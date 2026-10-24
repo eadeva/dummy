@@ -1,0 +1,83 @@
+"""Build and write reports (use case ``ReportService``).
+
+A report is built from the canonical run summary plus the tool results the
+steps left in their reports folders, so it can be regenerated at any time.
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+from ...domain.reporting.model import Report, from_summary
+from ..ports import ReportStore
+from .project import Project
+from .run import layout_of
+from .variants import VariantService
+
+
+class ReportService:
+    def __init__(self, store: ReportStore, version: str):
+        self._store = store
+        self._version = version
+
+    def build(self, project: Project, summary: dict[str, Any]) -> Report:
+        reports_dir = self._reports_dir(project, summary)
+        labels = [s["step"] for s in summary.get("steps", [])]
+        contributions = self._store.contributions(reports_dir, labels)
+        return from_summary(summary, contributions, self._version)
+
+    def write(
+        self,
+        project: Project,
+        summary: dict[str, Any],
+        formats: list[str] | None = None,
+        target: Path | None = None,
+    ) -> tuple[Report, list[Path]]:
+        report = self.build(project, summary)
+        formats = list(
+            formats if formats is not None else project.config.reporting.formats
+        )
+        out = target or self.output_dir(project, report.variant, report.action)
+        return report, self._store.write(report, formats, out)
+
+    def latest(
+        self,
+        project: Project,
+        action: str,
+        variant: str | None,
+        run_id: str | None = None,
+    ) -> dict[str, Any]:
+        layout = layout_of(project)
+        name = self._variant(project, variant)
+        return self._store.read_summary(
+            Path(layout.action_log_dir(name, action)), run_id
+        )
+
+    def output_dir(self, project: Project, variant: str | None, action: str) -> Path:
+        layout = layout_of(project)
+        configured = project.config.reporting.dir
+        name = None if variant in (None, "default") else variant
+        if configured:
+            return (project.root / configured).joinpath(
+                *Path(layout.reports_dir(name, action))
+                .relative_to(layout.root / layout.reports)
+                .parts
+            )
+        return Path(layout.reports_dir(name, action))
+
+    def _reports_dir(self, project: Project, summary: dict[str, Any]) -> Path:
+        if summary.get("reports_dir"):
+            return Path(summary["reports_dir"])
+        variant = summary.get("variant")
+        layout = layout_of(project)
+        return Path(
+            layout.reports_dir(
+                None if variant == "default" else variant, summary["action"]
+            )
+        )
+
+    @staticmethod
+    def _variant(project: Project, variant: str | None) -> str | None:
+        service = VariantService(project)
+        return service.name_of(variant) if service.has_variants else None

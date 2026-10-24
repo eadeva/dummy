@@ -19,6 +19,7 @@ from ..domain.execution.model import (
     StepResult,
 )
 from ..domain.logging import Level
+from ..domain.reporting.model import Contribution, Report
 
 MAIN_FILE = "main.ptk.yml"
 CI_FILE = "ci.ptk.yml"
@@ -158,3 +159,18 @@ class Prompter(Protocol):
         """A person can answer (terminal attached and not in CI)."""
 
     def secret(self, question: str) -> str: ...
+
+
+# --------------------------------------------------------------------------- reporting
+
+
+class ReportStore(Protocol):
+    """Reads run summaries and tool results, writes report files."""
+
+    def read_summary(self, log_dir: Path, run_id: str | None = None) -> dict: ...
+
+    def contributions(
+        self, reports_dir: Path, labels: list[str]
+    ) -> list[Contribution]: ...
+
+    def write(self, report: Report, formats: list[str], target: Path) -> list[Path]: ...

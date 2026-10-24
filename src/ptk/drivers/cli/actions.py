@@ -27,6 +27,7 @@ from ...domain.config.model import ActionSpec, ParamSpec
 from ...domain.errors import PtkError
 from ...domain.execution.model import Status
 from ...domain.logging import console_level
+from ...domain.reporting.summary import run_summary
 from ...domain.suggest import did_you_mean
 from . import console as present
 from .state import console, err_console, guarded, report_error, state_of
@@ -224,8 +225,28 @@ def execute(
         raise holder["error"]
     result = holder["result"]
     present.summary(console, result)
+    write_reports(state, project, prepared.plan, result)
     codes = {Status.PASSED: 0, Status.SKIPPED: 0, Status.CANCELLED: 130}
     sys.exit(codes.get(result.status, 1))
+
+
+def write_reports(state: Any, project: Any, plan: Any, result: Any) -> None:
+    """Reports after every run; a reporting problem never changes the run's result."""
+    if not project.config.reporting.formats:
+        return
+    try:
+        report, files = state.app.reports.write(project, run_summary(plan, result))
+    except (PtkError, OSError, ValueError) as exc:
+        err_console.print(f"[yellow]report not written: {escape(str(exc))}[/]")
+        return
+    html = next((f for f in files if f.suffix == ".html"), None)
+    shown = html or (files[0] if files else None)
+    if shown is not None:
+        console.print(
+            f"[dim]report: {escape(str(shown))}[/]", highlight=False, soft_wrap=True
+        )
+    for problem in report.problems:
+        err_console.print(f"[yellow]report: {escape(problem)}[/]")
 
 
 # --------------------------------------------------------------------------- commands

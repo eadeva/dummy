@@ -6,7 +6,7 @@ unified logging and reporting. See [`docs/PLAN.md`](docs/PLAN.md) for the full p
 
 **Status:** M1 (configuration meta-model and loader), M2 (variant core), M3
 (execution engine, dry run, HTML help), M4 (unified logging), M5 (generated
-CLI, maintainer visibility, VS Code tasks) and M6 (credentials) are done.
+CLI, maintainer visibility, VS Code tasks), M6 (credentials) and M7 (reporting) are done.
 
 ```bash
 uv sync                     # install with dev dependencies
@@ -14,6 +14,14 @@ uv run ptk --help
 uv run pytest
 uv run ruff check && uv run ruff format --check   # ruff default rules
 ```
+
+## Reports
+
+After every run ptk writes `_reports/<variant>/<action>/report.*` (`reporting.formats`:
+json, junit, html, markdown, github). Steps contribute tool results by writing them to
+`$PTK_STEP_REPORTS_DIR` - JUnit, SARIF and Cobertura are picked up automatically - or
+with `uses: report.import`. The HTML report shows what failed and a timeline of all
+steps; `ptk report open` opens it, `ptk report export --run ID` rebuilds older ones.
 
 ## Credentials
 
@@ -77,6 +85,7 @@ ptk config validate | show [PATH] [--sources] [--format yaml|json] | schema [-o 
 ptk variant list [--names] | show [NAME] [--json] [--all] | explain NAME FEATURE | check [NAMES] [--strict]
 ptk vscode tasks [--check] [--command "uv run ptk"] [--users-only]
 ptk creds setup [--vault] | set NAME [FIELD] [--store S] | list | test NAME | remove NAME
+ptk report export [ACTION] [-V v] [--run ID] [-f FORMAT]... | open [ACTION] [--run ID]
 ptk help [--no-open] [-o FILE]       full help as an HTML page, opened in your browser
 ```
 
@@ -126,7 +135,7 @@ actions:
 _builds/<variant>/<action>/<set>/<step>/    build folder per step (${run.build_dir})
 _bin/<variant>/                             binaries per variant
 _logs/<variant>/<action>/run.log            + <set>/<step>.log, events.jsonl, run.json, _history/
-_reports/<variant>/<action>/<set>/<step>/
+_reports/<variant>/<action>/report.{json,xml,html,md} + <set>/<step>/ (tool results)
 ```
 
 ## Architecture

@@ -8,6 +8,7 @@ from pathlib import Path
 
 from . import __version__
 from .adapters import help_html
+from .adapters.builtins import report_import
 from .adapters.config.source import FileConfigSource
 from .adapters.credentials.env import EnvProvider
 from .adapters.credentials.gopass import GopassProvider
@@ -18,6 +19,7 @@ from .adapters.host import SystemHost
 from .adapters.logging.files import FileLogObserver
 from .adapters.process import SubprocessRunner
 from .adapters.python_env import UvPythonEnvManager
+from .adapters.reporting.store import FileReportStore
 from .adapters.vscode_file import TasksFile
 from .application.ports import (
     ConfigSource,
@@ -36,8 +38,9 @@ from .application.use_cases.project import (
     Project,
     ShowConfig,
 )
+from .application.use_cases.report import ReportService
 from .application.use_cases.role import Role, resolve_role
-from .application.use_cases.run import PreparedRun, PrepareRun, RunAction
+from .application.use_cases.run import BUILTINS, PreparedRun, PrepareRun, RunAction
 from .application.use_cases.variants import VariantService
 from .application.use_cases.vscode import VSCodeTasks
 from .domain.errors import PtkError
@@ -54,6 +57,7 @@ class App:
     python_envs: PythonEnvManager
     build_help: BuildHelp
     vscode_tasks: VSCodeTasks
+    reports: ReportService
     prompter: Prompter
     secret_providers: dict[str, SecretProvider]
     _credentials: dict[int, CredentialService] = field(default_factory=dict, repr=False)
@@ -77,7 +81,8 @@ class App:
         return PrepareRun(self.host, self.credentials(project))
 
     def run_action(self, project: Project) -> RunAction:
-        return RunAction(self.host, self.runner, self.python_envs)
+        builtins = {**BUILTINS, "report.import": report_import}
+        return RunAction(self.host, self.runner, self.python_envs, builtins=builtins)
 
     def role(self, project: Project | None) -> Role:
         return resolve_role(project, self.host)
@@ -123,6 +128,7 @@ def create_app(
         or UvPythonEnvManager(runner, environ=dict(host.variables)),
         build_help=BuildHelp(version),
         vscode_tasks=VSCodeTasks(TasksFile),
+        reports=ReportService(FileReportStore(host.variables), version),
         prompter=prompter,
         secret_providers=secret_providers
         or default_secret_providers(host.variables, prompter),

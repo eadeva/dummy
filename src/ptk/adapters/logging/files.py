@@ -28,6 +28,7 @@ from ...domain.execution.model import (
     StepResult,
 )
 from ...domain.logging import Level, history_name, runs_to_prune
+from ...domain.reporting.summary import header, run_summary, step_dict
 
 HISTORY = "_history"
 SUMMARY = "run.json"
@@ -81,24 +82,6 @@ def _remove(path: Path) -> None:
         path.unlink()
 
 
-def _result_dict(result: StepResult) -> dict[str, Any]:
-    data: dict[str, Any] = {
-        "step": result.label,
-        "kind": result.kind,
-        "status": result.status.value,
-        "duration": round(result.duration, 3),
-    }
-    for key in ("exit_code", "message", "command", "log_file"):
-        value = getattr(result, key)
-        if value not in (None, ""):
-            data[key] = value
-    if result.attempts > 1:
-        data["attempts"] = result.attempts
-    if result.allowed_failure:
-        data["allowed_failure"] = True
-    return data
-
-
 class FileLogObserver:
     def __init__(
         self, layout: lay.Layout, *, level: Level = Level.DEBUG, keep_history: int = 10
@@ -124,11 +107,7 @@ class FileLogObserver:
         self._run = (folder / "run.log").open("w", encoding="utf-8")
         self._events = (folder / EVENTS).open("w", encoding="utf-8")
         self._write_summary(
-            {
-                **self._header(plan),
-                "status": "running",
-                "started_at": _timestamp(),
-            }
+            {**header(plan), "status": "running", "started_at": _timestamp()}
         )
         self._line(
             f"ptk run {plan.run_id}: project {plan.project}, action {plan.action}, "
@@ -174,7 +153,7 @@ class FileLogObserver:
         text = describe(result)
         self._step_line(step, text)
         self._line(f"[{step.label}] {text}")
-        self._event("step_finished", **_result_dict(result))
+        self._event("step_finished", **step_dict(result))
         with self._lock:
             handle = self._steps.pop(step.path, None)
         if handle:
@@ -188,15 +167,7 @@ class FileLogObserver:
             duration=round(result.duration, 3),
         )
         assert self._plan is not None
-        self._write_summary(
-            {
-                **self._header(self._plan),
-                "status": result.status.value,
-                "started_at": result.started_at,
-                "duration": round(result.duration, 3),
-                "steps": [_result_dict(r) for r in result.walk()],
-            }
-        )
+        self._write_summary(run_summary(self._plan, result))
         with self._lock:
             for handle in self._steps.values():
                 handle.close()
@@ -207,16 +178,6 @@ class FileLogObserver:
             self._run = self._events = None
 
     # -- helpers -----------------------------------------------------------------------
-
-    def _header(self, plan: ActionPlan) -> dict[str, Any]:
-        return {
-            "run_id": plan.run_id,
-            "project": plan.project,
-            "action": plan.action,
-            "variant": plan.variant or lay.NO_VARIANT,
-            "params": plan.params,
-            "param_sources": plan.param_sources,
-        }
 
     def _write_summary(self, data: dict[str, Any]) -> None:
         assert self._folder is not None

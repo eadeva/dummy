@@ -497,6 +497,97 @@ def creds_setup(ctx: click.Context, create_vault: bool) -> None:
     console.print(table)
 
 
+# --------------------------------------------------------------------------- report
+
+
+@cli.group("report")
+def report_group() -> None:
+    """Reports of past runs: export them again or open them in the browser."""
+
+
+def _report_target(ctx: click.Context, action: str | None) -> tuple[Any, str]:
+    project = _state(ctx).project()
+    name = action or project.config.project.default_action
+    if not name:
+        raise PtkError("which action? (no ACTION given and no project.default_action)")
+    if name not in project.config.actions:
+        raise PtkError(f"unknown action '{name}'")
+    return project, name
+
+
+@report_group.command("export")
+@click.argument("action", required=False)
+@click.option(
+    "-V", "--variant", help="Variant (default: the configured default variant)."
+)
+@click.option(
+    "--run", "run_id", metavar="RUN_ID", help="An older run kept in the log history."
+)
+@click.option(
+    "-f",
+    "--format",
+    "formats",
+    multiple=True,
+    type=click.Choice(["json", "junit", "html", "markdown", "github"]),
+    help="Formats (default: reporting.formats). Repeatable.",
+)
+@click.option(
+    "-o",
+    "--output",
+    type=click.Path(path_type=Path, file_okay=False),
+    help="Target folder (default: _reports/<variant>/<action>).",
+)
+@click.pass_context
+@guarded
+def report_export(
+    ctx: click.Context,
+    action: str | None,
+    variant: str | None,
+    run_id: str | None,
+    formats: tuple[str, ...],
+    output: Path | None,
+) -> None:
+    """Write the report of the latest (or a given) run of ACTION again."""
+    project, name = _report_target(ctx, action)
+    service = _state(ctx).app.reports
+    summary = service.latest(project, name, variant, run_id)
+    report, files = service.write(project, summary, list(formats) or None, output)
+    for file in files:
+        console.print(f"written {escape(str(file))}", highlight=False, soft_wrap=True)
+    for problem in report.problems:
+        console.print(f"[yellow]{escape(problem)}[/]")
+
+
+@report_group.command("open")
+@click.argument("action", required=False)
+@click.option(
+    "-V", "--variant", help="Variant (default: the configured default variant)."
+)
+@click.option(
+    "--run", "run_id", metavar="RUN_ID", help="An older run kept in the log history."
+)
+@click.pass_context
+@guarded
+def report_open(
+    ctx: click.Context, action: str | None, variant: str | None, run_id: str | None
+) -> None:
+    """Open the HTML report of the latest (or a given) run of ACTION in the browser."""
+    project, name = _report_target(ctx, action)
+    service = _state(ctx).app.reports
+    summary = service.latest(project, name, variant, run_id)
+    target = None
+    if run_id:  # older runs get their own folder so the latest report stays
+        target = (
+            service.output_dir(project, summary.get("variant"), name)
+            / "_history"
+            / run_id
+        )
+    _report, files = service.write(project, summary, ["html"], target)
+    console.print(f"report: {escape(str(files[0]))}", highlight=False, soft_wrap=True)
+    if not _state(ctx).app.open_in_browser(files[0]):
+        console.print("[dim]no browser available here - open the file above[/]")
+
+
 # --------------------------------------------------------------------------- vscode
 
 

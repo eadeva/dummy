@@ -106,6 +106,7 @@ class StepResult:
     status: Status = Status.PENDING
     exit_code: int | None = None
     duration: float = 0.0
+    start: float = 0.0  # seconds after the run started (for timelines)
     attempts: int = 0
     message: str = ""
     command: str = ""

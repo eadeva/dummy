@@ -385,15 +385,27 @@ configurable (`layout:`). Previous runs are archived per variant/action
 
 ## 7. Main point 6 — Unified reporting
 
-- **Run model** (domain): action, variant snapshot, params with sources, tool
-  versions, sanitised environment summary, step tree with status, duration,
-  exit code, log links, attachments.
-- Built from `events.jsonl` → the report can be regenerated after the fact.
-- **Exporters:** console summary · JSON (canonical) · JUnit XML · single-file HTML ·
-  Markdown · GitHub step summary.
-- **Contributors (plugins):** import tool results into the report — JUnit, SARIF,
-  Cobertura; later project-specific formats (QAC, CANoe, SBOM, ...).
-- Commands: `ptk report open [run]` · `ptk report export --format html`.
+- **Source:** the canonical run summary (`run.json`, written from the same event
+  stream as the logs) plus the tool results the steps left in their reports
+  folders - so any report can be regenerated later (`ptk report export --run ID`).
+- **Report model** (domain): action, variant, params with sources, step tree with
+  status, start offset, duration, exit code, attempts, log links; imported test
+  suites, findings and coverage.
+- **Contributions:** a step writes results into `$PTK_STEP_REPORTS_DIR`
+  (`${run.reports_dir}`); JUnit XML, SARIF and Cobertura are recognised by content
+  and imported automatically. `uses: report.import` with `files: [globs]` copies
+  results produced elsewhere into the step's folder (`optional: true` allows none).
+  More formats (QAC, CANoe, SBOM, ...) can be added as importers.
+- **Exporters** (`reporting.formats`, default json + html): JSON (canonical, with
+  totals) · JUnit XML (steps as test cases - allowed failures are not failures -
+  plus imported suites) · single-file HTML (offline; "what failed", a **timeline**
+  of all steps at their real start times so parallel sets and slow steps are
+  visible, parameters, tests, findings, coverage; relative links to the logs) ·
+  Markdown · GitHub step summary (appended to `$GITHUB_STEP_SUMMARY`).
+- Written to `_reports/<variant>/<action>/report.*` after every run
+  (`reporting.dir` moves them); a reporting problem never changes the run's result.
+- Commands: `ptk report export [ACTION] [-V v] [--run ID] [-f FORMAT]... [-o DIR]` ·
+  `ptk report open [ACTION] [-V v] [--run ID]`.
 
 ---
 
@@ -629,7 +641,7 @@ formatted with `ruff format`. CI runs `ruff check` and `ruff format --check`.
 | M4 ✅ | Unified logging | `run.log`, step logs, `events.jsonl`, `run.json`, history; levels; masking |
 | M5 ✅ | CLI: generated actions/params, `--from/--to`, `config`, `variant`, maintainer visibility (`maintainers.ptk.yml`), `vscode tasks` | `ptk build --help` shows declared params; maintainer actions hidden for others; tasks.json merge keeps user tasks |
 | M6 ✅ | Credential handler: env, keyring, gopass, vault, prompt | `creds` commands; secrets only via step env; masking tested |
-| M7 | Unified reporting | JSON, JUnit, HTML, Markdown, GitHub summary; contributors API |
+| M7 ✅ | Unified reporting | JSON, JUnit, HTML, Markdown, GitHub summary; contributors API |
 | M8 | Shared configs: pre-commit, ruff, clang-format, clang-tidy, clangd | `configs sync/check/--diff` |
 | M9 | Tools: model, Chocolatey, uv-tool, download, `setup`, `self-setup`, `doctor`, installers | missing tools detected and installed (Windows run by user) |
 | M10 | Example project, docs-as-code, skills, CI Linux + Windows | docs build with `-W`; all skills present |

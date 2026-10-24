@@ -309,17 +309,30 @@ class Cancelled(threading.Event):
     """Set on Ctrl+C: running processes are terminated, nothing new starts."""
 
 
-BuiltinStep = Callable[[PlannedStep, Callable[[str], None]], int]
+@dataclass(frozen=True)
+class BuiltinContext:
+    """What a built-in step (``uses:``) may work with."""
+
+    root: Path  # project root
+    build_dir: Path  # the step's build folder
+    reports_dir: Path  # the step's reports folder (picked up by the report)
 
 
-def _builtin_echo(step: PlannedStep, out: Callable[[str], None]) -> int:
+BuiltinStep = Callable[[PlannedStep, Callable[[str], None], BuiltinContext], int]
+
+
+def _builtin_echo(
+    step: PlannedStep, out: Callable[[str], None], ctx: BuiltinContext
+) -> int:
     message = step.with_.get("message", "")
     for line in to_text(message).splitlines() or [""]:
         out(line)
     return 0
 
 
-def _builtin_wait(step: PlannedStep, out: Callable[[str], None]) -> int:
+def _builtin_wait(
+    step: PlannedStep, out: Callable[[str], None], ctx: BuiltinContext
+) -> int:
     seconds = float(step.with_.get("seconds", 1))
     out(f"waiting {seconds:g}s")
     time.sleep(seconds)
@@ -363,6 +376,7 @@ class RunAction:
         self._cancel = cancel
         started_at = datetime.now().astimezone().isoformat(timespec="seconds")
         start = time.monotonic()
+        self._run_start = start
         Path(plan.dirs["bin_dir"]).mkdir(parents=True, exist_ok=True)
         self._emit("run_started", plan)
         results = self._run_sequence(plan.steps)
@@ -476,6 +490,7 @@ class RunAction:
                 step.kind,
                 status=_combine(children),
                 duration=time.monotonic() - start,
+                start=start - self._run_start,
                 children=children,
             )
             if result.status is Status.FAILED and step.spec.continue_on_error:
@@ -502,6 +517,7 @@ class RunAction:
             self._emit("output", step, prepared.mask(line))
 
         start = time.monotonic()
+        result.start = start - self._run_start
         try:
             if step.kind == "uses":
                 result.command = f"uses {step.spec.uses}"
@@ -568,7 +584,21 @@ class RunAction:
                 1,
                 f"built-in step '{name}' is not available{did_you_mean(name, self._builtins)}",
             )
-        return handler(step, out), ""
+        prepared = self._prepared
+        plan = prepared.plan
+        ctx = BuiltinContext(
+            root=prepared.project.root,
+            build_dir=Path(
+                prepared.layout.build_dir(plan.variant, plan.action, step.path)
+            ),
+            reports_dir=Path(
+                prepared.layout.reports_dir(plan.variant, plan.action, step.path)
+            ),
+        )
+        try:
+            return handler(step, out, ctx), ""
+        except (PtkError, ValueError, OSError) as exc:
+            return 1, str(exc)
 
     def _command(
         self, prepared: PreparedRun, step: PlannedStep, runtime: PythonRuntime | None
