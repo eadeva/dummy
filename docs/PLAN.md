@@ -162,7 +162,7 @@ actions:
     params:
       build_type: {type: choice, choices: [Debug, Release], default: Release, help: Build type}
       jobs:       {type: int, default: 8, env: PTK_JOBS, help: Parallel jobs}
-      profile:    {default: "${vh.data.conan.profile}", help: Conan profile (per variant)}
+      toolchain:  {default: "${vh.data.toolchain}", help: Compiler toolchain (per variant)}
     steps:
       - configure:
           run: [cmake, --preset, "${vh.variant}", "-DCMAKE_BUILD_TYPE=${params.build_type}"]
@@ -191,7 +191,7 @@ Reuse the core of `variant_handler` (already built and tested), trimmed for the 
 - **Simplifications for users:**
   - small product lines inline in `main.ptk.yml`, larger ones in separate files
   - matrix levels become enum features (`PLATFORM: [tc397, tc399]`)
-  - free-form `data:` merged through inheritance (e.g. Conan requirements)
+  - free-form `data:` merged through inheritance (e.g. toolchain, flash layout)
 - **Integration:**
   - `when:` on steps (replaces `execute_if`, `only_variants`, `omit_variants`)
   - `${vh.*}` substitution; `VH_*` (and optionally legacy `BO_*`) env vars per command
@@ -294,7 +294,7 @@ and reports folder `${run.reports_dir}`.
 - **Defaults** are typed and checked against `choices` when the config loads, and can
   be changed per layer: `local.ptk.yml` (per developer), `ci.ptk.yml` (CI), `--set`.
 - A default may be a template using `${env:...}`, `${vars.x}`, `${vh.*}` or
-  `${project.*}` - e.g. a **per-variant default** `default: "${vh.data.conan.profile}"`.
+  `${project.*}` - e.g. a **per-variant default** `default: "${vh.data.toolchain}"`.
   Templates are resolved and type-checked when the action runs; a default cannot
   refer to other parameters.
 

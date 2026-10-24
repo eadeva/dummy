@@ -149,7 +149,7 @@ def test_plain_ptk_outside_a_project_shows_help(tmp_path, monkeypatch):
     assert result.exit_code == 0 and "Commands" in result.output
 
 
-def test_demo_conan_profile_follows_variant():
+def test_demo_toolchain_follows_variant():
     args = ["--config", str(DEMO / "main.ptk.yml"), "--no-ci", "dry-run"]
     us = CliRunner().invoke(cli, [*args, "-V", "b_us"], catch_exceptions=False)
-    assert "-DCONAN_PROFILE=us" in us.output and "build (dry run" in us.output
+    assert "-DTOOLCHAIN=arm-clang" in us.output and "build (dry run" in us.output

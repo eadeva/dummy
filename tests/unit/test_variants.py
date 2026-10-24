@@ -32,14 +32,14 @@ LINE = {
         "base": {
             "abstract": True,
             "components": ["core", "display"],
-            "data": {"conan": {"profile": "x", "opts": {"a": 1}}},
+            "data": {"toolchain": {"name": "x", "opts": {"a": 1}}},
         },
         "high": {
             "extends": "base",
             "aliases": ["1", "h"],
             "components": ["core", "display", "camera"],
             "features": {"SIZE": 12, "BIG_UI": True, "NIGHT": True},
-            "data": {"conan": {"opts": {"b": 2}}},
+            "data": {"toolchain": {"opts": {"b": 2}}},
         },
         "low": {"extends": "base", "aliases": [2], "features": {"BIG_UI": True}},
     },
@@ -57,7 +57,7 @@ def test_aliases_default_and_data_merge(line):
     r = vr.resolve(line, vr.find(line, "h"))
     assert r.ok, r.issues
     assert r.aliases == ["1", "h"]
-    assert r.data == {"conan": {"profile": "x", "opts": {"a": 1, "b": 2}}}
+    assert r.data == {"toolchain": {"name": "x", "opts": {"a": 1, "b": 2}}}
     with pytest.raises(UnknownNameError, match="did you mean 'high'"):
         vr.find(line, "hihg")
 

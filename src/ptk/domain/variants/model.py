@@ -21,7 +21,7 @@ A product line has components (each declaring features) and variants
           aliases: [b_us, "3"]
           components: [display, navigation]
           features: {MAP_REGION: US}
-          data: {conan: {requires: {"zlib/1.3": {}}}}
+          data: {toolchain: arm-gcc, flash: {address: "0x08000000"}}
 """
 
 from __future__ import annotations

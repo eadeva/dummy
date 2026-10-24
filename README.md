@@ -68,7 +68,7 @@ actions:
   build:
     params:
       jobs: {type: int, default: 8, env: PTK_JOBS}                 # typed default
-      profile: {default: "${vh.data.conan.profile}"}               # per-variant default
+      toolchain: {default: "${vh.data.toolchain}"}                # per-variant default
     steps:
       - configure: [cmake, --preset, "${vars.preset}"]        # list: no shell
       - compile: "cmake --build --preset ${vars.preset} -j ${params.jobs}"   # string: shell

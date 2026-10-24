@@ -22,7 +22,7 @@ variants:
     abstract: true
     components: [core, display]
     features: {LOG_LEVEL: WARN}
-    data: {conan: {profile: default}}
+    data: {toolchain: arm-gcc}
   customer_a_high:
     extends: base
     aliases: ["1", a_high]
@@ -33,4 +33,4 @@ variants:
     aliases: ["2", b_us]
     components: [core, display, navigation]
     features: {MAP_REGION: US}
-    data: {conan: {profile: us}}
+    data: {toolchain: arm-clang}

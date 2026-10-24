@@ -5,7 +5,7 @@ Syntax::
     ${env:NAME}  ${env:NAME:-default}       environment of the run
     ${vars.build_dir}                       configuration vars (may reference others)
     ${params.jobs}                          action parameters
-    ${vh.variant} ${vh.features.X} ${vh.components.camera} ${vh.data.conan.profile}
+    ${vh.variant} ${vh.features.X} ${vh.components.camera} ${vh.data.toolchain}
     ${project.root} ${project.name}
     ${run.build_dir} ${run.bin_dir} ${run.log_dir} ${run.reports_dir} ${run.id} ${run.action} ${run.step}
     ${secret:artifactory.token}             only in step env values
