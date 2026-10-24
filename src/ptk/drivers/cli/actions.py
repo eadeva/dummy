@@ -143,6 +143,13 @@ def common_options(*, dry_run: bool) -> list[click.Parameter]:
                 help="Only warnings and errors; command output is still logged.",
             )
         )
+        params.append(
+            click.Option(
+                ["--setup"],
+                is_flag=True,
+                help="Install missing or outdated tools of the action first (ptk setup).",
+            )
+        )
     params.append(
         click.Argument(
             ["extra"], nargs=-1, type=click.UNPROCESSED, metavar="[-- ARGS]..."
@@ -187,10 +194,15 @@ def execute(
     *,
     quiet: bool = False,
     show_env: bool = False,
+    setup: bool = False,
 ) -> None:
     """Prepare the request; show it (dry run) or run it and exit with its status."""
     state = state_of(ctx)
     project = state.project()
+    if setup:
+        action = request.action or project.config.project.default_action
+        if action:
+            install_tools(state, project, [action])
     prepared = state.app.prepare_run(project).execute(project, request)
     runner = state.app.run_action(project)
     if request.dry_run:
@@ -230,6 +242,39 @@ def execute(
     sys.exit(codes.get(result.status, 1))
 
 
+def install_tools(
+    state: Any,
+    project: Any,
+    actions: list[str] | None,
+    *,
+    dry_run: bool = False,
+    allow_system: bool = False,
+) -> bool:
+    """Check and install tools; prints a line per tool. True when all are fine."""
+    service = state.app.tools
+    names = service.required(project, actions)
+    if not names:
+        console.print("[dim]no tools required[/]")
+        return True
+    results = service.setup(
+        project,
+        names,
+        dry_run=dry_run,
+        allow_system=allow_system,
+        out=lambda line: console.print(f"  [dim]{escape(line)}[/]", highlight=False),
+    )
+    for result in results:
+        status = result.after or result.before
+        colour = "green" if result.ok else "red"
+        version = f" {status.version}" if status.version else ""
+        console.print(
+            f"[{colour}]{'✔' if result.ok else '✘'} {escape(result.name)}{version}[/] "
+            f"[dim]{escape(result.outcome)}[/]",
+            highlight=False,
+        )
+    return all(r.ok for r in results)
+
+
 def write_reports(state: Any, project: Any, plan: Any, result: Any) -> None:
     """Reports after every run; a reporting problem never changes the run's result."""
     if not project.config.reporting.formats:
@@ -264,9 +309,10 @@ def action_command(
         }
         quiet = options.pop("quiet", False)
         show_env = options.pop("show_env", False)
+        setup = options.pop("setup", False)
         common = {k: v for k, v in options.items() if not k.startswith(PARAM_PREFIX)}
         request = build_request(ctx, name, params=given, dry_run=dry_run, **common)
-        execute(ctx, request, quiet=quiet, show_env=show_env)
+        execute(ctx, request, quiet=quiet, show_env=show_env, setup=setup)
 
     help_text = spec.help or f"Run the '{name}' action."
     if spec.audience == "maintainer":

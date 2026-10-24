@@ -459,44 +459,56 @@ effective files (`ptk configs sync --diff`).
 tools:
   cmake:
     version: ">=3.28,<4"
-    check: "cmake --version"          # version parsed from output (regex configurable)
-    choco: {package: cmake, version: "3.30.2"}
-    linux: {uv_tool: cmake}           # or download / apt / dnf (opt-in)
+    check: cmake --version            # version parsed from the output (version_regex)
+    choco: {package: cmake, version: "3.30.2"}     # Windows
+    uv_tool: cmake==3.30.2                         # Windows + Linux
   clang-format:
     version: "==18.*"
-    check: "clang-format --version"
     choco: {package: llvm, version: "18.1.8"}
-    linux: {download: {url: "...", sha256: "..."}}
+    download: {linux: {url: "https://.../clang-format-18.tar.xz", sha256: "...", bin: bin}}
+    apt: clang-format-18                           # only with --allow-system
 ```
 
 ### 9.2 Behaviour
 
-- Actions declare `requires_tools`. Before a run ptk checks versions and reports
-  missing / wrong ones; `--setup` installs them automatically.
-- `ptk setup [--action build] [--dry-run]` — install tools for all or one action.
-- Installers: **Chocolatey** (Windows), uv tool, download (sha256 verified,
-  into the user's tool dir), apt/dnf only when explicitly allowed.
-- **Chocolatey provider:** bootstraps Chocolatey if missing (official script,
-  needs admin), pins versions, logs into the report; without admin rights it
-  explains and suggests user-level alternatives.
+- Actions declare `requires_tools`. Before a run ptk checks them (version from
+  the `check` command against the range); missing or wrong tools stop the run
+  with what to do. `ptk <action> --setup` installs them first. Dry runs never block.
+- `ptk setup [--action A]... [--dry-run] [--allow-system] [--bootstrap-choco]`.
+- Install order: Windows `choco -> uv tool -> download`; Linux/macOS
+  `uv tool -> download -> apt/dnf` (apt/dnf only with `--allow-system`, via
+  `sudo -n`). After installing, the tool is checked again.
+- **Chocolatey:** `choco install <pkg> --version <v> --allow-downgrade -y`; needs an
+  administrator terminal - without one ptk says so and the next method is tried.
+  `--bootstrap-choco` installs Chocolatey itself (official script, admin only).
+- **Downloads:** sha256 verified (a warning if none is configured), unpacked
+  safely into `%LOCALAPPDATA%\\ptk\\tools\\<name>` or `~/.local/share/ptk/tools/<name>`
+  (`PTK_TOOLS_DIR`); their `bin` folders and uv's tool folder go first on PATH for
+  every command ptk runs.
 
 ### 9.3 Self-setup and installers
 
-- `install.ps1` / `install.sh`: install uv if missing, then `uv tool install ptk`.
-- `ptk self-setup`: verifies uv, Python, git; installs project tools
-  (optional), syncs shared configs, installs pre-commit hooks, checks credentials.
-- `ptk doctor`: diagnoses the environment (versions, PATH, credentials, configs).
+- `install/install.ps1` / `install/install.sh`: install uv if missing, then
+  `uv tool install ptk` (`PTK_SOURCE` for a git URL or another name, `PTK_EXTRAS`
+  e.g. `keyring`; package indexes via the standard `UV_INDEX_URL`).
+- `ptk self-setup [--tools] [--allow-system]`: checks uv and git, syncs shared
+  configs, installs the pre-commit hooks (`uv tool run pre-commit install`),
+  reports missing credentials, installs tools with `--tools`.
+- `ptk doctor`: ptk/Python, uv, git (+ user.email), configuration, role, tools,
+  credentials (never prompting), shared configs, pre-commit hook; exit 1 on problems.
 
 ---
 
 ## 9a. VS Code tasks
 
 - `ptk vscode tasks` creates or updates `.vscode/tasks.json` with one task per
-  visible action (label `ptk: <action>`), a `pickString` input for the variant and
-  inputs for declared choice parameters.
-- Existing user tasks are kept: ptk only manages entries it created (marked in
-  `detail`), so re-running the command is safe; `--check` reports drift (CI).
-- Maintainer-only actions appear only for maintainers (see 9b).
+  visible action (label `ptk: <action>`), a `pickString` input for the variant,
+  and the default action as default build task.
+- Existing user tasks are kept: ptk only manages entries whose label starts with
+  `ptk: ` and its `ptkVariant` input, so re-running is safe; `--check` reports
+  drift (CI). Parameters keep their defaults (no prompts per parameter).
+- Maintainer-only actions appear only for maintainers (see 9b); `--users-only`
+  for a committed file.
 
 ## 9b. Maintainer-only commands
 
@@ -652,7 +664,7 @@ formatted with `ruff format`. CI runs `ruff check` and `ruff format --check`.
 | M6 ✅ | Credential handler: env, keyring, gopass, vault, prompt | `creds` commands; secrets only via step env; masking tested |
 | M7 ✅ | Unified reporting | JSON, JUnit, HTML, Markdown, GitHub summary; contributors API |
 | M8 ✅ | Shared configs: pre-commit, ruff, clang-format, clang-tidy, clangd | `configs sync/check/--diff` |
-| M9 | Tools: model, Chocolatey, uv-tool, download, `setup`, `self-setup`, `doctor`, installers | missing tools detected and installed (Windows run by user) |
+| M9 ✅ | Tools: model, Chocolatey, uv-tool, download, `setup`, `self-setup`, `doctor`, installers | missing tools detected and installed (Windows run by user) |
 | M10 | Example project, docs-as-code, skills, CI Linux + Windows | docs build with `-W`; all skills present |
 | M11 | Optional: `ptk migrate`, background steps, variant GUI plugin | — |
 

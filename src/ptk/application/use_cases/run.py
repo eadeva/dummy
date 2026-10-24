@@ -45,6 +45,7 @@ from ..ports import (
 )
 from .project import Project
 from .role import Role, visible
+from .tools import ToolService
 from .variants import VariantService
 
 MASK = "********"
@@ -93,10 +94,12 @@ class PrepareRun:
         host: HostEnvironment,
         secrets: SecretResolver | None = None,
         clock: Callable[[], datetime] = datetime.now,
+        tools: ToolService | None = None,
     ):
         self._host = host
         self._secrets = secrets
         self._clock = clock
+        self._tools = tools
 
     def execute(self, project: Project, request: RunRequest) -> PreparedRun:
         config = project.config
@@ -110,6 +113,15 @@ class PrepareRun:
             request = dataclasses.replace(request, action=config.project.default_action)
         assert request.action is not None
         action = self._action(project, request.action)
+        if self._tools is not None and action.requires_tools and not request.dry_run:
+            problems = self._tools.problems(project, request.action)
+            if problems:
+                lines = "\n".join(f"  - {s.name}: {s.problem}" for s in problems)
+                raise PtkError(
+                    f"'{request.action}' needs tools that are missing or too old:\n{lines}\n"
+                    f"  install them with: ptk setup --action {request.action} "
+                    f"(or run the action with --setup)"
+                )
         if not visible(action.audience, request.role):
             raise PtkError(
                 f"'{request.action}' is a maintainer-only action "
@@ -217,7 +229,12 @@ class PrepareRun:
                 keep=env_spec.keep,
                 set_={k: to_text(pre(v)) for k, v in env_spec.set.items()},
                 unset=env_spec.unset,
-                path_prepend=[to_text(pre(p)) for p in env_spec.path_prepend],
+                path_prepend=[
+                    *(
+                        self._tools.paths() if self._tools else []
+                    ),  # ptk-installed tools
+                    *(to_text(pre(p)) for p in env_spec.path_prepend),
+                ],
                 path_append=[to_text(pre(p)) for p in env_spec.path_append],
             )
             base.update(

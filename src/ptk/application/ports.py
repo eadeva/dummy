@@ -20,6 +20,7 @@ from ..domain.execution.model import (
 )
 from ..domain.logging import Level
 from ..domain.reporting.model import Contribution, Report
+from ..domain.tools import InstallMethod
 
 MAIN_FILE = "main.ptk.yml"
 CI_FILE = "ci.ptk.yml"
@@ -192,3 +193,17 @@ class SharedConfigFiles(Protocol):
     def read(self, path: Path) -> str | None: ...
 
     def write(self, path: Path, text: str) -> None: ...
+
+
+# --------------------------------------------------------------------------- tools
+
+
+class ToolInstaller(Protocol):
+    """Installs tools (Chocolatey, uv tool, downloads, apt/dnf) and knows their folders."""
+
+    def bin_dirs(self) -> list[str]:
+        """Folders with ptk-installed tools; put first on PATH for every command."""
+
+    def install(
+        self, name: str, method: InstallMethod, out: Callable[[str], None]
+    ) -> None: ...

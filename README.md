@@ -6,7 +6,8 @@ unified logging and reporting. See [`docs/PLAN.md`](docs/PLAN.md) for the full p
 
 **Status:** M1 (configuration meta-model and loader), M2 (variant core), M3
 (execution engine, dry run, HTML help), M4 (unified logging), M5 (generated
-CLI, maintainer visibility, VS Code tasks), M6 (credentials), M7 (reporting) and M8 (shared configs) are done.
+CLI, maintainer visibility, VS Code tasks), M6 (credentials), M7 (reporting), M8 (shared configs) and M9 (tools,
+setup, doctor, installers) are done.
 
 ```bash
 uv sync                     # install with dev dependencies
@@ -14,6 +15,21 @@ uv run ptk --help
 uv run pytest
 uv run ruff check && uv run ruff format --check   # ruff default rules
 ```
+
+## Tools
+
+```yaml
+tools:
+  cmake: {version: ">=3.28,<4", check: cmake --version,
+          choco: {package: cmake, version: "3.30.2"}, uv_tool: "cmake==3.30.2"}
+actions:
+  build: {requires_tools: [cmake], steps: [...]}
+```
+
+Runs check `requires_tools` first; `ptk setup` (or `ptk build --setup`) installs what is
+missing - Chocolatey on Windows, `uv tool`, sha256-verified downloads, apt/dnf only with
+`--allow-system`. `ptk doctor` diagnoses a machine; `ptk self-setup` gets it ready.
+Install ptk itself with `install/install.sh` or `install/install.ps1`.
 
 ## Shared configs
 
@@ -101,6 +117,7 @@ ptk variant list [--names] | show [NAME] [--json] [--all] | explain NAME FEATURE
 ptk vscode tasks [--check] [--command "uv run ptk"] [--users-only]
 ptk creds setup [--vault] | set NAME [FIELD] [--store S] | list | test NAME | remove NAME
 ptk configs sync [NAMES] [--diff] | check [NAMES]
+ptk setup [--action A]... [--dry-run] [--allow-system] | doctor | self-setup [--tools]
 ptk report export [ACTION] [-V v] [--run ID] [-f FORMAT]... | open [ACTION] [--run ID]
 ptk help [--no-open] [-o FILE]       full help as an HTML page, opened in your browser
 ```

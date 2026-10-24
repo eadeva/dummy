@@ -18,9 +18,10 @@ from .adapters.credentials.vault import Vault, VaultProvider, default_vault_file
 from .adapters.host import SystemHost
 from .adapters.logging.files import FileLogObserver
 from .adapters.process import SubprocessRunner
-from .adapters.python_env import UvPythonEnvManager
+from .adapters.python_env import UvPythonEnvManager, find_uv
 from .adapters.reporting.store import FileReportStore
 from .adapters.shared_configs import PackageConfigFiles
+from .adapters.tools import SystemToolInstaller
 from .adapters.vscode_file import TasksFile
 from .application.ports import (
     ConfigSource,
@@ -43,6 +44,8 @@ from .application.use_cases.project import (
 from .application.use_cases.report import ReportService
 from .application.use_cases.role import Role, resolve_role
 from .application.use_cases.run import BUILTINS, PreparedRun, PrepareRun, RunAction
+from .application.use_cases.setup import Doctor, Environment, SelfSetup
+from .application.use_cases.tools import ToolService
 from .application.use_cases.variants import VariantService
 from .application.use_cases.vscode import VSCodeTasks
 from .domain.errors import PtkError
@@ -61,6 +64,10 @@ class App:
     vscode_tasks: VSCodeTasks
     reports: ReportService
     shared_configs: SharedConfigs
+    tools: ToolService
+    doctor: Doctor
+    self_setup: SelfSetup
+    installer: SystemToolInstaller
     prompter: Prompter
     secret_providers: dict[str, SecretProvider]
     _credentials: dict[int, CredentialService] = field(default_factory=dict, repr=False)
@@ -81,7 +88,7 @@ class App:
         return self._credentials[key]
 
     def prepare_run(self, project: Project) -> PrepareRun:
-        return PrepareRun(self.host, self.credentials(project))
+        return PrepareRun(self.host, self.credentials(project), tools=self.tools)
 
     def run_action(self, project: Project) -> RunAction:
         builtins = {**BUILTINS, "report.import": report_import}
@@ -121,6 +128,11 @@ def create_app(
     host = host or SystemHost(environ)
     runner = runner or SubprocessRunner()
     prompter = prompter or ConsolePrompter(host.is_ci)
+    uv = find_uv(dict(host.variables))
+    installer = SystemToolInstaller(runner, host.variables, uv=uv)
+    tools = ToolService(host, runner, installer)
+    configs = SharedConfigs(PackageConfigFiles())
+    machine = Environment(host, runner, uv)
     return App(
         host=host,
         load_project=LoadProject(source or FileConfigSource(), host, version),
@@ -132,7 +144,11 @@ def create_app(
         build_help=BuildHelp(version),
         vscode_tasks=VSCodeTasks(TasksFile),
         reports=ReportService(FileReportStore(host.variables), version),
-        shared_configs=SharedConfigs(PackageConfigFiles()),
+        shared_configs=configs,
+        tools=tools,
+        doctor=Doctor(machine, tools, configs, version),
+        self_setup=SelfSetup(machine, tools, configs),
+        installer=installer,
         prompter=prompter,
         secret_providers=secret_providers
         or default_secret_providers(host.variables, prompter),

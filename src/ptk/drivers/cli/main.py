@@ -20,7 +20,14 @@ from rich.table import Table
 from ... import __version__
 from ...application.use_cases.help import HelpCommand, HelpOption
 from ...domain.errors import ConfigError, PtkError
-from .actions import ProjectGroup, build_request, common_options, execute, pairs
+from .actions import (
+    ProjectGroup,
+    build_request,
+    common_options,
+    execute,
+    install_tools,
+    pairs,
+)
 from .state import console, err_console, guarded, state_of
 
 _state = state_of
@@ -327,6 +334,7 @@ def run_command(
     Exit code: 0 passed, 1 failed, 2 usage/configuration error, 130 cancelled.
     """
     quiet = options.pop("quiet", False)
+    setup = options.pop("setup", False)
     extra = options.pop("extra", ())
     if action is not None and action.startswith("-"):
         # "ptk run -- -k x": click put the first pass-through word into ACTION
@@ -334,7 +342,7 @@ def run_command(
     request = build_request(
         ctx, action, params=pairs(params, "--param"), extra=extra, **options
     )
-    execute(ctx, request, quiet=quiet)
+    execute(ctx, request, quiet=quiet, setup=setup)
 
 
 # the same options as the generated action commands (incl. the trailing [-- ARGS])
@@ -495,6 +503,109 @@ def creds_setup(ctx: click.Context, create_vault: bool) -> None:
         status = "[green]ready[/]" if ok else "[yellow]not available[/]"
         table.add_row(name, status, escape(reason or hints.get(name, "")))
     console.print(table)
+
+
+# --------------------------------------------------------------------------- setup
+
+
+@cli.command("setup")
+@click.option(
+    "-a",
+    "--action",
+    "actions",
+    multiple=True,
+    metavar="ACTION",
+    help="Only the tools of these actions (default: all configured tools).",
+)
+@click.option(
+    "--dry-run", "dry_run", is_flag=True, help="Only show what would be installed."
+)
+@click.option("--allow-system", is_flag=True, help="Allow apt/dnf (needs sudo rights).")
+@click.option(
+    "--bootstrap-choco",
+    is_flag=True,
+    help="Install Chocolatey first (Windows, administrator terminal).",
+)
+@click.pass_context
+@guarded
+def setup_command(
+    ctx: click.Context,
+    actions: tuple[str, ...],
+    dry_run: bool,
+    allow_system: bool,
+    bootstrap_choco: bool,
+) -> None:
+    """Check the configured tools and install missing or outdated ones."""
+    state = _state(ctx)
+    project = state.project()
+    if bootstrap_choco and not dry_run:
+        state.app.installer.bootstrap_choco(
+            lambda line: console.print(f"  {escape(line)}")
+        )
+    ok = install_tools(
+        state,
+        project,
+        list(actions) or None,
+        dry_run=dry_run,
+        allow_system=allow_system,
+    )
+    sys.exit(0 if ok else 1)
+
+
+def _print_checks(checks: list[Any]) -> bool:
+    icons = {"ok": "[green]✔[/]", "warning": "[yellow]![/]", "problem": "[red]✘[/]"}
+    table = Table(box=None, pad_edge=False, show_header=False)
+    for check in checks:
+        fix = f" [dim]→ {escape(check.fix)}[/]" if check.fix else ""
+        table.add_row(
+            icons[check.status], escape(check.area), escape(check.detail) + fix
+        )
+    console.print(table)
+    return not any(c.status == "problem" for c in checks)
+
+
+@cli.command("doctor")
+@click.pass_context
+def doctor_command(ctx: click.Context) -> None:
+    """Diagnose this machine and project: uv, git, configuration, tools, credentials, configs."""
+    state = _state(ctx)
+    project, error = None, None
+    try:
+        project = state.project()
+    except ConfigError as exc:
+        error = "invalid configuration: " + "; ".join(str(p) for p in exc.problems[:3])
+    except PtkError as exc:
+        error = str(exc)
+    credentials = state.app.credentials(project) if project else None
+    checks = state.app.doctor.run(project, error, credentials, state.app.role(project))
+    sys.exit(0 if _print_checks(checks) else 1)
+
+
+@cli.command("self-setup")
+@click.option(
+    "--tools/--no-tools",
+    default=False,
+    show_default=True,
+    help="Also install the configured tools.",
+)
+@click.option(
+    "--allow-system", is_flag=True, help="Allow apt/dnf for tools (needs sudo rights)."
+)
+@click.pass_context
+@guarded
+def self_setup_command(ctx: click.Context, tools: bool, allow_system: bool) -> None:
+    """Get this machine ready: check uv and git, sync shared configs, install the
+    pre-commit hooks, report missing credentials (and install tools with --tools)."""
+    state = _state(ctx)
+    project = state.project()
+    checks = state.app.self_setup.run(
+        project,
+        state.app.credentials(project),
+        install_tools=tools,
+        allow_system=allow_system,
+        out=lambda line: console.print(f"  [dim]{escape(line)}[/]", highlight=False),
+    )
+    sys.exit(0 if _print_checks(checks) else 1)
 
 
 # --------------------------------------------------------------------------- configs

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import inspect
 import types
-from typing import Any, Union, get_args, get_origin
+from typing import Any, Literal, Union, get_args, get_origin
 
 from pydantic import BaseModel
 
@@ -47,6 +47,14 @@ def _is_model(tp: Any) -> bool:
     return inspect.isclass(tp) and issubclass(tp, BaseModel)
 
 
+def _literal_keys(annotation: Any) -> set[str] | None:
+    """The allowed keys of ``dict[Literal[...], X]`` (None for other dicts)."""
+    args = get_args(annotation)
+    if args and get_origin(args[0]) is Literal:
+        return {str(v) for v in get_args(args[0])}
+    return None
+
+
 def unknown_keys(model: type[BaseModel], node: Node) -> list[Problem]:
     problems: list[Problem] = []
     _walk(model, node, (), problems)
@@ -64,6 +72,12 @@ def _walk(
         if node.is_map:
             models = [a for a in options if _is_model(a)]
             dicts = [a for a in options if get_origin(a) is dict]
+            keyed = [d for d in dicts if _literal_keys(d) is not None]
+            for candidate in keyed:  # e.g. {windows: ..., linux: ...}
+                keys = _literal_keys(candidate) or set()
+                if node.value and set(node.value) <= keys:
+                    _walk(candidate, node, path, problems)
+                    return
             if len(models) == 1:
                 _walk(models[0], node, path, problems)
             elif not models and dicts:
