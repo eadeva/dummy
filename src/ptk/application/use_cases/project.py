@@ -1,4 +1,5 @@
 """Load and validate a ptk project (use case)."""
+
 from __future__ import annotations
 
 import json
@@ -19,8 +20,10 @@ from ...domain.config.schema_walk import unknown_keys
 from ...domain.errors import ConfigError, Location, Problem
 from ..ports import CI_FILE, LOCAL_FILE, MAINTAINERS_FILE, ConfigSource, HostEnvironment
 
-_UNION_TAG = re.compile(r"^(str|int|float|bool|none|list\[.*\]|dict\[.*\]|literal\[.*\]|.*\[.*\]|function-.*)$",
-                        re.IGNORECASE)
+_UNION_TAG = re.compile(
+    r"^(str|int|float|bool|none|list\[.*\]|dict\[.*\]|literal\[.*\]|.*\[.*\]|function-.*)$",
+    re.IGNORECASE,
+)
 
 
 @dataclass
@@ -39,20 +42,31 @@ class Project:
         return t.locate(self.tree, path)
 
 
-def validation_problems(model: type[BaseModel], tree: t.Node, *, skip_unknown: bool) -> list[Problem]:
+def validation_problems(
+    model: type[BaseModel], tree: t.Node, *, skip_unknown: bool
+) -> list[Problem]:
     """pydantic errors mapped to file:line (unknown keys handled separately)."""
     try:
         model.model_validate(t.to_plain(tree))
     except ValidationError as exc:
         problems = []
-        model_names = {cls.__name__ for cls in BaseModel.__subclasses__()} | _all_model_names(model)
+        model_names = {
+            cls.__name__ for cls in BaseModel.__subclasses__()
+        } | _all_model_names(model)
         for error in exc.errors():
             if error["type"] == "extra_forbidden" and skip_unknown:
                 continue
-            path = tuple(p for p in error["loc"]
-                         if not (isinstance(p, str) and (p in model_names or _UNION_TAG.match(p))))
+            path = tuple(
+                p
+                for p in error["loc"]
+                if not (
+                    isinstance(p, str) and (p in model_names or _UNION_TAG.match(p))
+                )
+            )
             message = error["msg"].removeprefix("Value error, ")
-            problems.append(Problem(message, t.display_path(tree, path), t.locate(tree, path)))
+            problems.append(
+                Problem(message, t.display_path(tree, path), t.locate(tree, path))
+            )
         return _dedupe(problems)
     return []
 
@@ -74,6 +88,7 @@ def _all_model_names(model: type[BaseModel]) -> set[str]:
 
 def _types_in(annotation: Any):
     from typing import get_args
+
     yield annotation
     for arg in get_args(annotation):
         yield from _types_in(arg)
@@ -110,9 +125,19 @@ class LoadProject:
         self._host = host
         self._version = ptk_version
 
-    def execute(self, start: Path | None = None, *, config_file: Path | None = None,
-                overrides: list[str] | tuple[str, ...] = (), ci: bool | None = None) -> Project:
-        main = config_file.resolve() if config_file else self._source.find_main(start or Path.cwd())
+    def execute(
+        self,
+        start: Path | None = None,
+        *,
+        config_file: Path | None = None,
+        overrides: list[str] | tuple[str, ...] = (),
+        ci: bool | None = None,
+    ) -> Project:
+        main = (
+            config_file.resolve()
+            if config_file
+            else self._source.find_main(start or Path.cwd())
+        )
         root = main.parent
         tree = self._source.read(main)
         layers = [main.name]
@@ -133,19 +158,30 @@ class LoadProject:
         if problems:
             raise ConfigError(problems)
         config = PtkConfig.model_validate(t.to_plain(tree))
-        semantic = [Problem(message, t.display_path(tree, path), t.locate(tree, path))
-                    for path, message in config_rules.validate(config)]
+        semantic = [
+            Problem(message, t.display_path(tree, path), t.locate(tree, path))
+            for path, message in config_rules.validate(config)
+        ]
         if semantic:
             raise ConfigError(semantic)
         self._check_version(config, tree)
 
-        project = Project(config=config, root=root, main_file=main, tree=tree,
-                          files=list(dict.fromkeys(self._source.files)), layers=layers, ci=is_ci)
+        project = Project(
+            config=config,
+            root=root,
+            main_file=main,
+            tree=tree,
+            files=list(dict.fromkeys(self._source.files)),
+            layers=layers,
+            ci=is_ci,
+        )
         maintainers_file = root / MAINTAINERS_FILE
         if self._source.exists(maintainers_file):
             m_tree = self._source.read(maintainers_file)
             m_problems = unknown_keys(MaintainersSpec, m_tree)
-            m_problems += validation_problems(MaintainersSpec, m_tree, skip_unknown=bool(m_problems))
+            m_problems += validation_problems(
+                MaintainersSpec, m_tree, skip_unknown=bool(m_problems)
+            )
             if m_problems:
                 raise ConfigError(m_problems)
             project.maintainers = MaintainersSpec.model_validate(t.to_plain(m_tree))
@@ -158,13 +194,26 @@ class LoadProject:
         try:
             spec = SpecifierSet(config.ptk_version)
         except InvalidSpecifier:
-            raise ConfigError([Problem(f"invalid version range {config.ptk_version!r} (example: '>=0.1,<0.2')",
-                                       "ptk_version", loc)]) from None
+            raise ConfigError(
+                [
+                    Problem(
+                        f"invalid version range {config.ptk_version!r} (example: '>=0.1,<0.2')",
+                        "ptk_version",
+                        loc,
+                    )
+                ]
+            ) from None
         if not spec.contains(Version(self._version), prereleases=True):
-            raise ConfigError([Problem(
-                f"this project needs ptk {config.ptk_version}, but ptk {self._version} is running. "
-                f"Install the right version with: uv tool install \"ptk{config.ptk_version}\"",
-                "ptk_version", loc)])
+            raise ConfigError(
+                [
+                    Problem(
+                        f"this project needs ptk {config.ptk_version}, but ptk {self._version} is running. "
+                        f'Install the right version with: uv tool install "ptk{config.ptk_version}"',
+                        "ptk_version",
+                        loc,
+                    )
+                ]
+            )
 
 
 def path_text(path: t.Path) -> str:
@@ -177,7 +226,7 @@ def path_text(path: t.Path) -> str:
 @dataclass
 class ShowResult:
     value: Any
-    sources: list[tuple[str, str]]   # (path, location) for every leaf
+    sources: list[tuple[str, str]]  # (path, location) for every leaf
 
 
 class ShowConfig:
@@ -188,10 +237,21 @@ class ShowConfig:
             parent = t.get(project.tree, path[:-1]) if path else None
             options = list(parent.value) if parent is not None and parent.is_map else []
             from ...domain.suggest import did_you_mean
-            raise ConfigError([Problem(f"no configuration value at '{dotted}'"
-                                       f"{did_you_mean(str(path[-1]), options) if path else ''}")])
-        sources = [(t.format_path(path + p), str(loc)) for p, loc in t.provenance(node).items()
-                   if t.get(node, p) is not None and not (t.get(node, p).is_map or t.get(node, p).is_list)]
+
+            raise ConfigError(
+                [
+                    Problem(
+                        f"no configuration value at '{dotted}'"
+                        f"{did_you_mean(str(path[-1]), options) if path else ''}"
+                    )
+                ]
+            )
+        sources = [
+            (t.format_path(path + p), str(loc))
+            for p, loc in t.provenance(node).items()
+            if t.get(node, p) is not None
+            and not (t.get(node, p).is_map or t.get(node, p).is_list)
+        ]
         return ShowResult(t.to_plain(node), sources)
 
 
@@ -208,13 +268,23 @@ class ExportSchema:
             body["required"] = [r for r in body.get("required", []) if r != "name"]
             body["title"] = "Step"
             defs["StepBody"] = body
-            entry = {"type": "object", "minProperties": 1, "maxProperties": 1,
-                     "description": "- step-name: {run|uses|steps: ...}  or  - step-name: \"command\"",
-                     "additionalProperties": {"anyOf": [{"$ref": "#/$defs/StepBody"},
-                                                        {"type": "string"},
-                                                        {"type": "array", "items": {"type": "string"}}]}}
+            entry = {
+                "type": "object",
+                "minProperties": 1,
+                "maxProperties": 1,
+                "description": '- step-name: {run|uses|steps: ...}  or  - step-name: "command"',
+                "additionalProperties": {
+                    "anyOf": [
+                        {"$ref": "#/$defs/StepBody"},
+                        {"type": "string"},
+                        {"type": "array", "items": {"type": "string"}},
+                    ]
+                },
+            }
             defs["StepEntry"] = entry
-            text = json.dumps(schema).replace('"#/$defs/StepSpec"', '"#/$defs/StepEntry"')
+            text = json.dumps(schema).replace(
+                '"#/$defs/StepSpec"', '"#/$defs/StepEntry"'
+            )
             schema = json.loads(text)
             schema["$defs"].pop("StepSpec", None)
         schema["title"] = "ptk configuration (*.ptk.yml)"

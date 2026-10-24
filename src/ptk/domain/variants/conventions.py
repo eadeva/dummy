@@ -7,6 +7,7 @@
 * substitution namespace ``vh``: ``${vh.variant}``, ``${vh.features.X}``,
   ``${vh.components.x}``, ``${vh.data.<path>}``
 """
+
 from __future__ import annotations
 
 import re
@@ -30,10 +31,14 @@ def env_value(value: Any) -> str:
 
 def environment(line: ProductLineSpec, resolved: ResolvedVariant) -> dict[str, str]:
     prefix = line.env.prefix
-    env = {f"{prefix}VARIANT": resolved.name,
-           f"{prefix}COMPONENTS": " ".join(resolved.components)}
+    env = {
+        f"{prefix}VARIANT": resolved.name,
+        f"{prefix}COMPONENTS": " ".join(resolved.components),
+    }
     for comp in line.components:
-        env[f"{prefix}COMPONENT_{comp.upper()}"] = env_value(resolved.component_active(comp))
+        env[f"{prefix}COMPONENT_{comp.upper()}"] = env_value(
+            resolved.component_active(comp)
+        )
     for name, feature in resolved.features.items():
         env[f"{prefix}{name}"] = env_value(feature.value)
         if line.env.legacy_bo:
@@ -46,19 +51,25 @@ def namespace(resolved: ResolvedVariant) -> dict[str, Any]:
     return {
         "variant": resolved.name,
         "aliases": list(resolved.aliases),
-        "components": {c: resolved.component_active(c) for c in resolved.all_components},
+        "components": {
+            c: resolved.component_active(c) for c in resolved.all_components
+        },
         "component_list": list(resolved.components),
         "features": dict(resolved.values),
         "data": resolved.data,
     }
 
 
-def tags(line: ProductLineSpec, resolved: ResolvedVariant) -> tuple[list[str], list[str]]:
+def tags(
+    line: ProductLineSpec, resolved: ResolvedVariant
+) -> tuple[list[str], list[str]]:
     on = [f"variant_{identifier(resolved.name)}"]
     off: list[str] = []
     for comp in line.components:
-        (on if resolved.component_active(comp) else off).append(f"component_{identifier(comp)}")
-    for comp, name, spec in line.iter_features():
+        (on if resolved.component_active(comp) else off).append(
+            f"component_{identifier(comp)}"
+        )
+    for _comp, name, spec in line.iter_features():
         value = resolved.features[name].value
         base = f"feature_{identifier(name)}"
         if spec.type is FeatureType.ENUM:

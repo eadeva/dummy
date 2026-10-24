@@ -1,4 +1,5 @@
 """Variant use cases."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -37,8 +38,13 @@ class VariantService:
 
     def list(self, include_abstract: bool = True) -> list[VariantSummary]:
         default = vr.default_variant(self.line)
-        return [VariantSummary(n, s.description, s.abstract, s.aliases, s.extends, n == default)
-                for n, s in self.line.variants.items() if include_abstract or not s.abstract]
+        return [
+            VariantSummary(
+                n, s.description, s.abstract, s.aliases, s.extends, n == default
+            )
+            for n, s in self.line.variants.items()
+            if include_abstract or not s.abstract
+        ]
 
     def name_of(self, name_or_alias: str | None) -> str:
         if name_or_alias is None:

@@ -3,6 +3,7 @@
 pydantic would also reject unknown keys, but walking the located tree gives
 the exact line of the misspelled key and a "did you mean" hint.
 """
+
 from __future__ import annotations
 
 import inspect
@@ -22,8 +23,13 @@ def _named(path: Path) -> Path:
     """Drop the list index in front of a step name: steps[1].compile -> steps.compile."""
     result: list[str | int] = []
     for i, part in enumerate(path):
-        if isinstance(part, int) and i + 1 < len(path) and isinstance(path[i + 1], str) \
-                and i > 0 and path[i - 1] == "steps":
+        if (
+            isinstance(part, int)
+            and i + 1 < len(path)
+            and isinstance(path[i + 1], str)
+            and i > 0
+            and path[i - 1] == "steps"
+        ):
             continue
         result.append(part)
     return tuple(result)
@@ -47,7 +53,9 @@ def unknown_keys(model: type[BaseModel], node: Node) -> list[Problem]:
     return problems
 
 
-def _walk(annotation: Any, node: Node | None, path: Path, problems: list[Problem]) -> None:
+def _walk(
+    annotation: Any, node: Node | None, path: Path, problems: list[Problem]
+) -> None:
     if node is None or annotation is Any:
         return
     origin = get_origin(annotation)
@@ -69,17 +77,25 @@ def _walk(annotation: Any, node: Node | None, path: Path, problems: list[Problem
         if not node.is_map:
             return
         allowed = _allowed_keys(annotation)
-        if annotation.__name__ == _STEP_MODEL and "name" not in node.value and len(node.value) == 1:
-            (step_name, body), = node.value.items()
+        if (
+            annotation.__name__ == _STEP_MODEL
+            and "name" not in node.value
+            and len(node.value) == 1
+        ):
+            ((step_name, body),) = node.value.items()
             if not body.is_map:
                 return  # short form: "- name: <command>"
             node, path = body, path + (step_name,)
         for key, child in node.value.items():
             if key not in allowed:
                 visible = [k for k in allowed if k != "with_"]
-                problems.append(Problem(
-                    f"unknown key '{key}'{did_you_mean(key, visible)}",
-                    path=format_path(_named(path + (key,))), location=node.key_locs.get(key) or child.loc))
+                problems.append(
+                    Problem(
+                        f"unknown key '{key}'{did_you_mean(key, visible)}",
+                        path=format_path(_named(path + (key,))),
+                        location=node.key_locs.get(key) or child.loc,
+                    )
+                )
                 continue
             field = annotation.model_fields[allowed[key]]
             _walk(field.annotation, child, path + (key,), problems)

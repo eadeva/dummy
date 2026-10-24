@@ -1,4 +1,5 @@
 """HostEnvironment adapter: environment variables, CI detection, user identity."""
+
 from __future__ import annotations
 
 import getpass
@@ -8,7 +9,15 @@ import subprocess
 import sys
 from collections.abc import Mapping
 
-CI_VARIABLES = ("CI", "GITHUB_ACTIONS", "GITLAB_CI", "JENKINS_URL", "TF_BUILD", "BUILDKITE", "TEAMCITY_VERSION")
+CI_VARIABLES = (
+    "CI",
+    "GITHUB_ACTIONS",
+    "GITLAB_CI",
+    "JENKINS_URL",
+    "TF_BUILD",
+    "BUILDKITE",
+    "TEAMCITY_VERSION",
+)
 
 
 class SystemHost:
@@ -24,7 +33,10 @@ class SystemHost:
             return True
         if self._environ.get("PTK_CI", "").lower() in {"0", "false", "no"}:
             return False
-        return any(self._environ.get(name, "").lower() not in ("", "0", "false") for name in CI_VARIABLES)
+        return any(
+            self._environ.get(name, "").lower() not in ("", "0", "false")
+            for name in CI_VARIABLES
+        )
 
     def os_name(self) -> str:
         if sys.platform.startswith("win"):
@@ -38,7 +50,13 @@ class SystemHost:
         git = shutil.which("git")
         if git:
             try:
-                out = subprocess.run([git, "config", "user.email"], capture_output=True, text=True, timeout=5)
+                out = subprocess.run(
+                    [git, "config", "user.email"],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                    timeout=5,
+                )
                 email = out.stdout.strip() or None
             except (OSError, subprocess.SubprocessError):
                 email = None

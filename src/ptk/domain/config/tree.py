@@ -12,6 +12,7 @@ Merge rules
 * ``!replace``       -> the overlay replaces the base even for mappings
 * ``!append``        -> the overlay list is appended to the base list
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -25,10 +26,12 @@ Path = tuple[str | int, ...]
 
 @dataclass
 class Node:
-    value: Any                      # dict[str, Node] | list[Node] | scalar
+    value: Any  # dict[str, Node] | list[Node] | scalar
     loc: Location | None = None
     op: Op = None
-    key_locs: dict[str, Location] = field(default_factory=dict)  # locations of mapping keys
+    key_locs: dict[str, Location] = field(
+        default_factory=dict
+    )  # locations of mapping keys
 
     @property
     def is_map(self) -> bool:
@@ -42,8 +45,11 @@ class Node:
 def from_plain(value: Any, loc: Location | None = None) -> Node:
     """Wrap plain Python data (e.g. from ``--set``) into nodes with one location."""
     if isinstance(value, dict):
-        return Node({str(k): from_plain(v, loc) for k, v in value.items()}, loc,
-                    key_locs={str(k): loc for k in value} if loc else {})
+        return Node(
+            {str(k): from_plain(v, loc) for k, v in value.items()},
+            loc,
+            key_locs={str(k): loc for k in value} if loc else {},
+        )
     if isinstance(value, list):
         return Node([from_plain(v, loc) for v in value], loc)
     return Node(value, loc)
@@ -54,7 +60,9 @@ def merge(base: Node | None, overlay: Node) -> Node:
         return _strip_ops(overlay)
     if overlay.op == "append":
         if base.is_list and overlay.is_list:
-            return Node(base.value + [_strip_ops(n) for n in overlay.value], overlay.loc)
+            return Node(
+                base.value + [_strip_ops(n) for n in overlay.value], overlay.loc
+            )
         return _strip_ops(overlay)
     if base.is_map and overlay.is_map:
         merged = dict(base.value)
@@ -69,7 +77,11 @@ def merge(base: Node | None, overlay: Node) -> Node:
 
 def _strip_ops(node: Node) -> Node:
     if node.is_map:
-        return Node({k: _strip_ops(v) for k, v in node.value.items()}, node.loc, key_locs=node.key_locs)
+        return Node(
+            {k: _strip_ops(v) for k, v in node.value.items()},
+            node.loc,
+            key_locs=node.key_locs,
+        )
     if node.is_list:
         return Node([_strip_ops(v) for v in node.value], node.loc)
     return Node(node.value, node.loc)
@@ -125,18 +137,26 @@ def parse_dotted(dotted: str) -> Path:
 
 def overlay_for(path: Path, value: Node) -> Node:
     """Build a sparse overlay tree that sets ``value`` at ``path``."""
+    if any(isinstance(part, int) for part in path):
+        raise ValueError(
+            "list indices cannot be set with --set; set the whole list instead"
+        )
     node = value
     for part in reversed(path):
-        if isinstance(part, int):
-            raise ValueError("list indices cannot be set with --set; set the whole list instead")
-        node = Node({part: node}, value.loc, key_locs={part: value.loc} if value.loc else {})
+        node = Node(
+            {part: node}, value.loc, key_locs={part: value.loc} if value.loc else {}
+        )
     return node
 
 
 def format_path(path: Path) -> str:
     text = ""
     for part in path:
-        text += f"[{part}]" if isinstance(part, int) else (f".{part}" if text else str(part))
+        text += (
+            f"[{part}]"
+            if isinstance(part, int)
+            else (f".{part}" if text else str(part))
+        )
     return text
 
 
@@ -147,15 +167,31 @@ def display_path(root: Node, path: Path) -> str:
     current: Node | None = root
     for part in path:
         nxt = get(current, (part,)) if current is not None else None
-        if nxt is None and current is not None and current.is_map and len(current.value) == 1:
+        if (
+            nxt is None
+            and current is not None
+            and current.is_map
+            and len(current.value) == 1
+        ):
             only = next(iter(current.value))
             if get(current.value[only], (part,)) is not None:
                 current = current.value[only]
                 nxt = get(current, (part,))
-        if isinstance(part, int) and nxt is not None and nxt.is_map and len(nxt.value) == 1 \
-                and "name" not in nxt.value:
+        if (
+            isinstance(part, int)
+            and nxt is not None
+            and nxt.is_map
+            and len(nxt.value) == 1
+            and "name" not in nxt.value
+        ):
             parts.append(next(iter(nxt.value)))
-        elif isinstance(part, str) and parts and parts[-1] == part and current is not None and not current.is_map:
+        elif (
+            isinstance(part, str)
+            and parts
+            and parts[-1] == part
+            and current is not None
+            and not current.is_map
+        ):
             continue
         else:
             parts.append(part)

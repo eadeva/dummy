@@ -10,6 +10,7 @@
 Without variants the ``<variant>`` level is ``default``. Folder names and the
 root are configurable (``layout:``); names are sanitised for all platforms.
 """
+
 from __future__ import annotations
 
 import re
@@ -39,8 +40,12 @@ class Layout:
     def _steps(self, step_path: tuple[str, ...]) -> list[str]:
         return [safe(s) for s in step_path]
 
-    def build_dir(self, variant: str | None, action: str, step_path: tuple[str, ...] = ()) -> PurePath:
-        return self.root.joinpath(self.builds, self._variant(variant), safe(action), *self._steps(step_path))
+    def build_dir(
+        self, variant: str | None, action: str, step_path: tuple[str, ...] = ()
+    ) -> PurePath:
+        return self.root.joinpath(
+            self.builds, self._variant(variant), safe(action), *self._steps(step_path)
+        )
 
     def bin_dir(self, variant: str | None) -> PurePath:
         return self.root.joinpath(self.bin, self._variant(variant))
@@ -51,12 +56,23 @@ class Layout:
     def run_log(self, variant: str | None, action: str) -> PurePath:
         return self.action_log_dir(variant, action) / "run.log"
 
-    def step_log(self, variant: str | None, action: str, step_path: tuple[str, ...]) -> PurePath:
+    def step_log(
+        self, variant: str | None, action: str, step_path: tuple[str, ...]
+    ) -> PurePath:
         parts = self._steps(step_path)
-        return self.action_log_dir(variant, action).joinpath(*parts[:-1], f"{parts[-1]}.log")
+        return self.action_log_dir(variant, action).joinpath(
+            *parts[:-1], f"{parts[-1]}.log"
+        )
 
-    def reports_dir(self, variant: str | None, action: str, step_path: tuple[str, ...] = ()) -> PurePath:
-        return self.root.joinpath(self.reports, self._variant(variant), safe(action), *self._steps(step_path))
+    def reports_dir(
+        self, variant: str | None, action: str, step_path: tuple[str, ...] = ()
+    ) -> PurePath:
+        return self.root.joinpath(
+            self.reports, self._variant(variant), safe(action), *self._steps(step_path)
+        )
 
     def all_roots(self) -> list[PurePath]:
-        return [self.root / name for name in (self.builds, self.bin, self.logs, self.reports)]
+        return [
+            self.root / name
+            for name in (self.builds, self.bin, self.logs, self.reports)
+        ]

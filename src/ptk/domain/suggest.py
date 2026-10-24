@@ -1,4 +1,5 @@
 """'Did you mean ...' helper used for every unknown name."""
+
 from __future__ import annotations
 
 import difflib

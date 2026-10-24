@@ -17,13 +17,23 @@ def test_config_validate_and_show():
     assert result.exit_code == 0, result.output
     assert "configuration is valid" in result.output
     show = run("config", "show", "actions.build.params.jobs", "--format", "json")
-    assert json.loads(show.output) == {"type": "int", "default": 8, "help": "Parallel jobs"}
+    assert json.loads(show.output) == {
+        "type": "int",
+        "default": 8,
+        "help": "Parallel jobs",
+    }
     sources = run("config", "show", "project", "--sources")
     assert "main.ptk.yml:7" in sources.output
 
 
 def test_set_override():
-    result = run("--set", "actions.build.params.jobs.default=3", "config", "show", "actions.build.params.jobs.default")
+    result = run(
+        "--set",
+        "actions.build.params.jobs.default=3",
+        "config",
+        "show",
+        "actions.build.params.jobs.default",
+    )
     assert result.output.strip().startswith("3")
 
 
@@ -46,3 +56,37 @@ def test_errors_exit_2():
     result = CliRunner().invoke(cli, [*CONFIG, "variant", "show", "nope"])
     assert result.exit_code == 2
     assert "unknown variant 'nope'" in result.output
+
+
+def test_dry_run_of_demo_shows_plan_without_executing():
+    result = run("run", "build", "--dry-run", "-V", "b_us", "-p", "jobs=3", "--env")
+    assert result.exit_code == 0, result.output
+    assert "dry run" in result.output and "-j 3" in result.output
+    assert "camera-selftest: skipped (condition is false" in result.output
+    assert "VH_VARIANT=customer_b_us" in result.output
+    assert not (DEMO / "_logs").exists()
+
+
+def test_run_errors_are_clean():
+    assert "did you mean 'build'" in run("run", "biuld", "-n").output
+    bad = run("run", "build", "-n", "-p", "jobs=lots")
+    assert bad.exit_code == 2 and "parameter 'jobs'" in bad.output
+    assert "no selected step" in run("run", "build", "-n", "--", "-x").output
+
+
+def test_run_executes_and_returns_exit_code(write):
+    root = write(
+        {
+            "main.ptk.yml": """
+        project: {name: t}
+        actions:
+          ok: {steps: [{hi: "echo hi-there"}]}
+          bad: {steps: [{fail: "exit 4"}]}
+        """
+        }
+    )
+    config = ["--config", str(root / "main.ptk.yml"), "--no-ci"]
+    ok = CliRunner().invoke(cli, [*config, "run", "ok"], catch_exceptions=False)
+    assert ok.exit_code == 0 and "hi-there" in ok.output
+    bad = CliRunner().invoke(cli, [*config, "run", "bad"], catch_exceptions=False)
+    assert bad.exit_code == 1 and "exit code 4" in bad.output

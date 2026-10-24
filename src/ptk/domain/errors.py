@@ -3,6 +3,7 @@
 Every user-facing problem is a ``Problem`` with an optional source location,
 so drivers can print ``file:line: path: message`` consistently.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

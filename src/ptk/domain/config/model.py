@@ -13,6 +13,7 @@ Steps are written as an ordered list of single-key mappings::
           steps:
             - lint: {run: tools/lint.py, python: {uvx: "ruff==0.6.9"}}
 """
+
 from __future__ import annotations
 
 import re
@@ -28,10 +29,31 @@ STEP_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 
 RESERVED_ACTIONS = {
-    "config", "variant", "creds", "configs", "setup", "self-setup", "doctor", "report",
-    "plan", "init", "help", "vscode", "version",
+    "config",
+    "variant",
+    "creds",
+    "configs",
+    "setup",
+    "self-setup",
+    "doctor",
+    "report",
+    "run",
+    "init",
+    "help",
+    "vscode",
+    "version",
 }
-RESERVED_PARAMS = {"from", "to", "variant", "all_variants", "dry_run", "setup", "set", "params", "help"}
+RESERVED_PARAMS = {
+    "from",
+    "to",
+    "variant",
+    "all_variants",
+    "dry_run",
+    "setup",
+    "set",
+    "params",
+    "help",
+}
 
 SCHEMA_VERSION = 1
 
@@ -67,7 +89,7 @@ class ParamSpec(_Strict):
     choices: list[str] | None = None
     help: str = ""
     required: bool = False
-    env: str | None = None          # read the value from this environment variable
+    env: str | None = None  # read the value from this environment variable
 
     @model_validator(mode="after")
     def _check(self) -> ParamSpec:
@@ -109,7 +131,9 @@ class ParamSpec(_Strict):
         if kind == "choice":
             value = str(raw)
             if value not in (self.choices or []):
-                raise ValueError(f"expected one of {', '.join(self.choices or [])}, got {raw!r}")
+                raise ValueError(
+                    f"expected one of {', '.join(self.choices or [])}, got {raw!r}"
+                )
             return value
         if kind == "list":
             if isinstance(raw, list):
@@ -122,8 +146,8 @@ class ParamSpec(_Strict):
 
 
 class VenvSpec(_Strict):
-    requirements: list[str] = Field(default_factory=list)   # requirement files
-    packages: list[str] = Field(default_factory=list)       # extra packages
+    requirements: list[str] = Field(default_factory=list)  # requirement files
+    packages: list[str] = Field(default_factory=list)  # extra packages
     python: str | None = None
 
     @field_validator("requirements", "packages", mode="before")
@@ -133,10 +157,12 @@ class VenvSpec(_Strict):
 
 
 class PythonSpec(_Strict):
-    uvx: str | None = None                     # "ruff==0.6.9"
-    with_: list[str] = Field(default_factory=list, alias="with")  # extra packages for uvx
+    uvx: str | None = None  # "ruff==0.6.9"
+    with_: list[str] = Field(
+        default_factory=list, alias="with"
+    )  # extra packages for uvx
     venv: VenvSpec | None = None
-    project: str | None = None                 # uv run --project <dir>
+    project: str | None = None  # uv run --project <dir>
     interpreter: Literal["cli"] | None = None  # ptk's own environment
 
     @field_validator("with_", mode="before")
@@ -146,9 +172,15 @@ class PythonSpec(_Strict):
 
     @model_validator(mode="after")
     def _exactly_one(self) -> PythonSpec:
-        chosen = [k for k in ("uvx", "venv", "project", "interpreter") if getattr(self, k) is not None]
+        chosen = [
+            k
+            for k in ("uvx", "venv", "project", "interpreter")
+            if getattr(self, k) is not None
+        ]
         if len(chosen) != 1:
-            raise ValueError("python needs exactly one of: uvx, venv, project, interpreter")
+            raise ValueError(
+                "python needs exactly one of: uvx, venv, project, interpreter"
+            )
         if self.with_ and self.uvx is None:
             raise ValueError("'with' is only allowed together with uvx")
         return self
@@ -160,7 +192,7 @@ class PythonSpec(_Strict):
 def normalize_step_entry(raw: Any) -> Any:
     """``{name: body}`` -> ``{"name": name, **body}``; string body -> ``run``."""
     if isinstance(raw, dict) and "name" not in raw and len(raw) == 1:
-        (name, body), = raw.items()
+        ((name, body),) = raw.items()
         if body is None:
             body = {}
         if isinstance(body, (str, list)):
@@ -184,7 +216,7 @@ class StepSpec(_Strict):
     retries: int = Field(default=0, ge=0)
     cwd: str | None = None
     env: dict[str, str] = Field(default_factory=dict)
-    secrets: dict[str, str] = Field(default_factory=dict)   # ENV_VAR: credential.field
+    secrets: dict[str, str] = Field(default_factory=dict)  # ENV_VAR: credential.field
     python: PythonSpec | None = None
     passthrough: bool = False
     report: bool = True
@@ -204,10 +236,14 @@ class StepSpec(_Strict):
     @model_validator(mode="after")
     def _check(self) -> StepSpec:
         if not STEP_RE.match(self.name):
-            raise ValueError(f"step name {self.name!r} may only contain letters, digits, '_', '.', '-'")
+            raise ValueError(
+                f"step name {self.name!r} may only contain letters, digits, '_', '.', '-'"
+            )
         kinds = [k for k in ("run", "uses", "steps") if getattr(self, k) is not None]
         if len(kinds) != 1:
-            raise ValueError(f"step '{self.name}' needs exactly one of: run, uses, steps")
+            raise ValueError(
+                f"step '{self.name}' needs exactly one of: run, uses, steps"
+            )
         if self.parallel and self.steps is None:
             raise ValueError("'parallel' is only allowed for step sets (steps:)")
         if self.python is not None and self.run is None:
@@ -273,7 +309,7 @@ class ActionSpec(_Strict):
 
 
 class EnvironmentSpec(_Strict):
-    isolate: bool = False                    # start from a minimal OS environment
+    isolate: bool = False  # start from a minimal OS environment
     keep: list[str] = Field(default_factory=list)
     set: dict[str, str] = Field(default_factory=dict)
     unset: list[str] = Field(default_factory=list)
@@ -290,18 +326,20 @@ class DownloadSource(_Strict):
     url: str
     sha256: str | None = None
     extract: bool = True
-    bin: str | None = None                   # sub folder with the executables
+    bin: str | None = None  # sub folder with the executables
 
 
 class ToolSpec(_Strict):
     description: str = ""
-    version: str | None = None               # PEP 440 style range: ">=3.28,<4"
-    check: str | None = None                 # command printing the version
+    version: str | None = None  # PEP 440 style range: ">=3.28,<4"
+    check: str | None = None  # command printing the version
     version_regex: str = r"(\d+\.\d+(?:\.\d+)?)"
-    choco: str | ChocoSource | None = None   # Windows
-    uv_tool: str | None = None               # Windows + Linux
-    download: DownloadSource | dict[Literal["windows", "linux"], DownloadSource] | None = None
-    apt: str | None = None                   # opt-in, needs sudo
+    choco: str | ChocoSource | None = None  # Windows
+    uv_tool: str | None = None  # Windows + Linux
+    download: (
+        DownloadSource | dict[Literal["windows", "linux"], DownloadSource] | None
+    ) = None
+    apt: str | None = None  # opt-in, needs sudo
     dnf: str | None = None
 
 
@@ -315,16 +353,20 @@ class GopassSpec(_Strict):
 class CredentialSpec(_Strict):
     description: str = ""
     fields: list[str] = Field(default_factory=lambda: ["token"])
-    providers: list[ProviderName] = Field(default_factory=lambda: ["env", "gopass", "vault", "prompt"])
-    env: dict[str, str] = Field(default_factory=dict)       # field: ENV_VAR
+    providers: list[ProviderName] = Field(
+        default_factory=lambda: ["env", "gopass", "vault", "prompt"]
+    )
+    env: dict[str, str] = Field(default_factory=dict)  # field: ENV_VAR
     gopass: GopassSpec | None = None
-    test: str | None = None                                 # command to verify the credential
+    test: str | None = None  # command to verify the credential
 
     @model_validator(mode="after")
     def _check(self) -> CredentialSpec:
         unknown = set(self.env) - set(self.fields)
         if unknown:
-            raise ValueError(f"env maps unknown field(s) {sorted(unknown)}; fields are {self.fields}")
+            raise ValueError(
+                f"env maps unknown field(s) {sorted(unknown)}; fields are {self.fields}"
+            )
         return self
 
 
@@ -342,6 +384,7 @@ class SharedConfigSpec(_Strict):
 
 class LayoutSpec(_Strict):
     """Workspace folders: <root>/_builds|_bin|_logs|_reports/<variant>/<action>/<step>."""
+
     root: str = "."
     builds: str = "_builds"
     bin: str = "_bin"
@@ -358,12 +401,13 @@ class LayoutSpec(_Strict):
 
 class LoggingSpec(_Strict):
     level: Literal["trace", "debug", "info", "warning", "error"] = "info"
-    keep_history: int = Field(default=10, ge=0)   # previous runs kept per variant/action
+    keep_history: int = Field(default=10, ge=0)  # previous runs kept per variant/action
 
 
 class ReportingSpec(_Strict):
     formats: list[Literal["json", "junit", "html", "markdown", "github"]] = Field(
-        default_factory=lambda: ["json", "html"])
+        default_factory=lambda: ["json", "html"]
+    )
     dir: str | None = None
 
 
@@ -372,7 +416,7 @@ class ReportingSpec(_Strict):
 
 class PtkConfig(_Strict):
     schema_version: Literal[1] = 1
-    ptk_version: str | None = None           # required ptk version range, e.g. ">=0.1,<0.2"
+    ptk_version: str | None = None  # required ptk version range, e.g. ">=0.1,<0.2"
     project: ProjectSpec
     vars: dict[str, Any] = Field(default_factory=dict)
     environment: EnvironmentSpec = Field(default_factory=EnvironmentSpec)
@@ -391,7 +435,9 @@ class PtkConfig(_Strict):
     def _action_names(cls, v: dict[str, ActionSpec]) -> dict[str, ActionSpec]:
         for name in v:
             if not ACTION_RE.match(name):
-                raise ValueError(f"action name {name!r} must be lower-case (letters, digits, '-')")
+                raise ValueError(
+                    f"action name {name!r} must be lower-case (letters, digits, '-')"
+                )
             if name in RESERVED_ACTIONS:
                 raise ValueError(f"action name {name!r} is reserved by ptk")
         return v
@@ -401,7 +447,9 @@ class PtkConfig(_Strict):
     def _names(cls, v: dict[str, Any]) -> dict[str, Any]:
         for name in v:
             if not NAME_RE.match(name):
-                raise ValueError(f"name {name!r} may only contain letters, digits, '_' and '-'")
+                raise ValueError(
+                    f"name {name!r} may only contain letters, digits, '_' and '-'"
+                )
         return v
 
 

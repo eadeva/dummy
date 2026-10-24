@@ -15,6 +15,7 @@ A string that is exactly one reference keeps the value's type (``${params.jobs}`
 -> 8); otherwise values are inserted as text (booleans as ``true``/``false``).
 Unknown names are errors with suggestions.
 """
+
 from __future__ import annotations
 
 import re
@@ -81,7 +82,7 @@ def split_reference(ref: str) -> tuple[str, str]:
     """('env', 'HOME:-x') / ('vars', 'a.b') ..."""
     for ns in ("env", "secret"):
         if ref.startswith(ns + ":"):
-            return ns, ref[len(ns) + 1:]
+            return ns, ref[len(ns) + 1 :]
     head, _, rest = ref.partition(".")
     return head, rest
 
@@ -92,7 +93,7 @@ class Scope:
 
     env: Mapping[str, str] = field(default_factory=dict)
     vars: Mapping[str, Any] = field(default_factory=dict)
-    namespaces: dict[str, Any] = field(default_factory=dict)       # params, vh, project, run
+    namespaces: dict[str, Any] = field(default_factory=dict)  # params, vh, project, run
     secret: Callable[[str], str] | None = None
     _resolving: list[str] = field(default_factory=list)
     _cache: dict[str, Any] = field(default_factory=dict)
@@ -105,7 +106,9 @@ class Scope:
                 return self.env[name]
             if sep:
                 return default
-            raise SubstitutionError(f"environment variable '{name}' is not set (use ${{env:{name}:-default}})")
+            raise SubstitutionError(
+                f"environment variable '{name}' is not set (use ${{env:{name}:-default}})"
+            )
         if ns == "secret":
             if self.secret is None:
                 raise SubstitutionError(f"secret '{rest}' is not available here")
@@ -113,17 +116,27 @@ class Scope:
         if ns == "vars":
             return self._var(rest)
         if ns not in self.namespaces:
-            known = [n for n in NAMESPACES if n in self.namespaces or n in ("env", "vars", "secret")]
-            raise SubstitutionError(f"unknown namespace '{ns}' in ${{{ref}}}{did_you_mean(ns, known)}")
+            known = [
+                n
+                for n in NAMESPACES
+                if n in self.namespaces or n in ("env", "vars", "secret")
+            ]
+            raise SubstitutionError(
+                f"unknown namespace '{ns}' in ${{{ref}}}{did_you_mean(ns, known)}"
+            )
         return _walk(self.namespaces[ns], rest, ns, ref)
 
     def _var(self, dotted: str) -> Any:
         name, _, rest = dotted.partition(".")
         if name not in self.vars:
-            raise SubstitutionError(f"unknown variable 'vars.{name}'{did_you_mean(name, self.vars)}")
+            raise SubstitutionError(
+                f"unknown variable 'vars.{name}'{did_you_mean(name, self.vars)}"
+            )
         if name not in self._cache:
             if name in self._resolving:
-                raise SubstitutionError(f"circular vars reference: {' -> '.join(self._resolving + [name])}")
+                raise SubstitutionError(
+                    f"circular vars reference: {' -> '.join(self._resolving + [name])}"
+                )
             self._resolving.append(name)
             try:
                 self._cache[name] = substitute(self.vars[name], self.resolve)
@@ -144,7 +157,9 @@ def _walk(value: Any, dotted: str, prefix: str, ref: str) -> Any:
     for part in dotted.split("."):
         if not isinstance(current, Mapping) or part not in current:
             options = list(current) if isinstance(current, Mapping) else []
-            raise SubstitutionError(f"unknown name '{walked}.{part}' in ${{{ref}}}{did_you_mean(part, options)}")
+            raise SubstitutionError(
+                f"unknown name '{walked}.{part}' in ${{{ref}}}{did_you_mean(part, options)}"
+            )
         current = current[part]
         walked += f".{part}"
     return current

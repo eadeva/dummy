@@ -15,6 +15,7 @@ constraints) and step conditions (``when:``). A subset of Python syntax::
 * no calls, arithmetic, subscripts, lambdas ... - parsed with ``ast`` against
   a whitelist; nothing is ever executed
 """
+
 from __future__ import annotations
 
 import ast
@@ -23,9 +24,27 @@ from functools import lru_cache
 from typing import Any
 
 _ALLOWED = (
-    ast.Expression, ast.BoolOp, ast.And, ast.Or, ast.UnaryOp, ast.Not,
-    ast.Compare, ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE, ast.In, ast.NotIn,
-    ast.Name, ast.Attribute, ast.Load, ast.Constant, ast.List, ast.Tuple,
+    ast.Expression,
+    ast.BoolOp,
+    ast.And,
+    ast.Or,
+    ast.UnaryOp,
+    ast.Not,
+    ast.Compare,
+    ast.Eq,
+    ast.NotEq,
+    ast.Lt,
+    ast.LtE,
+    ast.Gt,
+    ast.GtE,
+    ast.In,
+    ast.NotIn,
+    ast.Name,
+    ast.Attribute,
+    ast.Load,
+    ast.Constant,
+    ast.List,
+    ast.Tuple,
 )
 
 
@@ -45,10 +64,18 @@ def parse(expr: str) -> ast.Expression:
         raise ExpressionError(f"invalid expression {expr!r}: {exc.msg}") from None
     for node in ast.walk(tree):
         if not isinstance(node, _ALLOWED):
-            raise ExpressionError(f"unsupported syntax '{type(node).__name__}' in {expr!r}")
-        if isinstance(node, ast.Attribute) and not isinstance(node.value, (ast.Name, ast.Attribute)):
-            raise ExpressionError(f"attribute access is only allowed on names in {expr!r}")
-        if isinstance(node, ast.Constant) and not isinstance(node.value, (bool, int, float, str, type(None))):
+            raise ExpressionError(
+                f"unsupported syntax '{type(node).__name__}' in {expr!r}"
+            )
+        if isinstance(node, ast.Attribute) and not isinstance(
+            node.value, (ast.Name, ast.Attribute)
+        ):
+            raise ExpressionError(
+                f"attribute access is only allowed on names in {expr!r}"
+            )
+        if isinstance(node, ast.Constant) and not isinstance(
+            node.value, (bool, int, float, str, type(None))
+        ):
             raise ExpressionError(f"unsupported constant {node.value!r} in {expr!r}")
     return tree
 
@@ -89,10 +116,14 @@ def evaluate(expr: str, symbols: Mapping[str, Any]) -> bool:
 
 
 _COMPARE = {
-    ast.Eq: lambda a, b: a == b, ast.NotEq: lambda a, b: a != b,
-    ast.Lt: lambda a, b: a < b, ast.LtE: lambda a, b: a <= b,
-    ast.Gt: lambda a, b: a > b, ast.GtE: lambda a, b: a >= b,
-    ast.In: lambda a, b: a in b, ast.NotIn: lambda a, b: a not in b,
+    ast.Eq: lambda a, b: a == b,
+    ast.NotEq: lambda a, b: a != b,
+    ast.Lt: lambda a, b: a < b,
+    ast.LtE: lambda a, b: a <= b,
+    ast.Gt: lambda a, b: a > b,
+    ast.GtE: lambda a, b: a >= b,
+    ast.In: lambda a, b: a in b,
+    ast.NotIn: lambda a, b: a not in b,
 }
 
 

@@ -23,10 +23,11 @@ A product line has components (each declaring features) and variants
           features: {MAP_REGION: US}
           data: {conan: {requires: {"zlib/1.3": {}}}}
 """
+
 from __future__ import annotations
 
 import re
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -58,7 +59,7 @@ def _listify(value: Any) -> Any:
     return [value] if isinstance(value, str) else value
 
 
-class FeatureType(str, Enum):
+class FeatureType(StrEnum):
     BOOL = "bool"
     INT = "int"
     STRING = "string"
@@ -94,15 +95,19 @@ class FeatureSpec(_Strict):
                 raise ValueError("enum 'values' contain duplicates")
         elif self.values is not None:
             raise ValueError("'values' is only allowed for enum features")
-        if kind is not FeatureType.INT and (self.min is not None or self.max is not None):
+        if kind is not FeatureType.INT and (
+            self.min is not None or self.max is not None
+        ):
             raise ValueError("'min'/'max' are only allowed for int features")
         if self.min is not None and self.max is not None and self.min > self.max:
             raise ValueError("'min' is greater than 'max'")
         if self.default is None:
-            self.default = {FeatureType.BOOL: False,
-                            FeatureType.INT: self.min if self.min is not None else 0,
-                            FeatureType.STRING: "",
-                            FeatureType.ENUM: (self.values or [None])[0]}[kind]
+            self.default = {
+                FeatureType.BOOL: False,
+                FeatureType.INT: self.min if self.min is not None else 0,
+                FeatureType.STRING: "",
+                FeatureType.ENUM: (self.values or [None])[0],
+            }[kind]
         self.default = self.validate_value(self.default)
         return self
 
@@ -126,7 +131,9 @@ class FeatureSpec(_Strict):
             if not isinstance(value, str):
                 raise ValueError(f"expected a string, got {value!r}")
         elif value not in (self.values or []):
-            raise ValueError(f"expected one of {', '.join(self.values or [])}, got {value!r}")
+            raise ValueError(
+                f"expected one of {', '.join(self.values or [])}, got {value!r}"
+            )
         return value
 
     def parse_text(self, text: str) -> FeatureValue:
@@ -137,7 +144,9 @@ class FeatureSpec(_Strict):
                 return True
             if low in {"n", "no", "false", "off", "0"}:
                 return False
-            raise ValueError(f"expected a boolean (y/n, true/false, on/off), got {text!r}")
+            raise ValueError(
+                f"expected a boolean (y/n, true/false, on/off), got {text!r}"
+            )
         if self.type is FeatureType.INT:
             try:
                 return self.validate_value(int(text, 0))
@@ -182,7 +191,7 @@ class VariantSpec(_Strict):
     abstract: bool = False
     extends: list[str] = Field(default_factory=list)
     aliases: list[str] = Field(default_factory=list)
-    components: list[str] | None = None   # None = inherit (root: all components)
+    components: list[str] | None = None  # None = inherit (root: all components)
     features: dict[str, bool | int | str] = Field(default_factory=dict)
     data: dict[str, Any] = Field(default_factory=dict)
 
@@ -204,7 +213,7 @@ class VariantSpec(_Strict):
 
 class VariantEnvSpec(_Strict):
     prefix: str = "VH_"
-    legacy_bo: bool = False   # also export BO_<FEATURE> like the previous tool
+    legacy_bo: bool = False  # also export BO_<FEATURE> like the previous tool
 
 
 class ProductLineSpec(_Strict):
@@ -227,10 +236,14 @@ class ProductLineSpec(_Strict):
     def _variant_names(cls, v: dict[str, VariantSpec]) -> dict[str, VariantSpec]:
         for name, spec in v.items():
             if not VARIANT_RE.match(name):
-                raise ValueError(f"variant name {name!r} may only contain letters, digits, '_' and '-'")
+                raise ValueError(
+                    f"variant name {name!r} may only contain letters, digits, '_' and '-'"
+                )
             for alias in spec.aliases:
                 if not ALIAS_RE.match(alias):
-                    raise ValueError(f"alias {alias!r} of variant {name!r} is not valid")
+                    raise ValueError(
+                        f"alias {alias!r} of variant {name!r} is not valid"
+                    )
         return v
 
     # -------------------------------------------------------------- helpers
@@ -267,7 +280,7 @@ class ProductLineSpec(_Strict):
 # --------------------------------------------------------------------------- results
 
 
-class Severity(str, Enum):
+class Severity(StrEnum):
     ERROR = "error"
     WARNING = "warning"
 

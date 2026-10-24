@@ -1,0 +1,202 @@
+"""Console presentation of runs and dry runs (driver)."""
+
+from __future__ import annotations
+
+import threading
+
+from rich.console import Console
+from rich.markup import escape
+from rich.tree import Tree
+
+from ...application.use_cases.run import PreparedRun, RunAction
+from ...domain.execution.model import (
+    ActionPlan,
+    PlannedStep,
+    RunResult,
+    Status,
+    StepResult,
+)
+
+STYLE = {
+    Status.PASSED: "green",
+    Status.FAILED: "red",
+    Status.SKIPPED: "dim",
+    Status.CANCELLED: "yellow",
+    Status.PENDING: "white",
+}
+ICON = {
+    Status.PASSED: "✔",
+    Status.FAILED: "✘",
+    Status.SKIPPED: "–",
+    Status.CANCELLED: "■",
+    Status.PENDING: "·",
+}
+
+
+class ConsoleObserver:
+    """Streams output; steps inside parallel sets get a ``[step]`` prefix."""
+
+    def __init__(self, console: Console, *, quiet: bool = False):
+        self._console = console
+        self._quiet = quiet
+        self._parallel: set[tuple[str, ...]] = set()
+        self._quiet_sets: set[tuple[str, ...]] = set()
+        self._lock = threading.Lock()
+
+    def run_started(self, plan: ActionPlan) -> None:
+        def mark(step: PlannedStep, inside: bool) -> None:
+            if inside:
+                self._parallel.add(step.path)
+            for child in step.children:
+                mark(child, inside or step.spec.parallel)
+
+        for step in plan.steps:
+            mark(step, False)
+        variant = f" [dim]variant[/] {escape(plan.variant)}" if plan.variant else ""
+        self._print(
+            f"[bold]ptk {escape(plan.action)}[/]{variant} [dim]run {plan.run_id}[/]"
+        )
+
+    def step_started(self, step: PlannedStep, command: str | None) -> None:
+        if step.kind == "set":
+            mode = "parallel" if step.spec.parallel else "sequential"
+            self._print(f"[bold cyan]▶ {escape(step.label)}[/] [dim]({mode})[/]")
+        else:
+            self._print(
+                f"[bold cyan]▶ {escape(step.label)}[/] [dim]{escape(command or '')}[/]"
+            )
+
+    def output(self, step: PlannedStep, line: str) -> None:
+        if self._quiet:
+            return
+        prefix = (
+            f"[dim]\\[{escape(step.name)}][/] " if step.path in self._parallel else "  "
+        )
+        self._print(prefix + escape(line))
+
+    def step_finished(self, step: PlannedStep, result: StepResult) -> None:
+        if result.status in (Status.SKIPPED, Status.CANCELLED) and result.children:
+            self._quiet_sets.add(step.path)
+        if any(step.path[:i] in self._quiet_sets for i in range(1, len(step.path))):
+            return  # inside a set that was not run: the set line says it all
+        style = STYLE[result.status]
+        message = result.message if result.message != result.status.value else ""
+        detail = f" [dim]{escape(message)}[/]" if message else ""
+        if result.allowed_failure:
+            detail += " [yellow](allowed)[/]"
+        timing = (
+            f" {result.duration:.1f}s"
+            if result.status in (Status.PASSED, Status.FAILED)
+            else ""
+        )
+        self._print(
+            f"[{style}]{ICON[result.status]} {escape(step.label)} {result.status.value}{timing}[/]{detail}"
+        )
+
+    def run_finished(self, result: RunResult) -> None:
+        pass
+
+    def _print(self, text: str) -> None:
+        with self._lock:
+            self._console.print(text, highlight=False, soft_wrap=True)
+
+
+def summary(console: Console, result: RunResult) -> None:
+    tree = Tree(
+        f"[bold]{escape(result.action)}[/] [{STYLE[result.status]}]{result.status.value}[/] "
+        f"in {result.duration:.1f}s"
+    )
+
+    def add(node: Tree, step: StepResult) -> None:
+        style = STYLE[step.status]
+        timing = (
+            f" {step.duration:.1f}s"
+            if step.status in (Status.PASSED, Status.FAILED)
+            else ""
+        )
+        show = (
+            step.message
+            and step.status is not Status.PASSED
+            and step.message != step.status.value
+        )
+        extra = f" [dim]{escape(step.message)}[/]" if show else ""
+        if step.allowed_failure:
+            extra += " [yellow](allowed)[/]"
+        child = node.add(
+            f"[{style}]{ICON[step.status]} {escape(step.name)}{timing}[/]{extra}"
+        )
+        if step.status not in (Status.SKIPPED, Status.CANCELLED):
+            for sub in step.children:
+                add(child, sub)
+
+    for step in result.steps:
+        add(tree, step)
+    console.print(tree, highlight=False)
+    if result.log_file:
+        console.print(
+            f"[dim]log: {escape(result.log_file)}[/]", highlight=False, soft_wrap=True
+        )
+
+
+def dry_run(
+    console: Console,
+    prepared: PreparedRun,
+    runner: RunAction,
+    *,
+    show_env: bool = False,
+) -> None:
+    plan = prepared.plan
+    head = f"[bold]{escape(plan.action)}[/] [dim](dry run - nothing is executed)[/]"
+    if plan.variant:
+        head += f"  variant [bold]{escape(plan.variant)}[/]"
+    tree = Tree(head)
+    if plan.params:
+        params = tree.add("[bold]parameters[/]")
+        for name, value in plan.params.items():
+            params.add(
+                f"{escape(name)} = {escape(repr(value))} [dim]({escape(plan.param_sources[name])})[/]"
+            )
+
+    def add(node: Tree, step: PlannedStep) -> None:
+        if step.skip_reason:
+            node.add(
+                f"[dim]– {escape(step.name)}: skipped ({escape(step.skip_reason)})[/]"
+            )
+            return
+        if step.kind == "set":
+            mode = "parallel" if step.spec.parallel else "sequential"
+            child = node.add(f"[bold cyan]{escape(step.name)}[/] [dim]({mode})[/]")
+            for sub in step.children:
+                add(child, sub)
+            return
+        command, python = runner.describe(prepared, step)
+        child = node.add(f"[bold cyan]{escape(step.name)}[/]  {escape(command)}")
+        details = []
+        if step.cwd not in (".", ""):
+            details.append(f"cwd {step.cwd}")
+        if python and step.python is not None:
+            details.append(f"python: {python}")
+        flags = [
+            f"timeout {step.spec.timeout:g}s" if step.spec.timeout else "",
+            f"retries {step.spec.retries}" if step.spec.retries else "",
+            "continue_on_error" if step.spec.continue_on_error else "",
+        ]
+        details += [f for f in flags if f]
+        if details:
+            child.add(f"[dim]{escape(', '.join(details))}[/]")
+        env = {**step.env, **{k: "********" for k in step.secrets}}
+        for key, value in env.items():
+            child.add(f"[dim]env {escape(key)}={escape(prepared.mask(value))}[/]")
+
+    for step in plan.steps:
+        add(tree, step)
+    console.print(tree, highlight=False)
+    if show_env:
+        console.print("[bold]generated environment[/]")
+        for key in sorted(
+            k for k in plan.base_env if k.startswith(("PTK_", "VH_", "BO_"))
+        ):
+            console.print(
+                f"  {escape(key)}={escape(prepared.mask(plan.base_env[key]))}",
+                highlight=False,
+            )

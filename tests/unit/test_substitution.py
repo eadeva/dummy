@@ -1,14 +1,28 @@
 import pytest
 
-from ptk.domain.config.substitution import Scope, SubstitutionError, references, substitute
+from ptk.domain.config.substitution import (
+    Scope,
+    SubstitutionError,
+    references,
+    substitute,
+)
 
 
 def make_scope(**kw):
-    return Scope(env={"HOME": "/home/u"},
-                 vars={"root": "${project.root}/out", "dir": "${vars.root}/${vh.variant}", "loop": "${vars.loop}"},
-                 namespaces={"project": {"root": "/p"}, "vh": {"variant": "b_us", "features": {"N": 8}},
-                             "params": {"jobs": 4, "fast": True}},
-                 **kw)
+    return Scope(
+        env={"HOME": "/home/u"},
+        vars={
+            "root": "${project.root}/out",
+            "dir": "${vars.root}/${vh.variant}",
+            "loop": "${vars.loop}",
+        },
+        namespaces={
+            "project": {"root": "/p"},
+            "vh": {"variant": "b_us", "features": {"N": 8}},
+            "params": {"jobs": 4, "fast": True},
+        },
+        **kw,
+    )
 
 
 def test_typed_single_reference_and_text_interpolation():

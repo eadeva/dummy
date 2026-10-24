@@ -1,4 +1,5 @@
 """File system implementation of the ConfigSource port."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -19,8 +20,14 @@ class FileConfigSource:
             candidate = directory / MAIN_FILE
             if candidate.is_file():
                 return candidate
-        raise ConfigError([Problem(f"no {MAIN_FILE} found in {start} or any parent directory "
-                                   f"(create one with 'ptk init')")])
+        raise ConfigError(
+            [
+                Problem(
+                    f"no {MAIN_FILE} found in {start} or any parent directory "
+                    f"(create one with 'ptk init')"
+                )
+            ]
+        )
 
     def read(self, file: Path) -> Node:
         if self._reader is None:
