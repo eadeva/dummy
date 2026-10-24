@@ -165,7 +165,7 @@ class BuildHelp:
                         for path, s in _walk(action.steps)
                         if s.passthrough
                     ],
-                    usage=f"ptk run {name} [OPTIONS]"
+                    usage=f"ptk {name} [OPTIONS]"
                     + (
                         " [-- ARGS]"
                         if any(s.passthrough for _, s in _walk(action.steps))
@@ -217,11 +217,19 @@ def _rel(project: Project, path: Any) -> str:
         return str(path)
 
 
+def _option(name: str, spec: ParamSpec) -> str:
+    flag = "--" + name.replace("_", "-")
+    if spec.type == "bool":
+        return f"{flag} / --no-{flag[2:]}"
+    metavar = {"int": "N", "float": "NUMBER", "list": "A,B,...", "choice": "CHOICE"}
+    return f"{flag} {metavar.get(spec.type, 'TEXT')}"
+
+
 def _param(name: str, spec: ParamSpec) -> HelpParam:
     default = "" if spec.default is None else to_text(spec.default)
     return HelpParam(
         name,
-        f"-p {name}=VALUE",
+        _option(name, spec),
         spec.type,
         default,
         list(spec.choices or []),

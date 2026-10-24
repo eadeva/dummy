@@ -44,6 +44,7 @@ from ..ports import (
     SecretResolver,
 )
 from .project import Project
+from .role import Role, visible
 from .variants import VariantService
 
 MASK = "********"
@@ -61,6 +62,7 @@ class RunRequest:
     passthrough: Sequence[str] = ()  # after "--"
     args_for: Mapping[str, list[str]] = field(default_factory=dict)
     dry_run: bool = False
+    role: Role = "user"  # maintainer-only actions are refused for users
 
 
 @dataclass
@@ -107,6 +109,12 @@ class PrepareRun:
             request = dataclasses.replace(request, action=config.project.default_action)
         assert request.action is not None
         action = self._action(project, request.action)
+        if not visible(action.audience, request.role):
+            raise PtkError(
+                f"'{request.action}' is a maintainer-only action "
+                "(maintainers are listed in maintainers.ptk.yml; "
+                "PTK_ROLE=maintainer overrides the detection)"
+            )
         host_env = self._host.variables
         os_name = self._host.os_name()
 

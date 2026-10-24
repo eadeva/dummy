@@ -14,6 +14,7 @@ from .adapters.host import SystemHost
 from .adapters.logging.files import FileLogObserver
 from .adapters.process import SubprocessRunner
 from .adapters.python_env import UvPythonEnvManager
+from .adapters.vscode_file import TasksFile
 from .application.ports import (
     ConfigSource,
     HostEnvironment,
@@ -31,6 +32,7 @@ from .application.use_cases.project import (
 from .application.use_cases.role import Role, resolve_role
 from .application.use_cases.run import PreparedRun, PrepareRun, RunAction
 from .application.use_cases.variants import VariantService
+from .application.use_cases.vscode import VSCodeTasks
 from .domain.logging import file_level
 
 
@@ -43,6 +45,7 @@ class App:
     runner: ProcessRunner
     python_envs: PythonEnvManager
     build_help: BuildHelp
+    vscode_tasks: VSCodeTasks
 
     def variants(self, project: Project) -> VariantService:
         return VariantService(project)
@@ -98,6 +101,7 @@ def create_app(
         python_envs=python_envs
         or UvPythonEnvManager(runner, environ=dict(host.variables)),
         build_help=BuildHelp(version),
+        vscode_tasks=VSCodeTasks(TasksFile),
     )
 
 

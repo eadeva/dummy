@@ -118,3 +118,16 @@ class RunObserver(Protocol):
 class SecretResolver(Protocol):
     def __call__(self, ref: str) -> str:
         """``credential.field`` -> secret value."""
+
+
+class TasksFile(Protocol):
+    """``.vscode/tasks.json`` (JSON with comments)."""
+
+    path: Path
+    had_comments: bool
+
+    def read(self) -> dict | None: ...
+
+    def render(self, data: dict) -> str: ...
+
+    def write(self, data: dict) -> None: ...

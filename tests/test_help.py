@@ -70,7 +70,7 @@ def test_help_command_writes_page(tmp_path):
     assert result.exit_code == 0, result.output
     html = out.read_text()
     for text in (
-        "ptk run build [OPTIONS]",
+        "ptk build [OPTIONS]",
         "ptk variant show",
         "ptk dry-run build",
         "customer_a_high",

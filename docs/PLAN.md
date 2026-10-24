@@ -457,12 +457,12 @@ tools:
 ## 10. CLI surface
 
 ```
-ptk [--variant V[,V...] | --all-variants] [--rebuild] [-v|-vv|--quiet]
-     [--config FILE] [--set k=v]... [--params FILE]
-     <action> [declared params] [--from STEP] [--to STEP] [--setup] [-- args]
+ptk [--config FILE] [--set k=v]... [--ci/--no-ci] [-v|-vv]
+ptk <action> [--<param> VALUE]... [-V VARIANT] [--from STEP] [--to STEP]
+             [--params FILE] [-q] [--args-for STEP="ARGS"] [--setup] [-- args]
 ptk                                     run project.default_action
 
-ptk dry-run [<action>] [same options]   what would run - nothing is executed
+ptk dry-run [<action> [same options]]  what would run - nothing is executed
 ptk run [<action>] [...]                generic form (scripts, CI); -p NAME=VALUE
 ptk help [--no-open] [-o FILE]          full help as HTML, opened in the browser
 ptk init                                scaffold a project
@@ -472,7 +472,7 @@ ptk creds   setup | set | list | test | remove
 ptk configs sync [--diff] | check
 ptk setup   [--action A] [--dry-run]
 ptk self-setup | doctor
-ptk vscode  tasks [--check]
+ptk vscode  tasks [--check] [--command CMD] [--users-only]
 ptk report  open | export
 ```
 
@@ -481,6 +481,28 @@ actions) prints the step tree with conditions evaluated, the final command of
 every step, Python runtimes, step env (secrets masked), every parameter value
 with its source and, with `--env`, the generated `PTK_*`/`VH_*` variables.
 Without `<action>`, `ptk`, `ptk run` and `ptk dry-run` use `project.default_action`.
+
+### Generated action commands
+
+- Each action is a command; each parameter a typed option (`int`, `float`,
+  `choice`, `bool` → `--x/--no-x`, `list` → `a,b`). Only given options are passed
+  on, so configured defaults (incl. per-variant templates) and their sources
+  stay authoritative. `ptk dry-run <action>` has exactly the same options.
+- `ptk --help` shows the actions in their own panel; unknown commands get
+  "did you mean"; shell completion covers actions and their options.
+- Maintainer-only actions are hidden (help, completion, VS Code tasks) and refused
+  for users - also through `ptk run`.
+
+### VS Code tasks (`ptk vscode tasks`)
+
+- One task per visible action (`ptk: <action>`), a variant picker input
+  (`${input:ptkVariant}`) when the project has variants, and the default action
+  as the default build task.
+- Merges into `.vscode/tasks.json` (JSON with comments accepted): ptk's tasks and
+  input are replaced, the user's tasks and inputs are kept; comments cannot be kept
+  and a note says so. `--check` exits 1 if the file is out of date (CI);
+  `--users-only` leaves out maintainer actions for a committed file;
+  `--command "uv run ptk"` if ptk is not on PATH.
 
 ## 10a. Advanced help (`ptk help`)
 
@@ -570,7 +592,7 @@ formatted with `ruff format`. CI runs `ruff check` and `ruff format --check`.
 | M2 ✅ | Variant core integrated | `when:`, `${vh.*}`, `variant` commands, explain/check |
 | M3 ✅ | Execution engine: steps, sets, parallel, script types, uv Python modes, env per command; `ptk run`, `ptk dry-run`, default action, parameter defaults (incl. per variant); `ptk help` (HTML) with maintainer visibility | demo action runs on Linux; parallel set without shared state |
 | M4 ✅ | Unified logging | `run.log`, step logs, `events.jsonl`, `run.json`, history; levels; masking |
-| M5 | CLI: generated actions/params, `--from/--to`, `config`, `variant`, maintainer visibility (`maintainers.ptk.yml`), `vscode tasks` | `ptk build --help` shows declared params; maintainer actions hidden for others; tasks.json merge keeps user tasks |
+| M5 ✅ | CLI: generated actions/params, `--from/--to`, `config`, `variant`, maintainer visibility (`maintainers.ptk.yml`), `vscode tasks` | `ptk build --help` shows declared params; maintainer actions hidden for others; tasks.json merge keeps user tasks |
 | M6 | Credential handler: env, gopass, vault, prompt | `creds` commands; secrets only via step env; masking tested |
 | M7 | Unified reporting | JSON, JUnit, HTML, Markdown, GitHub summary; contributors API |
 | M8 | Shared configs: pre-commit, ruff, clang-format, clang-tidy, clangd | `configs sync/check/--diff` |

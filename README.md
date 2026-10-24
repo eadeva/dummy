@@ -5,7 +5,8 @@ built-in variant handling, credentials, tool setup, shared base configs,
 unified logging and reporting. See [`docs/PLAN.md`](docs/PLAN.md) for the full plan.
 
 **Status:** M1 (configuration meta-model and loader), M2 (variant core), M3
-(execution engine, dry run, HTML help) and M4 (unified logging) are done.
+(execution engine, dry run, HTML help), M4 (unified logging) and M5 (generated
+CLI, maintainer visibility, VS Code tasks) are done.
 
 ```bash
 uv sync                     # install with dev dependencies
@@ -49,15 +50,22 @@ Loading order: `main.ptk.yml` (+ includes) → `ci.ptk.yml` (in CI) →
 ## Commands available now
 
 ```
-ptk [-c main.ptk.yml] [--set PATH=VALUE]... [--ci/--no-ci]
+ptk [-c main.ptk.yml] [--set PATH=VALUE]... [--ci/--no-ci] [-v|-vv]
+ptk                                  run the default action (project.default_action)
+ptk ACTION [--PARAM VALUE]... [-V VARIANT] [--from STEP] [--to STEP] [--params FILE]
+           [-q] [--args-for STEP="ARGS"]... [-- ARGS]
+ptk dry-run [ACTION [same options]] [--env]   what would run - nothing is executed
+ptk run [ACTION] [-p NAME=VALUE]... [same options]   generic form for scripts and CI
 ptk config validate | show [PATH] [--sources] [--format yaml|json] | schema [-o FILE]
 ptk variant list [--names] | show [NAME] [--json] [--all] | explain NAME FEATURE | check [NAMES] [--strict]
-ptk                                   run the default action (project.default_action)
-ptk run [ACTION] [-V VARIANT] [-p NAME=VALUE]... [--params FILE] [--from STEP] [--to STEP]
-                 [-q] [--args-for STEP="ARGS"]... [-- ARGS]
-ptk dry-run [ACTION] [same options] [--env]   what would run - nothing is executed
+ptk vscode tasks [--check] [--command "uv run ptk"] [--users-only]
 ptk help [--no-open] [-o FILE]       full help as an HTML page, opened in your browser
 ```
+
+Every action is a command with typed options for its parameters (`ptk build --help`
+lists them; `int`, `float`, `choice`, `bool` as `--x/--no-x`, `list` as `a,b`).
+Maintainer-only actions are hidden from users and refused if invoked.
+Shell completion comes from click: e.g. `eval "$(_PTK_COMPLETE=bash_source ptk)"`.
 
 Exit codes: 0 passed, 1 failed, 2 usage/configuration error, 130 cancelled (Ctrl+C).
 

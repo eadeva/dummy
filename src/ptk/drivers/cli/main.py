@@ -1,38 +1,29 @@
 """ptk command line (driver).
 
-Thin layer: parse options, call use cases, present results. ``ptk run ACTION``
-is the generic entry point; per-action commands with typed options are
-generated from the configuration in a later milestone.
+Thin layer: parse options, call use cases, present results. The configured
+actions are generated commands (see :mod:`.actions`); ``ptk run ACTION`` is
+the generic form and ``ptk dry-run ACTION`` previews either.
 """
 
 from __future__ import annotations
 
-import functools
 import json
 import sys
-import threading
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import rich_click as click
 import yaml
-from rich.console import Console
 from rich.markup import escape
 from rich.table import Table
 
 from ... import __version__
 from ...application.use_cases.help import HelpCommand, HelpOption
-from ...application.use_cases.project import Project
-from ...application.use_cases.run import Cancelled, RunRequest
-from ...bootstrap import App, create_app
 from ...domain.errors import ConfigError, PtkError
-from ...domain.execution.model import Status
-from ...domain.logging import console_level
-from . import console as present
+from .actions import ProjectGroup, build_request, common_options, execute, pairs
+from .state import console, err_console, guarded, state_of
 
-console = Console()
-err_console = Console(stderr=True)
+_state = state_of
 
 if hasattr(click.rich_click, "TEXT_MARKUP"):
     click.rich_click.TEXT_MARKUP = "rich"
@@ -41,54 +32,11 @@ else:  # pragma: no cover - older rich-click
 click.rich_click.SHOW_ARGUMENTS = True
 
 
-@dataclass
-class CliState:
-    app: App
-    config: Path | None = None
-    overrides: tuple[str, ...] = ()
-    ci: bool | None = None
-    verbose: int = 0
-    _project: Project | None = field(default=None, repr=False)
-
-    def project(self) -> Project:
-        if self._project is None:
-            self._project = self.app.load_project.execute(
-                config_file=self.config, overrides=self.overrides, ci=self.ci
-            )
-        return self._project
-
-
-def guarded(fn):
-    """Turn expected errors into clean messages and exit code 2."""
-
-    @functools.wraps(fn)
-    def wrapper(*args: Any, **kwargs: Any) -> Any:
-        try:
-            return fn(*args, **kwargs)
-        except ConfigError as exc:
-            err_console.print("[bold red]error:[/] invalid configuration")
-            for problem in exc.problems:
-                err_console.print(
-                    f"  {problem}", markup=False, highlight=False, soft_wrap=True
-                )
-            sys.exit(2)
-        except PtkError as exc:
-            err_console.print(
-                f"[bold red]error:[/] {exc}", highlight=False, soft_wrap=True
-            )
-            sys.exit(2)
-
-    return wrapper
-
-
-def _state(ctx: click.Context) -> CliState:
-    return ctx.find_object(CliState)
-
-
 # --------------------------------------------------------------------------- root
 
 
 @click.group(
+    cls=ProjectGroup,
     context_settings={"help_option_names": ["-h", "--help"]},
     invoke_without_command=True,
 )
@@ -96,6 +44,7 @@ def _state(ctx: click.Context) -> CliState:
     "-c",
     "--config",
     type=click.Path(path_type=Path, dir_okay=False, exists=True),
+    is_eager=True,  # known before --help lists the project's actions
     help="Path to main.ptk.yml (default: search upwards from the current directory).",
 )
 @click.option(
@@ -103,11 +52,15 @@ def _state(ctx: click.Context) -> CliState:
     "--set",
     "overrides",
     multiple=True,
+    is_eager=True,
     metavar="PATH=VALUE",
     help="Override a configuration value, e.g. --set actions.build.params.jobs.default=4",
 )
 @click.option(
-    "--ci/--no-ci", default=None, help="Force CI mode on/off (default: detected)."
+    "--ci/--no-ci",
+    default=None,
+    is_eager=True,
+    help="Force CI mode on/off (default: detected).",
 )
 @click.option(
     "-v",
@@ -126,18 +79,14 @@ def cli(
 ) -> None:
     """[bold]ptk[/] - project tool kit.
 
-    Without a command, ptk runs the project's default action
-    ([italic]project.default_action[/]).
+    The project's actions are commands too ([bold]ptk build --help[/]). Without a
+    command, ptk runs the default action ([italic]project.default_action[/]).
     """
-    ctx.obj = CliState(
-        app=create_app(), config=config, overrides=overrides, ci=ci, verbose=verbose
-    )
+    state = state_of(ctx)
     if ctx.invoked_subcommand is not None:
         return
-    try:
-        default = ctx.obj.project().config.project.default_action
-    except PtkError:
-        default = None  # not in a project (or broken config): just show the help
+    project = state.try_project()  # outside a project / broken config: show the help
+    default = project.config.project.default_action if project else None
     if default is None:
         click.echo(ctx.get_help())
         return
@@ -146,7 +95,7 @@ def cli(
         "(project.default_action) - 'ptk --help' lists all commands[/]",
         highlight=False,
     )
-    ctx.invoke(run_command)
+    guarded(execute)(ctx, guarded(build_request)(ctx, None))
 
 
 # --------------------------------------------------------------------------- config
@@ -354,184 +303,144 @@ def variant_check(ctx: click.Context, names: tuple[str, ...], strict: bool) -> N
 # --------------------------------------------------------------------------- run
 
 
-def _pairs(values: tuple[str, ...], option: str) -> dict[str, str]:
-    result: dict[str, str] = {}
-    for item in values:
-        key, sep, value = item.partition("=")
-        if not sep or not key:
-            raise PtkError(f"{option} expects NAME=VALUE, got {item!r}")
-        result[
-            key.strip().replace("-", "_") if option == "--param" else key.strip()
-        ] = value
-    return result
-
-
-def _params_file(path: Path | None) -> dict[str, Any]:
-    if path is None:
-        return {}
-    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    if not isinstance(data, dict):
-        raise PtkError(
-            f"{path}: a params file must be a mapping of parameter names to values"
-        )
-    return data
-
-
-def _action_options(fn):
-    """Options shared by ``ptk run`` and ``ptk dry-run``."""
-    decorators = [
-        click.argument("action", required=False),
-        click.argument(
-            "extra", nargs=-1, type=click.UNPROCESSED, metavar="[-- ARGS]..."
-        ),
-        click.option(
-            "-V",
-            "--variant",
-            help="Variant (name or alias); default: the configured default variant.",
-        ),
-        click.option(
-            "--from", "start", metavar="STEP", help="Start at this top-level step."
-        ),
-        click.option(
-            "--to", "end", metavar="STEP", help="Stop after this top-level step."
-        ),
-        click.option(
-            "-p",
-            "--param",
-            "params",
-            multiple=True,
-            metavar="NAME=VALUE",
-            help="Set an action parameter (default values come from the configuration).",
-        ),
-        click.option(
-            "--params",
-            "params_file",
-            type=click.Path(path_type=Path, dir_okay=False, exists=True),
-            help="YAML file with parameter values.",
-        ),
-        click.option(
-            "--args-for",
-            multiple=True,
-            metavar='STEP="ARGS"',
-            help="Extra arguments for one step with passthrough: true (STEP is a/b).",
-        ),
-    ]
-    for decorator in reversed(decorators):
-        fn = decorator(fn)
-    return fn
-
-
-def _prepare(
-    ctx: click.Context,
-    action: str | None,
-    extra: tuple[str, ...],
-    variant: str | None,
-    start: str | None,
-    end: str | None,
-    params: tuple[str, ...],
-    params_file: Path | None,
-    args_for: tuple[str, ...],
-    *,
-    dry_run: bool,
-):
-    import shlex
-
-    state = _state(ctx)
-    project = state.project()
-    if action is not None and action.startswith("-"):
-        # "ptk run -- -k x": click put the first pass-through word into ACTION
-        extra, action = (action, *extra), None
-    request = RunRequest(
-        action=action,
-        variant=variant,
-        params=_pairs(params, "--param"),
-        params_file=_params_file(params_file),
-        start=start,
-        end=end,
-        passthrough=list(extra),
-        args_for={k: shlex.split(v) for k, v in _pairs(args_for, "--args-for").items()},
-        dry_run=dry_run,
-    )
-    prepared = state.app.prepare_run(project).execute(project, request)
-    return prepared, state.app.run_action(project)
-
-
-@cli.command("dry-run")
-@_action_options
-@click.option(
-    "--env",
-    "show_env",
-    is_flag=True,
-    help="Also show the generated PTK_/VH_ variables.",
-)
-@click.pass_context
-@guarded
-def dry_run_command(ctx: click.Context, show_env: bool, **options: Any) -> None:
-    """Show what ACTION would do, without running anything.
-
-    Prints the steps with conditions evaluated, the final command of every step,
-    Python runtimes, step environment (secrets masked) and where every parameter
-    value comes from. ACTION defaults to [italic]project.default_action[/].
-    """
-    prepared, runner = _prepare(ctx, dry_run=True, **options)
-    present.dry_run(console, prepared, runner, show_env=show_env)
-
-
 @cli.command("run")
-@_action_options
+@click.argument("action", required=False)
 @click.option(
-    "-q",
-    "--quiet",
-    is_flag=True,
-    help="Only warnings and errors; command output is still logged.",
+    "-p",
+    "--param",
+    "params",
+    multiple=True,
+    metavar="NAME=VALUE",
+    help="Set an action parameter (unset ones use their configured default).",
 )
 @click.pass_context
 @guarded
-def run_command(ctx: click.Context, quiet: bool = False, **options: Any) -> None:
-    """Run ACTION (default: [italic]project.default_action[/]).
+def run_command(
+    ctx: click.Context, action: str | None, params: tuple[str, ...], **options: Any
+) -> None:
+    """Run ACTION by name - the generic form for scripts and CI.
 
-    Arguments after [bold]--[/] go to the step with [italic]passthrough: true[/].
-    Preview first with [bold]ptk dry-run ACTION[/].
+    Same as [bold]ptk ACTION[/], but parameters are given as [bold]-p NAME=VALUE[/].
+    ACTION defaults to [italic]project.default_action[/]. Arguments after [bold]--[/] go
+    to the step with [italic]passthrough: true[/].
 
     Exit code: 0 passed, 1 failed, 2 usage/configuration error, 130 cancelled.
     """
-    prepared, runner = _prepare(ctx, dry_run=False, **options)
-    observers = [
-        present.ConsoleObserver(
-            console,
-            quiet=quiet,
-            level=console_level(
-                _state(ctx).project().config.logging.level,
-                verbose=_state(ctx).verbose,
-                quiet=quiet,
-            ),
-        ),
-        *_state(ctx).app.log_observers(prepared),
-    ]
-    cancel = Cancelled()
-    holder: dict[str, Any] = {}
+    quiet = options.pop("quiet", False)
+    extra = options.pop("extra", ())
+    if action is not None and action.startswith("-"):
+        # "ptk run -- -k x": click put the first pass-through word into ACTION
+        extra, action = (action, *extra), None
+    request = build_request(
+        ctx, action, params=pairs(params, "--param"), extra=extra, **options
+    )
+    execute(ctx, request, quiet=quiet)
 
-    def work() -> None:
-        try:
-            holder["result"] = runner.execute(prepared, observers, cancel)
-        except BaseException as exc:  # noqa: BLE001 - re-raised in the main thread
-            holder["error"] = exc
 
-    worker = threading.Thread(target=work, name="ptk-run")
-    worker.start()
-    try:
-        while worker.is_alive():
-            worker.join(0.2)
-    except KeyboardInterrupt:
-        err_console.print("[yellow]cancelling - terminating running processes ...[/]")
-        cancel.set()
-        worker.join()
-    if "error" in holder:
-        raise holder["error"]
-    result = holder["result"]
-    present.summary(console, result)
-    codes = {Status.PASSED: 0, Status.SKIPPED: 0, Status.CANCELLED: 130}
-    sys.exit(codes.get(result.status, 1))
+# the same options as the generated action commands (incl. the trailing [-- ARGS])
+run_command.params.extend(common_options(dry_run=False))
+
+
+@cli.group("dry-run", cls=ProjectGroup, dry_run=True, invoke_without_command=True)
+@click.pass_context
+@guarded
+def dry_run_group(ctx: click.Context, **options: Any) -> None:
+    """Show what an action would do, without running anything.
+
+    [bold]ptk dry-run ACTION [OPTIONS][/] takes exactly the options of
+    [bold]ptk ACTION[/] and prints the steps with conditions evaluated, the final
+    command of every step, Python runtimes, the step environment (secrets masked)
+    and where every parameter value comes from. Without ACTION: the default action.
+    """
+    if ctx.invoked_subcommand is None:
+        show_env = options.pop("show_env", False)
+        options.pop("extra", None)
+        execute(
+            ctx, build_request(ctx, None, dry_run=True, **options), show_env=show_env
+        )
+
+
+# without ACTION, "ptk dry-run -V x" previews the default action with these options
+dry_run_group.params.extend(
+    p for p in common_options(dry_run=True) if p.name not in ("extra", "args_for")
+)
+
+
+# --------------------------------------------------------------------------- vscode
+
+
+@cli.group("vscode")
+def vscode_group() -> None:
+    """VS Code integration."""
+
+
+@vscode_group.command("tasks")
+@click.option(
+    "--check",
+    is_flag=True,
+    help="Only check that tasks.json is up to date (exit code 1 if not) - for CI.",
+)
+@click.option(
+    "--command",
+    "command",
+    default="ptk",
+    show_default=True,
+    help='How VS Code starts ptk, e.g. "uv run ptk".',
+)
+@click.option(
+    "--users-only",
+    is_flag=True,
+    help="Leave out maintainer-only actions (for a tasks.json that is committed).",
+)
+@click.option(
+    "-o",
+    "--output",
+    type=click.Path(path_type=Path, dir_okay=False),
+    help="Target file (default: .vscode/tasks.json in the project).",
+)
+@click.pass_context
+@guarded
+def vscode_tasks(
+    ctx: click.Context, check: bool, command: str, users_only: bool, output: Path | None
+) -> None:
+    """Add a task for every action to .vscode/tasks.json.
+
+    Tasks labelled [bold]ptk: ...[/] and the variant picker input are managed by ptk;
+    all other tasks and inputs in the file are kept. The default action becomes the
+    default build task (Ctrl+Shift+B).
+    """
+    state = _state(ctx)
+    result = state.app.vscode_tasks.execute(
+        state.project(),
+        state.role(),
+        command=command,
+        users_only=users_only,
+        check=check,
+        path=output,
+    )
+    if check:
+        if result.up_to_date:
+            console.print(
+                f"[green]{escape(str(result.path))} is up to date[/]", highlight=False
+            )
+            return
+        console.print(
+            f"[red]{escape(str(result.path))} is out of date[/] - run 'ptk vscode tasks'",
+            highlight=False,
+        )
+        sys.exit(1)
+    if result.written:
+        console.print(
+            f"updated [bold]{escape(str(result.path))}[/]: "
+            f"{', '.join(result.labels) or 'no actions'}",
+            highlight=False,
+        )
+        if result.lost_comments:
+            console.print("[yellow]note: comments in the file could not be kept[/]")
+    else:
+        console.print(
+            f"{escape(str(result.path))} is already up to date", highlight=False
+        )
 
 
 # --------------------------------------------------------------------------- help
@@ -591,7 +500,9 @@ def _collect_commands(
         if isinstance(command, click.Group):
             for child_name in command.list_commands(sub):
                 child = command.get_command(sub, child_name)
-                if child is not None and not child.hidden:
+                # generated action commands have their own section in the help page
+                is_action = hasattr(child, "ptk_action")
+                if child is not None and not child.hidden and not is_action:
                     visit(child, sub, [*path, child_name])
 
     visit(group, None, [])

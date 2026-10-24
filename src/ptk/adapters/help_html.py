@@ -279,8 +279,8 @@ def render(doc: HelpDocument) -> str:
         _cmd(
             "ptk                               # run the default action\n"
             "ptk dry-run ACTION                # see what would run\n"
-            "ptk run ACTION -p NAME=VALUE      # run it with a parameter\n"
-            "ptk run ACTION --from STEP -- ARGS\n"
+            "ptk ACTION --NAME VALUE           # run it with a parameter\n"
+            "ptk ACTION --from STEP -- ARGS\n"
             "ptk variant list"
         )
     )
