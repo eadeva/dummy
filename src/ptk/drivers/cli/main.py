@@ -366,6 +366,137 @@ dry_run_group.params.extend(
 )
 
 
+# --------------------------------------------------------------------------- creds
+
+
+@cli.group("creds")
+def creds_group() -> None:
+    """Credentials: env -> keyring -> gopass -> vault -> prompt. Values are never shown."""
+
+
+def _read_secret(ctx: click.Context, question: str) -> str:
+    prompter = _state(ctx).app.prompter
+    if prompter.interactive():
+        return prompter.secret(question)
+    if not sys.stdin.isatty():
+        return sys.stdin.read().rstrip("\r\n")  # e.g. piped from a secret manager
+    raise PtkError(
+        "no terminal: pipe the value in, e.g. 'gopass show -o x | ptk creds set NAME'"
+    )
+
+
+@creds_group.command("list")
+@click.argument("name", required=False)
+@click.pass_context
+@guarded
+def creds_list(ctx: click.Context, name: str | None) -> None:
+    """Show which provider supplies each credential (never the values)."""
+    service = _state(ctx).app.credentials(_state(ctx).project())
+    rows = service.status(name)
+    if not rows:
+        console.print("no credentials configured")
+        return
+    table = Table(
+        "credential", "provider", "env variable", "details", box=None, pad_edge=False
+    )
+    missing = False
+    for row in rows:
+        supplier = f"[green]{row.provider}[/]" if row.provider else "[red]missing[/]"
+        missing |= row.provider is None
+        details = "" if row.provider else "; ".join(row.notes)
+        table.add_row(row.key.ref, supplier, row.key.env_var, escape(details))
+    console.print(table)
+    if missing:
+        console.print("[dim]store a value with: ptk creds set NAME [FIELD][/]")
+
+
+@creds_group.command("set")
+@click.argument("name")
+@click.argument("field", required=False)
+@click.option(
+    "--store",
+    type=click.Choice(["keyring", "gopass", "vault"]),
+    help="Where to store it (default: first available of the credential's providers).",
+)
+@click.pass_context
+@guarded
+def creds_set(
+    ctx: click.Context, name: str, field: str | None, store: str | None
+) -> None:
+    """Store a credential. The value is typed hidden (or piped in) - never an argument."""
+    service = _state(ctx).app.credentials(_state(ctx).project())
+    field = field or service.spec(name).fields[0]
+    [key] = service.keys(name, field)
+    value = _read_secret(ctx, f"value for {key.ref}")
+    target = service.store(name, field, value, store)
+    console.print(f"[green]stored[/] {key.ref} in {target}")
+
+
+@creds_group.command("remove")
+@click.argument("name")
+@click.argument("field", required=False)
+@click.option(
+    "--store",
+    type=click.Choice(["keyring", "gopass", "vault"]),
+    help="Only remove it from this store.",
+)
+@click.pass_context
+@guarded
+def creds_remove(
+    ctx: click.Context, name: str, field: str | None, store: str | None
+) -> None:
+    """Remove a stored credential (from every store unless --store)."""
+    service = _state(ctx).app.credentials(_state(ctx).project())
+    removed = service.remove(name, field, store)
+    console.print("removed " + ", ".join(removed) if removed else "nothing stored")
+
+
+@creds_group.command("test")
+@click.argument("name")
+@click.pass_context
+@guarded
+def creds_test(ctx: click.Context, name: str) -> None:
+    """Run the credential's 'test' command with its values as environment variables."""
+    service = _state(ctx).app.credentials(_state(ctx).project())
+    ok, lines = service.test(name)
+    for line in lines:
+        console.print(f"  {escape(line)}", highlight=False)
+    console.print(f"[green]{name}: OK[/]" if ok else f"[red]{name}: FAILED[/]")
+    sys.exit(0 if ok else 1)
+
+
+@creds_group.command("setup")
+@click.option(
+    "--vault",
+    "create_vault",
+    is_flag=True,
+    help="Create the built-in encrypted vault (asks for a master password).",
+)
+@click.pass_context
+@guarded
+def creds_setup(ctx: click.Context, create_vault: bool) -> None:
+    """Check the credential providers on this machine and how to set them up."""
+    app = _state(ctx).app
+    providers = app.secret_providers
+    if create_vault:
+        vault = providers["vault"].vault  # type: ignore[attr-defined]
+        vault.create()
+        console.print(f"[green]vault created[/] at {escape(str(vault.path))}")
+    table = Table("provider", "status", "notes", box=None, pad_edge=False)
+    hints = {
+        "env": "CI: set the variables shown by 'ptk creds list'",
+        "keyring": "OS keyring: Windows Credential Manager, macOS Keychain, Linux desktop",
+        "gopass": "recommended for teams: gopass setup --crypto age (no gpg needed)",
+        "vault": "built-in encrypted file: ptk creds setup --vault",
+        "prompt": "asks in the terminal, never stored",
+    }
+    for name, provider in providers.items():
+        ok, reason = provider.available()
+        status = "[green]ready[/]" if ok else "[yellow]not available[/]"
+        table.add_row(name, status, escape(reason or hints.get(name, "")))
+    console.print(table)
+
+
 # --------------------------------------------------------------------------- vscode
 
 

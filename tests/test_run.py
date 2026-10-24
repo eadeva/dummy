@@ -13,6 +13,7 @@ import pytest
 
 from ptk.application.use_cases.run import Cancelled, RunRequest
 from ptk.bootstrap import create_app
+from ptk.domain.errors import PtkError
 from ptk.domain.execution.model import Status
 
 pytestmark = pytest.mark.skipif(
@@ -178,11 +179,16 @@ def test_failure_stops_following_steps(project):
     )
 
 
-def test_missing_secret_fails_step_only(project, write):
-    result, _lines, _ = run(project, environ={"REPO_TOKEN": ""})
-    steps = by_label(result)
-    assert steps["secret"].status is Status.FAILED
-    assert "REPO_TOKEN" in steps["secret"].message
+def test_missing_secret_stops_before_anything_runs(project):
+    with pytest.raises(PtkError, match="REPO_TOKEN is not set") as info:
+        run(project, environ={"REPO_TOKEN": ""})
+    assert "ptk creds set repo" in str(info.value)
+    assert not (project / "_logs").exists()  # nothing was started
+
+
+def test_secret_of_skipped_step_is_not_needed(project):
+    result, _lines, _ = run(project, environ={"REPO_TOKEN": ""}, end="script")
+    assert by_label(result)["secret"].status is Status.SKIPPED
 
 
 def test_timeout_and_retries(write):

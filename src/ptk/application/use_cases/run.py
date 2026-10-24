@@ -72,6 +72,7 @@ class PreparedRun:
     layout: lay.Layout
     secret_values: set[str]  # values to mask in every output
     dry_run: bool = False
+    step_secrets: dict[str, str] = field(default_factory=dict)  # ref -> value
 
     def mask(self, text: str) -> str:
         for value in sorted(self.secret_values, key=len, reverse=True):
@@ -270,7 +271,22 @@ class PrepareRun:
             base_env=base,
             dirs=dirs,
         )
-        return PreparedRun(plan, project, layout, secret_values, request.dry_run)
+        # resolve every secret the selected steps need now: a missing credential
+        # stops the run before anything starts, and prompts never happen in the
+        # middle of parallel steps
+        step_secrets: dict[str, str] = {}
+        if not request.dry_run:
+            for step in plan.walk():
+                if step.skip_reason is None:
+                    for ref in step.secrets.values():
+                        if ref not in step_secrets:
+                            try:
+                                step_secrets[ref] = secret(ref)
+                            except SubstitutionError as exc:
+                                raise PtkError(str(exc)) from None
+        return PreparedRun(
+            plan, project, layout, secret_values, request.dry_run, step_secrets
+        )
 
     @staticmethod
     def _action(project: Project, name: str) -> ActionSpec:
@@ -321,14 +337,12 @@ class RunAction:
         host: HostEnvironment,
         runner: ProcessRunner,
         python_envs: PythonEnvManager,
-        secrets: SecretResolver | None = None,
         builtins: Mapping[str, BuiltinStep] | None = None,
         max_parallel: int | None = None,
     ):
         self._host = host
         self._runner = runner
         self._python = python_envs
-        self._secrets = secrets
         self._builtins = dict(BUILTINS if builtins is None else builtins)
         self._max_parallel = max_parallel
         self._powershell: str | None = None
@@ -576,12 +590,7 @@ class RunAction:
         env.update(step.env)
         for variable, ref in step.secrets.items():
             if not prepared.dry_run:
-                if self._secrets is None:
-                    raise PtkError(
-                        f"step '{step.label}' needs secret '{ref}' but no credential provider is configured"
-                    )
-                value = self._secrets(ref)
-                prepared.secret_values.add(value)
+                value = prepared.step_secrets[ref]
                 if len(value) < MIN_MASK_LENGTH:
                     self._log(
                         Level.WARNING,

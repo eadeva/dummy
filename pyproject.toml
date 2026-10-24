@@ -14,7 +14,11 @@ dependencies = [
   "packaging>=23",
   "rich>=13.7",
   "rich-click>=1.8",
+  "cryptography>=42",   # built-in credential vault (AES-GCM)
 ]
+
+[project.optional-dependencies]
+keyring = ["keyring>=24"]   # OS keyring provider (Windows Credential Manager, macOS, Secret Service)
 
 [project.scripts]
 ptk = "ptk.drivers.cli.main:main"

@@ -5,8 +5,8 @@ built-in variant handling, credentials, tool setup, shared base configs,
 unified logging and reporting. See [`docs/PLAN.md`](docs/PLAN.md) for the full plan.
 
 **Status:** M1 (configuration meta-model and loader), M2 (variant core), M3
-(execution engine, dry run, HTML help), M4 (unified logging) and M5 (generated
-CLI, maintainer visibility, VS Code tasks) are done.
+(execution engine, dry run, HTML help), M4 (unified logging), M5 (generated
+CLI, maintainer visibility, VS Code tasks) and M6 (credentials) are done.
 
 ```bash
 uv sync                     # install with dev dependencies
@@ -14,6 +14,23 @@ uv run ptk --help
 uv run pytest
 uv run ruff check && uv run ruff format --check   # ruff default rules
 ```
+
+## Credentials
+
+```yaml
+credentials:
+  artifactory:
+    fields: [user, token]
+    env: {token: ARTIFACTORY_TOKEN}          # CI
+    gopass: {path: team/artifactory}         # optional
+    test: curl -fsS -u "$ARTIFACTORY_USER:$ARTIFACTORY_TOKEN" https://repo.example.com/api/system/ping
+```
+
+Looked up in order `env -> keyring -> gopass -> vault -> prompt` (configurable per
+credential). `ptk creds set artifactory token` stores a value (typed hidden); the
+built-in vault is an AES-GCM file protected by a master password - no external tool
+needed. Steps get secrets only as environment variables (`secrets: {TOKEN: artifactory.token}`),
+and they are masked everywhere. keyring support: `uv tool install "ptk[keyring]"`.
 
 ## Configuration files
 
@@ -59,6 +76,7 @@ ptk run [ACTION] [-p NAME=VALUE]... [same options]   generic form for scripts an
 ptk config validate | show [PATH] [--sources] [--format yaml|json] | schema [-o FILE]
 ptk variant list [--names] | show [NAME] [--json] [--all] | explain NAME FEATURE | check [NAMES] [--strict]
 ptk vscode tasks [--check] [--command "uv run ptk"] [--users-only]
+ptk creds setup [--vault] | set NAME [FIELD] [--store S] | list | test NAME | remove NAME
 ptk help [--no-open] [-o FILE]       full help as an HTML page, opened in your browser
 ```
 

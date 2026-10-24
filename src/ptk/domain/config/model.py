@@ -355,7 +355,7 @@ class ToolSpec(_Strict):
     dnf: str | None = None
 
 
-ProviderName = Literal["env", "gopass", "vault", "prompt"]
+ProviderName = Literal["env", "keyring", "gopass", "vault", "prompt"]
 
 
 class GopassSpec(_Strict):
@@ -366,7 +366,7 @@ class CredentialSpec(_Strict):
     description: str = ""
     fields: list[str] = Field(default_factory=lambda: ["token"])
     providers: list[ProviderName] = Field(
-        default_factory=lambda: ["env", "gopass", "vault", "prompt"]
+        default_factory=lambda: ["env", "keyring", "gopass", "vault", "prompt"]
     )
     env: dict[str, str] = Field(default_factory=dict)  # field: ENV_VAR
     gopass: GopassSpec | None = None

@@ -206,8 +206,43 @@ Reuse the core of `variant_handler` (already built and tested), trimmed for the 
 
 ### 4.1 Provider chain
 
+Default order `env -> keyring -> gopass -> vault -> prompt`; a credential can
+restrict or reorder it with `providers: [...]`. The first provider with a value
+wins; the value is cached for the rest of the ptk run.
+
 | Provider | Where | Notes |
 |----------|-------|-------|
+| `env` | CI | `credentials.<name>.env.<field>`, else `PTK_CRED_<NAME>_<FIELD>`; read-only |
+| `keyring` | Windows, macOS, Linux desktops | optional extra `ptk[keyring]`; skipped when not installed or no real backend (headless Linux); service `ptk`, user `<name>.<field>` |
+| `gopass` | Windows, headless Linux, teams | `gopass show --password` / `insert --force` via stdin; path `gopass.path/<field>` (default `ptk/<name>/<field>`); recommend the **age** backend (no gpg-agent/pinentry); team sharing via git |
+| `vault` | everywhere, no external tool | one file per user (`%APPDATA%\\ptk\\vault.json`, `~/.config/ptk/vault.json`, `PTK_VAULT_FILE`); AES-256-GCM, key from the master password via scrypt; names and values encrypted; tampering detected; written atomically, mode 600; password asked once per run or `PTK_VAULT_PASSWORD` |
+| `prompt` | interactive only | never in CI or without a terminal; not stored |
+
+Keys are shared by all projects of a user (`artifactory.token` is the same
+everywhere). More providers (HashiCorp Vault, ...) can be added behind the same
+port.
+
+### 4.2 Commands
+
+`ptk creds setup [--vault]` (which providers work here and how to set them up;
+`--vault` creates the vault) · `ptk creds set <name> [field] [--store keyring|gopass|vault]`
+(value typed hidden or piped in, never an argument) · `ptk creds list [name]`
+(which provider supplies what - never values, never prompts) ·
+`ptk creds test <name>` (runs the credential's `test` command with its values as
+environment variables) · `ptk creds remove <name> [field] [--store ...]`.
+
+### 4.3 Rules
+
+- Secrets reach commands only as environment variables of that single step -
+  never as arguments (visible in process lists), never written unencrypted.
+- All secrets the selected steps need are resolved **before the first step
+  starts**: a missing credential stops the run with a list of what was tried,
+  and no prompt appears in the middle of parallel steps. Skipped steps need none.
+- Masked in console, log files, events, reports and `ptk dry-run` output
+  (dry runs never look secrets up).
+- Access tokens preferred over passwords.
+
+----------|-------|-------|
 | `env` | CI | names configured per credential |
 | `gopass` | Windows, headless Linux | `gopass show -o <path>` / `gopass insert`; recommend **age** backend (no gpg-agent/pinentry); team sharing via git |
 | `vault` | everywhere, no external tool | AES-GCM file in the user's config dir, key from master password (scrypt); unlocked once per session |
@@ -593,7 +628,7 @@ formatted with `ruff format`. CI runs `ruff check` and `ruff format --check`.
 | M3 ✅ | Execution engine: steps, sets, parallel, script types, uv Python modes, env per command; `ptk run`, `ptk dry-run`, default action, parameter defaults (incl. per variant); `ptk help` (HTML) with maintainer visibility | demo action runs on Linux; parallel set without shared state |
 | M4 ✅ | Unified logging | `run.log`, step logs, `events.jsonl`, `run.json`, history; levels; masking |
 | M5 ✅ | CLI: generated actions/params, `--from/--to`, `config`, `variant`, maintainer visibility (`maintainers.ptk.yml`), `vscode tasks` | `ptk build --help` shows declared params; maintainer actions hidden for others; tasks.json merge keeps user tasks |
-| M6 | Credential handler: env, gopass, vault, prompt | `creds` commands; secrets only via step env; masking tested |
+| M6 ✅ | Credential handler: env, keyring, gopass, vault, prompt | `creds` commands; secrets only via step env; masking tested |
 | M7 | Unified reporting | JSON, JUnit, HTML, Markdown, GitHub summary; contributors API |
 | M8 | Shared configs: pre-commit, ruff, clang-format, clang-tidy, clangd | `configs sync/check/--diff` |
 | M9 | Tools: model, Chocolatey, uv-tool, download, `setup`, `self-setup`, `doctor`, installers | missing tools detected and installed (Windows run by user) |

@@ -9,6 +9,7 @@ from typing import Protocol
 
 from ..domain.config.model import PythonSpec
 from ..domain.config.tree import Node
+from ..domain.credentials import SecretKey
 from ..domain.execution.commands import PythonRuntime
 from ..domain.execution.model import (
     ActionPlan,
@@ -131,3 +132,29 @@ class TasksFile(Protocol):
     def render(self, data: dict) -> str: ...
 
     def write(self, data: dict) -> None: ...
+
+
+# --------------------------------------------------------------------------- credentials
+
+
+class SecretProvider(Protocol):
+    """One link of the credential chain (env, keyring, gopass, vault, prompt)."""
+
+    name: str
+    can_store: bool
+
+    def available(self) -> tuple[bool, str]:
+        """(usable here?, reason if not)."""
+
+    def get(self, key: SecretKey) -> str | None: ...
+
+    def store(self, key: SecretKey, value: str) -> None: ...
+
+    def remove(self, key: SecretKey) -> bool: ...
+
+
+class Prompter(Protocol):
+    def interactive(self) -> bool:
+        """A person can answer (terminal attached and not in CI)."""
+
+    def secret(self, question: str) -> str: ...
