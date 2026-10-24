@@ -4,8 +4,8 @@ A configuration-driven project CLI: actions made of steps and step sets,
 built-in variant handling, credentials, tool setup, shared base configs,
 unified logging and reporting. See [`docs/PLAN.md`](docs/PLAN.md) for the full plan.
 
-**Status:** M1 (configuration meta-model and loader), M2 (variant core) and M3
-(execution engine, dry run, HTML help) are done.
+**Status:** M1 (configuration meta-model and loader), M2 (variant core), M3
+(execution engine, dry run, HTML help) and M4 (unified logging) are done.
 
 ```bash
 uv sync                     # install with dev dependencies
@@ -99,7 +99,7 @@ actions:
 ```
 _builds/<variant>/<action>/<set>/<step>/    build folder per step (${run.build_dir})
 _bin/<variant>/                             binaries per variant
-_logs/<variant>/<action>/run.log            + <set>/<step>.log
+_logs/<variant>/<action>/run.log            + <set>/<step>.log, events.jsonl, run.json, _history/
 _reports/<variant>/<action>/<set>/<step>/
 ```
 

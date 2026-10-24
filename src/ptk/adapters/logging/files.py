@@ -1,17 +1,23 @@
-"""RunObserver writing the log files of the workspace layout.
+"""RunObserver writing the logs of the workspace layout (unified logging).
 
-    _logs/<variant>/<action>/run.log            whole run, every line prefixed with the step
+    _logs/<variant>/<action>/run.log            the whole run, each line tagged with its step
     _logs/<variant>/<action>/<set>/<step>.log   output of one step
+    _logs/<variant>/<action>/events.jsonl       machine-readable events (one JSON per line)
+    _logs/<variant>/<action>/run.json           summary of the run (status, steps, params)
+    _logs/<variant>/<action>/_history/<run id>/ previous runs (``logging.keep_history``)
 
-Output arrives already masked. M4 extends this with events.jsonl and history.
+The latest run is always directly in the action folder. Everything arrives
+already masked (secrets never reach this writer).
 """
 
 from __future__ import annotations
 
+import json
+import shutil
 import threading
 from datetime import datetime
 from pathlib import Path
-from typing import TextIO
+from typing import Any, TextIO
 
 from ...domain import layout as lay
 from ...domain.execution.model import (
@@ -21,37 +27,122 @@ from ...domain.execution.model import (
     Status,
     StepResult,
 )
+from ...domain.logging import Level, history_name, runs_to_prune
+
+HISTORY = "_history"
+SUMMARY = "run.json"
+EVENTS = "events.jsonl"
 
 
-def _now() -> str:
+def _clock() -> str:
     return datetime.now().astimezone().strftime("%H:%M:%S")
 
 
+def _timestamp() -> str:
+    return datetime.now().astimezone().isoformat(timespec="milliseconds")
+
+
+def rotate(folder: Path, keep: int) -> None:
+    """Move the previous run into ``_history/<run id>/`` and prune old ones."""
+    summary = folder / SUMMARY
+    if summary.is_file():
+        try:
+            previous = json.loads(summary.read_text(encoding="utf-8"))["run_id"]
+        except (ValueError, KeyError):
+            previous = "unknown"
+        entries = [p for p in folder.iterdir() if p.name != HISTORY]
+        if keep > 0:
+            history = folder / HISTORY
+            history.mkdir(exist_ok=True)
+            taken = [p.name for p in history.iterdir()]
+            target = history / history_name(str(previous), taken)
+            target.mkdir()
+            for entry in entries:
+                shutil.move(str(entry), target / entry.name)
+        else:
+            for entry in entries:
+                _remove(entry)
+    elif folder.is_dir():  # leftovers without a summary (interrupted / old layout)
+        for entry in folder.iterdir():
+            if entry.name != HISTORY:
+                _remove(entry)
+    history = folder / HISTORY
+    if history.is_dir():
+        for name in runs_to_prune([p.name for p in history.iterdir()], keep):
+            _remove(history / name)
+        if not any(history.iterdir()):
+            history.rmdir()
+
+
+def _remove(path: Path) -> None:
+    if path.is_dir():
+        shutil.rmtree(path)
+    else:
+        path.unlink()
+
+
+def _result_dict(result: StepResult) -> dict[str, Any]:
+    data: dict[str, Any] = {
+        "step": result.label,
+        "kind": result.kind,
+        "status": result.status.value,
+        "duration": round(result.duration, 3),
+    }
+    for key in ("exit_code", "message", "command", "log_file"):
+        value = getattr(result, key)
+        if value not in (None, ""):
+            data[key] = value
+    if result.attempts > 1:
+        data["attempts"] = result.attempts
+    if result.allowed_failure:
+        data["allowed_failure"] = True
+    return data
+
+
 class FileLogObserver:
-    def __init__(self, layout: lay.Layout):
+    def __init__(
+        self, layout: lay.Layout, *, level: Level = Level.DEBUG, keep_history: int = 10
+    ):
         self._layout = layout
+        self._level = level
+        self._keep = keep_history
         self._lock = threading.Lock()
         self._run: TextIO | None = None
+        self._events: TextIO | None = None
         self._steps: dict[tuple[str, ...], TextIO] = {}
         self._plan: ActionPlan | None = None
+        self._folder: Path | None = None
+
+    # -- RunObserver -------------------------------------------------------------------
 
     def run_started(self, plan: ActionPlan) -> None:
         self._plan = plan
-        path = Path(self._layout.run_log(plan.variant, plan.action))
-        path.parent.mkdir(parents=True, exist_ok=True)
-        self._run = path.open("w", encoding="utf-8")
-        self._write_run(
+        folder = Path(self._layout.action_log_dir(plan.variant, plan.action))
+        folder.mkdir(parents=True, exist_ok=True)
+        rotate(folder, self._keep)
+        self._folder = folder
+        self._run = (folder / "run.log").open("w", encoding="utf-8")
+        self._events = (folder / EVENTS).open("w", encoding="utf-8")
+        self._write_summary(
+            {
+                **self._header(plan),
+                "status": "running",
+                "started_at": _timestamp(),
+            }
+        )
+        self._line(
             f"ptk run {plan.run_id}: project {plan.project}, action {plan.action}, "
             f"variant {plan.variant or lay.NO_VARIANT}"
         )
         for name, value in plan.params.items():
-            self._write_run(f"param {name} = {value!r} ({plan.param_sources[name]})")
+            self._line(f"param {name} = {value!r} ({plan.param_sources[name]})")
+        self._event("run_started", params=plan.params, param_sources=plan.param_sources)
 
     def step_started(self, step: PlannedStep, command: str | None) -> None:
         if step.kind == "set":
-            self._write_run(
-                f"[{step.label}] start ({'parallel' if step.spec.parallel else 'sequential'})"
-            )
+            mode = "parallel" if step.spec.parallel else "sequential"
+            self._line(f"[{step.label}] start ({mode})")
+            self._event("step_started", step=step.label, kind="set", mode=mode)
             return
         assert self._plan is not None
         path = Path(
@@ -60,49 +151,102 @@ class FileLogObserver:
         path.parent.mkdir(parents=True, exist_ok=True)
         with self._lock:
             self._steps[step.path] = path.open("w", encoding="utf-8")
-        self._write_step(step, f"$ {command}" if command else "start")
-        self._write_run(f"[{step.label}] $ {command}")
+        self._step_line(step, f"$ {command}" if command else "start")
+        self._line(f"[{step.label}] $ {command}")
+        self._event("step_started", step=step.label, kind=step.kind, command=command)
 
     def output(self, step: PlannedStep, line: str) -> None:
-        self._write_step(step, line, stamp=False)
-        self._write_run(f"[{step.label}] {line}")
+        self._step_line(step, line, stamp=False)
+        self._line(f"[{step.label}] {line}")
+
+    def message(self, level: Level, text: str, step: PlannedStep | None = None) -> None:
+        if level < self._level:
+            return
+        prefix = f"[{step.label}] " if step else ""
+        self._line(f"{prefix}{level.label}: {text}")
+        if step is not None:
+            self._step_line(step, f"{level.label}: {text}")
+        self._event(
+            "message", level=level.label, text=text, step=step.label if step else None
+        )
 
     def step_finished(self, step: PlannedStep, result: StepResult) -> None:
-        text = _describe(result)
-        self._write_step(step, text)
-        self._write_run(f"[{step.label}] {text}")
+        text = describe(result)
+        self._step_line(step, text)
+        self._line(f"[{step.label}] {text}")
+        self._event("step_finished", **_result_dict(result))
         with self._lock:
             handle = self._steps.pop(step.path, None)
         if handle:
             handle.close()
 
     def run_finished(self, result: RunResult) -> None:
-        self._write_run(f"run {result.status.value} in {result.duration:.1f}s")
+        self._line(f"run {result.status.value} in {result.duration:.1f}s")
+        self._event(
+            "run_finished",
+            status=result.status.value,
+            duration=round(result.duration, 3),
+        )
+        assert self._plan is not None
+        self._write_summary(
+            {
+                **self._header(self._plan),
+                "status": result.status.value,
+                "started_at": result.started_at,
+                "duration": round(result.duration, 3),
+                "steps": [_result_dict(r) for r in result.walk()],
+            }
+        )
         with self._lock:
             for handle in self._steps.values():
                 handle.close()
             self._steps.clear()
-            if self._run:
-                self._run.close()
-                self._run = None
+            for handle in (self._run, self._events):
+                if handle:
+                    handle.close()
+            self._run = self._events = None
 
     # -- helpers -----------------------------------------------------------------------
 
-    def _write_run(self, text: str) -> None:
+    def _header(self, plan: ActionPlan) -> dict[str, Any]:
+        return {
+            "run_id": plan.run_id,
+            "project": plan.project,
+            "action": plan.action,
+            "variant": plan.variant or lay.NO_VARIANT,
+            "params": plan.params,
+            "param_sources": plan.param_sources,
+        }
+
+    def _write_summary(self, data: dict[str, Any]) -> None:
+        assert self._folder is not None
+        text = json.dumps(data, indent=2, default=str)
+        (self._folder / SUMMARY).write_text(text + "\n", encoding="utf-8")
+
+    def _event(self, name: str, **fields: Any) -> None:
+        assert self._plan is not None
+        record = {"ts": _timestamp(), "event": name, "run_id": self._plan.run_id}
+        record.update({k: v for k, v in fields.items() if v is not None})
+        with self._lock:
+            if self._events:
+                self._events.write(json.dumps(record, default=str) + "\n")
+                self._events.flush()
+
+    def _line(self, text: str) -> None:
         with self._lock:
             if self._run:
-                self._run.write(f"{_now()} {text}\n")
+                self._run.write(f"{_clock()} {text}\n")
                 self._run.flush()
 
-    def _write_step(self, step: PlannedStep, text: str, stamp: bool = True) -> None:
+    def _step_line(self, step: PlannedStep, text: str, stamp: bool = True) -> None:
         with self._lock:
             handle = self._steps.get(step.path)
             if handle:
-                handle.write(f"{_now()} ptk: {text}\n" if stamp else f"{text}\n")
+                handle.write(f"{_clock()} ptk: {text}\n" if stamp else f"{text}\n")
                 handle.flush()
 
 
-def _describe(result: StepResult) -> str:
+def describe(result: StepResult) -> str:
     text = f"{result.status.value}"
     if result.status in (Status.PASSED, Status.FAILED):
         text += f" in {result.duration:.1f}s"

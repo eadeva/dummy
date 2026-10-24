@@ -16,7 +16,15 @@ from ...domain.execution.model import (
     Status,
     StepResult,
 )
+from ...domain.logging import Level
 
+MESSAGE_STYLE = {
+    Level.TRACE: "dim",
+    Level.DEBUG: "dim",
+    Level.INFO: "default",
+    Level.WARNING: "yellow",
+    Level.ERROR: "bold red",
+}
 STYLE = {
     Status.PASSED: "green",
     Status.FAILED: "red",
@@ -36,9 +44,12 @@ ICON = {
 class ConsoleObserver:
     """Streams output; steps inside parallel sets get a ``[step]`` prefix."""
 
-    def __init__(self, console: Console, *, quiet: bool = False):
+    def __init__(
+        self, console: Console, *, quiet: bool = False, level: Level = Level.INFO
+    ):
         self._console = console
         self._quiet = quiet
+        self._level = level
         self._parallel: set[tuple[str, ...]] = set()
         self._quiet_sets: set[tuple[str, ...]] = set()
         self._lock = threading.Lock()
@@ -69,10 +80,18 @@ class ConsoleObserver:
     def output(self, step: PlannedStep, line: str) -> None:
         if self._quiet:
             return
-        prefix = (
-            f"[dim]\\[{escape(step.name)}][/] " if step.path in self._parallel else "  "
-        )
-        self._print(prefix + escape(line))
+        self._print(self._prefix(step) + escape(line))
+
+    def _prefix(self, step: PlannedStep | None) -> str:
+        if step is not None and step.path in self._parallel:
+            return f"[dim]\\[{escape(step.name)}][/] "
+        return "  "
+
+    def message(self, level: Level, text: str, step: PlannedStep | None = None) -> None:
+        if level < self._level:
+            return
+        style = MESSAGE_STYLE[level]
+        self._print(f"{self._prefix(step)}[{style}]{level.label}: {escape(text)}[/]")
 
     def step_finished(self, step: PlannedStep, result: StepResult) -> None:
         if result.status in (Status.SKIPPED, Status.CANCELLED) and result.children:

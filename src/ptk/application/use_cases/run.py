@@ -34,6 +34,7 @@ from ...domain.execution.model import (
 )
 from ...domain.execution.params import resolve_params
 from ...domain.execution.planning import PlanContext, plan_action
+from ...domain.logging import Level
 from ...domain.suggest import did_you_mean
 from ..ports import (
     HostEnvironment,
@@ -46,6 +47,7 @@ from .project import Project
 from .variants import VariantService
 
 MASK = "********"
+MIN_MASK_LENGTH = 4  # shorter values would garble normal output; warned about
 
 
 @dataclass
@@ -71,7 +73,7 @@ class PreparedRun:
 
     def mask(self, text: str) -> str:
         for value in sorted(self.secret_values, key=len, reverse=True):
-            if value:
+            if len(value) >= MIN_MASK_LENGTH:
                 text = text.replace(value, MASK)
         return text
 
@@ -497,11 +499,16 @@ class RunAction:
                 command = self._command(prepared, step, runtime)
                 result.command = prepared.mask(command.display())
                 self._emit("step_started", step, result.command)
+                self._describe_command(step, command, runtime)
                 exit_code, message = 1, ""
                 for attempt in range(1, step.spec.retries + 2):
                     result.attempts = attempt
                     if attempt > 1:
-                        out(f"--- retry {attempt - 1}/{step.spec.retries} ---")
+                        self._log(
+                            Level.WARNING,
+                            f"exit code {exit_code} - retry {attempt - 1}/{step.spec.retries}",
+                            step,
+                        )
                     outcome = self._runner.run(command, out, self._cancel)
                     exit_code = outcome.exit_code
                     message = outcome.error or ""
@@ -514,7 +521,7 @@ class RunAction:
                     message = message or "cancelled"
         except (PtkError, SubstitutionError, ValueError, OSError) as exc:
             exit_code, message = 1, str(exc)
-            out(f"error: {message}")
+            self._log(Level.ERROR, message, step)
         result.exit_code = exit_code
         result.message = prepared.mask(message)
         result.duration = time.monotonic() - start
@@ -524,6 +531,8 @@ class RunAction:
             if not result.message:
                 result.message = f"exit code {exit_code}"
             result.allowed_failure = step.spec.continue_on_error
+            if result.allowed_failure:
+                self._log(Level.WARNING, "failure allowed by continue_on_error", step)
         self._emit("step_finished", step, result)
         return result
 
@@ -565,6 +574,13 @@ class RunAction:
                     )
                 value = self._secrets(ref)
                 prepared.secret_values.add(value)
+                if len(value) < MIN_MASK_LENGTH:
+                    self._log(
+                        Level.WARNING,
+                        f"secret '{ref}' is shorter than {MIN_MASK_LENGTH} characters "
+                        "and cannot be masked in output",
+                        step,
+                    )
                 env[variable] = value
             else:
                 env[variable] = MASK
@@ -587,9 +603,31 @@ class RunAction:
             self._powershell = "pwsh" if self._runner.which("pwsh") else "powershell"
         return self._powershell
 
+    def _describe_command(
+        self, step: PlannedStep, command: Any, runtime: PythonRuntime | None
+    ) -> None:
+        mask = self._prepared.mask
+        self._log(Level.DEBUG, f"cwd {command.cwd}", step)
+        if runtime is not None:
+            self._log(Level.DEBUG, f"python: {runtime.description}", step)
+        if command.timeout:
+            self._log(Level.DEBUG, f"timeout {command.timeout:g}s", step)
+        if step.env:
+            self._log(Level.DEBUG, "env: " + ", ".join(sorted(step.env)), step)
+        if step.secrets:
+            names = ", ".join(sorted(step.secrets))
+            self._log(Level.DEBUG, f"secrets as env: {names} (values masked)", step)
+        for key in sorted(command.env):
+            self._log(Level.TRACE, f"env {key}={mask(command.env[key])}", step)
+
+    def _log(self, level: Level, text: str, step: PlannedStep | None = None) -> None:
+        self._emit("message", level, self._prepared.mask(text), step)
+
     def _emit(self, event: str, *args: Any) -> None:
         for observer in self._observers:
-            getattr(observer, event)(*args)
+            handler = getattr(observer, event, None)  # observers may skip events
+            if handler is not None:
+                handler(*args)
 
 
 def _combine(results: list[StepResult]) -> Status:

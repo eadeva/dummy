@@ -326,13 +326,25 @@ configurable (`layout:`). Previous runs are archived per variant/action
 
 ## 6. Main point 5 — Unified logging
 
-- One logging facade (stdlib `logging` + rich), configured once by the CLI.
-- **Logs** follow the workspace layout (5a):
-  - `_logs/<variant>/<action>/run.log` — everything
-  - `_logs/<variant>/<action>/<set>/<step>.log` — one file per step (command line, env diff, output, exit code)
-  - `_logs/<variant>/<action>/events.jsonl` — structured events (run/step started/finished, warning, output)
-- Console: compact live view; `-v` debug, `-vv` trace; `--quiet` for CI.
-- Secrets masked everywhere; previous runs archived (`logging.keep_history`).
+- One stream of events from the run engine (port `RunObserver`): run/step
+  started/finished, command output, and ptk's own levelled messages. The console
+  and the log files are two observers of the same stream; reports (M7) are another.
+- **Logs** follow the workspace layout (5a); the latest run is always directly
+  in the action folder:
+  - `_logs/<variant>/<action>/run.log` — everything, each line tagged with its step
+  - `_logs/<variant>/<action>/<set>/<step>.log` — one file per step (command line,
+    debug details, output, result)
+  - `_logs/<variant>/<action>/events.jsonl` — one JSON object per event (timestamps,
+    step, status, exit code, attempts, messages) for tools and reports
+  - `_logs/<variant>/<action>/run.json` — summary: status, params with sources, step tree
+  - `_logs/<variant>/<action>/_history/<run id>/` — previous runs, pruned to
+    `logging.keep_history` (0 = keep only the latest)
+- **Levels** for ptk's messages: trace (full masked environment per step), debug
+  (cwd, Python runtime, env and secret names), info, warning (retries, allowed
+  failures), error. Console: `logging.level`, `-v` debug, `-vv` trace, `run -q`
+  warnings only. Files always keep debug and above (trace when configured).
+- Secrets are masked before anything reaches an observer; values shorter than 4
+  characters cannot be masked safely and trigger a warning instead.
 
 ---
 
@@ -557,7 +569,7 @@ formatted with `ruff format`. CI runs `ruff check` and `ruff format --check`.
 | M1 ✅ | Meta-model, loader (include, overlays, tags, provenance), substitution, validation, JSON Schema | invalid configs fail with `file:line` + suggestion; `config show --sources` works |
 | M2 ✅ | Variant core integrated | `when:`, `${vh.*}`, `variant` commands, explain/check |
 | M3 ✅ | Execution engine: steps, sets, parallel, script types, uv Python modes, env per command; `ptk run`, `ptk dry-run`, default action, parameter defaults (incl. per variant); `ptk help` (HTML) with maintainer visibility | demo action runs on Linux; parallel set without shared state |
-| M4 | Unified logging | run dir with `run.log`, step logs, `events.jsonl`; masking |
+| M4 ✅ | Unified logging | `run.log`, step logs, `events.jsonl`, `run.json`, history; levels; masking |
 | M5 | CLI: generated actions/params, `--from/--to`, `config`, `variant`, maintainer visibility (`maintainers.ptk.yml`), `vscode tasks` | `ptk build --help` shows declared params; maintainer actions hidden for others; tasks.json merge keeps user tasks |
 | M6 | Credential handler: env, gopass, vault, prompt | `creds` commands; secrets only via step env; masking tested |
 | M7 | Unified reporting | JSON, JUnit, HTML, Markdown, GitHub summary; contributors API |

@@ -28,6 +28,7 @@ from ...application.use_cases.run import Cancelled, RunRequest
 from ...bootstrap import App, create_app
 from ...domain.errors import ConfigError, PtkError
 from ...domain.execution.model import Status
+from ...domain.logging import console_level
 from . import console as present
 
 console = Console()
@@ -108,7 +109,12 @@ def _state(ctx: click.Context) -> CliState:
 @click.option(
     "--ci/--no-ci", default=None, help="Force CI mode on/off (default: detected)."
 )
-@click.option("-v", "--verbose", count=True, help="More output (-v, -vv).")
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    help="More ptk messages: -v debug, -vv trace (default: logging.level).",
+)
 @click.version_option(__version__, prog_name="ptk")
 @click.pass_context
 def cli(
@@ -477,7 +483,7 @@ def dry_run_command(ctx: click.Context, show_env: bool, **options: Any) -> None:
     "-q",
     "--quiet",
     is_flag=True,
-    help="Do not stream command output (it is still logged).",
+    help="Only warnings and errors; command output is still logged.",
 )
 @click.pass_context
 @guarded
@@ -491,7 +497,15 @@ def run_command(ctx: click.Context, quiet: bool = False, **options: Any) -> None
     """
     prepared, runner = _prepare(ctx, dry_run=False, **options)
     observers = [
-        present.ConsoleObserver(console, quiet=quiet),
+        present.ConsoleObserver(
+            console,
+            quiet=quiet,
+            level=console_level(
+                _state(ctx).project().config.logging.level,
+                verbose=_state(ctx).verbose,
+                quiet=quiet,
+            ),
+        ),
         *_state(ctx).app.log_observers(prepared),
     ]
     cancel = Cancelled()

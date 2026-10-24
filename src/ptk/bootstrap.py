@@ -31,6 +31,7 @@ from .application.use_cases.project import (
 from .application.use_cases.role import Role, resolve_role
 from .application.use_cases.run import PreparedRun, PrepareRun, RunAction
 from .application.use_cases.variants import VariantService
+from .domain.logging import file_level
 
 
 @dataclass
@@ -67,7 +68,14 @@ class App:
         return help_html.open_in_browser(path)
 
     def log_observers(self, prepared: PreparedRun) -> list[RunObserver]:
-        return [FileLogObserver(prepared.layout)]
+        logging = prepared.project.config.logging
+        return [
+            FileLogObserver(
+                prepared.layout,
+                level=file_level(logging.level),
+                keep_history=logging.keep_history,
+            )
+        ]
 
 
 def create_app(

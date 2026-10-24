@@ -17,6 +17,7 @@ from ..domain.execution.model import (
     RunResult,
     StepResult,
 )
+from ..domain.logging import Level
 
 MAIN_FILE = "main.ptk.yml"
 CI_FILE = "ci.ptk.yml"
@@ -105,6 +106,9 @@ class RunObserver(Protocol):
     def step_started(self, step: PlannedStep, command: str | None) -> None: ...
 
     def output(self, step: PlannedStep, line: str) -> None: ...
+
+    def message(self, level: Level, text: str, step: PlannedStep | None) -> None:
+        """ptk's own messages (retries, errors, debug details); optional."""
 
     def step_finished(self, step: PlannedStep, result: StepResult) -> None: ...
 
