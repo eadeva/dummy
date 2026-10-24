@@ -122,7 +122,7 @@ main.ptk.yml               ptk_version, project, include, main settings
 
 - Short forms: `run: "cmake --build ."` instead of a full mapping.
 - Defaults everywhere (working dir = project root, `continue_on_error: false`, ...).
-- `ptk init` scaffolds a project; `ptk <action> --dry-run` shows the expanded step
+- `ptk init` scaffolds a project; `ptk dry-run <action>` shows the expanded step
   tree with evaluated conditions, final commands and parameter sources before
   running anything.
 - `ptk help` opens the full help as an offline HTML page in the default browser
@@ -161,7 +161,8 @@ actions:
     requires_tools: [cmake, ninja]
     params:
       build_type: {type: choice, choices: [Debug, Release], default: Release, help: Build type}
-      jobs:       {type: int, default: 8, help: Parallel jobs}
+      jobs:       {type: int, default: 8, env: PTK_JOBS, help: Parallel jobs}
+      profile:    {default: "${vh.data.conan.profile}", help: Conan profile (per variant)}
     steps:
       - configure:
           run: [cmake, --preset, "${vh.variant}", "-DCMAKE_BUILD_TYPE=${params.build_type}"]
@@ -225,7 +226,7 @@ Manager, HashiCorp Vault) as plugins.
 
 - Secrets reach commands only as environment variables of that single step —
   never as arguments (visible in process lists), never written unencrypted.
-- Masked in console, log files, events, reports and `--dry-run` output.
+- Masked in console, log files, events, reports and `ptk dry-run` output.
 - Access tokens preferred over passwords; expiry warnings when known.
 
 ---
@@ -288,8 +289,20 @@ and reports folder `${run.reports_dir}`.
 - Declared per action → real rich_click options (shown in `--help`, typed, validated).
 - `--set key=value` for scripts; `--params file.yaml`; `-- ...` passed to steps with
   `passthrough: true` (if several in range: `--args-for <step>="..."`).
-- Precedence: CLI > params file > declared env var > default.
-  Final values and their sources go into the report.
+- Precedence: CLI > params file > declared env var (`env:`) > `default:`.
+  Final values and their sources go into the report and `ptk dry-run`.
+- **Defaults** are typed and checked against `choices` when the config loads, and can
+  be changed per layer: `local.ptk.yml` (per developer), `ci.ptk.yml` (CI), `--set`.
+- A default may be a template using `${env:...}`, `${vars.x}`, `${vh.*}` or
+  `${project.*}` - e.g. a **per-variant default** `default: "${vh.data.conan.profile}"`.
+  Templates are resolved and type-checked when the action runs; a default cannot
+  refer to other parameters.
+
+### 5.5a Default action
+
+`project.default_action` names the action run by plain `ptk` (and by `ptk run` /
+`ptk dry-run` without an action). It must exist and must not be maintainer-only;
+both are checked when the configuration loads. The HTML help marks it.
 
 ### 5.6 Built-in steps (`uses:`)
 
@@ -434,9 +447,11 @@ tools:
 ```
 ptk [--variant V[,V...] | --all-variants] [--rebuild] [-v|-vv|--quiet]
      [--config FILE] [--set k=v]... [--params FILE]
-     <action> [declared params] [--from STEP] [--to STEP] [--dry-run] [--setup] [-- args]
+     <action> [declared params] [--from STEP] [--to STEP] [--setup] [-- args]
+ptk                                     run project.default_action
 
-ptk run <action> [...]                  generic form of the above (scripts, CI)
+ptk dry-run [<action>] [same options]   what would run - nothing is executed
+ptk run [<action>] [...]                generic form (scripts, CI); -p NAME=VALUE
 ptk help [--no-open] [-o FILE]          full help as HTML, opened in the browser
 ptk init                                scaffold a project
 ptk config  show [--sources] | validate | schema
@@ -449,9 +464,11 @@ ptk vscode  tasks [--check]
 ptk report  open | export
 ```
 
-`--dry-run` (`-n`) replaces a separate `plan` command: it prints the step tree
-with conditions evaluated, the final command of every step, Python runtimes,
-step env (secrets masked) and, with `--env`, the generated `PTK_*`/`VH_*` variables.
+`ptk dry-run <action>` (no separate `plan` command, no `--dry-run` flag on
+actions) prints the step tree with conditions evaluated, the final command of
+every step, Python runtimes, step env (secrets masked), every parameter value
+with its source and, with `--env`, the generated `PTK_*`/`VH_*` variables.
+Without `<action>`, `ptk`, `ptk run` and `ptk dry-run` use `project.default_action`.
 
 ## 10a. Advanced help (`ptk help`)
 
@@ -500,14 +517,14 @@ A one-off converter (`ptk migrate old-config.yaml`) is optional (milestone M11).
 | Skill | Use when | Content |
 |-------|----------|---------|
 | `ptk-config-authoring` | creating or changing `*.ptk.yml`, includes, overlays, vars | meta-model, merge rules and tags, substitution, `config validate/show --sources`, common mistakes |
-| `ptk-action-authoring` | adding/changing actions, steps, step sets, params | step kinds, controls, parallel rules, params + precedence, `--dry-run` before running, `--from/--to`, `audience: maintainer`, regenerating VS Code tasks |
+| `ptk-action-authoring` | adding/changing actions, steps, step sets, params | step kinds, controls, parallel rules, params + defaults + precedence, `ptk dry-run` before running, `--from/--to`, `audience: maintainer`, regenerating VS Code tasks |
 | `ptk-python-steps` | running Python tools/scripts | uvx vs venv vs project vs cli interpreter, pinning versions, cache, Windows/Linux differences |
 | `ptk-variant-model` | adding features, variants, conditions | variant model, `when:`, explain/check, renaming features across configs |
 | `ptk-credentials` | adding a credential or fixing auth | provider chain, gopass+age setup, vault, CI env vars, masking rules, never on command lines |
 | `ptk-shared-configs` | adjusting ruff, pre-commit, clang-format/tidy/clangd for a project | overlay principle, per-tool strategy, `configs sync --diff/check`, upgrading base configs |
 | `ptk-tools-setup` | declaring tools, Chocolatey/download sources, onboarding | tool model, version ranges, `setup`/`self-setup`/`doctor`, admin vs user installs |
 | `ptk-reporting` | adding report output or importing tool results | run model, exporters, contributors (JUnit/SARIF/Cobertura), writing a contributor plugin |
-| `ptk-troubleshooting` | any failing ptk run or config | error categories → fixes, reading `run.log`/`events.jsonl`, `doctor`, `--dry-run`, variant `explain` |
+| `ptk-troubleshooting` | any failing ptk run or config | error categories → fixes, reading `run.log`/`events.jsonl`, `doctor`, `ptk dry-run`, variant `explain` |
 | `ptk-development` | changing ptk itself or writing plugins | architecture rules, where changes go, plugin entry points, definition of done (tests, docs, skills) |
 | `ptk-docs-writing` | documenting ptk features or project actions (docs-as-code) | doc structure, reference tables generated from the schema, examples tested in CI |
 
@@ -539,9 +556,9 @@ formatted with `ruff format`. CI runs `ruff check` and `ruff format --check`.
 |---|-------------|-----------|
 | M1 ✅ | Meta-model, loader (include, overlays, tags, provenance), substitution, validation, JSON Schema | invalid configs fail with `file:line` + suggestion; `config show --sources` works |
 | M2 ✅ | Variant core integrated | `when:`, `${vh.*}`, `variant` commands, explain/check |
-| M3 ✅ | Execution engine: steps, sets, parallel, script types, uv Python modes, env per command; `ptk run ACTION [--dry-run]`; `ptk help` (HTML) with maintainer visibility | demo action runs on Linux; parallel set without shared state |
+| M3 ✅ | Execution engine: steps, sets, parallel, script types, uv Python modes, env per command; `ptk run`, `ptk dry-run`, default action, parameter defaults (incl. per variant); `ptk help` (HTML) with maintainer visibility | demo action runs on Linux; parallel set without shared state |
 | M4 | Unified logging | run dir with `run.log`, step logs, `events.jsonl`; masking |
-| M5 | CLI: generated actions/params, `--from/--to`, `--dry-run`, `config`, `variant`, maintainer visibility (`maintainers.ptk.yml`), `vscode tasks` | `ptk build --help` shows declared params; maintainer actions hidden for others; tasks.json merge keeps user tasks |
+| M5 | CLI: generated actions/params, `--from/--to`, `config`, `variant`, maintainer visibility (`maintainers.ptk.yml`), `vscode tasks` | `ptk build --help` shows declared params; maintainer actions hidden for others; tasks.json merge keeps user tasks |
 | M6 | Credential handler: env, gopass, vault, prompt | `creds` commands; secrets only via step env; masking tested |
 | M7 | Unified reporting | JSON, JUnit, HTML, Markdown, GitHub summary; contributors API |
 | M8 | Shared configs: pre-commit, ruff, clang-format, clang-tidy, clangd | `configs sync/check/--diff` |

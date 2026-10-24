@@ -58,6 +58,18 @@ def validate(config: PtkConfig) -> list[PathProblem]:
             )
         )
 
+    default_action = config.actions.get(config.project.default_action or "")
+    if default_action is not None and default_action.audience == "maintainer":
+        problems.append(
+            (
+                ("project", "default_action"),
+                (
+                    "the default action must be available to everyone "
+                    "(this one has audience: maintainer)"
+                ),
+            )
+        )
+
     problems += _check_values(config.vars, ("vars",), config, None, allow_secret=False)
 
     for name, action in config.actions.items():
@@ -73,6 +85,15 @@ def validate(config: PtkConfig) -> list[PathProblem]:
         problems += _check_values(
             action.env, base + ("env",), config, action, allow_secret=False
         )
+        for pname, param in action.params.items():
+            # defaults cannot depend on other parameters (action=None)
+            problems += _check_values(
+                param.default,
+                base + ("params", pname, "default"),
+                config,
+                None,
+                allow_secret=False,
+            )
         for i, step in enumerate(action.steps):
             problems += _check_step(step, base + ("steps", i), config, action)
     return problems

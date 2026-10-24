@@ -70,6 +70,7 @@ class HelpAction:
     phases: list[str]  # names usable with --from / --to
     passthrough: list[str]  # steps accepting "-- args"
     usage: str = ""
+    is_default: bool = False
 
 
 @dataclass
@@ -170,6 +171,7 @@ class BuildHelp:
                         if any(s.passthrough for _, s in _walk(action.steps))
                         else ""
                     ),
+                    is_default=name == config.project.default_action,
                 )
             )
         if config.variants is not None:

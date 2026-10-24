@@ -52,8 +52,10 @@ Loading order: `main.ptk.yml` (+ includes) → `ci.ptk.yml` (in CI) →
 ptk [-c main.ptk.yml] [--set PATH=VALUE]... [--ci/--no-ci]
 ptk config validate | show [PATH] [--sources] [--format yaml|json] | schema [-o FILE]
 ptk variant list [--names] | show [NAME] [--json] [--all] | explain NAME FEATURE | check [NAMES] [--strict]
-ptk run ACTION [-V VARIANT] [-p NAME=VALUE]... [--params FILE] [--from STEP] [--to STEP]
-               [--dry-run [--env]] [-q] [--args-for STEP="ARGS"]... [-- ARGS]
+ptk                                   run the default action (project.default_action)
+ptk run [ACTION] [-V VARIANT] [-p NAME=VALUE]... [--params FILE] [--from STEP] [--to STEP]
+                 [-q] [--args-for STEP="ARGS"]... [-- ARGS]
+ptk dry-run [ACTION] [same options] [--env]   what would run - nothing is executed
 ptk help [--no-open] [-o FILE]       full help as an HTML page, opened in your browser
 ```
 
@@ -64,7 +66,9 @@ Exit codes: 0 passed, 1 failed, 2 usage/configuration error, 130 cancelled (Ctrl
 ```yaml
 actions:
   build:
-    params: {jobs: {type: int, default: 8}}
+    params:
+      jobs: {type: int, default: 8, env: PTK_JOBS}                 # typed default
+      profile: {default: "${vh.data.conan.profile}"}               # per-variant default
     steps:
       - configure: [cmake, --preset, "${vars.preset}"]        # list: no shell
       - compile: "cmake --build --preset ${vars.preset} -j ${params.jobs}"   # string: shell
@@ -81,9 +85,14 @@ actions:
 * `python:` `uvx` (tool from PyPI), `venv` (cached in `.ptk/venvs/<hash>`), `project`
   (`uv run --project`), `interpreter: cli` (ptk's own) - nothing is ever activated
 * every command gets its own environment: `PTK_*`, `PTK_PARAM_*`, `VH_*`, action/step
-  `env`, then secrets; secrets are masked in console, logs and `--dry-run`
+  `env`, then secrets; secrets are masked in console, logs and `ptk dry-run`
 * working directory: project root; per-step folders `${run.build_dir}`, `${run.reports_dir}`
-* `--dry-run` shows the expanded steps, conditions, final commands and parameter sources
+* `ptk dry-run ACTION` shows the expanded steps, conditions, final commands and where every
+  parameter value comes from
+* parameter precedence: `-p` > `--params FILE` > `env:` variable > `default:`; defaults can
+  be changed per layer (`local.ptk.yml`, `ci.ptk.yml`, `--set`) and may use `${env:..}`,
+  `${vars.x}`, `${vh.*}` (per-variant defaults) or `${project.*}`
+* `project.default_action` is what plain `ptk` runs
 
 ## Workspace layout
 

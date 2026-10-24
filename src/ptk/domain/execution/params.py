@@ -5,7 +5,7 @@ Precedence: command line > params file > declared environment variable > default
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 
 from ..config.model import ParamSpec
@@ -23,6 +23,7 @@ def resolve_params(
     cli: Mapping[str, Any] | None = None,
     file_values: Mapping[str, Any] | None = None,
     environ: Mapping[str, str] | None = None,
+    resolve_default: Callable[[str], Any] | None = None,
 ) -> tuple[dict[str, Any], dict[str, str]]:
     cli = dict(cli or {})
     file_values = dict(file_values or {})
@@ -50,6 +51,14 @@ def resolve_params(
                     spec.convert(environ[spec.env]),
                     f"env:{spec.env}",
                 )
+            elif spec.default is not None and spec.default_is_template:
+                if resolve_default is None:
+                    raise ParamError(
+                        f"parameter '{name}': default {spec.default!r} "
+                        "cannot be resolved here"
+                    )
+                values[name] = spec.convert(resolve_default(spec.default))
+                sources[name] = f"default {spec.default}"
             elif spec.default is not None:
                 values[name], sources[name] = spec.default, "default"
             elif spec.required:

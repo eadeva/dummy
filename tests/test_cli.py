@@ -20,6 +20,7 @@ def test_config_validate_and_show():
     assert json.loads(show.output) == {
         "type": "int",
         "default": 8,
+        "env": "PTK_JOBS",
         "help": "Parallel jobs",
     }
     sources = run("config", "show", "project", "--sources")
@@ -59,7 +60,7 @@ def test_errors_exit_2():
 
 
 def test_dry_run_of_demo_shows_plan_without_executing():
-    result = run("run", "build", "--dry-run", "-V", "b_us", "-p", "jobs=3", "--env")
+    result = run("dry-run", "build", "-V", "b_us", "-p", "jobs=3", "--env")
     assert result.exit_code == 0, result.output
     assert "dry run" in result.output and "-j 3" in result.output
     assert "camera-selftest: skipped (condition is false" in result.output
@@ -68,10 +69,10 @@ def test_dry_run_of_demo_shows_plan_without_executing():
 
 
 def test_run_errors_are_clean():
-    assert "did you mean 'build'" in run("run", "biuld", "-n").output
-    bad = run("run", "build", "-n", "-p", "jobs=lots")
+    assert "did you mean 'build'" in run("dry-run", "biuld").output
+    bad = run("dry-run", "build", "-p", "jobs=lots")
     assert bad.exit_code == 2 and "parameter 'jobs'" in bad.output
-    assert "no selected step" in run("run", "build", "-n", "--", "-x").output
+    assert "no selected step" in run("dry-run", "build", "--", "-x").output
 
 
 def test_run_executes_and_returns_exit_code(write):

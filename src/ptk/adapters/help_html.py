@@ -167,6 +167,8 @@ def _action(action: HelpAction) -> str:
         if action.audience == "maintainer"
         else ""
     )
+    if action.is_default:
+        badge += ' <span class="tag def">default action</span>'
     parts = [
         f'<section class="block" id="{_anchor("action", action.name)}"><h2>{_e(action.name)}{badge}</h2>',
         f'<p class="lead">{_e(action.help)}</p>'
@@ -201,9 +203,12 @@ def _action(action: HelpAction) -> str:
             "Needs the tools "
             + ", ".join(f"<code>{_e(t)}</code>" for t in action.requires_tools)
         )
-    notes.append(
-        f"Preview without running: <code>ptk run {_e(action.name)} --dry-run</code>"
-    )
+    notes.append(f"Preview without running: <code>ptk dry-run {_e(action.name)}</code>")
+    if action.is_default:
+        notes.append(
+            "This is the default action: plain <code>ptk</code> or "
+            "<code>ptk run</code> runs it"
+        )
     parts.append(
         '<ul class="notes">'
         + "".join(f"<li>{n}</li>" for n in notes)
@@ -272,7 +277,8 @@ def render(doc: HelpDocument) -> str:
         )
     hero.append(
         _cmd(
-            "ptk run ACTION --dry-run          # see what would run\n"
+            "ptk                               # run the default action\n"
+            "ptk dry-run ACTION                # see what would run\n"
             "ptk run ACTION -p NAME=VALUE      # run it with a parameter\n"
             "ptk run ACTION --from STEP -- ARGS\n"
             "ptk variant list"

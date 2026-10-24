@@ -38,6 +38,7 @@ RESERVED_ACTIONS = {
     "doctor",
     "report",
     "run",
+    "dry-run",
     "init",
     "help",
     "vscode",
@@ -84,6 +85,13 @@ ParamType = Literal["str", "int", "float", "bool", "choice", "path", "secret", "
 
 
 class ParamSpec(_Strict):
+    """An action parameter.
+
+    ``default`` may use ``${env:...}``, ``${vars.x}``, ``${vh.*}`` and
+    ``${project.*}`` - e.g. a per-variant default ``${vh.data.build_type}``;
+    such defaults are resolved and type-checked when the action runs.
+    """
+
     type: ParamType = "str"
     default: Any = None
     choices: list[str] | None = None
@@ -98,11 +106,15 @@ class ParamSpec(_Strict):
                 raise ValueError("choice parameters need 'choices'")
         elif self.choices is not None:
             raise ValueError("'choices' is only allowed for type: choice")
-        if self.default is not None:
+        if self.default is not None and not self.default_is_template:
             self.default = self.convert(self.default)
         if self.required and self.default is not None:
             raise ValueError("a required parameter cannot have a default")
         return self
+
+    @property
+    def default_is_template(self) -> bool:
+        return isinstance(self.default, str) and "${" in self.default.replace("$${", "")
 
     def convert(self, raw: Any) -> Any:
         """Typed value from YAML or command-line text; raises ValueError."""

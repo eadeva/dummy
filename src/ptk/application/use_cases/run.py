@@ -2,13 +2,14 @@
 
 ``PrepareRun`` turns configuration + request into an :class:`ActionPlan`
 (parameters, variant, environment, substituted steps, skip reasons); it has no
-side effects, so ``--dry-run`` is simply "prepare and show".
+side effects, so ``ptk dry-run`` is simply "prepare and show".
 ``RunAction`` executes a plan through the ports: sequential and parallel step
 sets, retries, timeouts, ``continue_on_error`` and cancellation (Ctrl+C).
 """
 
 from __future__ import annotations
 
+import dataclasses
 import threading
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -49,7 +50,7 @@ MASK = "********"
 
 @dataclass
 class RunRequest:
-    action: str
+    action: str | None = None  # None: project.default_action
     variant: str | None = None
     params: Mapping[str, Any] = field(default_factory=dict)  # from the command line
     params_file: Mapping[str, Any] = field(default_factory=dict)  # from --params FILE
@@ -94,16 +95,18 @@ class PrepareRun:
 
     def execute(self, project: Project, request: RunRequest) -> PreparedRun:
         config = project.config
+        if request.action is None:
+            if config.project.default_action is None:
+                names = ", ".join(config.actions) or "none configured"
+                raise PtkError(
+                    "no action given and no project.default_action configured "
+                    f"(actions: {names})"
+                )
+            request = dataclasses.replace(request, action=config.project.default_action)
+        assert request.action is not None
         action = self._action(project, request.action)
         host_env = self._host.variables
         os_name = self._host.os_name()
-
-        params, sources = resolve_params(
-            action.params,
-            cli=request.params,
-            file_values=request.params_file,
-            environ=host_env,
-        )
 
         variants = VariantService(project)
         variant_name: str | None = None
@@ -119,6 +122,28 @@ class PrepareRun:
         elif request.variant:
             raise PtkError(f"--variant {request.variant}: this project has no variants")
 
+        project_ns = {
+            "root": str(project.root),
+            "name": config.project.name,
+            "description": config.project.description,
+        }
+
+        def resolve_default(template: str) -> Any:
+            # defaults may use env, vars, vh and project - not other parameters
+            return Scope(
+                env=host_env,
+                vars=config.vars,
+                namespaces={"vh": vh_ns, "project": project_ns},
+            )(template)
+
+        params, sources = resolve_params(
+            action.params,
+            cli=request.params,
+            file_values=request.params_file,
+            environ=host_env,
+            resolve_default=resolve_default,
+        )
+
         layout = layout_of(project)
         run_id = self._clock().strftime("%Y%m%d-%H%M%S")
         dirs = {
@@ -126,11 +151,6 @@ class PrepareRun:
             "log_dir": str(layout.action_log_dir(variant_name, request.action)),
             "reports_dir": str(layout.reports_dir(variant_name, request.action)),
             "build_dir": str(layout.build_dir(variant_name, request.action)),
-        }
-        project_ns = {
-            "root": str(project.root),
-            "name": config.project.name,
-            "description": config.project.description,
         }
         secret_values: set[str] = set()
 
@@ -344,7 +364,7 @@ class RunAction:
     def describe(
         self, prepared: PreparedRun, step: PlannedStep
     ) -> tuple[str, str | None]:
-        """(command line, python runtime description) without side effects - for --dry-run."""
+        """(command line, python runtime description) without side effects - for ptk dry-run."""
         if step.kind == "uses":
             return f"uses {step.spec.uses} {step.with_ or ''}".rstrip(), None
         runtime = (

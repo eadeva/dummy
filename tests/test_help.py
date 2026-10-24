@@ -72,7 +72,7 @@ def test_help_command_writes_page(tmp_path):
     for text in (
         "ptk run build [OPTIONS]",
         "ptk variant show",
-        "--dry-run",
+        "ptk dry-run build",
         "customer_a_high",
     ):
         assert text in html

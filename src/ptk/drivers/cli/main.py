@@ -87,7 +87,10 @@ def _state(ctx: click.Context) -> CliState:
 # --------------------------------------------------------------------------- root
 
 
-@click.group(context_settings={"help_option_names": ["-h", "--help"]})
+@click.group(
+    context_settings={"help_option_names": ["-h", "--help"]},
+    invoke_without_command=True,
+)
 @click.option(
     "-c",
     "--config",
@@ -115,10 +118,29 @@ def cli(
     ci: bool | None,
     verbose: int,
 ) -> None:
-    """[bold]ptk[/] - project tool kit."""
+    """[bold]ptk[/] - project tool kit.
+
+    Without a command, ptk runs the project's default action
+    ([italic]project.default_action[/]).
+    """
     ctx.obj = CliState(
         app=create_app(), config=config, overrides=overrides, ci=ci, verbose=verbose
     )
+    if ctx.invoked_subcommand is not None:
+        return
+    try:
+        default = ctx.obj.project().config.project.default_action
+    except PtkError:
+        default = None  # not in a project (or broken config): just show the help
+    if default is None:
+        click.echo(ctx.get_help())
+        return
+    err_console.print(
+        f"[dim]running the default action '{escape(default)}' "
+        "(project.default_action) - 'ptk --help' lists all commands[/]",
+        highlight=False,
+    )
+    ctx.invoke(run_command)
 
 
 # --------------------------------------------------------------------------- config
@@ -349,59 +371,53 @@ def _params_file(path: Path | None) -> dict[str, Any]:
     return data
 
 
-@cli.command("run")
-@click.argument("action")
-@click.argument("extra", nargs=-1, type=click.UNPROCESSED, metavar="[-- ARGS]...")
-@click.option(
-    "-V",
-    "--variant",
-    help="Variant (name or alias); default: the configured default variant.",
-)
-@click.option("--from", "start", metavar="STEP", help="Start at this top-level step.")
-@click.option("--to", "end", metavar="STEP", help="Stop after this top-level step.")
-@click.option(
-    "-p",
-    "--param",
-    "params",
-    multiple=True,
-    metavar="NAME=VALUE",
-    help="Set an action parameter.",
-)
-@click.option(
-    "--params",
-    "params_file",
-    type=click.Path(path_type=Path, dir_okay=False, exists=True),
-    help="YAML file with parameter values.",
-)
-@click.option(
-    "--args-for",
-    multiple=True,
-    metavar='STEP="ARGS"',
-    help="Extra arguments for one step with passthrough: true (STEP is the step path a/b).",
-)
-@click.option(
-    "-n",
-    "--dry-run",
-    is_flag=True,
-    help="Show what would run (commands, conditions, environment) without executing anything.",
-)
-@click.option(
-    "--env",
-    "show_env",
-    is_flag=True,
-    help="With --dry-run: also show the generated PTK_/VH_ variables.",
-)
-@click.option(
-    "-q",
-    "--quiet",
-    is_flag=True,
-    help="Do not stream command output (it is still logged).",
-)
-@click.pass_context
-@guarded
-def run_command(
+def _action_options(fn):
+    """Options shared by ``ptk run`` and ``ptk dry-run``."""
+    decorators = [
+        click.argument("action", required=False),
+        click.argument(
+            "extra", nargs=-1, type=click.UNPROCESSED, metavar="[-- ARGS]..."
+        ),
+        click.option(
+            "-V",
+            "--variant",
+            help="Variant (name or alias); default: the configured default variant.",
+        ),
+        click.option(
+            "--from", "start", metavar="STEP", help="Start at this top-level step."
+        ),
+        click.option(
+            "--to", "end", metavar="STEP", help="Stop after this top-level step."
+        ),
+        click.option(
+            "-p",
+            "--param",
+            "params",
+            multiple=True,
+            metavar="NAME=VALUE",
+            help="Set an action parameter (default values come from the configuration).",
+        ),
+        click.option(
+            "--params",
+            "params_file",
+            type=click.Path(path_type=Path, dir_okay=False, exists=True),
+            help="YAML file with parameter values.",
+        ),
+        click.option(
+            "--args-for",
+            multiple=True,
+            metavar='STEP="ARGS"',
+            help="Extra arguments for one step with passthrough: true (STEP is a/b).",
+        ),
+    ]
+    for decorator in reversed(decorators):
+        fn = decorator(fn)
+    return fn
+
+
+def _prepare(
     ctx: click.Context,
-    action: str,
+    action: str | None,
     extra: tuple[str, ...],
     variant: str | None,
     start: str | None,
@@ -409,18 +425,16 @@ def run_command(
     params: tuple[str, ...],
     params_file: Path | None,
     args_for: tuple[str, ...],
+    *,
     dry_run: bool,
-    show_env: bool,
-    quiet: bool,
-) -> None:
-    """Run ACTION. Arguments after [bold]--[/] go to the step with [italic]passthrough: true[/].
-
-    Exit code: 0 passed, 1 failed, 2 usage/configuration error, 130 cancelled.
-    """
+):
     import shlex
 
     state = _state(ctx)
     project = state.project()
+    if action is not None and action.startswith("-"):
+        # "ptk run -- -k x": click put the first pass-through word into ACTION
+        extra, action = (action, *extra), None
     request = RunRequest(
         action=action,
         variant=variant,
@@ -433,13 +447,52 @@ def run_command(
         dry_run=dry_run,
     )
     prepared = state.app.prepare_run(project).execute(project, request)
-    runner = state.app.run_action(project)
-    if dry_run:
-        present.dry_run(console, prepared, runner, show_env=show_env)
-        return
+    return prepared, state.app.run_action(project)
+
+
+@cli.command("dry-run")
+@_action_options
+@click.option(
+    "--env",
+    "show_env",
+    is_flag=True,
+    help="Also show the generated PTK_/VH_ variables.",
+)
+@click.pass_context
+@guarded
+def dry_run_command(ctx: click.Context, show_env: bool, **options: Any) -> None:
+    """Show what ACTION would do, without running anything.
+
+    Prints the steps with conditions evaluated, the final command of every step,
+    Python runtimes, step environment (secrets masked) and where every parameter
+    value comes from. ACTION defaults to [italic]project.default_action[/].
+    """
+    prepared, runner = _prepare(ctx, dry_run=True, **options)
+    present.dry_run(console, prepared, runner, show_env=show_env)
+
+
+@cli.command("run")
+@_action_options
+@click.option(
+    "-q",
+    "--quiet",
+    is_flag=True,
+    help="Do not stream command output (it is still logged).",
+)
+@click.pass_context
+@guarded
+def run_command(ctx: click.Context, quiet: bool = False, **options: Any) -> None:
+    """Run ACTION (default: [italic]project.default_action[/]).
+
+    Arguments after [bold]--[/] go to the step with [italic]passthrough: true[/].
+    Preview first with [bold]ptk dry-run ACTION[/].
+
+    Exit code: 0 passed, 1 failed, 2 usage/configuration error, 130 cancelled.
+    """
+    prepared, runner = _prepare(ctx, dry_run=False, **options)
     observers = [
         present.ConsoleObserver(console, quiet=quiet),
-        *state.app.log_observers(prepared),
+        *_state(ctx).app.log_observers(prepared),
     ]
     cancel = Cancelled()
     holder: dict[str, Any] = {}
@@ -463,11 +516,8 @@ def run_command(
         raise holder["error"]
     result = holder["result"]
     present.summary(console, result)
-    sys.exit(
-        {Status.PASSED: 0, Status.SKIPPED: 0, Status.CANCELLED: 130}.get(
-            result.status, 1
-        )
-    )
+    codes = {Status.PASSED: 0, Status.SKIPPED: 0, Status.CANCELLED: 130}
+    sys.exit(codes.get(result.status, 1))
 
 
 # --------------------------------------------------------------------------- help
