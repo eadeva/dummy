@@ -1,0 +1,22 @@
+formats:
+  - HTML
+
+sbom:
+  flagged_licenses:
+    - GPL-2.0
+    - GPL-3.0
+    - AGPL-3.0
+    - LGPL-2.1
+    - LGPL-3.0
+
+log_analyzer:
+  white_list:
+    - regex: "cmake        CMake Warning:"
+      justification: "Non-useful warning from CMake"
+    - regex: "-- Warning: Did not find file Compiler/-ASM"
+      justification: "CMake problems with greenhills compiler"
+    - regex: "*-- >>>> SWB_EXEC_TOOL_CONTINUE_ON_ERROR:  FALSE*"
+      justification: "arclbuild toolchain message that it doesn't continue on error, no actual error"
+    - regex: "*-- >>>> SWB_EXEC_TOOL_ERROR_LOG:*"
+      justification: "arclbuild toolchain message for error.log, no actual error"
+  reclassify: {}

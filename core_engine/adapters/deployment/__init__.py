@@ -1,0 +1,2 @@
+"""Artifactory deployment adapter package.
+"""
