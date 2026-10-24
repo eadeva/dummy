@@ -6,7 +6,7 @@ unified logging and reporting. See [`docs/PLAN.md`](docs/PLAN.md) for the full p
 
 **Status:** M1 (configuration meta-model and loader), M2 (variant core), M3
 (execution engine, dry run, HTML help), M4 (unified logging), M5 (generated
-CLI, maintainer visibility, VS Code tasks), M6 (credentials) and M7 (reporting) are done.
+CLI, maintainer visibility, VS Code tasks), M6 (credentials), M7 (reporting) and M8 (shared configs) are done.
 
 ```bash
 uv sync                     # install with dev dependencies
@@ -14,6 +14,21 @@ uv run ptk --help
 uv run pytest
 uv run ruff check && uv run ruff format --check   # ruff default rules
 ```
+
+## Shared configs
+
+```yaml
+configs:
+  pre-commit:   {overlay: ptk/configs/pre-commit.overlay.yaml}
+  ruff:         {}
+  clang-format: {overlay: ptk/configs/clang-format.overlay.yaml}
+  clang-tidy:   {overlay: ptk/configs/clang-tidy.overlay.yaml}
+  clangd:       {}
+```
+
+`ptk configs sync` merges ptk's base configs with your overlays into `.pre-commit-config.yaml`,
+`.clang-format`, `.clang-tidy`, `.clangd` and `ruff-base.toml` (your `ruff.toml` extends it).
+Commit them; `ptk configs check` in CI catches stale files.
 
 ## Reports
 
@@ -85,6 +100,7 @@ ptk config validate | show [PATH] [--sources] [--format yaml|json] | schema [-o 
 ptk variant list [--names] | show [NAME] [--json] [--all] | explain NAME FEATURE | check [NAMES] [--strict]
 ptk vscode tasks [--check] [--command "uv run ptk"] [--users-only]
 ptk creds setup [--vault] | set NAME [FIELD] [--store S] | list | test NAME | remove NAME
+ptk configs sync [NAMES] [--diff] | check [NAMES]
 ptk report export [ACTION] [-V v] [--run ID] [-f FORMAT]... | open [ACTION] [--run ID]
 ptk help [--no-open] [-o FILE]       full help as an HTML page, opened in your browser
 ```

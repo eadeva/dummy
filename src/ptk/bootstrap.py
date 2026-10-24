@@ -20,6 +20,7 @@ from .adapters.logging.files import FileLogObserver
 from .adapters.process import SubprocessRunner
 from .adapters.python_env import UvPythonEnvManager
 from .adapters.reporting.store import FileReportStore
+from .adapters.shared_configs import PackageConfigFiles
 from .adapters.vscode_file import TasksFile
 from .application.ports import (
     ConfigSource,
@@ -30,6 +31,7 @@ from .application.ports import (
     RunObserver,
     SecretProvider,
 )
+from .application.use_cases.configs import SharedConfigs
 from .application.use_cases.credentials import CredentialService
 from .application.use_cases.help import BuildHelp, HelpDocument
 from .application.use_cases.project import (
@@ -58,6 +60,7 @@ class App:
     build_help: BuildHelp
     vscode_tasks: VSCodeTasks
     reports: ReportService
+    shared_configs: SharedConfigs
     prompter: Prompter
     secret_providers: dict[str, SecretProvider]
     _credentials: dict[int, CredentialService] = field(default_factory=dict, repr=False)
@@ -129,6 +132,7 @@ def create_app(
         build_help=BuildHelp(version),
         vscode_tasks=VSCodeTasks(TasksFile),
         reports=ReportService(FileReportStore(host.variables), version),
+        shared_configs=SharedConfigs(PackageConfigFiles()),
         prompter=prompter,
         secret_providers=secret_providers
         or default_secret_providers(host.variables, prompter),

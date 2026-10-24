@@ -174,3 +174,21 @@ class ReportStore(Protocol):
     ) -> list[Contribution]: ...
 
     def write(self, report: Report, formats: list[str], target: Path) -> list[Path]: ...
+
+
+# --------------------------------------------------------------------------- shared configs
+
+
+class SharedConfigFiles(Protocol):
+    """Base configs shipped with ptk and the project's config files."""
+
+    def base(self, name: str) -> tuple[str, str]:
+        """(text, version) of a shipped base config."""
+
+    def parse(self, text: str, source: str) -> dict: ...
+
+    def render(self, name: str, data: dict) -> str: ...
+
+    def read(self, path: Path) -> str | None: ...
+
+    def write(self, path: Path, text: str) -> None: ...

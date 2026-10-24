@@ -70,6 +70,15 @@ def validate(config: PtkConfig) -> list[PathProblem]:
             )
         )
 
+    ruff = config.configs.get("ruff")
+    if ruff is not None and ruff.overlay:
+        problems.append(
+            (
+                ("configs", "ruff", "overlay"),
+                "ruff needs no overlay: your ruff.toml extends ptk's ruff-base.toml",
+            )
+        )
+
     problems += _check_values(config.vars, ("vars",), config, None, allow_secret=False)
 
     for name, action in config.actions.items():

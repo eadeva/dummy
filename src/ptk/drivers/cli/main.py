@@ -497,6 +497,70 @@ def creds_setup(ctx: click.Context, create_vault: bool) -> None:
     console.print(table)
 
 
+# --------------------------------------------------------------------------- configs
+
+
+@cli.group("configs")
+def configs_group() -> None:
+    """Shared base configs (pre-commit, ruff, clang-format, clang-tidy, clangd) + overlays."""
+
+
+def _show_config_results(items: list[Any], root: Path) -> None:
+    for item in items:
+        colour = {"up to date": "green", "new": "cyan"}.get(item.status, "yellow")
+        rel = (
+            item.path.relative_to(root) if item.path.is_relative_to(root) else item.path
+        )
+        console.print(
+            f"[{colour}]{item.status:<11}[/] {escape(str(rel))} [dim]({item.name})[/]",
+            highlight=False,
+        )
+        for note in item.notes:
+            console.print(f"            [yellow]{escape(note)}[/]", highlight=False)
+
+
+@configs_group.command("sync")
+@click.argument("names", nargs=-1)
+@click.option(
+    "--diff", is_flag=True, help="Only show what would change (unified diff)."
+)
+@click.pass_context
+@guarded
+def configs_sync(ctx: click.Context, names: tuple[str, ...], diff: bool) -> None:
+    """Write the effective config files: ptk's base merged with your overlay."""
+    project = _state(ctx).project()
+    service = _state(ctx).app.shared_configs
+    if diff:
+        changed = False
+        for item in service.plan(project, list(names) or None):
+            if item.status != "up to date":
+                changed = True
+                click.echo(item.diff(project.root), nl=False)
+        if not changed:
+            console.print("[green]all configs are up to date[/]")
+        return
+    items = service.sync(project, list(names) or None)
+    if not items:
+        console.print(
+            "no shared configs configured (add them under 'configs:' in main.ptk.yml)"
+        )
+    _show_config_results(items, project.root)
+
+
+@configs_group.command("check")
+@click.argument("names", nargs=-1)
+@click.pass_context
+@guarded
+def configs_check(ctx: click.Context, names: tuple[str, ...]) -> None:
+    """Fail (exit code 1) if an effective config file is missing or out of date - for CI."""
+    project = _state(ctx).project()
+    items = _state(ctx).app.shared_configs.plan(project, list(names) or None)
+    _show_config_results(items, project.root)
+    if any(item.status != "up to date" for item in items):
+        console.print("run 'ptk configs sync' and commit the result")
+        sys.exit(1)
+
+
 # --------------------------------------------------------------------------- report
 
 

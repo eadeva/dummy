@@ -1,0 +1,13 @@
+# ptk-base: clangd v1
+CompileFlags:
+  CompilationDatabase: build
+Diagnostics:
+  ClangTidy:
+    FastCheckFilter: Strict
+  UnusedIncludes: Strict
+InlayHints:
+  Enabled: true
+  ParameterNames: true
+  DeducedTypes: true
+Index:
+  Background: Build

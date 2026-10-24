@@ -1,0 +1,9 @@
+# ptk-base: ruff v1
+# ruff's default rules (E4, E7, E9, F; line length 88) plus a few stricter rule sets.
+# Your ruff.toml extends this file: extend = "ruff-base.toml"
+
+[lint]
+extend-select = ["I", "B", "UP", "SIM"]
+
+[format]
+docstring-code-format = true
