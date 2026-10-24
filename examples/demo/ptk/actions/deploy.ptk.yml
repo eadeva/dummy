@@ -1,0 +1,14 @@
+credentials:
+  artifactory:
+    fields: [user, token]
+    env: {user: ARTIFACTORY_USER, token: ARTIFACTORY_TOKEN}
+    gopass: {path: work/artifactory}
+
+actions:
+  deploy:
+    help: Upload binaries (maintainers only)
+    audience: maintainer
+    steps:
+      - upload:
+          run: [python, tools/upload.py, "${run.bin_dir}"]
+          secrets: {ARTIFACTORY_TOKEN: artifactory.token}

@@ -1,0 +1,19 @@
+# ptk entry point: version, project and the files that make up the configuration
+schema_version: 1
+ptk_version: ">=0.1.0.dev0,<0.2"
+
+project:
+  name: demo
+  description: Infotainment demo for ptk
+  default_action: build
+
+include:
+  - ptk/actions/*.ptk.yml
+
+variants: ptk/variants.ptk.yml
+
+vars:
+  preset: ${vh.variant}
+
+layout:
+  root: .

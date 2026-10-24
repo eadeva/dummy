@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ptk"
+version = "0.1.0.dev0"
+description = "ptk (project tool kit): a configuration-driven project CLI with variants, credentials, tool setup, logging and reporting"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "pydantic>=2.6",
+  "PyYAML>=6.0",
+  "packaging>=23",
+  "rich>=13.7",
+  "rich-click>=1.8",
+]
+
+[project.scripts]
+ptk = "ptk.drivers.cli.main:main"
+
+[dependency-groups]
+dev = [
+  "pytest>=8",
+  "ruff>=0.6",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ptk"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]

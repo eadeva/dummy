@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+dist/
+.pytest_cache/
+.ruff_cache/
+# ptk workspace
+_builds/
+_bin/
+_logs/
+_reports/
+.ptk/
+local.ptk.yml
