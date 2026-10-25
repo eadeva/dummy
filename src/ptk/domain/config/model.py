@@ -22,6 +22,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ..variants.model import ProductLineSpec
+from ..versioning import VersionDependency, VersioningSpec
 
 ACTION_RE = re.compile(r"^[a-z][a-z0-9-]*$")
 PARAM_RE = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -304,6 +305,7 @@ def _unique(names: list[str], where: str) -> None:
 
 
 class ActionSpec(_Strict):
+    version_dependencies: dict[str, VersionDependency] = Field(default_factory=dict)
     environment: EnvironmentSpec | None = None
     help: str = ""
     audience: Literal["all", "maintainer"] = "all"
@@ -465,6 +467,7 @@ class PtkConfig(_Strict):
     tools: dict[str, ToolSpec] = Field(default_factory=dict)
     credentials: dict[str, CredentialSpec] = Field(default_factory=dict)
     variants: ProductLineSpec | None = None
+    versioning: VersioningSpec | None = None
     actions: dict[str, ActionSpec] = Field(default_factory=dict)
     configs: dict[SharedConfigName, SharedConfigSpec] = Field(default_factory=dict)
     layout: LayoutSpec = Field(default_factory=LayoutSpec)
@@ -484,6 +487,7 @@ class PtkConfig(_Strict):
             "setup.init",
             "setup.migrate",
             "variant",
+            "version",
             "report",
         ],
         Literal["all", "maintainer"],

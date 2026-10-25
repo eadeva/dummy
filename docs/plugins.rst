@@ -134,3 +134,11 @@ must be non-interactive; listing never calls ``get`` on persistent stores.
 Custom installers must manage their own version-specific destinations and
 configure a discoverable PATH explicitly; PTK cannot isolate arbitrary external
 installer side effects.
+
+Version generators
+------------------
+
+The bundled ``version.generate`` step supports C headers, CMake, MSBuild, Python
+and JSON. See :doc:`versioning`. Custom ``ptk.steps`` handlers receive the resolved
+run snapshot in ``ctx.versions``; consume that snapshot instead of rediscovering
+Git state during execution. Existing variant generator contracts are unchanged.

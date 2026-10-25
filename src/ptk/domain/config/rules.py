@@ -40,6 +40,31 @@ def parse_path(text: str) -> Path:
 def validate(config: PtkConfig) -> list[PathProblem]:
     problems: list[PathProblem] = []
     line = config.variants
+    if config.versioning is not None:
+        spec = config.versioning
+        if spec.project is None or spec.project.source == "inherit":
+            problems.append(
+                (
+                    ("versioning", "project"),
+                    "project version requires an explicit source",
+                )
+            )
+        for name in spec.variants:
+            if line is None or name not in line.variants:
+                problems.append(
+                    (("versioning", "variants", name), "unknown versioning variant")
+                )
+    for action_name, action in config.actions.items():
+        for step in action.walk_steps():
+            if any(
+                k.upper().startswith("PTK_VERSION_") for k in (*step.env, *step.secrets)
+            ):
+                problems.append(
+                    (
+                        ("actions", action_name),
+                        "PTK_VERSION_* variables are reserved for discovered versions",
+                    )
+                )
 
     if line is not None:
         problems += [(parse_path(p), m) for p, m in variant_rules.validate(line)]
@@ -249,6 +274,11 @@ def _check_dotted(
             return f"unknown component '{ref}'{did_you_mean(name, config.variants.components)}"
     elif ns == "env":
         return None
+    elif in_substitution and ns == "version":
+        if config.versioning is None:
+            return f"{ref!r} needs versioning configuration"
+        if first != "projects":
+            return f"unknown version namespace {ref!r}; use version.projects.ALIAS"
     elif in_substitution and ns == "project":
         if first not in PROJECT_KEYS:
             return f"unknown name '{ref}'{did_you_mean(first, PROJECT_KEYS)}"
@@ -256,7 +286,7 @@ def _check_dotted(
         if first not in RUN_KEYS:
             return f"unknown name '{ref}'{did_you_mean(first, RUN_KEYS)}"
     else:
-        known = ["env", "vars", "params", "vh", "project", "run", "secret"]
+        known = ["env", "vars", "params", "vh", "project", "run", "secret", "version"]
         return f"unknown namespace '{ns}'{did_you_mean(ns, known)}"
     return None
 

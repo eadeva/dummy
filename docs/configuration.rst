@@ -20,7 +20,7 @@ keeps configuration alongside the entry file. Entry-file includes (including
 ``!include`` and ``variants:``) resolve from this directory. Includes inside
 fragments remain relative to the fragment itself.
 
-Automatic ``tools.ptk.yml``, ``<action>.tools.ptk.yml``, ``cx.ptk.yml``,
+Automatic ``versioning.ptk.yml``, ``tools.ptk.yml``, ``<action>.tools.ptk.yml``, ``cx.ptk.yml``,
 ``local.ptk.yml`` and ``maintainers.ptk.yml`` are discovered in that directory.
 The loader applies shared tool files, main/includes, CX when enabled, local,
 and finally CLI ``--set`` overrides. Repository metadata cannot be overridden.
@@ -77,7 +77,7 @@ parameters. String commands use platform shell syntax.
 
 The registered built-ins are ``echo``, ``wait``, ``report.import``,
 ``configs.sync``, ``tools.ensure``, ``files.copy``, ``files.clean`` and
-``variant.generate``. Their contracts are in :doc:`plugins`.
+``variant.generate`` and ``version.generate``. Their contracts are in :doc:`plugins`.
 ``--from`` and ``--to`` select top-level steps.
 
 Python modes are mutually exclusive: ``uvx`` for a Python tool, ``venv`` for
@@ -171,7 +171,7 @@ automatically when present. Action filenames are discovered for actions declared
 in the main configuration, its includes, global tools file or enabled overlays.
 Files already included explicitly are not applied again automatically.
 
-Precedence, from lowest to highest: automatic ``tools.ptk.yml``, automatic action
+Precedence, from lowest to highest: automatic ``tools.ptk.yml`` and ``versioning.ptk.yml``, automatic action
 tool files (alphabetical), main configuration/includes, ``cx.ptk.yml`` in CI,
 ``local.ptk.yml``, then command-line overrides. Explicit includes retain their
 normal position. Additional tool definitions in action files are shared definitions;
@@ -265,3 +265,6 @@ tools for incompatible repository versions. Host PATH entries pointing into
 PTK's managed cache are removed before the selected installations are added.
 
 The complete ``examples/authoring`` starter is exercised by the skill tests.
+
+Version discovery is documented in :doc:`versioning`. It uses a maintained
+``versioning.ptk.yml`` and ignored per-run ``.gen.version.ptk.yml`` snapshots.

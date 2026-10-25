@@ -60,6 +60,10 @@ class YamlConfigReader:
         metadata_only: bool = False,
     ) -> Node:
         path = path.resolve()
+        if path.name == ".gen.version.ptk.yml":
+            raise ConfigError(
+                [Problem("generated version snapshots are not configuration inputs")]
+            )
         if path in _stack:
             chain = " -> ".join(_display(p, self.display_root) for p in (*_stack, path))
             raise ConfigError([Problem(f"include cycle: {chain}")])
@@ -247,7 +251,7 @@ class YamlConfigReader:
             matches = sorted(
                 Path(p)
                 for p in glob.glob(str(full), recursive=True)
-                if Path(p).is_file()
+                if Path(p).is_file() and Path(p).name != ".gen.version.ptk.yml"
             )
             return matches  # an empty glob is fine (optional fragments)
         if not full.is_file():

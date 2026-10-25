@@ -9,7 +9,7 @@ description: Create or change ptk YAML configuration, includes, layers and subst
 
 2. Use `.main.ptk.yml` as the entry point and `*.ptk.yml` fragments. Keep `local.ptk.yml` untracked.
 
-3. Preserve merge order: automatic tool files, main/includes, CX overlay, local overlay, CLI overrides. Entry includes use repository.config_path; fragment includes use the fragment directory.
+3. Preserve merge order: automatic tool/versioning files, main/includes, CX overlay, local overlay, CLI overrides. Entry includes use repository.config_path; fragment includes use the fragment directory.
 
 4. Remember that mappings merge deeply and lists replace; use `!append` or `!replace` intentionally.
 
@@ -23,10 +23,12 @@ description: Create or change ptk YAML configuration, includes, layers and subst
 
 9. Avoid unknown keys, unresolved references, recursive includes and unsupported `plugins` expectations.
 
-10. For a new project, preview `ptk setup init DIRECTORY --dry-run`, then run `ptk setup init DIRECTORY`. Existing configuration is refused and an existing .gitignore is preserved. Run `ptk setup config validate` and `ptk hello` in the new directory.
+10. For a new project, preview `ptk setup init DIRECTORY --dry-run`, then run `ptk setup init DIRECTORY`. Existing configuration is refused and existing .gitignore content is preserved with missing ignore rules appended. Run `ptk setup config validate` and `ptk hello` in the new directory.
 
 11. Use `param_defaults` for shared defaults on explicitly declared parameters; action defaults win. Use `cx.ptk.yml` for workflows and preserve per-tool requirement inheritance.
 
 The root `.main.ptk.yml` requires `repository: {alias: lowercase-name, config_path: relative/directory}`. Entry includes and automatic tool/CX/local/maintainer files use that directory; fragment includes stay fragment-relative and commands use the repository root. In `.repo` VMR workspaces, invoke `ptk <repository-alias> <command>`.
 
 Start from `examples/authoring/.main.ptk.yml` and its fragments for a complete tested configuration. Read `docs/configuration.rst` for default environment isolation and explicit inheritance.
+
+For version discovery, read `docs/versioning.rst` and exercise `tests/test_versioning.py`. Keep `.main.ptk.yml` minimal; use `ptk setup init --config-dir PATH` for starter fragments. Maintain `versioning.ptk.yml`, never commit `.gen.version.ptk.yml`. Use `PTK_VERSION_ALIAS_COMPONENT_NAME` and `${version.projects.alias.value}`; generators consume the run snapshot. Declare VMR version dependencies and their variants explicitly. Do not add bump/tag operations.

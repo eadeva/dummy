@@ -31,8 +31,9 @@ from .adapters.reporting.store import FileReportStore
 from .adapters.scaffold import FileProjectScaffold
 from .adapters.shared_configs import PackageConfigFiles
 from .adapters.tools import SystemToolInstaller
+from .adapters.versioning import VersionIO, version_generator
 from .adapters.vscode_file import TasksFile
-from .adapters.workspace import workspace_root
+from .adapters.workspace import repositories, workspace_root
 from .application.ports import (
     ConfigSource,
     HostEnvironment,
@@ -64,6 +65,7 @@ from .application.use_cases.run import (
 from .application.use_cases.setup import Doctor, Environment, SelfSetup
 from .application.use_cases.tools import ToolService
 from .application.use_cases.variants import VariantService
+from .application.use_cases.versioning import VersionService
 from .application.use_cases.vscode import VSCodeTasks
 from .domain.errors import PtkError
 from .domain.logging import file_level
@@ -187,8 +189,28 @@ class App:
             )
         return self._credentials[key]
 
+    def versions(self):
+        def dependency(member, alias):
+            root = workspace_root(member.root)
+            entries = repositories(root) if root else {}
+            if alias not in entries:
+                raise PtkError(
+                    f"version dependency {alias!r} is not a repository in this VMR"
+                )
+            # A fresh reader avoids leaking another repository's include state.
+            return LoadProject(FileConfigSource(), self.host, __version__).execute(
+                config_file=entries[alias], ci=member.ci
+            )
+
+        return VersionService(VersionIO(self.runner, self.host), dependency)
+
     def prepare_run(self, project: Project) -> PrepareRun:
-        return PrepareRun(self.host, self.credentials(project), tools=self.tools)
+        return PrepareRun(
+            self.host,
+            self.credentials(project),
+            tools=self.tools,
+            versions=self.versions(),
+        )
 
     def run_action(self, project: Project) -> RunAction:
         plugins = self.configure_project(project)
@@ -230,6 +252,7 @@ class App:
                     for n in (layout.builds, layout.bin, layout.logs, layout.reports)
                 ]
             ),
+            "version.generate": version_generator,
             "variant.generate": variant_generator(
                 {**GENERATORS, **plugins["generators"]}
             ),
@@ -256,6 +279,7 @@ class App:
             builtins=builtins,
             path_provider=lambda: self.tools.paths(project),
             environment_check=verify_tools,
+            version_writer=self.versions().write,
         )
 
     def role(self, project: Project | None) -> Role:

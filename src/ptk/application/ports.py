@@ -21,6 +21,7 @@ from ..domain.execution.model import (
 from ..domain.logging import Level
 from ..domain.reporting.model import Contribution, Report
 from ..domain.tools import InstallMethod
+from ..domain.versioning import VersionSource
 
 MAIN_FILE = ".main.ptk.yml"
 CX_FILE = "cx.ptk.yml"
@@ -217,3 +218,11 @@ class ProjectScaffold(Protocol):
 
         Refuse existing .main.ptk.yml. A dry run performs checks without writes.
         """
+
+
+class VersionDiscovery(Protocol):
+    """External version sources and atomic generated snapshot storage."""
+
+    def discover(self, spec: VersionSource, root: Path) -> dict: ...
+
+    def snapshot(self, path: str | Path, snapshot: dict) -> None: ...

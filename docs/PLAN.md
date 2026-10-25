@@ -734,3 +734,16 @@ Former top-level commands remain hidden compatibility aliases.
   mutable project operations remain repository-qualified.
 - Added `ptk-vmr` and `ptk-plugin-development` skills with tested starter artifacts;
   synchronized existing skills and documented checkout-based reuse.
+
+## Version discovery and organized initialization (implemented)
+
+- Per-run Git/file/env/command/literal discovery with explicit fallback, component
+  inheritance, variant-specific sources and explicit recursive VMR dependencies.
+- Qualified PTK_VERSION_ALIAS / PTK_VERSION_ALIAS_COMPONENT_NAME variables and
+  version.projects substitutions share one immutable-by-convention run snapshot.
+- Unique ignored .gen.version.ptk.yml snapshots; no version bump/tag mutations.
+- C header, CMake, MSBuild, Python and JSON generation preserves unchanged mtimes.
+- Init asks for a config directory, emits minimal root metadata and complete
+  runnable fragments, preflights existing files and adds missing ignore rules.
+- Snapshots are manually retained/cleaned; Git uses reachable tags and rejects
+  shallow history by default. Discovery commands must be authored read-only.

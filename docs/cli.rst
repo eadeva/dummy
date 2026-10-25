@@ -140,3 +140,14 @@ Report inputs are snapshotted with completed run summaries. Later runs start
 with fresh report input directories. Historical export reads its retained
 snapshot, not current inputs. Runs for the same action/variant are serialized
 by a local lock; different actions or repositories may run concurrently.
+
+Version commands
+----------------
+
+``ptk version show/check/generate`` discovers versions and optionally writes an
+ignored snapshot. There are no bump/set/tag commands. In VMR mode use
+``ptk ALIAS version ...``. See :doc:`versioning` for sources and generators.
+
+``ptk setup init`` asks for a configuration directory on a terminal. Use
+``--config-dir PATH --yes`` for scripts. Root metadata stays minimal; initial
+configuration fragments, variants and version-generation examples live in PATH.

@@ -26,7 +26,7 @@ from typing import Any
 from ..suggest import did_you_mean
 
 _TOKEN = re.compile(r"\$\$\{|\$\{([^{}]*)\}")
-NAMESPACES = ("env", "vars", "params", "vh", "project", "run", "secret")
+NAMESPACES = ("env", "vars", "params", "vh", "project", "run", "secret", "version")
 
 
 class SubstitutionError(ValueError):

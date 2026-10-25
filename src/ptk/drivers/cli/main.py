@@ -31,6 +31,7 @@ from .actions import (
     pairs,
 )
 from .state import console, err_console, guarded, state_of
+from .versioning import version_group
 from .workspace import WorkspaceGroup
 
 _state = state_of
@@ -1062,11 +1063,20 @@ def help_command(ctx: click.Context, output: Path | None, no_open: bool) -> None
     "directory", default=".", type=click.Path(path_type=Path, file_okay=False)
 )
 @click.option("--name", help="Project name (default: destination directory name).")
+@click.option(
+    "--config-dir", help="Repository-relative configuration directory (default: ptk)."
+)
+@click.option("--yes", "-y", is_flag=True, help="Use defaults without prompting.")
 @click.option("--dry-run", is_flag=True, help="Preview files without writing them.")
 @click.pass_context
 @guarded
 def init_command(
-    ctx: click.Context, directory: Path, name: str | None, dry_run: bool
+    ctx: click.Context,
+    directory: Path,
+    name: str | None,
+    dry_run: bool,
+    config_dir: str | None,
+    yes: bool,
 ) -> None:
     """Create a runnable project without overwriting existing configuration."""
     state = _state(ctx)
@@ -1075,7 +1085,18 @@ def init_command(
             "init uses DIRECTORY; do not combine it with --config or --set"
         )
     target = directory.resolve()
-    result = state.app.init_project.execute(target, name, dry_run=dry_run)
+    if config_dir is None:
+        config_dir = (
+            click.prompt(
+                "PTK configuration directory (relative to repository root)",
+                default="ptk",
+            )
+            if not yes and sys.stdin.isatty()
+            else "ptk"
+        )
+    result = state.app.init_project.execute(
+        target, name, config_path=config_dir, dry_run=dry_run
+    )
     for file, content in result.files.items():
         console.print(
             f"{'would create' if dry_run else 'created'} {target / file}", markup=False
@@ -1084,11 +1105,11 @@ def init_command(
             console.print(content, markup=False, highlight=False)
     if result.kept_gitignore:
         console.print(
-            "Kept existing .gitignore. Add ptk workspace folders and local.ptk.yml if needed."
+            "Kept existing .gitignore content and appended missing PTK ignore rules."
         )
     if not dry_run:
         console.print(
-            "Next: change to the project directory, then run 'ptk setup config validate' and 'ptk hello'."
+            "Next: change to the project directory, then run 'ptk setup config validate', 'ptk version show' and 'ptk hello'."
         )
 
 
@@ -1179,6 +1200,7 @@ def _group_setup_commands() -> None:
 
 
 _group_setup_commands()
+cli.add_command(version_group)
 
 
 def main() -> None:

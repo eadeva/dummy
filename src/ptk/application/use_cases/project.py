@@ -161,12 +161,13 @@ class LoadProject:
         # Files already included explicitly retain that placement and are not applied twice.
         tree = t.from_plain({})
         layers = []
-        global_tools = config_root / "tools.ptk.yml"
-        if global_tools not in self._source.files[first_read:] and self._source.exists(
-            global_tools
-        ):
-            tree = self._source.read(global_tools)
-            layers.append(global_tools.name)
+        for filename in ("tools.ptk.yml", "versioning.ptk.yml"):
+            conventional = config_root / filename
+            if conventional not in self._source.files[
+                first_read:
+            ] and self._source.exists(conventional):
+                tree = t.merge(tree, self._source.read(conventional))
+                layers.append(filename)
         names = set()
         for candidate in [tree, main_tree, *(node for _, node in overlays)]:
             actions = t.get(candidate, ("actions",))

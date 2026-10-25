@@ -6,7 +6,6 @@ import pytest
 from click.testing import CliRunner
 
 from ptk.application.use_cases.init import InitProject
-from ptk.domain.config.model import PtkConfig
 from ptk.domain.errors import PtkError
 from ptk.drivers.cli.main import cli
 
@@ -23,9 +22,11 @@ def test_use_case_renders_valid_configuration(tmp_path):
 
     files = MemoryScaffold()
     result = InitProject(files).execute(tmp_path, 'My "project": #1', dry_run=True)
-    config = PtkConfig.model_validate(yaml.safe_load(result.files[".main.ptk.yml"]))
-    assert config.project.name == 'My "project": #1'
-    assert config.project.default_action == "hello"
+    entry = yaml.safe_load(result.files[".main.ptk.yml"])
+    assert set(entry) == {"repository", "include"}
+    config = yaml.safe_load(result.files["ptk/project.ptk.yml"])
+    assert config["project"]["name"] == 'My "project": #1'
+    assert config["project"]["default_action"] == "hello"
     assert files.dry_run
 
 
@@ -48,7 +49,7 @@ def test_new_project_runs(tmp_path, monkeypatch):
     assert runner.invoke(cli, [*base, "setup", "config", "validate"]).exit_code == 0
     ran = runner.invoke(cli, [*base, "hello", "--message", "custom message"])
     assert ran.exit_code == 0, ran.output
-    report = json.loads((target / "_reports/default/hello/report.json").read_text())
+    report = json.loads((target / "_reports/debug/hello/report.json").read_text())
     assert report["status"] == "passed"
     assert report["params"]["message"] == "custom message"
 
@@ -78,7 +79,8 @@ def test_existing_gitignore_is_preserved_and_alias_works(tmp_path):
     result = CliRunner().invoke(cli, ["init", str(tmp_path)])
     assert result.exit_code == 0, result.output
     assert "Kept existing .gitignore" in result.output
-    assert ignore.read_text() == "my-own-rule\n"
+    assert ignore.read_text().startswith("my-own-rule\n")
+    assert ".gen.version.ptk.yml" in ignore.read_text()
 
 
 def test_init_does_not_use_parent_project(tmp_path, monkeypatch):
@@ -97,3 +99,65 @@ def test_conflicting_global_options_rejected(tmp_path):
     )
     assert result.exit_code == 2
     assert not (tmp_path / ".main.ptk.yml").exists()
+
+
+def test_custom_config_directory_and_outputs(tmp_path):
+    runner = CliRunner()
+    result = runner.invoke(
+        cli,
+        ["setup", "init", str(tmp_path), "--config-dir", "config/ptk files", "--yes"],
+    )
+    assert result.exit_code == 0, result.output
+    folder = tmp_path / "config/ptk files"
+    for name in (
+        "project",
+        "actions",
+        "variants",
+        "tools",
+        "versioning",
+        "environment",
+        "credentials",
+        "cx",
+        "maintainers",
+    ):
+        assert (folder / f"{name}.ptk.yml").is_file()
+    base = ["-c", str(tmp_path / ".main.ptk.yml")]
+    for variant in ("debug", "release"):
+        result = runner.invoke(cli, [*base, "hello", "--variant", variant])
+        assert result.exit_code == 0, result.output
+        assert (tmp_path / f"_bin/{variant}/generated/version.h").is_file()
+    assert len(list(tmp_path.rglob(".gen.version.ptk.yml"))) == 2
+
+
+def test_init_prompts_for_directory(tmp_path, monkeypatch):
+    import sys
+
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+    # CliRunner replaces stdin; patch the driver's predicate through its wrapper.
+    from unittest.mock import patch
+
+    with patch("click.testing._NamedTextIOWrapper.isatty", return_value=True):
+        result = CliRunner().invoke(
+            cli, ["setup", "init", str(tmp_path)], input="config/toolkit\n"
+        )
+    assert result.exit_code == 0, result.output
+    assert (tmp_path / "config/toolkit/versioning.ptk.yml").exists()
+
+
+@pytest.mark.parametrize("directory", ["../outside", ".git/config", ".ptk/config"])
+def test_init_rejects_invalid_directory(tmp_path, directory):
+    result = CliRunner().invoke(
+        cli, ["setup", "init", str(tmp_path), "--config-dir", directory]
+    )
+    assert result.exit_code == 2
+    assert not (tmp_path / ".main.ptk.yml").exists()
+
+
+def test_init_preflights_all_files(tmp_path):
+    folder = tmp_path / "ptk"
+    folder.mkdir()
+    (folder / "tools.ptk.yml").write_text("keep me")
+    result = CliRunner().invoke(cli, ["setup", "init", str(tmp_path)])
+    assert result.exit_code == 2
+    assert not (tmp_path / ".main.ptk.yml").exists()
+    assert (folder / "tools.ptk.yml").read_text() == "keep me"

@@ -16,11 +16,22 @@ From the installed CLI, preview and initialize a new directory::
    ptk setup config validate
    ptk hello --message "It works"
 
-This creates ``.main.ptk.yml`` with a portable built-in echo action and a
-``.gitignore`` for local overrides and generated workspace folders. The project
-name defaults to the destination directory name. An existing ``.main.ptk.yml``
-is never overwritten, including in preview mode. An existing ``.gitignore``
-is preserved; review its rules yourself. No tools or credentials are installed.
+The terminal wizard asks where configuration files should live (default ``ptk``).
+Use ``--config-dir config/ptk --yes`` for an unattended setup; redirected input
+also uses the default unless ``--config-dir`` is supplied. The root
+``.main.ptk.yml`` contains only repository metadata and the project include.
+The chosen directory contains project, actions, variants, tools, versioning,
+environment, credentials, shared-config settings, CX and maintainer files.
+
+The starter has debug/release variants and a literal ``0.1.0`` version, so it
+runs without tools, credentials or Git tags. ``hello`` demonstrates parameters,
+version substitutions and generates ``_bin/<variant>/generated/version.h`` and
+``version.cmake``. Each run also writes its ignored ``.gen.version.ptk.yml``
+snapshot. See :doc:`versioning` to select Git tags or existing manifests instead.
+
+No existing configuration file is overwritten; all destinations are checked
+before writing. Existing ``.gitignore`` content is kept and missing PTK ignore
+rules are appended. The project name defaults to the destination directory name.
 
 The command works without an existing project, including inside a directory
 whose parent contains a ptk project. ``DIRECTORY`` is the initialization target;

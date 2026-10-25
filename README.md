@@ -111,7 +111,7 @@ All ptk files end in `.ptk.yml`:
 
 | File | Purpose |
 |------|---------|
-| `.main.ptk.yml` | repository-root entry: alias, configuration path, version, project and includes |
+| `.main.ptk.yml` | repository-root entry: alias, configuration path and includes |
 | `*.ptk.yml` | fragments pulled in with `include:` (e.g. `ptk/actions/*.ptk.yml`) |
 | `cx.ptk.yml` | applied automatically in CI |
 | `local.ptk.yml` | personal overrides (git-ignore it) |
@@ -128,7 +128,7 @@ variants: ptk/variants.ptk.yml       # plain string = include this file here
 vars: {preset: "${vh.variant}"}
 ```
 
-Loading order: automatic `tools.ptk.yml` and `<action>.tools.ptk.yml` → `.main.ptk.yml` (+ includes) → `cx.ptk.yml` (in CI) →
+Loading order: automatic `tools.ptk.yml`, `versioning.ptk.yml` and `<action>.tools.ptk.yml` → `.main.ptk.yml` (+ includes) → `cx.ptk.yml` (in CI) →
 `local.ptk.yml` → `--set PATH=VALUE`.
 
 * mappings merge deeply, lists are replaced; `!replace`, `!append` and
@@ -250,3 +250,18 @@ shared host operations. See `docs/configuration.rst` and `docs/cli.rst`.
 For a complete tested starter, copy `examples/authoring`. For a plugin starter,
 use `examples/plugin`. The authoring skill catalog is in `docs/skills.rst`;
 these are repository files, not automatically installed by the PTK wheel.
+
+## Version discovery and initialization
+
+`ptk setup init` asks for the configuration directory (default `ptk`); use
+`--config-dir config/ptk --yes` in scripts. It creates a minimal root entry and
+runnable project/actions/variants/tools/versioning/environment/credential/CX
+configuration. Existing files are protected; missing ignore rules are appended.
+
+Versions can come from Git tags, manifests/text files, environment variables,
+commands or explicit values. Components inherit unless given a source. Every
+configured action gets one ignored `.gen.version.ptk.yml` snapshot and qualified
+variables such as `PTK_VERSION_ENGINE` and `PTK_VERSION_ENGINE_COMPONENT_SDK`.
+`version.generate` produces C headers, CMake, MSBuild, Python or JSON files without
+rewriting unchanged content. See [versioning](docs/versioning.rst) for variant
+release lines, explicit VMR dependencies and `ptk version show/check/generate`.

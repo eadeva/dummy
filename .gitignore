@@ -12,3 +12,5 @@ _reports/
 .ptk/
 local.ptk.yml
 docs/_build/
+
+.gen.version.ptk.yml

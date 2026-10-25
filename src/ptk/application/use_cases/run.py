@@ -39,6 +39,7 @@ from ...domain.execution.planning import PlanContext, plan_action
 from ...domain.logging import Level
 from ...domain.suggest import did_you_mean
 from ...domain.variants.model import ResolvedVariant
+from ...domain.versioning import variables as version_variables
 from ..ports import (
     CancelToken,
     HostEnvironment,
@@ -81,6 +82,9 @@ class PreparedRun:
     dry_run: bool = False
     step_secrets: dict[str, str] = field(default_factory=dict)  # ref -> value
 
+    versions: dict = field(default_factory=dict)
+    version_file: str | None = None
+
     def mask(self, text: str) -> str:
         for value in sorted(self.secret_values, key=len, reverse=True):
             if len(value) >= MIN_MASK_LENGTH:
@@ -101,11 +105,13 @@ class PrepareRun:
         secrets: SecretResolver | None = None,
         clock: Callable[[], datetime] = datetime.now,
         tools: ToolService | None = None,
+        versions=None,
     ):
         self._host = host
         self._secrets = secrets
         self._clock = clock
         self._tools = tools
+        self._versions = versions
 
     def execute(self, project: Project, request: RunRequest) -> PreparedRun:
         config = project.config
@@ -164,6 +170,11 @@ class PrepareRun:
         elif request.variant:
             raise PtkError(f"--variant {request.variant}: this project has no variants")
 
+        version_snapshot = (
+            self._versions.resolve(project, variant_name, request.action)
+            if self._versions
+            else {}
+        )
         project_ns = {
             "root": str(project.root),
             "name": config.project.name,
@@ -175,7 +186,11 @@ class PrepareRun:
             return Scope(
                 env=host_env,
                 vars=config.vars,
-                namespaces={"vh": vh_ns, "project": project_ns},
+                namespaces={
+                    "vh": vh_ns,
+                    "project": project_ns,
+                    "version": version_snapshot,
+                },
             )(template)
 
         params, sources = resolve_params(
@@ -188,6 +203,19 @@ class PrepareRun:
 
         layout = layout_of(project)
         run_id = self._clock().strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8]
+        version_file = (
+            str(
+                project.root
+                / ".ptk"
+                / "versions"
+                / (variant_name or "default")
+                / request.action
+                / run_id
+                / ".gen.version.ptk.yml"
+            )
+            if version_snapshot
+            else None
+        )
         dirs = {
             "bin_dir": str(layout.bin_dir(variant_name)),
             "log_dir": str(layout.action_log_dir(variant_name, request.action)),
@@ -239,6 +267,7 @@ class PrepareRun:
                     "vh": vh_ns,
                     "project": project_ns,
                     "run": run_ns,
+                    "version": version_snapshot,
                 },
             )
 
@@ -280,7 +309,21 @@ class PrepareRun:
                 )
             )
             base.update(vh_env)
+            base = {
+                k: v
+                for k, v in base.items()
+                if not k.upper().startswith("PTK_VERSION_")
+            }
+            base.update(
+                {k: str(v) for k, v in version_variables(version_snapshot).items()}
+            )
+            if version_file:
+                base["PTK_VERSION_FILE"] = version_file
             action_scope = scope(base)
+            if any(k.upper().startswith("PTK_VERSION_") for k in action.env):
+                raise PtkError(
+                    "PTK_VERSION_* variables are reserved for discovered versions"
+                )
             base.update({k: to_text(action_scope(v)) for k, v in action.env.items()})
             resolved_vars = {
                 name: action_scope.resolve(f"vars.{name}") for name in config.vars
@@ -352,7 +395,14 @@ class PrepareRun:
                             except SubstitutionError as exc:
                                 raise PtkError(str(exc)) from None
         return PreparedRun(
-            plan, project, layout, secret_values, request.dry_run, step_secrets
+            plan,
+            project,
+            layout,
+            secret_values,
+            request.dry_run,
+            step_secrets,
+            version_snapshot,
+            version_file,
         )
 
     @staticmethod
@@ -400,6 +450,7 @@ class BuiltinContext:
     reports_dir: Path  # the step's reports folder (picked up by the report)
     cancel: CancelToken | None = None  # cooperative cancellation: is_set()
     variant: ResolvedVariant | None = None  # resolved variant for generators
+    versions: dict = field(default_factory=dict)
 
 
 BuiltinStep = Callable[[PlannedStep, Callable[[str], None], BuiltinContext], int]
@@ -442,6 +493,7 @@ class RunAction:
         max_parallel: int | None = None,
         path_provider: Callable[[], list[str]] | None = None,
         environment_check=None,
+        version_writer=None,
     ):
         self._host = host
         self._runner = runner
@@ -450,6 +502,7 @@ class RunAction:
         self._max_parallel = max_parallel
         self._path_provider = path_provider
         self._environment_check = environment_check
+        self._version_writer = version_writer
         self._powershell: str | None = None
         self._python_lock = threading.Lock()
 
@@ -462,6 +515,8 @@ class RunAction:
         cancel: Cancelled | None = None,
     ) -> RunResult:
         plan = prepared.plan
+        if prepared.version_file and self._version_writer and not prepared.dry_run:
+            self._version_writer(prepared.version_file, prepared.versions)
         cancel = cancel or Cancelled()
         self._prepared = prepared
         self._observers = list(observers)
@@ -731,6 +786,7 @@ class RunAction:
         plan = prepared.plan
         ctx = BuiltinContext(
             cancel=cancel,
+            versions=prepared.versions,
             variant=VariantService(prepared.project).resolve(plan.variant)
             if prepared.project.config.variants
             else None,
@@ -767,6 +823,12 @@ class RunAction:
                 ),
             }
         )
+        if any(
+            k.upper().startswith("PTK_VERSION_") for k in (*step.env, *step.secrets)
+        ):
+            raise PtkError(
+                "PTK_VERSION_* variables are reserved for discovered versions"
+            )
         env.update(step.env)
         for variable, ref in step.secrets.items():
             if not prepared.dry_run:
