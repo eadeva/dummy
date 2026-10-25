@@ -47,7 +47,7 @@ from ..ports import (
 )
 from .project import Project
 from .role import Role, visible
-from .tools import ToolService
+from .tools import ToolService, tools_for_actions
 from .variants import VariantService
 
 MASK = "********"
@@ -117,9 +117,11 @@ class PrepareRun:
             request = dataclasses.replace(request, action=config.project.default_action)
         assert request.action is not None
         action = self._action(project, request.action)
+        project = tools_for_actions(project, [request.action])
+        config = project.config
         if (
             self._tools is not None
-            and action.requires_tools
+            and action.required_tool_names
             and not request.dry_run
             and not any(s.uses == "tools.ensure" for s in action.walk_steps())
         ):

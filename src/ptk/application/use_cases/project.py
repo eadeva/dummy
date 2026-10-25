@@ -15,10 +15,11 @@ from pydantic import BaseModel, ValidationError
 
 from ...domain.config import rules as config_rules
 from ...domain.config import tree as t
-from ...domain.config.model import MaintainersSpec, PtkConfig
+from ...domain.config.defaults import apply_defaults, normalize_requirements
+from ...domain.config.model import ACTION_RE, MaintainersSpec, PtkConfig
 from ...domain.config.schema_walk import unknown_keys
 from ...domain.errors import ConfigError, Location, Problem
-from ..ports import CI_FILE, LOCAL_FILE, MAINTAINERS_FILE, ConfigSource, HostEnvironment
+from ..ports import CX_FILE, LOCAL_FILE, MAINTAINERS_FILE, ConfigSource, HostEnvironment
 
 _UNION_TAG = re.compile(
     r"^(str|int|float|bool|none|list\[.*\]|dict\[.*\]|literal\[.*\]|.*\[.*\]|function-.*)$",
@@ -139,20 +140,52 @@ class LoadProject:
             else self._source.find_main(start or Path.cwd())
         )
         root = main.parent
-        tree = self._source.read(main)
-        layers = [main.name]
+        first_read = len(self._source.files)
+        main_tree = self._source.read(main)
         is_ci = self._host.is_ci() if ci is None else ci
-        for name, enabled in ((CI_FILE, is_ci), (LOCAL_FILE, True)):
+        overlays = []
+        for name, enabled in ((CX_FILE, is_ci), (LOCAL_FILE, True)):
             layer_file = root / name
             if enabled and self._source.exists(layer_file):
-                tree = t.merge(tree, self._source.read(layer_file))
-                layers.append(name)
+                overlays.append((name, self._source.read(layer_file)))
+
+        # Conventional tool files are defaults: explicit main/includes win.
+        # Files already included explicitly retain that placement and are not applied twice.
+        tree = t.from_plain({})
+        layers = []
+        global_tools = root / "tools.ptk.yml"
+        if global_tools not in self._source.files[first_read:] and self._source.exists(
+            global_tools
+        ):
+            tree = self._source.read(global_tools)
+            layers.append(global_tools.name)
+        names = set()
+        for candidate in [tree, main_tree, *(node for _, node in overlays)]:
+            actions = t.get(candidate, ("actions",))
+            if actions is not None and actions.is_map:
+                names.update(n for n in actions.value if ACTION_RE.fullmatch(n))
+        for name in sorted(names):
+            tool_file = root / f"{name}.tools.ptk.yml"
+            if tool_file not in self._source.files[first_read:] and self._source.exists(
+                tool_file
+            ):
+                tree = t.merge(tree, self._source.read(tool_file))
+                layers.append(tool_file.name)
+        tree = t.merge(tree, main_tree)
+        layers.append(main.name)
+        for name, overlay in overlays:
+            tree = t.merge(tree, overlay)
+            layers.append(name)
         for text in overrides:
             path, value = parse_override(text)
             loc = Location(f"--set {text}")
-            tree = t.merge(tree, t.overlay_for(path, t.from_plain(value, loc)))
+            tree = t.merge(
+                tree,
+                normalize_requirements(t.overlay_for(path, t.from_plain(value, loc))),
+            )
             layers.append(f"--set {path_text(path)}")
 
+        tree = apply_defaults(tree)
         problems = unknown_keys(PtkConfig, tree)
         problems += validation_problems(PtkConfig, tree, skip_unknown=bool(problems))
         if problems:

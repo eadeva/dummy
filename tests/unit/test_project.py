@@ -8,7 +8,7 @@ def test_layers_ci_local_and_overrides(write, load):
     root = write(
         {
             "main.ptk.yml": MINIMAL + "vars: {where: main, a: 1}\n",
-            "ci.ptk.yml": "vars: {where: ci}",
+            "cx.ptk.yml": "vars: {where: ci}",
             "local.ptk.yml": "vars: {where: local, b: 2}",
         }
     )
@@ -21,7 +21,7 @@ def test_layers_ci_local_and_overrides(write, load):
         overrides=["vars.where=cli", "vars.n=5"],
     )
     assert ci.ci and ci.config.vars["where"] == "cli" and ci.config.vars["n"] == 5
-    assert ci.layers[:3] == ["main.ptk.yml", "ci.ptk.yml", "local.ptk.yml"]
+    assert ci.layers[:3] == ["main.ptk.yml", "cx.ptk.yml", "local.ptk.yml"]
 
 
 def test_found_from_subdirectory(write, load):

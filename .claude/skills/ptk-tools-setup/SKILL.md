@@ -25,3 +25,5 @@ description: Declare tool checks and installers or diagnose ptk setup, doctor an
 9. Verify with `ptk setup doctor` and rerun the tool's check. Use `ptk setup self` for project configuration/hooks.
 
 10. Test adapters with fake runners or local archives; do not install machine-wide tools in unit tests.
+
+10. Global and action `requires_tools` merge per tool: unmentioned tools stay inherited, `name: false` disables one, and settings mappings override only that action. Tool files load automatically; see `docs/configuration.rst`.

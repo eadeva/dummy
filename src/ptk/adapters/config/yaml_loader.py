@@ -19,6 +19,7 @@ from pathlib import Path
 
 import yaml
 
+from ...domain.config.defaults import normalize_requirements
 from ...domain.config.tree import Node, merge
 from ...domain.errors import ConfigError, Location, Problem
 
@@ -88,7 +89,7 @@ class YamlConfigReader:
                     [Problem("top level must be a mapping", location=tree.loc)]
                 )
             return tree
-        return self._apply_top_level_includes(tree, path, stack)
+        return self._apply_top_level_includes(normalize_requirements(tree), path, stack)
 
     # ------------------------------------------------------------------ construction
 

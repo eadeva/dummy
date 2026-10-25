@@ -302,9 +302,20 @@ class ActionSpec(_Strict):
     help: str = ""
     audience: Literal["all", "maintainer"] = "all"
     params: dict[str, ParamSpec] = Field(default_factory=dict)
-    requires_tools: list[str] = Field(default_factory=list)
+    requires_tools: dict[str, bool | ToolSpec] = Field(default_factory=dict)
     env: dict[str, str] = Field(default_factory=dict)
     steps: list[StepSpec] = Field(min_length=1)
+
+    @field_validator("requires_tools", mode="before")
+    @classmethod
+    def _tool_list(cls, value: Any) -> Any:
+        if isinstance(value, list) and all(isinstance(n, str) for n in value):
+            return dict.fromkeys(value, True)
+        return value
+
+    @property
+    def required_tool_names(self) -> list[str]:
+        return [name for name, spec in self.requires_tools.items() if spec is not False]
 
     @field_validator("params")
     @classmethod
@@ -439,6 +450,8 @@ class PtkConfig(_Strict):
     ptk_version: str | None = None  # required ptk version range, e.g. ">=0.1,<0.2"
     project: ProjectSpec
     vars: dict[str, Any] = Field(default_factory=dict)
+    param_defaults: dict[str, Any] = Field(default_factory=dict)
+    requires_tools: dict[str, bool | ToolSpec] = Field(default_factory=dict)
     environment: EnvironmentSpec = Field(default_factory=EnvironmentSpec)
     tools: dict[str, ToolSpec] = Field(default_factory=dict)
     credentials: dict[str, CredentialSpec] = Field(default_factory=dict)
@@ -466,6 +479,24 @@ class PtkConfig(_Strict):
         ],
         Literal["all", "maintainer"],
     ] = Field(default_factory=dict)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _shared_defaults(cls, value: Any) -> Any:
+        if isinstance(value, dict):
+            from .defaults import apply_defaults
+            from .tree import from_plain, to_plain
+
+            return to_plain(apply_defaults(from_plain(value)))
+        return value
+
+    @field_validator("param_defaults")
+    @classmethod
+    def _default_names(cls, value: dict[str, Any]) -> dict[str, Any]:
+        for name in value:
+            if not PARAM_RE.match(name) or name in RESERVED_PARAMS:
+                raise ValueError(f"invalid shared parameter name {name!r}")
+        return value
 
     @field_validator("actions")
     @classmethod

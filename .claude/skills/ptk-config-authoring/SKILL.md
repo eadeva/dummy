@@ -24,3 +24,5 @@ description: Create or change ptk YAML configuration, includes, layers and subst
 9. Avoid unknown keys, unresolved references, recursive includes and unsupported `plugins` expectations.
 
 10. For a new project, preview `ptk setup init DIRECTORY --dry-run`, then run `ptk setup init DIRECTORY`. Existing configuration is refused and an existing .gitignore is preserved. Run `ptk setup config validate` and `ptk hello` in the new directory.
+
+11. Use `param_defaults` for shared defaults on explicitly declared parameters; action defaults win. Use `cx.ptk.yml` for workflows and preserve per-tool requirement inheritance.

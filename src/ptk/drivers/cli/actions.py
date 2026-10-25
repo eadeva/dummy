@@ -24,6 +24,7 @@ import yaml
 from rich.markup import escape
 
 from ...application.use_cases.run import Cancelled, RunRequest
+from ...application.use_cases.tools import tools_for_actions
 from ...domain.config.model import ActionSpec, ParamSpec
 from ...domain.errors import PtkError
 from ...domain.execution.model import Status
@@ -332,6 +333,7 @@ def install_tools(
     allow_system: bool = False,
 ) -> bool:
     """Check and install tools; prints a line per tool. True when all are fine."""
+    project = tools_for_actions(project, actions)
     service = state.app.tools
     names = service.required(project, actions)
     if not names:

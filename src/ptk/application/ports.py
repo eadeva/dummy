@@ -23,7 +23,7 @@ from ..domain.reporting.model import Contribution, Report
 from ..domain.tools import InstallMethod
 
 MAIN_FILE = "main.ptk.yml"
-CI_FILE = "ci.ptk.yml"
+CX_FILE = "cx.ptk.yml"
 LOCAL_FILE = "local.ptk.yml"
 MAINTAINERS_FILE = "maintainers.ptk.yml"
 

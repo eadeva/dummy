@@ -158,7 +158,7 @@ class BuildHelp:
                     audience=action.audience,
                     params=[_param(n, p) for n, p in action.params.items()],
                     steps=[_step(s) for s in action.steps],
-                    requires_tools=list(action.requires_tools),
+                    requires_tools=action.required_tool_names,
                     phases=[s.name for s in action.steps],
                     passthrough=[
                         "/".join(path)

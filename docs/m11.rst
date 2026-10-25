@@ -31,10 +31,10 @@ the required scope; legacy ``ENV_ISOLATION`` migration is deferred. If an input
 still contains these fields, remove or translate them explicitly before conversion;
 the converter will not silently discard conditions or environment settings.
 
-The meanings and need for ``variant_matrix``, ``variant_overrides``, ``*_cx`` and
-global defaults have not been confirmed against actual legacy configurations.
-They are not currently automatic migration features. See the scope clarification
-in ``docs/PLAN.md``; in particular, the meaning of CX requires confirmation.
+Legacy compatibility is not a completion requirement. CX has been clarified as
+GitHub Actions execution; the runtime uses ``cx.ptk.yml`` for workflow overrides.
+No automatic conversion of legacy ``variant_matrix``, ``variant_overrides`` or
+``*_cx`` dialects is promised. Shared defaults now use ``param_defaults``.
 There is no claim of automatic compatibility with every historical config dialect.
 Do not put literal credentials in configuration files or migration previews.
 

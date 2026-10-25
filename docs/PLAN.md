@@ -2,7 +2,7 @@
 
 > **ptk** (*project tool kit*): a generic, configuration-driven project CLI.
 > All configuration files end in `.ptk.yml`: entry point `main.ptk.yml` (ptk version + main fields),
-> fragments `*.ptk.yml`, layers `ci.ptk.yml` and `local.ptk.yml`, and `maintainers.ptk.yml`.
+> fragments `*.ptk.yml`, layers `cx.ptk.yml` and `local.ptk.yml`, and `maintainers.ptk.yml`.
 > Workspace folders: `_builds/`, `_bin/`, `_logs/`, `_reports/` (structured by variant / action / step).
 
 One CLI that every project can use: declarative actions made of steps and step
@@ -97,7 +97,7 @@ src/ptk/
 ```
 main.ptk.yml               ptk_version, project, include, main settings
   → include: [...]            merged in order (files or globs)
-  → ci.ptk.yml              applied automatically in CI
+  → cx.ptk.yml              applied automatically in CI
   → local.ptk.yml           personal overrides (git-ignored)
   → --set key=value           command line
   → validate (pydantic, extra=forbid, suggestions)
@@ -274,7 +274,7 @@ and reports folder `${run.reports_dir}`.
 - Precedence: CLI > params file > declared env var (`env:`) > `default:`.
   Final values and their sources go into the report and `ptk dry-run`.
 - **Defaults** are typed and checked against `choices` when the config loads, and can
-  be changed per layer: `local.ptk.yml` (per developer), `ci.ptk.yml` (CI), `--set`.
+  be changed per layer: `local.ptk.yml` (per developer), `cx.ptk.yml` (CI), `--set`.
 - A default may be a template using `${env:...}`, `${vars.x}`, `${vh.*}` or
   `${project.*}` - e.g. a **per-variant default** `default: "${vh.data.toolchain}"`.
   Templates are resolved and type-checked when the action runs; a default cannot
@@ -533,10 +533,10 @@ so `ptk build --help` documents the project's real options.
 | `parallel: true` | `parallel: true` |
 | `execute_if` | Dropped from required legacy migration scope by user decision |
 | `only_variants` / `omit_variants` | `when: "variant in [...]"` / `not in` |
-| `variant_overrides` / `*_cx` | `when` blocks, `ci.ptk.yml` overlay |
+| `variant_overrides` / `*_cx` | `when` blocks, `cx.ptk.yml` overlay |
 | `game_stopper: false` | `continue_on_error: true` |
 | `non_blocking` | `background: true` (scoped finite processes) |
-| `DEFAULT_PARAMETERS(_CX)` | `params` defaults, `ci.ptk.yml` |
+| `DEFAULT_PARAMETERS(_CX)` | `params` defaults, `cx.ptk.yml` |
 | `-bo name=value` | variant feature override `--feature FEATURE=value` / `--set vh.FEATURE=value` (alias `-bo` kept) |
 | `-mp name=value` | declared `params` / `--set` (alias `-mp` kept) |
 | `shell_run_command`, `custom_script` | `run:` |
@@ -679,42 +679,27 @@ Former top-level commands remain hidden compatibility aliases.
 - Package name/index availability and publishing a release remain delivery decisions.
   Code is delivered on `ChatGPT_version`; it has not been merged into the base branch.
 
-## Scope clarification: legacy migration and filters
+## Confirmed scope and shared defaults
 
-- `execute_if` support is no longer required. Legacy `ENV_ISOLATION` migration is
-  deferred. Their absence is not an unfinished release requirement. Existing
-  runtime environment configuration is separate from migration compatibility.
-- Requested explicit filters: `only_variants` and `omit_variants` at both action
-  and step level; `only_cx` at both levels; `only_mantainers` at action level
-  (the existing equivalent is `audience: maintainer`). Direct filter field support
-  is a follow-up requirement, not yet implemented by this scope clarification.
-  The converter currently handles only/omit variants on steps through `when`.
-- The exact meaning of CX is not established by the repository. Confirm it before
-  implementing `only_cx` or interpreting `DEFAULT_PARAMETERS_CX` / `*_cx`.
-- `variant_matrix`, `variant_overrides`, global defaults and the CX-suffixed names
-  were conceptual legacy mappings, not verified requirements backed by legacy
-  configuration fixtures. They need a user decision before being counted as work
-  required to finish this project. Current features already provide named variants,
-  inherited feature/data values, feature overrides and per-action parameter defaults.
-
-## Confirmed scope after CX clarification (supersedes legacy requirements)
-
-- CX means execution in GitHub Actions/workflows. Prefer a `cx.ptk.yml` overlay
-  for workflow-specific settings; a separate `only_cx` filter is not required
-  unless an individual-step use case emerges. The current loader still uses
-  `ci.ptk.yml`; adopting the requested filename remains an implementation change.
-- No legacy compatibility or migration is required for completion. Existing
-  optional migration support does not create obligations to cover old dialects.
-- Drop `variant_matrix` as a separate deliverable. Explicit named variants,
-  inheritance, feature overrides and multi-variant runs cover the accepted need;
-  automatic Cartesian-product expansion is not required.
-- Add shared action-parameter defaults. `vars` already supplies reusable values,
-  but does not automatically declare parameters or apply defaults to all actions.
-  Shared defaults must apply only to parameters explicitly declared by an action,
-  with action-specific defaults taking precedence.
-- Discussed tool-file organization: `tools.ptk.yml` for shared tool definitions
-  and `<action>.tools.ptk.yml` for action requirements/additional definitions.
-  These names currently work as explicitly included fragments, not automatically
-  discovered files. Tool definitions and requirements are separate: declaring a
-  tool does not require it for every action. A shared requirement list for tools
-  needed by every action would be an additional model feature.
+- CX means GitHub Actions/workflows. `cx.ptk.yml` is the automatic workflow
+  overlay; `--ci` / `--no-ci` can force mode. No legacy filename is required.
+- Legacy migration is not a completion requirement. `execute_if`, legacy
+  `ENV_ISOLATION`, `*_cx`, `variant_overrides` and `DEFAULT_PARAMETERS_CX` do not
+  create further legacy obligations. Existing optional migration remains available.
+- Drop `variant_matrix` as a separate deliverable. Named variants, inheritance,
+  feature overrides and multi-variant execution cover the accepted requirement.
+- Shared `param_defaults` applies only to explicitly declared action parameters.
+  Explicit action defaults override shared values; required parameters remain
+  required. Inherited defaults retain provenance and undergo normal type checks.
+- Automatically load project-root `tools.ptk.yml` and `<action>.tools.ptk.yml`.
+  Explicit includes are not applied a second time. Main/includes override auto
+  files; CX, local and CLI layers follow. See `docs/configuration.rst` for ordering.
+- **Tool requirements override per tool.** Unmentioned global requirements stay;
+  action maps can add a tool, override its settings, or disable a named tool with
+  `false`. An empty list does not disable global requirements. Per-action tool
+  settings do not mutate the global definition or other actions.
+- `setup install --action NAME` and execution checks use effective per-action
+  settings; incompatible settings across a combined install selection are errors.
+- Explicit action/step `only_variants` and `omit_variants` fields discussed earlier
+  remain a separate follow-up; current runtime filtering uses `when` on steps.
+  Maintainer action visibility uses `audience: maintainer`.

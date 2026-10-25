@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
+from ...domain.config.model import ToolSpec
 from ...domain.errors import PtkError
 from ...domain.execution.commands import split_words
 from ...domain.execution.environment import prepend_path
@@ -30,6 +31,36 @@ class SetupResult:
         return status.ok or self.outcome.startswith("would install")
 
 
+def tools_for_actions(project: Project, actions: list[str] | None = None) -> Project:
+    """Apply per-tool settings without modifying other actions or the source project."""
+    config = project.config.model_copy(deep=True)
+    selections = [config.requires_tools] if actions is None else []
+    for name in actions or []:
+        if name not in config.actions:
+            raise PtkError(f"unknown action '{name}'")
+        selections.append(config.actions[name].requires_tools)
+    overrides = {}
+    for selection in selections:
+        for name, spec in selection.items():
+            if spec is False or name not in config.tools:
+                continue
+            base = project.config.tools[name]
+            effective = (
+                ToolSpec.model_validate(
+                    {**base.model_dump(), **spec.model_dump(exclude_unset=True)}
+                )
+                if isinstance(spec, ToolSpec)
+                else base
+            )
+            if name in overrides and overrides[name] != effective:
+                raise PtkError(
+                    f"selected actions require different settings for tool '{name}'; install per action"
+                )
+            overrides[name] = effective
+    config.tools.update(overrides)
+    return replace(project, config=config)
+
+
 class ToolService:
     def __init__(
         self, host: HostEnvironment, runner: ProcessRunner, installer: ToolInstaller
@@ -53,6 +84,8 @@ class ToolService:
     def required(self, project: Project, actions: list[str] | None = None) -> list[str]:
         config = project.config
         if not actions:
+            if "requires_tools" in config.model_fields_set:
+                return [n for n, v in config.requires_tools.items() if v is not False]
             return list(config.tools)
         names: list[str] = []
         for action in actions:
@@ -61,7 +94,7 @@ class ToolService:
                     f"unknown action '{action}'{did_you_mean(action, config.actions)}"
                 )
             names += [
-                t for t in config.actions[action].requires_tools if t not in names
+                t for t in config.actions[action].required_tool_names if t not in names
             ]
         return names
 
@@ -86,7 +119,8 @@ class ToolService:
         return result
 
     def problems(self, project: Project, action: str) -> list[ToolStatus]:
-        names = project.config.actions[action].requires_tools
+        project = tools_for_actions(project, [action])
+        names = project.config.actions[action].required_tool_names
         return (
             [s for s in self.status(project, list(names)) if not s.ok] if names else []
         )

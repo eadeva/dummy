@@ -115,7 +115,7 @@ All ptk files end in `.ptk.yml`:
 |------|---------|
 | `main.ptk.yml` | entry point: `ptk_version`, project, includes, main settings |
 | `*.ptk.yml` | fragments pulled in with `include:` (e.g. `ptk/actions/*.ptk.yml`) |
-| `ci.ptk.yml` | applied automatically in CI |
+| `cx.ptk.yml` | applied automatically in CI |
 | `local.ptk.yml` | personal overrides (git-ignore it) |
 | `maintainers.ptk.yml` | who sees maintainer-only actions |
 
@@ -129,7 +129,7 @@ variants: ptk/variants.ptk.yml       # plain string = include this file here
 vars: {preset: "${vh.variant}"}
 ```
 
-Loading order: `main.ptk.yml` (+ includes) → `ci.ptk.yml` (in CI) →
+Loading order: `main.ptk.yml` (+ includes) → `cx.ptk.yml` (in CI) →
 `local.ptk.yml` → `--set PATH=VALUE`.
 
 * mappings merge deeply, lists are replaced; `!replace`, `!append` and
@@ -194,7 +194,7 @@ actions:
 * `ptk dry-run ACTION` shows the expanded steps, conditions, final commands and where every
   parameter value comes from
 * parameter precedence: `-p` > `--params FILE` > `env:` variable > `default:`; defaults can
-  be changed per layer (`local.ptk.yml`, `ci.ptk.yml`, `--set`) and may use `${env:..}`,
+  be changed per layer (`local.ptk.yml`, `cx.ptk.yml`, `--set`) and may use `${env:..}`,
   `${vars.x}`, `${vh.*}` (per-variant defaults) or `${project.*}`
 * `project.default_action` is what plain `ptk` runs
 

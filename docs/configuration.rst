@@ -6,7 +6,7 @@ Files and precedence
 
 Start with ``main.ptk.yml``. Put reusable fragments in ``*.ptk.yml`` and load
 them with ``include: [ptk/actions/*.ptk.yml]``. Includes are merged in order.
-The loader then applies ``ci.ptk.yml`` when CI is enabled, ``local.ptk.yml``,
+The loader then applies ``cx.ptk.yml`` when CI is enabled, ``local.ptk.yml``,
 and command-line ``--set PATH=VALUE`` overrides. Keep local overrides out of git.
 Use global ``--no-ci`` to inspect local behavior independently of the host.
 
@@ -139,3 +139,65 @@ children, without cancelling unrelated groups. Repeating a group repeats all of
 its children, so enable retries only for repeatable work. Built-in/plugin Python
 handlers must cooperate with ``ctx.cancel.is_set()``; Python threads cannot safely
 be forcibly terminated. ``wait`` cooperates with deadlines and Ctrl+C.
+
+Shared defaults and tool files
+------------------------------
+
+``tools.ptk.yml`` and ``<action>.tools.ptk.yml`` in the project root are loaded
+automatically when present. Action filenames are discovered for actions declared
+in the main configuration, its includes, global tools file or enabled overlays.
+Files already included explicitly are not applied again automatically.
+
+Precedence, from lowest to highest: automatic ``tools.ptk.yml``, automatic action
+tool files (alphabetical), main configuration/includes, ``cx.ptk.yml`` in CI,
+``local.ptk.yml``, then command-line overrides. Explicit includes retain their
+normal position. Additional tool definitions in action files are shared definitions;
+put action-specific changes under that action's ``requires_tools``.
+
+``cx.ptk.yml`` is the automatic workflow overlay filename. GitHub Actions is
+recognized automatically; ``--ci`` / ``--no-ci`` can force the mode. The old
+``ci.ptk.yml`` filename is not automatically loaded.
+
+Global ``param_defaults`` supplies defaults only to parameters that an action
+explicitly declares. Action-specific ``default`` values take precedence. An
+explicit ``default: null`` opts out; ``required: true`` parameters remain required.
+Inherited values are validated against each parameter's type/choices, and
+``config show --sources`` retains the global value's source location::
+
+   param_defaults:
+     jobs: 8
+   actions:
+     build:
+       params:
+         jobs: {type: int}
+       steps:
+         - compile: {run: [cmake, --build, build, -j, "${params.jobs}"]}
+
+Tool requirements merge **per tool**, not by replacing the entire list::
+
+   # tools.ptk.yml
+   tools:
+     git: {check: git --version}
+     cmake: {version: ">=3.28", check: cmake --version, choco: cmake}
+     ninja: {check: ninja --version}
+   requires_tools: [git, cmake]
+
+   # build.tools.ptk.yml
+   actions:
+     build:
+       requires_tools:
+         cmake: {version: ">=3.30"}
+         ninja: true
+
+``build`` requires git, cmake and ninja, with its own CMake version constraint.
+Other actions retain the global requirements and CMake definition. Use
+``git: false`` to disable only git for one action. ``requires_tools: []`` or ``{}``
+changes nothing; an action's unmentioned global requirements remain inherited.
+List shorthand enables/adds named tools; mappings can enable, disable or override
+a named tool's settings. All referenced names must be declared under ``tools``.
+
+``setup install --action build`` uses that action's effective tool settings.
+Selecting actions that require conflicting settings for the same tool fails
+before installation; install for those actions separately. Without ``--action``,
+``setup install`` uses global requirements when supplied, otherwise all declared
+tools. Declaring a tool alone does not make it a requirement of every action.

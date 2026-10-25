@@ -58,6 +58,15 @@ def validate(config: PtkConfig) -> list[PathProblem]:
             )
         )
 
+    for tool in config.requires_tools:
+        if tool not in config.tools:
+            problems.append(
+                (
+                    ("requires_tools", tool),
+                    f"unknown tool '{tool}'{did_you_mean(tool, config.tools)}",
+                )
+            )
+
     default_action = config.actions.get(config.project.default_action or "")
     if default_action is not None and default_action.audience == "maintainer":
         problems.append(
@@ -83,11 +92,11 @@ def validate(config: PtkConfig) -> list[PathProblem]:
 
     for name, action in config.actions.items():
         base: Path = ("actions", name)
-        for i, tool in enumerate(action.requires_tools):
+        for tool in action.requires_tools:
             if tool not in config.tools:
                 problems.append(
                     (
-                        base + ("requires_tools", i),
+                        base + ("requires_tools", tool),
                         f"unknown tool '{tool}'{did_you_mean(tool, config.tools)}",
                     )
                 )
