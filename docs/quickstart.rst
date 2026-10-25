@@ -15,17 +15,31 @@ From the installed CLI, preview and initialize a new directory::
    cd my-project
    ptk setup config validate
    ptk hello --message "It works"
+   ptk build -V release
 
 The terminal wizard asks where configuration files should live (default ``ptk``).
 Use ``--config-dir config/ptk --yes`` for an unattended setup; redirected input
 also uses the default unless ``--config-dir`` is supplied. The root
 ``.main.ptk.yml`` contains only repository metadata and the project include.
-The chosen directory contains project, actions, variants, tools, versioning,
-environment, credentials, shared-config settings, CX and maintainer files.
+The chosen directory contains ``project.ptk.yml`` as its include index, plus:
+
+* ``actions/hello.ptk.yml`` and ``actions/build.ptk.yml``: two independent actions.
+  ``actions/*.ptk.yml`` loads additional action files automatically.
+* ``variants/variants.ptk.yml``: component/feature model and default selection;
+  includes ``debug.ptk.yml`` and ``release.ptk.yml`` from the same folder.
+* ``tools/tools.ptk.yml`` and ``versioning/versioning.ptk.yml``.
+* ``environment/environment.ptk.yml`` and ``credentials/credentials.ptk.yml``.
+* ``configs/configs.ptk.yml`` for shared formatter/linter settings.
+
+``cx.ptk.yml`` and ``maintainers.ptk.yml`` stay at the configuration root because
+they are conventional discovery entry points. Other nested files are loaded by
+explicit includes. Optional settings contain commented field examples and usage
+notes, including managed tools, credential providers, Git versions and action
+requirements; no secret values or tool installations are needed.
 
 The starter has debug/release variants and a literal ``0.1.0`` version, so it
-runs without tools, credentials or Git tags. ``hello`` demonstrates parameters,
-version substitutions and generates ``_bin/<variant>/generated/version.h`` and
+runs without tools, credentials or Git tags. ``hello`` demonstrates parameters
+and version substitutions; ``build`` generates ``_bin/<variant>/generated/version.h`` and
 ``version.cmake``. Each run also writes its ignored ``.gen.version.ptk.yml``
 snapshot. See :doc:`versioning` to select Git tags or existing manifests instead.
 

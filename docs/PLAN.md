@@ -747,3 +747,11 @@ Former top-level commands remain hidden compatibility aliases.
   runnable fragments, preflights existing files and adds missing ignore rules.
 - Snapshots are manually retained/cleaned; Git uses reachable tags and rejects
   shallow history by default. Discovery commands must be authored read-only.
+
+## Init starter organization
+
+- Separate hello/build action files under actions/, discovered by a glob.
+- Topic folders for variants (model plus debug/release files), tools, versioning,
+  environment, credentials and shared formatter/linter settings.
+- Commented optional field examples; starter actions remain runnable offline.
+- Conventional CX/maintainer entries remain at config root; other files use includes.

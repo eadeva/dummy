@@ -262,8 +262,11 @@ these are repository files, not automatically installed by the PTK wheel.
 
 `ptk setup init` asks for the configuration directory (default `ptk`); use
 `--config-dir config/ptk --yes` in scripts. It creates a minimal root entry and
-runnable project/actions/variants/tools/versioning/environment/credential/CX
-configuration. Existing files are protected; missing ignore rules are appended.
+two runnable actions in `actions/hello.ptk.yml` and `actions/build.ptk.yml`.
+Variants, tools, versioning, environment, credentials and shared settings have
+separate folders with commented configuration examples. `project.ptk.yml` includes
+them; the conventional CX and maintainer entry files remain at the config root.
+Run `ptk hello` for messages and `ptk build` for generated version files. Existing files are protected; missing ignore rules are appended.
 
 Versions can come from Git tags, manifests/text files, environment variables,
 commands or explicit values. Components inherit unless given a source. Every

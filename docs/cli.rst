@@ -150,4 +150,6 @@ ignored snapshot. There are no bump/set/tag commands. In VMR mode use
 
 ``ptk setup init`` asks for a configuration directory on a terminal. Use
 ``--config-dir PATH --yes`` for scripts. Root metadata stays minimal; initial
-configuration fragments, variants and version-generation examples live in PATH.
+configuration fragments live in topic folders under PATH. ``actions/hello.ptk.yml``
+and ``actions/build.ptk.yml`` provide separate runnable examples. Optional fields
+are documented in comments. Existing files are never overwritten.

@@ -110,23 +110,34 @@ def test_custom_config_directory_and_outputs(tmp_path):
     assert result.exit_code == 0, result.output
     folder = tmp_path / "config/ptk files"
     for name in (
-        "project",
-        "actions",
-        "variants",
-        "tools",
-        "versioning",
-        "environment",
-        "credentials",
-        "cx",
-        "maintainers",
+        "project.ptk.yml",
+        "actions/hello.ptk.yml",
+        "actions/build.ptk.yml",
+        "variants/variants.ptk.yml",
+        "variants/debug.ptk.yml",
+        "variants/release.ptk.yml",
+        "tools/tools.ptk.yml",
+        "versioning/versioning.ptk.yml",
+        "environment/environment.ptk.yml",
+        "credentials/credentials.ptk.yml",
+        "configs/configs.ptk.yml",
+        "cx.ptk.yml",
+        "maintainers.ptk.yml",
     ):
-        assert (folder / f"{name}.ptk.yml").is_file()
+        assert (folder / name).is_file()
+        assert "#" in (folder / name).read_text()
+    assert sorted(p.name for p in (folder / "actions").iterdir()) == [
+        "build.ptk.yml",
+        "hello.ptk.yml",
+    ]
     base = ["-c", str(tmp_path / ".main.ptk.yml")]
     for variant in ("debug", "release"):
         result = runner.invoke(cli, [*base, "hello", "--variant", variant])
         assert result.exit_code == 0, result.output
+        result = runner.invoke(cli, [*base, "build", "--variant", variant])
+        assert result.exit_code == 0, result.output
         assert (tmp_path / f"_bin/{variant}/generated/version.h").is_file()
-    assert len(list(tmp_path.rglob(".gen.version.ptk.yml"))) == 2
+    assert len(list(tmp_path.rglob(".gen.version.ptk.yml"))) == 4
 
 
 def test_init_prompts_for_directory(tmp_path, monkeypatch):
@@ -141,7 +152,7 @@ def test_init_prompts_for_directory(tmp_path, monkeypatch):
             cli, ["setup", "init", str(tmp_path)], input="config/toolkit\n"
         )
     assert result.exit_code == 0, result.output
-    assert (tmp_path / "config/toolkit/versioning.ptk.yml").exists()
+    assert (tmp_path / "config/toolkit/versioning/versioning.ptk.yml").exists()
 
 
 @pytest.mark.parametrize("directory", ["../outside", ".git/config", ".ptk/config"])
@@ -154,10 +165,37 @@ def test_init_rejects_invalid_directory(tmp_path, directory):
 
 
 def test_init_preflights_all_files(tmp_path):
-    folder = tmp_path / "ptk"
-    folder.mkdir()
+    folder = tmp_path / "ptk/tools"
+    folder.mkdir(parents=True)
     (folder / "tools.ptk.yml").write_text("keep me")
     result = CliRunner().invoke(cli, ["setup", "init", str(tmp_path)])
     assert result.exit_code == 2
     assert not (tmp_path / ".main.ptk.yml").exists()
     assert (folder / "tools.ptk.yml").read_text() == "keep me"
+
+
+def test_scaffold_nested_includes_variants_and_ci(tmp_path):
+    from ptk.application.use_cases.variants import VariantService
+    from ptk.bootstrap import create_app
+
+    result = CliRunner().invoke(cli, ["setup", "init", str(tmp_path), "--yes"])
+    assert result.exit_code == 0, result.output
+    for ci in (False, True):
+        project = create_app().load_project.execute(
+            config_file=tmp_path / ".main.ptk.yml", ci=ci
+        )
+        assert set(project.config.actions) == {"hello", "build"}
+        assert project.config.versioning.project.version == "0.1.0"
+        assert project.config.environment.set.get("PTK_CI") == ("true" if ci else None)
+        variants = VariantService(project)
+        assert variants.resolve("debug").values["DEBUG"] is True
+        assert variants.resolve("release").values["DEBUG"] is False
+        assert project.config.tools == {}
+        assert project.config.credentials == {}
+    # New actions are discovered through the actions glob without editing the index.
+    (tmp_path / "ptk/actions/check.ptk.yml").write_text(
+        "actions:\n  check:\n    steps:\n      - check: {uses: echo, with: {message: discovered}}\n"
+    )
+    result = CliRunner().invoke(cli, ["-c", str(tmp_path / ".main.ptk.yml"), "check"])
+    assert result.exit_code == 0, result.output
+    assert "discovered" in result.output

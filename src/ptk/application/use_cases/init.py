@@ -72,24 +72,33 @@ class InitProject:
             ".gitignore": IGNORE,
         }
         configs = {
-            "project.ptk.yml": dump(
+            "project.ptk.yml": "# Composition root: includes are relative to this file.\n"
+            "# Add actions as separate files under actions/; the glob loads them.\n"
+            + dump(
                 {
                     "schema_version": 1,
                     "include": [
-                        "actions.ptk.yml",
-                        "environment.ptk.yml",
-                        "credentials.ptk.yml",
-                        "configs.ptk.yml",
+                        "tools/tools.ptk.yml",
+                        "versioning/versioning.ptk.yml",
+                        "environment/environment.ptk.yml",
+                        "credentials/credentials.ptk.yml",
+                        "configs/configs.ptk.yml",
+                        "actions/*.ptk.yml",
                     ],
                     "project": {"name": name, "default_action": "hello"},
-                    "variants": "variants.ptk.yml",
+                    "variants": "variants/variants.ptk.yml",
                 }
-            ),
-            "actions.ptk.yml": dump(
+            )
+            + "# Optional project-wide parameter defaults (only for declared parameters):\n"
+            "# param_defaults: {jobs: 4}\n"
+            "# logging: {level: info, keep_history: 10}\n"
+            "# reporting: {formats: [json, html]}\n",
+            "actions/hello.ptk.yml": '# First action: try `ptk hello --message "Hello" -V debug`.\n'
+            + dump(
                 {
                     "actions": {
                         "hello": {
-                            "help": "Try parameters, variants and version generation",
+                            "help": "Print a message and the selected project version",
                             "params": {
                                 "message": {
                                     "default": "Hello from ptk",
@@ -113,6 +122,22 @@ class InitProject:
                                         },
                                     }
                                 },
+                            ],
+                        }
+                    }
+                }
+            )
+            + "# Action options (place alongside help/params/steps):\n"
+            "#     audience: maintainer  # Restrict this action to listed maintainers.\n"
+            "#     env: {GREETING_STYLE: friendly}  # Applies only to this action.\n",
+            "actions/build.ptk.yml": "# Second action: a portable build starter; no compiler installation needed.\n"
+            "# Run `ptk build -V release`; replace/extend these steps for your build.\n"
+            + dump(
+                {
+                    "actions": {
+                        "build": {
+                            "help": "Generate version files for C/C++ and CMake",
+                            "steps": [
                                 {
                                     "header": {
                                         "uses": "version.generate",
@@ -135,31 +160,139 @@ class InitProject:
                         }
                     }
                 }
-            ),
-            "variants.ptk.yml": dump(
+            )
+            + "# After declaring cmake in tools/tools.ptk.yml, add beside steps:\n"
+            "#     requires_tools: {cmake: true}\n"
+            "# Example additional step (under steps, after creating CMakeLists.txt):\n"
+            "#       - configure:\n"
+            '#           run: [cmake, -S, ., -B, "${run.build_dir}"]\n'
+            "#           timeout: 120\n",
+            "variants/variants.ptk.yml": "# Variant model: includes here are relative to variants/.\n"
+            "# Add a separate file per variant and include it below.\n"
+            + dump(
                 {
+                    "include": ["debug.ptk.yml", "release.ptk.yml"],
                     "default": "debug",
-                    "components": {},
-                    "variants": {"debug": {}, "release": {}},
+                    "components": {
+                        "core": {
+                            "description": "Example project component",
+                            "features": {
+                                "DEBUG": {
+                                    "type": "bool",
+                                    "default": True,
+                                    "help": "Enable debug behavior",
+                                }
+                            },
+                        }
+                    },
                 }
             ),
-            "tools.ptk.yml": "# Declare managed download or uv_tool sources here; enable tools with requires_tools.\ntools: {}\nrequires_tools: {}\n",
-            "versioning.ptk.yml": "# Switch to source: git, match: 'v*', strip_prefix: v when tags are available.\n"
+            "variants/debug.ptk.yml": "# Development variant; feature values are exported as VH_* variables.\n"
+            + dump(
+                {
+                    "variants": {
+                        "debug": {
+                            "description": "Development build",
+                            "features": {"DEBUG": True},
+                        }
+                    }
+                }
+            ),
+            "variants/release.ptk.yml": "# Release variant; select with -V release.\n"
+            + dump(
+                {
+                    "variants": {
+                        "release": {
+                            "description": "Release build",
+                            "features": {"DEBUG": False},
+                        }
+                    }
+                }
+            ),
+            "tools/tools.ptk.yml": """# Tool definitions and global requirements. Nothing is installed by this starter.
+# Uncomment the tool, then enable it in an action's requires_tools.
+tools: {}
+requires_tools: {}
+# Replace tools: {} with, for example:
+# tools:
+#   cmake:
+#     version: ">=3.30,<4"           # Accepted version range.
+#     check: cmake --version         # Command used to verify the tool.
+#     uv_tool: "cmake==3.30.2"       # Isolated, pinned Python tool installation.
+# Or use a managed archive source for a tool:
+#     download:
+#       url: https://example.com/tool.zip  # Replace with the real download URL.
+#       sha256: REPLACE_WITH_SHA256       # Verify the downloaded archive.
+#       bin: bin                         # Executable directory inside the archive.
+# requires_tools: {cmake: true}     # Require globally instead of per action.
+""",
+            "versioning/versioning.ptk.yml": "# Literal version works before you create any Git tags.\n"
             + dump(
                 {
                     "versioning": {
                         "project": {"source": "literal", "version": "0.1.0"},
-                        "components": {"core": {}},
+                        "components": {"core": {"source": "inherit"}},
                     }
                 }
-            ),
-            "environment.ptk.yml": dump(
+            )
+            + "# To discover a tagged version, replace project above with:\n"
+            "#   project:\n"
+            "#     source: git\n"
+            '#     match: "v*"          # Select reachable tags matching this pattern.\n'
+            "#     strip_prefix: v      # v1.2.3 becomes 1.2.3.\n"
+            "#     dirty: suffix        # suffix, ignore or error.\n"
+            "# A separately versioned component can use source: file, path: VERSION.\n"
+            "# Paths in version sources are relative to the repository root.\n",
+            "environment/environment.ptk.yml": "# Child commands get only OS essentials and explicitly kept variables.\n"
+            + dump(
                 {"environment": {"isolate": True, "inherit_path": False, "keep": []}}
-            ),
-            "credentials.ptk.yml": "# Declare credential providers here; never commit secret values.\ncredentials: {}\n",
-            "configs.ptk.yml": "# Enable shared formatter/linter configuration with ptk setup configs.\nconfigs: {}\n",
-            "cx.ptk.yml": "# GitHub Actions/workflows overlay, loaded automatically in CI.\n{}\n",
-            "maintainers.ptk.yml": "# Optional identities for maintainer-only actions.\nmaintainers: []\n",
+            )
+            + "# Under environment, customize only what commands need:\n"
+            "#   keep: [HTTP_PROXY, HTTPS_PROXY]  # Copy named variables from the caller.\n"
+            "#   set: {BUILD_MODE: reproducible} # Set values for all actions.\n"
+            "#   unset: [UNWANTED_VARIABLE]      # Remove inherited variables.\n"
+            "#   path_prepend: [/opt/sdk/bin]    # Explicit extra executable paths.\n"
+            "#   path_append: []\n",
+            "credentials/credentials.ptk.yml": """# Credential declarations only; never put actual secret values here.
+credentials: {}
+# Replace credentials: {} with an entry such as:
+# credentials:
+#   registry:
+#     description: Package registry access
+#     fields: [token]
+#     providers: [env, vault, prompt]  # Tried in this order.
+#     env: {token: REGISTRY_TOKEN}    # Read this variable from the caller.
+# Then inject it only in a step that needs it:
+#     secrets: {REGISTRY_TOKEN: registry.token}
+# Provision using `ptk setup creds`; do not commit secret values.
+""",
+            "configs/configs.ptk.yml": """# Shared formatter/linter configuration. Enable entries you intend to use.
+configs: {}
+# Replace configs: {} with, for example:
+# configs:
+#   ruff: {enabled: true}           # Python lint/format configuration.
+#   clang-format: {enabled: true}   # C/C++ formatting configuration.
+# Run `ptk setup configs sync` to generate the enabled configuration files.
+""",
+            "cx.ptk.yml": """# Conventional entry point: loaded automatically for GitHub Actions/workflows.
+# This file stays at the configuration root so PTK can discover it.
+environment:
+  set:
+    PTK_CI: "true"
+# Optional action override; place at the top level:
+# actions:
+#   build:
+#     env: {BUILD_MODE: ci}
+""",
+            "maintainers.ptk.yml": """# Conventional entry point for maintainer identities; stays at config root.
+maintainers: []
+# Replace maintainers: [] with real identities before restricting actions:
+# maintainers:
+#   - name: Project Maintainer
+#     email: maintainer@example.com  # Matches this repository's Git identity.
+#     user: maintainer              # Optional operating-system username.
+# Set audience: maintainer on an action to restrict it.
+""",
         }
         files.update(
             {(folder / n).as_posix(): content for n, content in configs.items()}

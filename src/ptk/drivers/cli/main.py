@@ -1109,7 +1109,7 @@ def init_command(
         )
     if not dry_run:
         console.print(
-            "Next: change to the project directory, then run 'ptk setup config validate', 'ptk version show' and 'ptk hello'."
+            "Next: change to the project directory, then run 'ptk setup config validate', 'ptk hello' and 'ptk build'."
         )
 
 
