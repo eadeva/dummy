@@ -92,3 +92,45 @@ def test_background_cancel(tmp_path):
 def test_background_requires_process():
     with pytest.raises(ValidationError, match="only allowed for run"):
         StepSpec(name="wait", uses="wait", background=True)
+
+
+def test_background_joins_at_nested_boundary(tmp_path):
+    result = execute(
+        tmp_path,
+        [
+            {
+                "group": {
+                    "steps": [
+                        {
+                            "worker": command(
+                                "from pathlib import Path; import time; time.sleep(0.1); Path('nested').touch()",
+                                background=True,
+                            )
+                        },
+                    ]
+                }
+            },
+            {
+                "verify": command(
+                    "from pathlib import Path; assert Path('nested').exists()"
+                )
+            },
+        ],
+    )
+    assert result.status is Status.PASSED
+    assert result.steps[0].children[0].status is Status.PASSED
+
+
+def test_background_timeout(tmp_path):
+    result = execute(
+        tmp_path,
+        [
+            {
+                "worker": command(
+                    "import time; time.sleep(30)", background=True, timeout=0.2
+                )
+            },
+        ],
+    )
+    assert result.status is Status.FAILED
+    assert "timed out" in result.steps[0].message

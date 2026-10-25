@@ -1,0 +1,105 @@
+Migration, background steps and variant editor
+==============================================
+
+Legacy migration
+----------------
+
+Use a new output path and review the preview first::
+
+   ptk setup migrate old-config.yaml --name demo --dry-run
+   ptk setup migrate old-config.yaml --name demo --output main.ptk.yml
+   ptk setup config validate
+
+``ptk migrate`` is an alias. Conversion never modifies the source and refuses
+existing output files, including symlinks. It validates the converted schema and
+cross-references before writing. The output directory must already exist.
+
+Supported legacy shapes are ``ACTIONS`` mappings with action ``PHASES``, ``SETS``
+or ``steps``. Step collections may be ordered mappings or lists of single-name
+mappings, recursively. Commands may be strings or argv lists. The converter maps:
+
+* ``VARS`` and ``$VAR{name}`` to ``vars`` and ``${vars.name}``.
+* ``shell_run_command`` and ``custom_script`` to ``run``.
+* Boolean ``game_stopper`` to inverted ``continue_on_error``.
+* ``non_blocking`` to ``background``.
+* ``only_variants`` / ``omit_variants`` to combined ``when`` conditions.
+* Action-local ``DEFAULT_PARAMETERS`` scalar/list values to typed defaults.
+
+Already-current fields are retained and validated. Unsupported keys or conflicting
+old/new spellings stop conversion. In particular, translate ``execute_if`` manually:
+the old variable's environment/feature/configuration scope is ambiguous.
+``variant_matrix``, ``variant_overrides``, ``*_cx``, global default parameters and
+``ENV_ISOLATION`` need manual conversion using the mapping in ``docs/PLAN.md``.
+There is no claim of automatic compatibility with every historical config dialect.
+Do not put literal credentials in configuration files or migration previews.
+
+Background process steps
+------------------------
+
+``background: true`` is supported on ``run`` steps, including Python commands::
+
+   actions:
+     build:
+       steps:
+         - analyze:
+             run: [python, tools/analyze.py]
+             background: true
+             timeout: 120
+         - compile:
+             run: [cmake, --build, build]
+
+The next step can start while the background process runs. All background jobs
+are joined at the end of their containing sequential group (or action). Nested
+groups therefore finish their own jobs before the parent continues. Summaries
+retain configuration order; logs and observers receive live events. In parallel
+groups, all children already run concurrently.
+
+Failures remain failures in the final result. Before starting another step,
+completed background failures stop the sequence unless ``continue_on_error`` is
+set. A failure discovered later cannot undo work already started. Conditions,
+retries, timeouts, secret masking and cancellation use the existing process path.
+Ctrl+C signals running child processes before waiting for executor shutdown.
+
+These are finite jobs, not detached services. PTK does not provide readiness
+probes or automatically stop a server when foreground work ends. Use ``timeout``
+and explicit coordination for dependent work. Built-ins and step groups cannot
+be marked ``background``; use ``parallel`` for concurrent groups.
+
+Optional desktop variant editor
+-------------------------------
+
+Launch from a graphical desktop with a Python installation that includes Tk::
+
+   ptk variant gui --output main.variants-edited.ptk.yml
+
+On Linux the operating system's ``python3-tk`` package may be required; the Python
+interpreter running PTK must have Tk support. No GUI dependency is imported by
+ordinary CLI commands. Headless hosts receive a clear error.
+
+The editor displays product-line YAML for components, features, constraints,
+variants and inheritance. **Validate / preview** shows resolved feature values
+and validation errors. **Export validated project** checks both the product line
+and the complete project's references before writing a new file. Existing files
+are never overwritten. Closing a modified editor asks before discarding edits.
+
+The export is a standalone snapshot of the effective project configuration;
+includes, overlays, command-line overrides and comments are flattened. Original
+files remain intact. Inspect and run the export explicitly::
+
+   ptk --config main.variants-edited.ptk.yml variant check
+   ptk --config main.variants-edited.ptk.yml dry-run build
+
+Integrate reviewed changes into source configuration separately. This is a YAML
+editor with validation, not a graphical feature-tree designer.
+
+Alternative editors can register a Python entry point::
+
+   [project.entry-points."ptk.variant_gui"]
+   my_editor = "my_package.editor:open_editor"
+
+Select one using ``ptk variant gui --plugin my_editor``. The callable receives
+``(session: VariantEditorSession, output: pathlib.Path)``. Use
+``session.initial_text()``, ``session.validate(text)`` and ``session.render(text)``;
+``ptk.adapters.variant_editor.save_edit`` performs validated exclusive export.
+Plugins are explicitly selected installed Python code; project ``plugins:`` does
+not automatically load them. The bundled editor is selected by ``tkinter``.

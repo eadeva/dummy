@@ -479,7 +479,11 @@ class RunAction:
         with ThreadPoolExecutor(
             max_workers=workers, thread_name_prefix="ptk-step"
         ) as pool:
-            return list(pool.map(self._run_step, steps))
+            try:
+                return list(pool.map(self._run_step, steps))
+            except BaseException:
+                self._cancel.set()
+                raise
 
     def _not_run(self, step: PlannedStep, status: Status, message: str) -> StepResult:
         result = StepResult(

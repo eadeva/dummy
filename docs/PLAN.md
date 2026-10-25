@@ -601,7 +601,7 @@ so `ptk build --help` documents the project's real options.
 | `only_variants` / `omit_variants` | `when: "variant in [...]"` / `not in` |
 | `variant_overrides` / `*_cx` | `when` blocks, `ci.ptk.yml` overlay |
 | `game_stopper: false` | `continue_on_error: true` |
-| `non_blocking` | `background: true` (later milestone) |
+| `non_blocking` | `background: true` (scoped finite processes) |
 | `DEFAULT_PARAMETERS(_CX)` | `params` defaults, `ci.ptk.yml` |
 | `-bo name=value` | variant feature override `--set vh.FEATURE=value` (alias `-bo` kept) |
 | `-mp name=value` | declared `params` / `--set` (alias `-mp` kept) |
@@ -610,7 +610,9 @@ so `ptk build --help` documents the project's real options.
 | `$VAR{...}` / env replacement | `${vars.x}` / `${env:X}` |
 | `variant_matrix` + `variants` | product line with enum features + aliases |
 
-A one-off converter (`ptk migrate old-config.yaml`) is optional (milestone M11).
+A conservative one-off converter is available as `ptk setup migrate old-config.yaml`
+(alias `ptk migrate`). Unsupported/ambiguous legacy fields require manual conversion;
+see `docs/m11.rst` for the supported subset.
 
 ---
 
@@ -666,7 +668,7 @@ formatted with `ruff format`. CI runs `ruff check` and `ruff format --check`.
 | M8 ✅ | Shared configs: pre-commit, ruff, clang-format, clang-tidy, clangd | `configs sync/check/--diff` |
 | M9 ✅ | Tools: model, Chocolatey, uv-tool, download, `setup`, `self-setup`, `doctor`, installers | missing tools detected and installed (Windows run by user) |
 | M10 ✅ | Runnable quickstart, schema-generated reference, eleven authoring skills, native process tests and CI matrix | Sphinx `-W`, lint and tests passed on Linux/Windows with Python 3.12/3.13 (run 40195082145) |
-| M11 | Optional: `ptk migrate`, background steps, variant GUI plugin | — |
+| M11 | `setup migrate` (alias `migrate`), scoped background steps, optional variant YAML GUI and plugin discovery | done |
 
 ---
 
@@ -698,4 +700,18 @@ Former top-level commands remain hidden compatibility aliases.
 - Generates a portable `hello` action and a new `.gitignore` when absent.
 - Refuses existing configuration, preserves existing ignore rules, and previews
   without writing files. Does not install tools or access credentials.
-- M11 migration, background steps and a variant GUI remain optional and unimplemented.
+- M11 is implemented with documented limits: conservative migration, finite scoped
+  background processes, and a desktop YAML variant editor with validated export.
+
+## M11 implementation
+
+- Migration supports the explicit legacy subset in `docs/m11.rst`, previews without
+  writes, validates output and refuses existing destinations. Ambiguous scopes and
+  unsupported options stop conversion; sources are never changed.
+- Background `run` steps overlap subsequent work, join at their sequence boundary,
+  preserve result ordering, and use existing timeout/retry/cancellation handling.
+- `variant gui` lazily opens the Tk editor or an explicitly selected installed
+  `ptk.variant_gui` entry point. Export is a validated standalone project snapshot;
+  existing source files are preserved. GUI layout needs a desktop for manual QA.
+- Regression coverage includes real process overlap/cancellation, failure reporting,
+  migration preview/round-trip/overwrite protection, variant constraints and plugin dispatch.

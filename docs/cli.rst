@@ -48,3 +48,11 @@ and ``vscode`` commands remain callable aliases, hidden from help and completion
 Legacy ``ptk setup --action ACTION --dry-run`` also remains supported. Bare
 ``ptk setup`` now shows help; use ``ptk setup install`` to install all configured
 tools. Do not combine legacy installation options with a setup subcommand.
+
+M11 commands
+------------
+
+``ptk setup migrate SOURCE [--output FILE] [--name NAME] [--dry-run]`` converts
+supported legacy configurations; ``ptk migrate`` remains an alias.
+``ptk variant gui [--plugin NAME] [--output FILE]`` opens the optional desktop
+variant editor. See :doc:`m11` for prerequisites and semantics.

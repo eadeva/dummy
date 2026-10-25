@@ -186,7 +186,7 @@ def config_schema(ctx: click.Context, output: Path | None) -> None:
 
 @cli.group("variant")
 def variant_group() -> None:
-    """Inspect variants: list, show, explain, check."""
+    """Inspect and edit variants: list, show, explain, check, gui."""
 
 
 def _value(value: Any) -> str:
@@ -195,6 +195,33 @@ def _value(value: Any) -> str:
     if value is False:
         return "no"
     return "-" if value is None else str(value)
+
+
+@variant_group.command("gui")
+@click.option(
+    "--plugin",
+    default="tkinter",
+    show_default=True,
+    help="Installed ptk.variant_gui plugin name.",
+)
+@click.option(
+    "-o",
+    "--output",
+    type=click.Path(path_type=Path, dir_okay=False),
+    default="main.variants-edited.ptk.yml",
+    show_default=True,
+)
+@click.pass_context
+@guarded
+def variant_gui(ctx: click.Context, plugin: str, output: Path) -> None:
+    """Edit variants in a desktop window and export a validated project copy."""
+    from ...adapters.variant_editor import launch_editor
+    from ...application.use_cases.variant_editor import VariantEditorSession
+
+    project = _state(ctx).project()
+    session = VariantEditorSession(project.config)
+    session.initial_text()  # report absent variants before loading any GUI
+    launch_editor(session, output.resolve(), plugin)
 
 
 @variant_group.command("list")
