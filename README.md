@@ -284,7 +284,7 @@ components. From the repository root:
 uv run ptk test                          # pytest + JUnit/PTK reports
 uv run ptk test -- tests/test_init.py -q  # selected tests and pytest options
 uv run ptk check                         # Ruff lint and format checks
-uv run ptk docs                          # docs/_build/html/index.html
+uv run ptk docs                          # _builds/default/docs/sphinx/html/index.html
 ```
 
 An installed `ptk` can run these directly. Actions use this checkout's Python

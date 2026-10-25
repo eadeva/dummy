@@ -29,7 +29,7 @@ The action's Python runtime always selects this checkout's uv project.
 ``ptk test -- tests/test_init.py -q`` selects tests and forwards pytest options.
 JUnit results go to ``_reports/default/test/pytest/pytest.xml`` and are included
 in PTK's report, even when pytest fails. HTML docs go to
-``docs/_build/html/index.html``. The default action is ``test``; the dummy hello
+``_builds/default/docs/sphinx/html/index.html``. The default action is ``test``; the dummy hello
 and header-generation actions are not part of this repository configuration.
 
 ``check`` runs Ruff lint and format checks without modifying files. To apply
@@ -48,11 +48,18 @@ for both variants in a directory containing spaces.
 Continuous integration
 ----------------------
 
-GitHub Actions runs the test suite on Ubuntu and Windows with Python 3.12 and
-3.13. CI calls ``ptk test``, ``ptk check`` and ``ptk docs`` for the same workflows used locally. Existing
+GitHub Actions runs the test suite on Ubuntu and Windows with Python 3.12, 3.13
+and 3.14. CI checks that CMake is available so the generated CMake integration
+test cannot silently skip. CI calls ``ptk test``, ``ptk check`` and ``ptk docs`` for the same workflows used locally. Existing
 POSIX-only tests remain skipped on Windows; the quickstart integration tests
 exercise actual Python processes and report generation on both platforms.
 A green Linux run alone does not establish that Windows works.
+
+The demo dry-run test uses a temporary copy and checks that both fresh and
+previously used workspaces remain unchanged. Tests must not assume a developer's
+example folders have no previous output. Filesystem identity checks account for
+Windows path capitalization. CMake integration failures report the selected
+executable, its version, output and generated script to diagnose local tool issues.
 
 Documentation and skills
 ------------------------

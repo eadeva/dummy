@@ -36,6 +36,8 @@ def test_repository_actions_and_single_component_free_variant():
 
 @pytest.mark.parametrize("run", [["python", "-m", "sphinx"], ["build_docs.py"]])
 def test_project_dependency_groups_reach_uv_before_the_command(tmp_path, run):
+    project = tmp_path / "project with spaces"
+    project.mkdir()
     manager = UvPythonEnvManager(None, uv="/tools/uv")
     spec = PythonSpec(project="project with spaces", groups=["dev", "docs"])
     runtime = manager.runtime(spec, tmp_path, create=False)
@@ -45,16 +47,10 @@ def test_project_dependency_groups_reach_uv_before_the_command(tmp_path, run):
     command = build_command(
         step, env={}, cwd=str(tmp_path), os_name="linux", python=runtime
     )
-    assert command.argv[:8] == [
-        "/tools/uv",
-        "run",
-        "--project",
-        str(tmp_path / "project with spaces"),
-        "--group",
-        "dev",
-        "--group",
-        "docs",
-    ]
+    assert command.argv[:3] == ["/tools/uv", "run", "--project"]
+    # Windows may canonicalize directory-name casing during resolve().
+    assert Path(command.argv[3]).samefile(project)
+    assert command.argv[4:8] == ["--group", "dev", "--group", "docs"]
     assert command.argv[8:] == (["python", *run] if run[0].endswith(".py") else run)
 
 

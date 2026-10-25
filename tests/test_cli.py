@@ -1,5 +1,7 @@
 import json
+import shutil
 
+import pytest
 from click.testing import CliRunner
 
 from ptk.drivers.cli.main import cli
@@ -59,13 +61,47 @@ def test_errors_exit_2():
     assert "unknown variant 'nope'" in result.output
 
 
-def test_dry_run_of_demo_shows_plan_without_executing():
-    result = run("dry-run", "build", "-V", "b_us", "--jobs", "3", "--env")
+@pytest.mark.parametrize("existing_logs", [False, True])
+def test_dry_run_of_demo_shows_plan_without_executing(tmp_path, existing_logs):
+    demo = tmp_path / "demo"
+    shutil.copytree(
+        DEMO,
+        demo,
+        ignore=shutil.ignore_patterns("_logs", "_reports", "_builds", "_bin", ".ptk"),
+    )
+    if existing_logs:
+        logs = demo / "_logs"
+        logs.mkdir()
+        (logs / "previous.log").write_text("Preserve the previous run.\n")
+
+    def snapshot():
+        return {
+            path.relative_to(demo): path.read_bytes() if path.is_file() else None
+            for path in demo.rglob("*")
+        }
+
+    before = snapshot()
+    result = CliRunner().invoke(
+        cli,
+        [
+            "--config",
+            str(demo / ".main.ptk.yml"),
+            "--no-ci",
+            "dry-run",
+            "build",
+            "-V",
+            "b_us",
+            "--jobs",
+            "3",
+            "--env",
+        ],
+        catch_exceptions=False,
+    )
     assert result.exit_code == 0, result.output
     assert "dry run" in result.output and "-j 3" in result.output
     assert "camera-selftest: skipped (condition is false" in result.output
     assert "VH_VARIANT=customer_b_us" in result.output
-    assert not (DEMO / "_logs").exists()
+    assert snapshot() == before
 
 
 def test_run_errors_are_clean():

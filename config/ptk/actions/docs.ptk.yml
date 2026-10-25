@@ -1,5 +1,5 @@
 # Build HTML: ptk docs
-# Open docs/_build/html/index.html afterwards. Warnings fail the action.
+# Open _builds/default/docs/sphinx/html/index.html afterwards. Warnings fail the action.
 # The docs dependency group is installed automatically by uv when needed.
 actions:
   docs:

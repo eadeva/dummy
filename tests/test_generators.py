@@ -50,12 +50,36 @@ def test_seven_generators_and_language_values(tmp_path):
 
 @pytest.mark.skipif(not shutil.which("cmake"), reason="cmake not installed")
 def test_cmake_consumes_generated_values(tmp_path):
+    cmake = shutil.which("cmake")
+    version = subprocess.run(
+        [cmake, "--version"],
+        check=False,
+        capture_output=True,
+        text=True,
+        errors="replace",
+        timeout=30,
+    )
+    assert version.returncode == 0, (
+        f"CMake executable: {cmake}\n{version.stdout}{version.stderr}"
+    )
     path = tmp_path / "variant.cmake"
     path.write_text(
         GENERATORS["cmake"](variant())["variant.cmake"]
         + '\nif(NOT VH_SIZE EQUAL 4 OR NOT VH_TEXT STREQUAL "hello world")\nmessage(FATAL_ERROR "wrong values")\nendif()\n'
     )
-    subprocess.run(["cmake", "-P", str(path)], check=True, capture_output=True)
+    result = subprocess.run(
+        [cmake, "-P", str(path)],
+        check=False,
+        capture_output=True,
+        text=True,
+        errors="replace",
+        timeout=30,
+    )
+    assert result.returncode == 0, (
+        f"CMake executable: {cmake}\n{version.stdout}"
+        f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        f"\nGenerated script:\n{path.read_text()}"
+    )
 
 
 def test_builtin_generation_copy_clean_and_configs(tmp_path):
