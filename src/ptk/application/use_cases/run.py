@@ -13,7 +13,7 @@ import dataclasses
 import threading
 import time
 from collections.abc import Callable, Mapping, Sequence
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -435,27 +435,44 @@ class RunAction:
     # -- tree --------------------------------------------------------------------------
 
     def _run_sequence(self, steps: list[PlannedStep]) -> list[StepResult]:
-        results: list[StepResult] = []
+        # Background jobs are scoped to this sequence, never detached. Preserve
+        # configuration order in summaries while observers receive live events.
+        results: list[StepResult | Future[StepResult]] = []
         failed = False
-        for step in steps:
-            if failed or self._cancel.is_set():
-                reason = (
-                    "cancelled"
-                    if self._cancel.is_set()
-                    else "not run: an earlier step failed"
-                )
-                results.append(
-                    self._not_run(
-                        step,
-                        Status.CANCELLED if self._cancel.is_set() else Status.SKIPPED,
-                        reason,
+        workers = max(1, sum(s.spec.background for s in steps))
+        with ThreadPoolExecutor(
+            max_workers=workers, thread_name_prefix="ptk-bg"
+        ) as pool:
+            try:
+                for step in steps:
+                    failed = failed or any(
+                        r.done() and r.result().blocking_failure
+                        for r in results
+                        if isinstance(r, Future)
                     )
-                )
-                continue
-            result = self._run_step(step)
-            results.append(result)
-            failed = result.blocking_failure
-        return results
+                    if failed or self._cancel.is_set():
+                        results.append(
+                            self._not_run(
+                                step,
+                                Status.CANCELLED
+                                if self._cancel.is_set()
+                                else Status.SKIPPED,
+                                "cancelled"
+                                if self._cancel.is_set()
+                                else "not run: an earlier step failed",
+                            )
+                        )
+                    elif step.spec.background and not step.skip_reason:
+                        results.append(pool.submit(self._run_step, step))
+                    else:
+                        result = self._run_step(step)
+                        results.append(result)
+                        failed = result.blocking_failure
+                return [r.result() if isinstance(r, Future) else r for r in results]
+            except BaseException:
+                # Signal subprocesses before executor shutdown waits for them.
+                self._cancel.set()
+                raise
 
     def _run_parallel(self, steps: list[PlannedStep]) -> list[StepResult]:
         workers = max(1, min(len(steps), self._max_parallel or len(steps)))

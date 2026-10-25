@@ -40,6 +40,7 @@ RESERVED_ACTIONS = {
     "run",
     "dry-run",
     "init",
+    "migrate",
     "help",
     "vscode",
     "version",
@@ -222,6 +223,7 @@ class StepSpec(_Strict):
     with_: dict[str, Any] = Field(default_factory=dict, alias="with")
     steps: list[StepSpec] | None = None
     parallel: bool = False
+    background: bool = False
     when: str | None = None
     continue_on_error: bool = False
     timeout: float | None = Field(default=None, gt=0)
@@ -256,6 +258,8 @@ class StepSpec(_Strict):
             raise ValueError(
                 f"step '{self.name}' needs exactly one of: run, uses, steps"
             )
+        if self.background and self.run is None:
+            raise ValueError("background is only allowed for run steps")
         if self.parallel and self.steps is None:
             raise ValueError("'parallel' is only allowed for step sets (steps:)")
         if self.python is not None and self.run is None:
