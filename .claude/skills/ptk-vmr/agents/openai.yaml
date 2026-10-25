@@ -1,0 +1,4 @@
+interface:
+  display_name: "PTK VMR"
+  short_description: "Operate and diagnose multi-repository PTK workspaces"
+  default_prompt: "Use $ptk-vmr to validate this workspace and diagnose repository tool isolation."

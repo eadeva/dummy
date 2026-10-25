@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from ...domain.config.model import CredentialSpec
 from ...domain.credentials import SecretKey, parse_ref
@@ -35,11 +36,13 @@ class CredentialService:
         providers: Mapping[str, SecretProvider],
         host: HostEnvironment,
         runner: ProcessRunner | None = None,
+        root: Path | None = None,
     ):
         self._credentials = dict(credentials)
         self._providers = dict(providers)
         self._host = host
         self._runner = runner
+        self._root = root
         self._cache: dict[str, str] = {}
 
     # -- lookups -----------------------------------------------------------------------
@@ -121,8 +124,16 @@ class CredentialService:
                         or not usable.available()[0]
                     ):
                         continue  # 'ptk setup creds setup' explains unavailable providers
-                    if self._try(provider, key, notes):
+                    if provider == "env":
+                        if self._try(provider, key, notes):
+                            supplier = provider
+                            break
+                    else:
+                        # Never retrieve/unlock secrets just to list metadata.
                         supplier = provider
+                        notes.append(
+                            "provider available; stored value not read or verified"
+                        )
                         break
                 result.append(SecretStatus(key, supplier, notes))
         return result
@@ -191,7 +202,10 @@ class CredentialService:
             lines.append(line)
 
         outcome = self._runner.run(
-            CommandSpec(shell=spec.test, cwd=".", env=env, timeout=120), masked
+            CommandSpec(
+                shell=spec.test, cwd=str(self._root or "."), env=env, timeout=120
+            ),
+            masked,
         )
         if outcome.error:
             lines.append(outcome.error)

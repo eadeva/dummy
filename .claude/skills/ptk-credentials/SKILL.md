@@ -25,3 +25,5 @@ description: Declare, provision or troubleshoot ptk credentials without exposing
 9. In CI, provide the declared env variables and avoid interactive prompt providers. Store only through a provider that supports writes.
 
 10. Use `creds test NAME` only after inspecting the configured test command and its external effects.
+
+In VMR mode, use `ptk setup creds list` for shared names and repository-qualified conflicts. Listing must never unlock a store. Use the storage namespace when implementing providers; logical credential references alone are not unique across VMR definitions.

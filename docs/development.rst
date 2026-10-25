@@ -35,7 +35,7 @@ A green Linux run alone does not establish that Windows works.
 Documentation and skills
 ------------------------
 
-The configuration reference is generated from the validation models. Eleven
+The configuration reference is generated from the validation models. Thirteen
 repository-local authoring skills are shipped under ``.claude/skills`` and
 included in the documentation. Tests check catalog completeness and source links.
 

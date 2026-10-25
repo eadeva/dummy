@@ -13,6 +13,7 @@ already masked (secrets never reach this writer).
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import threading
 from datetime import datetime
@@ -60,6 +61,21 @@ def rotate(folder: Path, keep: int) -> None:
             target.mkdir()
             for entry in entries:
                 shutil.move(str(entry), target / entry.name)
+            archived = target / SUMMARY
+            data = json.loads(archived.read_text(encoding="utf-8"))
+
+            def relocate(value):
+                if isinstance(value, str) and (
+                    value == str(folder) or value.startswith(str(folder) + os.sep)
+                ):
+                    return str(target) + value[len(str(folder)) :]
+                if isinstance(value, dict):
+                    return {k: relocate(v) for k, v in value.items()}
+                if isinstance(value, list):
+                    return [relocate(v) for v in value]
+                return value
+
+            archived.write_text(json.dumps(relocate(data), indent=2), encoding="utf-8")
         else:
             for entry in entries:
                 _remove(entry)
@@ -167,7 +183,14 @@ class FileLogObserver:
             duration=round(result.duration, 3),
         )
         assert self._plan is not None
-        self._write_summary(run_summary(self._plan, result))
+        assert self._folder is not None
+        snapshot = self._folder / "report-inputs"
+        source = Path(self._plan.dirs["reports_dir"])
+        if source.is_dir():
+            shutil.copytree(source, snapshot, dirs_exist_ok=True)
+        summary = run_summary(self._plan, result)
+        summary["reports_dir"] = str(snapshot)
+        self._write_summary(summary)
         with self._lock:
             for handle in self._steps.values():
                 handle.close()

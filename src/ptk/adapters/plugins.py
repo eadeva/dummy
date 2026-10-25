@@ -82,8 +82,11 @@ class PluginInstaller:
         self.base = base
         self.handlers = handlers
 
-    def bin_dirs(self):
-        return self.base.bin_dirs()
+    def bin_dirs(self, tools=None):
+        return self.base.bin_dirs(tools)
+
+    def clean_environment(self, env):
+        return self.base.clean_environment(env)
 
     def install(self, name, method, out):
         if method.kind.startswith("plugin:"):

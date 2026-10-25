@@ -58,7 +58,7 @@ class KeyringProvider:
         if keyring is None:
             return None
         try:
-            return keyring.get_password(SERVICE, key.ref) or None
+            return keyring.get_password(SERVICE, key.storage_ref) or None
         except Exception:  # noqa: BLE001 - a broken backend must not stop the chain
             return None
 
@@ -66,14 +66,14 @@ class KeyringProvider:
         keyring = self._keyring()
         if keyring is None:
             raise PtkError(f"keyring: {self._reason}")
-        keyring.set_password(SERVICE, key.ref, value)
+        keyring.set_password(SERVICE, key.storage_ref, value)
 
     def remove(self, key: SecretKey) -> bool:
         keyring = self._keyring()
         if keyring is None:
             return False
         try:
-            keyring.delete_password(SERVICE, key.ref)
+            keyring.delete_password(SERVICE, key.storage_ref)
         except Exception:  # noqa: BLE001 - not stored
             return False
         return True

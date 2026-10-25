@@ -1,0 +1,9 @@
+default: debug
+components:
+  device:
+    features:
+      SIZE: {type: int, default: 4, min: 1, max: 16}
+variants:
+  debug: {}
+  release:
+    features: {SIZE: 8}

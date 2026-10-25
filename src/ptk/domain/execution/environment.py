@@ -75,9 +75,21 @@ def base_environment(
     unset: Iterable[str],
     path_prepend: Iterable[str],
     path_append: Iterable[str],
+    inherit_path: bool = True,
 ) -> dict[str, str]:
     windows = os_name == "windows"
     sep = ";" if windows else ":"
+    if not inherit_path:
+        host = {k: v for k, v in host.items() if k.upper() != "PATH"}
+        system_root = next(
+            (v for k, v in host.items() if k.upper() == "SYSTEMROOT"), r"C:\Windows"
+        )
+        host = {
+            **host,
+            "PATH": (system_root + r"\System32;" + system_root)
+            if windows
+            else "/usr/bin:/bin",
+        }
     if isolate:
         essentials = WINDOWS_ESSENTIAL if windows else POSIX_ESSENTIAL
         wanted = {n.upper() if windows else n for n in (*essentials, *keep, "PATH")}

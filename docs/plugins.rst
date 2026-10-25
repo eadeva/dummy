@@ -115,3 +115,22 @@ Supported keys are ``setup``, its immediate commands/groups (``config``, ``confi
 ``variant`` and ``report``. Restrictions apply to descendants and compatibility
 aliases, normal/HTML help and completion. Roles use ``maintainers.ptk.yml`` as
 for actions. This is command visibility, not a security boundary.
+
+Runnable extension starter
+---------------------------
+
+``examples/plugin`` is a complete minimal distribution. Install it into the
+Python environment that contains PTK, for example from a development checkout::
+
+   uv pip install ./examples/plugin
+
+Select ``plugins: [ptk-example-extension]`` and a step with
+``uses: example.check``. The skill tests load the declared entry point and run
+a real configured action. See the ``ptk-plugin-development`` authoring skill.
+
+Credential-provider keys include ``storage_ref`` as well as logical ``ref``.
+Persist by ``storage_ref`` to honor VMR namespaces. Provider availability checks
+must be non-interactive; listing never calls ``get`` on persistent stores.
+Custom installers must manage their own version-specific destinations and
+configure a discoverable PATH explicitly; PTK cannot isolate arbitrary external
+installer side effects.

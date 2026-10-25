@@ -75,10 +75,10 @@ Names must be unique within their set. ``parallel`` applies only to sets;
 ``uses``. Prefer argument lists for paths containing spaces and user-supplied
 parameters. String commands use platform shell syntax.
 
-The registered built-ins are ``echo``, ``wait`` and ``report.import``.
-``configs sync`` and ``setup`` are CLI commands; equivalent ``uses`` handlers
-from the plan are not registered yet. Read the active code before adding new
-built-in names. ``--from`` and ``--to`` select top-level steps.
+The registered built-ins are ``echo``, ``wait``, ``report.import``,
+``configs.sync``, ``tools.ensure``, ``files.copy``, ``files.clean`` and
+``variant.generate``. Their contracts are in :doc:`plugins`.
+``--from`` and ``--to`` select top-level steps.
 
 Python modes are mutually exclusive: ``uvx`` for a Python tool, ``venv`` for
 cached requirements/packages, ``project`` for a uv project, or
@@ -224,3 +224,44 @@ Selecting actions that require conflicting settings for the same tool fails
 before installation; install for those actions separately. Without ``--action``,
 ``setup install`` uses global requirements when supplied, otherwise all declared
 tools. Declaring a tool alone does not make it a requirement of every action.
+
+Isolated action environments
+----------------------------
+
+``environment.isolate`` defaults to true. Each action receives a new environment
+containing OS essentials, explicitly kept variables, configured values and its
+selected managed tools. ``inherit_path`` defaults to false: PATH starts with
+standard OS directories, not the caller's potentially repository-specific PATH.
+This is environment isolation, not a filesystem or process sandbox::
+
+   environment:
+     isolate: true
+     inherit_path: false
+     keep: [HTTP_PROXY, HTTPS_PROXY]
+     set: {BUILD_MODE: reproducible}
+   actions:
+     build:
+       environment:
+         keep: [HTTP_PROXY, HTTPS_PROXY, COMPANY_SDK]
+       steps:
+         - compile: {run: [compiler, source.c]}
+
+An action's explicitly set environment fields override the global fields.
+Lists replace, so include all desired ``keep`` entries in an action override.
+``isolate: false`` deliberately inherits ordinary host variables;
+``inherit_path: true`` separately opts into caller PATH. Step ``env`` and secrets
+are applied to that command only. Neither the host process nor another action's
+environment is mutated. Tool versions are rechecked in the final subprocess
+environment, including Python-runtime and step overrides.
+
+Managed downloads and Python tools are stored by tool name and effective
+version/source identity. Only installations selected by the action's effective
+requirements (or its explicit ``tools.ensure`` selections) enter its PATH.
+A later ``tool: true`` keeps earlier settings; ``tool: false`` disables that
+requirement. System binaries on the OS path are version-checked. Chocolatey,
+apt/dnf and custom plugin installers are shared host operations and cannot
+provide the same side-by-side isolation. Prefer managed downloads or Python
+tools for incompatible repository versions. Host PATH entries pointing into
+PTK's managed cache are removed before the selected installations are added.
+
+The complete ``examples/authoring`` starter is exercised by the skill tests.

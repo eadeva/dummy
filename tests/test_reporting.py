@@ -178,6 +178,7 @@ def test_html_export(tmp_path):
 
 PROJECT = """
 project: {name: rep, default_action: ci}
+environment: {keep: [JUNIT]}
 reporting: {formats: [json, junit, html, markdown, github]}
 actions:
   ci:

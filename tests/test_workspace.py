@@ -256,3 +256,80 @@ def test_unselected_repository_broken_include_does_not_block_command(
     assert result.exit_code == 0, result.output
     result = CliRunner().invoke(cli, ["bootloader", "setup", "config", "validate"])
     assert result.exit_code != 0 and "included file not found" in result.output
+
+
+def test_shared_workspace_views_and_no_global_installer(tmp_path, monkeypatch):
+    workspace(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    for args in (
+        ["repos"],
+        ["setup", "config", "validate"],
+        ["setup", "config", "show", "project.name"],
+        ["variant", "list"],
+        ["report", "list"],
+        ["report", "summary"],
+    ):
+        result = runner.invoke(cli, args)
+        assert result.exit_code == 0, (args, result.output, result.exception)
+    result = runner.invoke(cli, ["setup", "install"])
+    assert result.exit_code != 0
+    result = runner.invoke(cli, ["setup", "config", "show", "project.name"])
+    assert "[firmware]" in result.output and "[bootloader]" in result.output
+
+
+def test_shared_credentials_merge_conflicts_and_namespace(tmp_path, monkeypatch):
+    from ptk.bootstrap import create_app
+
+    a, b = workspace(tmp_path)
+    for file in (a, b):
+        data = yaml.safe_load(file.read_text())
+        data["credentials"] = {
+            "shared": {"providers": ["vault"]},
+            "different": {"providers": ["vault"], "description": file.parent.name},
+        }
+        file.write_text(yaml.safe_dump(data))
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("PTK_VAULT_FILE", str(tmp_path / "vault.json"))
+    monkeypatch.setenv("PTK_VAULT_PASSWORD", "synthetic-password")
+    runner = CliRunner()
+    result = runner.invoke(cli, ["setup", "creds", "list"])
+    assert result.exit_code == 0, result.output
+    assert (
+        "firmware/different" in result.output
+        and "bootloader/different" in result.output
+    )
+    assert "shared.token [bootloader, firmware]" in result.output
+    assert (
+        runner.invoke(
+            cli, ["setup", "creds", "set", "different"], input="ambiguous\n"
+        ).exit_code
+        != 0
+    )
+    result = runner.invoke(
+        cli, ["setup", "creds", "set", "shared"], input="shared-synthetic\n"
+    )
+    assert result.exit_code == 0, (result.output, result.exception)
+    result = runner.invoke(
+        cli,
+        ["setup", "creds", "set", "firmware/different"],
+        input="private-synthetic\n",
+    )
+    assert result.exit_code == 0, result.output
+    one, two = create_app(), create_app()
+    ap, bp = (
+        one.load_project.execute(config_file=a),
+        two.load_project.execute(config_file=b),
+    )
+    assert one.credentials(ap).resolve("shared.token") == two.credentials(bp).resolve(
+        "shared.token"
+    )
+    assert (
+        one.credentials(ap).keys("different")[0].storage_ref
+        != two.credentials(bp).keys("different")[0].storage_ref
+    )
+    # Listing a locked vault must not retrieve or prompt for a value.
+    monkeypatch.delenv("PTK_VAULT_PASSWORD")
+    result = runner.invoke(cli, ["setup", "creds", "list"])
+    assert result.exit_code == 0 and "not read or verified" in result.output
+    assert "shared-synthetic" not in result.output

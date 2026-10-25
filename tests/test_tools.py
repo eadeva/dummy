@@ -187,7 +187,7 @@ def test_setup_installs_download_and_puts_it_on_path(project):
     result = project("setup", "--action", "build")
     assert result.exit_code == 0, result.output
     assert "mytool 1.2.3" in result.output and "installed via download" in result.output
-    assert (project.tools / "mytool" / "bin" / "mytool").is_file()
+    assert len(list((project.tools / "mytool").glob("*/bin/mytool"))) == 1
     ran = project("build")
     assert ran.exit_code == 0 and "mytool 1.2.3" in ran.output
 
@@ -258,3 +258,75 @@ def test_per_os_download_is_validated(write, load):
         }
     )
     assert load(root).config.tools["a"].download["windows"].url == "file:///y"
+
+
+@posix_only
+def test_action_versions_coexist_and_path_contains_only_selected_tools(
+    tmp_path, write, load
+):
+    import yaml
+
+    from ptk.application.use_cases.tools import tools_for_actions
+    from ptk.bootstrap import create_app
+
+    definitions = {}
+    for name, version in [("one", "1.0.0"), ("two", "2.0.0")]:
+        archive = tmp_path / f"{name}.tar.gz"
+        payload = f"#!/bin/sh\necho selectedtool {version}\n".encode()
+        with tarfile.open(archive, "w:gz") as bundle:
+            entry = tarfile.TarInfo("bin/selectedtool")
+            entry.size, entry.mode = len(payload), 0o755
+            bundle.addfile(entry, io.BytesIO(payload))
+        definitions[name] = {
+            "version": "==" + version,
+            "download": {
+                "url": archive.as_uri(),
+                "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
+                "bin": "bin",
+            },
+        }
+    data = {
+        "project": {"name": "isolated"},
+        "tools": {"selectedtool": {}},
+        "actions": {
+            name: {
+                "requires_tools": {"selectedtool": spec},
+                "steps": [{"version": {"run": ["selectedtool", "--version"]}}],
+            }
+            for name, spec in definitions.items()
+        },
+    }
+    root = write({".main.ptk.yml": yaml.safe_dump(data)})
+    env = {
+        "PATH": os.environ.get("PATH", ""),
+        "PTK_TOOLS_DIR": str(tmp_path / "installed"),
+    }
+    app = create_app(environ=env)
+    project = load(root)
+    one, two = (tools_for_actions(project, [name]) for name in ("one", "two"))
+    for scoped in (one, two):
+        assert app.tools.setup(scoped, ["selectedtool"])[0].ok
+    first_paths, second_paths = app.tools.paths(one), app.tools.paths(two)
+    assert len(first_paths) == len(second_paths) == 1 and first_paths != second_paths
+    assert app.tools.status(one, ["selectedtool"])[0].version == "1.0.0"
+    assert app.tools.status(two, ["selectedtool"])[0].version == "2.0.0"
+    assert second_paths[0] not in app.tools.environment(one)["PATH"]
+    for action, version in [("one", "1.0.0"), ("two", "2.0.0"), ("one", "1.0.0")]:
+        result = CliRunner(env=env).invoke(
+            cli, ["-c", str(root / ".main.ptk.yml"), action]
+        )
+        assert result.exit_code == 0 and f"selectedtool {version}" in result.output, (
+            result.output
+        )
+
+    # A step cannot silently override PATH to the other version after preflight.
+    data["actions"]["one"]["steps"][0]["version"]["env"] = {
+        "PATH": second_paths[0] + ":/usr/bin:/bin"
+    }
+    write({".main.ptk.yml": yaml.safe_dump(data)})
+    result = CliRunner(env=env).invoke(cli, ["-c", str(root / ".main.ptk.yml"), "one"])
+    assert result.exit_code == 1
+    assert (
+        "tool requirements are not satisfied in the command environment"
+        in result.output
+    )

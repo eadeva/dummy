@@ -37,6 +37,7 @@ class Project:
     layers: list[str]
     maintainers: MaintainersSpec | None = None
     ci: bool = False
+    selected_tools: list[str] | None = None
     warnings: list[Problem] = field(default_factory=list)
 
     @property
@@ -343,6 +344,24 @@ class ExportSchema:
             )
             schema = json.loads(text)
             schema["$defs"].pop("StepSpec", None)
+        schema["properties"]["include"] = {
+            "anyOf": [
+                {"type": "string"},
+                {"type": "array", "items": {"type": "string"}},
+            ]
+        }
+        schema["properties"]["variants"]["anyOf"].append({"type": "string"})
+        for definition in [schema, schema.get("$defs", {}).get("ActionSpec", {})]:
+            properties = definition.get("properties", {})
+            if "requires_tools" in properties:
+                properties["requires_tools"] = {
+                    "anyOf": [
+                        properties["requires_tools"],
+                        {"type": "array", "items": {"type": "string"}},
+                    ]
+                }
+        # Project content may be supplied entirely by includes.
+        schema["required"] = []
         schema["properties"]["repository"] = {"$ref": "#/$defs/RepositorySpec"}
         schema.setdefault("required", []).append("repository")
         schema["title"] = "ptk configuration (*.ptk.yml)"

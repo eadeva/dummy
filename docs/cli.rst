@@ -105,3 +105,38 @@ isolated configuration, tools, plugins, permissions and output directories.
 repositories. There is no implicit run across all repositories. Global options
 precede the alias. ``ptk --config path/to/.main.ptk.yml build`` explicitly selects
 standalone mode. Generated VS Code tasks in VMR mode include the repository alias.
+
+Shared VMR commands
+-------------------
+
+Alongside repository aliases, the VMR root exposes ``repos``, ``help``,
+``setup config show/validate/schema``, ``setup doctor``, ``setup creds``,
+``variant list/check`` and ``report list/summary``. ``report list --history``
+includes retained historical runs. Configuration and variant output is labelled
+by repository; projects without variants are skipped. Doctor checks the host
+once and then each repository. There is no root ``setup install``.
+
+Credentials with identical definitions and names are combined. Different
+definitions use ``ALIAS/NAME`` at the workspace level. Provisioning a shared
+credential writes once; testing it runs its configured test separately in each
+owning repository. Restricted credential groups are excluded from the shared
+catalog. Repository commands remain available for all these operations.
+
+VMR credential storage is namespaced by workspace location and definition
+identity unless ``credentials.NAME.namespace`` explicitly sets a stable scope.
+This applies even with explicit ``--config`` inside a VMR. Identical definitions
+share a scope; conflicting definitions cannot overwrite each other in the vault
+or keyring. Moving a workspace or changing a definition changes its automatic
+scope: provision again or configure a stable namespace. Explicit env and gopass
+mappings are honored and may intentionally share external storage. Default env
+variable names are shown by ``setup creds list``.
+
+Listing only reads environment values and provider availability. Other stores
+are labelled as unverified; listing never retrieves values or unlocks a vault.
+Writes are locked read-modify-write transactions. A stale lock after a killed
+process produces a diagnostic; remove it only after confirming the owner exited.
+
+Report inputs are snapshotted with completed run summaries. Later runs start
+with fresh report input directories. Historical export reads its retained
+snapshot, not current inputs. Runs for the same action/variant are serialized
+by a local lock; different actions or repositories may run concurrently.

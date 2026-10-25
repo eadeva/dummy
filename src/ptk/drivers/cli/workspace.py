@@ -12,6 +12,7 @@ from ...bootstrap import create_app
 from ...domain.errors import PtkError
 from .actions import ProjectGroup
 from .state import CliState, state_of
+from .workspace_commands import RESERVED, build_commands
 
 
 class RepositoryGroup(ProjectGroup):
@@ -38,16 +39,30 @@ class WorkspaceGroup(ProjectGroup):
                 ctx.meta["vmr_repositories"] = repositories(root) if root else None
             except (PtkError, OSError) as exc:
                 raise click.ClickException(str(exc)) from None
-        return ctx.meta["vmr_repositories"]
+        repos = ctx.meta["vmr_repositories"]
+        if repos is not None and RESERVED.intersection(repos):
+            raise click.ClickException(
+                "repository alias conflicts with a workspace command: "
+                + ", ".join(sorted(RESERVED.intersection(repos)))
+            )
+        return repos
 
     def list_commands(self, ctx):
         repos = self._repositories(ctx)
-        return sorted(repos) if repos is not None else super().list_commands(ctx)
+        return (
+            sorted(set(repos) | RESERVED)
+            if repos is not None
+            else super().list_commands(ctx)
+        )
 
     def get_command(self, ctx, cmd_name):
         repos = self._repositories(ctx)
         if repos is None:
             return super().get_command(ctx, cmd_name)
+        if cmd_name in RESERVED:
+            if "vmr_commands" not in ctx.meta:
+                ctx.meta["vmr_commands"] = build_commands(ctx, repos)
+            return ctx.meta["vmr_commands"].get(cmd_name)
         if cmd_name not in repos:
             return None
 

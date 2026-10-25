@@ -55,7 +55,15 @@ def from_plain(value: Any, loc: Location | None = None) -> Node:
     return Node(value, loc)
 
 
-def merge(base: Node | None, overlay: Node) -> Node:
+def merge(base: Node | None, overlay: Node, _path: Path = ()) -> Node:
+    if (
+        base is not None
+        and base.is_map
+        and overlay.value is True
+        and len(_path) >= 2
+        and _path[-2] == "requires_tools"
+    ):
+        return _strip_ops(base)
     if base is None or overlay.op == "replace":
         return _strip_ops(overlay)
     if overlay.op == "append":
@@ -68,7 +76,7 @@ def merge(base: Node | None, overlay: Node) -> Node:
         merged = dict(base.value)
         key_locs = dict(base.key_locs)
         for key, child in overlay.value.items():
-            merged[key] = merge(base.value.get(key), child)
+            merged[key] = merge(base.value.get(key), child, (*_path, key))
             if key in overlay.key_locs:
                 key_locs[key] = overlay.key_locs[key]
         return Node(merged, overlay.loc or base.loc, key_locs=key_locs)

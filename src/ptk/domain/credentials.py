@@ -33,6 +33,11 @@ class SecretKey:
     field: str
     env_var: str
     gopass_path: str
+    namespace: str | None = None
+
+    @property
+    def storage_ref(self) -> str:
+        return f"{self.namespace}/{self.ref}" if self.namespace else self.ref
 
     @property
     def ref(self) -> str:
@@ -40,11 +45,13 @@ class SecretKey:
 
 
 def key_for(name: str, field: str, spec: CredentialSpec) -> SecretKey:
-    base = spec.gopass.path.rstrip("/") if spec.gopass else f"ptk/{name}"
+    scoped_name = f"{spec.namespace}/{name}" if spec.namespace else name
+    base = spec.gopass.path.rstrip("/") if spec.gopass else f"ptk/{scoped_name}"
     return SecretKey(
+        namespace=spec.namespace,
         credential=name,
         field=field,
-        env_var=spec.env.get(field) or default_variable(name, field),
+        env_var=spec.env.get(field) or default_variable(scoped_name, field),
         gopass_path=f"{base}/{field}",
     )
 

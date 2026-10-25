@@ -275,7 +275,28 @@ def execute(
         sys.exit(130 if 130 in codes else max(codes, default=0))
 
 
-def _execute_one(
+def _execute_one(ctx, request, *, quiet=False, show_env=False, prepared=None):
+    from ...adapters.locking import file_lock
+
+    if request.dry_run:
+        return _execute_one_unlocked(
+            ctx, request, quiet=quiet, show_env=show_env, prepared=prepared
+        )
+    # Keep logs, report inputs and exports from concurrent CLI runs separate.
+    lock = (
+        prepared.project.root
+        / ".ptk"
+        / "locks"
+        / (prepared.plan.variant or "default")
+        / (prepared.plan.action + ".lock")
+    )
+    with file_lock(lock):
+        return _execute_one_unlocked(
+            ctx, request, quiet=quiet, show_env=show_env, prepared=prepared
+        )
+
+
+def _execute_one_unlocked(
     ctx: click.Context,
     request: RunRequest,
     *,

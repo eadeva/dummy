@@ -59,33 +59,42 @@ class Doctor:
         project_error: str | None,
         credentials: CredentialService | None,
         role: Role,
+        *,
+        include_machine: bool = True,
     ) -> list[Check]:
-        checks = [
-            Check("ptk", OK, f"{self._version} on Python {platform.python_version()}"),
-        ]
-        uv = self._env.output([self._env.uv, "--version"])
-        checks.append(
-            Check("uv", OK, uv)
-            if uv
-            else Check(
-                "uv", FAIL, "not found", "install uv: https://docs.astral.sh/uv/"
-            )
-        )
-        git = self._env.output(["git", "--version"])
-        if git is None:
-            checks.append(Check("git", FAIL, "not found", "install git"))
-        else:
-            email = self._env.output(["git", "config", "user.email"])
+        checks = []
+        if include_machine:
+            checks = [
+                Check(
+                    "ptk", OK, f"{self._version} on Python {platform.python_version()}"
+                ),
+            ]
+            uv = self._env.output([self._env.uv, "--version"])
             checks.append(
-                Check("git", OK, f"{git}, user.email {email}")
-                if email
+                Check("uv", OK, uv)
+                if uv
                 else Check(
-                    "git",
-                    WARN,
-                    f"{git}, no user.email",
-                    'git config --global user.email "..."',
+                    "uv", FAIL, "not found", "install uv: https://docs.astral.sh/uv/"
                 )
             )
+            git = self._env.output(["git", "--version"])
+            if git is None:
+                checks.append(Check("git", FAIL, "not found", "install git"))
+            else:
+                email = self._env.output(
+                    ["git", "config", "user.email"],
+                    cwd=str(project.root) if project else ".",
+                )
+                checks.append(
+                    Check("git", OK, f"{git}, user.email {email}")
+                    if email
+                    else Check(
+                        "git",
+                        WARN,
+                        f"{git}, no user.email",
+                        'git config --global user.email "..."',
+                    )
+                )
         if project is None:
             checks.append(
                 Check("configuration", FAIL, project_error or "no project found")

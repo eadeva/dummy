@@ -21,6 +21,8 @@ description: Add ptk report formats, import tool results or troubleshoot report 
 
 8. Register external exporters/contributors with `ptk.reporters` / `ptk.report_contributors` and select the installed distribution in `plugins`. Follow `docs/plugins.rst`.
 
-10. `report: false` excludes a step subtree from reports and imports, but does not hide audit logs or change failure status.
+9. `report: false` excludes a step subtree from reports and imports, but does not hide audit logs or change failure status.
 
-9. Never include secrets in imported results; masking engine logs does not sanitize arbitrary third-party files.
+10. Never include secrets in imported results; masking engine logs does not sanitize arbitrary third-party files.
+
+Historical input snapshots travel with run summaries. Reproduce with two runs producing different input files; historical export must not import the newer results.

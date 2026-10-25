@@ -5,6 +5,7 @@ import json
 from docutils import nodes
 from docutils.parsers.rst import Directive
 
+from ptk.application.use_cases.project import ExportSchema
 from ptk.domain.config.model import MaintainersSpec, PtkConfig
 
 
@@ -31,7 +32,11 @@ class SchemaReference(Directive):
     def run(self):
         result = []
         for model in (PtkConfig, MaintainersSpec):
-            schema = model.model_json_schema(by_alias=True)
+            schema = (
+                ExportSchema().execute()
+                if model is PtkConfig
+                else model.model_json_schema(by_alias=True)
+            )
             models = {model.__name__: schema, **schema.get("$defs", {})}
             for name, definition in models.items():
                 if "properties" not in definition:

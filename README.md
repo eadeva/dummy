@@ -4,12 +4,10 @@ A configuration-driven project CLI: actions made of steps and step sets,
 built-in variant handling, credentials, tool setup, shared base configs,
 unified logging and reporting. See [`docs/PLAN.md`](docs/PLAN.md) for the full plan.
 
-**Status:** M1 (configuration meta-model and loader), M2 (variant core), M3
-(execution engine, dry run, HTML help), M4 (unified logging), M5 (generated
-CLI, maintainer visibility, VS Code tasks), M6 (credentials), M7 (reporting), M8 (shared configs) and M9 (tools,
-setup, doctor, installers) are done. M10 adds a runnable offline quickstart, Sphinx documentation with a generated
-configuration reference, eleven authoring skills and Linux/Windows CI.
-See the plan for remaining features outside this milestone.
+**Status:** Configuration, execution, variants, credentials, reporting, tool setup,
+plugins and VMR discovery are implemented. The current scope and acceptance
+boundaries are recorded in `docs/PLAN.md`. Thirteen repository-local skills
+include tested authoring and plugin examples.
 
 ```bash
 uv sync                     # install with dev dependencies
@@ -113,7 +111,7 @@ All ptk files end in `.ptk.yml`:
 
 | File | Purpose |
 |------|---------|
-| `.main.ptk.yml` | entry point: `ptk_version`, project, includes, main settings |
+| `.main.ptk.yml` | repository-root entry: alias, configuration path, version, project and includes |
 | `*.ptk.yml` | fragments pulled in with `include:` (e.g. `ptk/actions/*.ptk.yml`) |
 | `cx.ptk.yml` | applied automatically in CI |
 | `local.ptk.yml` | personal overrides (git-ignore it) |
@@ -121,15 +119,16 @@ All ptk files end in `.ptk.yml`:
 
 ```yaml
 # .main.ptk.yml
+repository: {alias: demo, config_path: .}
 schema_version: 1
-ptk_version: ">=0.1,<0.2"          # ptk refuses to run with another version
+ptk_version: ">=0.1.0.dev0,<0.2"          # ptk refuses to run with another version
 project: {name: demo, default_action: build}
 include: [ptk/actions/*.ptk.yml]
 variants: ptk/variants.ptk.yml       # plain string = include this file here
 vars: {preset: "${vh.variant}"}
 ```
 
-Loading order: `.main.ptk.yml` (+ includes) → `cx.ptk.yml` (in CI) →
+Loading order: automatic `tools.ptk.yml` and `<action>.tools.ptk.yml` → `.main.ptk.yml` (+ includes) → `cx.ptk.yml` (in CI) →
 `local.ptk.yml` → `--set PATH=VALUE`.
 
 * mappings merge deeply, lists are replaced; `!replace`, `!append` and
@@ -234,3 +233,20 @@ Dependencies point inwards only; the domain has no I/O.
 
 See [M11 features and limitations](docs/m11.rst) for migration coverage, process
 lifecycle and the `ptk.variant_gui` editor plugin interface.
+
+## VMR workspaces and isolated environments
+
+In a `.repo` workspace, use `ptk repos`, shared `ptk setup creds list`,
+`ptk setup config validate`, `ptk setup doctor`, `ptk variant list/check`,
+and `ptk report list/summary`. Actions and installation stay repository-specific:
+`ptk firmware build` and `ptk firmware setup install --action build`.
+
+Commands receive a fresh isolated environment by default. Declare variables to
+keep explicitly; caller PATH is not inherited unless `environment.inherit_path`
+is enabled. Only selected managed tool versions are prepended. Managed download
+and Python-tool versions coexist; system and custom plugin installers remain
+shared host operations. See `docs/configuration.rst` and `docs/cli.rst`.
+
+For a complete tested starter, copy `examples/authoring`. For a plugin starter,
+use `examples/plugin`. The authoring skill catalog is in `docs/skills.rst`;
+these are repository files, not automatically installed by the PTK wheel.

@@ -304,6 +304,7 @@ def _unique(names: list[str], where: str) -> None:
 
 
 class ActionSpec(_Strict):
+    environment: EnvironmentSpec | None = None
     help: str = ""
     audience: Literal["all", "maintainer"] = "all"
     params: dict[str, ParamSpec] = Field(default_factory=dict)
@@ -346,7 +347,8 @@ class ActionSpec(_Strict):
 
 
 class EnvironmentSpec(_Strict):
-    isolate: bool = False  # start from a minimal OS environment
+    isolate: bool = True  # start from a minimal OS environment
+    inherit_path: bool = False  # opt in to caller PATH
     keep: list[str] = Field(default_factory=list)
     set: dict[str, str] = Field(default_factory=dict)
     unset: list[str] = Field(default_factory=list)
@@ -389,6 +391,7 @@ class GopassSpec(_Strict):
 
 
 class CredentialSpec(_Strict):
+    namespace: str | None = None  # explicit storage scope; VMR supplies one by default
     description: str = ""
     fields: list[str] = Field(default_factory=lambda: ["token"])
     providers: list[str] = Field(

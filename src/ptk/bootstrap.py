@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -30,6 +32,7 @@ from .adapters.scaffold import FileProjectScaffold
 from .adapters.shared_configs import PackageConfigFiles
 from .adapters.tools import SystemToolInstaller
 from .adapters.vscode_file import TasksFile
+from .adapters.workspace import workspace_root
 from .application.ports import (
     ConfigSource,
     HostEnvironment,
@@ -155,11 +158,32 @@ class App:
         self.configure_project(project)
         key = id(project)
         if key not in self._credentials:
+            definitions = project.config.credentials
+            workspace = workspace_root(project.root)
+            if workspace is not None:
+                workspace_id = hashlib.sha256(str(workspace).encode()).hexdigest()[:12]
+                definitions = {
+                    name: spec.model_copy(
+                        update={
+                            "namespace": spec.namespace
+                            or "vmr/"
+                            + workspace_id
+                            + "/"
+                            + hashlib.sha256(
+                                json.dumps(
+                                    spec.model_dump(mode="json"), sort_keys=True
+                                ).encode()
+                            ).hexdigest()[:12]
+                        }
+                    )
+                    for name, spec in definitions.items()
+                }
             self._credentials[key] = CredentialService(
-                project.config.credentials,
+                definitions,
                 self.secret_providers,
                 self.host,
                 self.runner,
+                root=project.root,
             )
         return self._credentials[key]
 
@@ -211,12 +235,27 @@ class App:
             ),
             **plugins["steps"],
         }
+
+        def verify_tools(action, env, cwd):
+            names = project.config.actions[action].required_tool_names
+            problems = [
+                s
+                for s in self.tools.status(project, names, env=env, cwd=cwd)
+                if not s.ok
+            ]
+            if problems:
+                raise PtkError(
+                    "tool requirements are not satisfied in the command environment: "
+                    + "; ".join(f"{s.name}: {s.problem}" for s in problems)
+                )
+
         return RunAction(
             self.host,
             self.runner,
             self.python_envs,
             builtins=builtins,
-            path_provider=self.tools.paths,
+            path_provider=lambda: self.tools.paths(project),
+            environment_check=verify_tools,
         )
 
     def role(self, project: Project | None) -> Role:

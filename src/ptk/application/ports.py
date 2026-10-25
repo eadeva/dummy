@@ -55,7 +55,7 @@ class HostEnvironment(Protocol):
     def os_name(self) -> str:
         """'windows' or 'linux' (or 'macos')."""
 
-    def user_identity(self) -> tuple[str | None, str | None]:
+    def user_identity(self, root: Path | None = None) -> tuple[str | None, str | None]:
         """(git e-mail, OS user name)."""
 
 
@@ -201,8 +201,10 @@ class SharedConfigFiles(Protocol):
 class ToolInstaller(Protocol):
     """Installs tools (Chocolatey, uv tool, downloads, apt/dnf) and knows their folders."""
 
-    def bin_dirs(self) -> list[str]:
+    def bin_dirs(self, tools=None) -> list[str]:
         """Folders with ptk-installed tools; put first on PATH for every command."""
+
+    def clean_environment(self, env: dict[str, str]) -> dict[str, str]: ...
 
     def install(
         self, name: str, method: InstallMethod, out: Callable[[str], None]

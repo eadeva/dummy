@@ -23,7 +23,7 @@ class Host:
     def os_name(self):
         return "linux"
 
-    def user_identity(self):
+    def user_identity(self, root=None):
         return self._identity
 
 

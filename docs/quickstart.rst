@@ -67,3 +67,16 @@ Read the configuration and workload
 The larger ``examples/demo`` directory illustrates a firmware configuration.
 Its CMake presets, toolchains and upload scripts are project-specific placeholders;
 it is suitable for configuration validation and dry runs, not an unattended build.
+
+Configuration-directory starter
+--------------------------------
+
+Copy ``examples/authoring`` into a new repository. Its root entry file declares
+its configuration directory explicitly:
+
+.. literalinclude:: ../examples/authoring/.main.ptk.yml
+   :language: yaml
+
+From that repository, run ``ptk setup config validate``, ``ptk dry-run build``
+and ``ptk build --all-variants``. These commands are exercised by the authoring
+skill tests, including invocation from the configuration subdirectory.

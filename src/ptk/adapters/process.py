@@ -115,8 +115,15 @@ def _kill_tree(proc: subprocess.Popen) -> None:
         os.killpg(pgid, signal.SIGTERM)
     except (ProcessLookupError, PermissionError):
         return
-    try:
-        proc.wait(timeout=GRACE_SECONDS)
-    except subprocess.TimeoutExpired:
-        with contextlib.suppress(ProcessLookupError):
-            os.killpg(pgid, signal.SIGKILL)
+    # Reap the leader, but track the process group independently: descendants
+    # may ignore TERM even when the leader exits immediately.
+    deadline = time.monotonic() + GRACE_SECONDS
+    while time.monotonic() < deadline:
+        proc.poll()
+        try:
+            os.killpg(pgid, 0)
+        except ProcessLookupError:
+            return
+        time.sleep(0.05)
+    with contextlib.suppress(ProcessLookupError):
+        os.killpg(pgid, signal.SIGKILL)

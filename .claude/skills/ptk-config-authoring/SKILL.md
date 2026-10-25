@@ -9,7 +9,7 @@ description: Create or change ptk YAML configuration, includes, layers and subst
 
 2. Use `.main.ptk.yml` as the entry point and `*.ptk.yml` fragments. Keep `local.ptk.yml` untracked.
 
-3. Preserve merge order: included files, CI overlay, local overlay, command-line overrides.
+3. Preserve merge order: automatic tool files, main/includes, CX overlay, local overlay, CLI overrides. Entry includes use repository.config_path; fragment includes use the fragment directory.
 
 4. Remember that mappings merge deeply and lists replace; use `!append` or `!replace` intentionally.
 
@@ -28,3 +28,5 @@ description: Create or change ptk YAML configuration, includes, layers and subst
 11. Use `param_defaults` for shared defaults on explicitly declared parameters; action defaults win. Use `cx.ptk.yml` for workflows and preserve per-tool requirement inheritance.
 
 The root `.main.ptk.yml` requires `repository: {alias: lowercase-name, config_path: relative/directory}`. Entry includes and automatic tool/CX/local/maintainer files use that directory; fragment includes stay fragment-relative and commands use the repository root. In `.repo` VMR workspaces, invoke `ptk <repository-alias> <command>`.
+
+Start from `examples/authoring/.main.ptk.yml` and its fragments for a complete tested configuration. Read `docs/configuration.rst` for default environment isolation and explicit inheritance.

@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 from collections.abc import Mapping
+from pathlib import Path
 
 CI_VARIABLES = (
     "CI",
@@ -45,13 +46,15 @@ class SystemHost:
             return "macos"
         return "linux"
 
-    def user_identity(self) -> tuple[str | None, str | None]:
+    def user_identity(self, root: Path | None = None) -> tuple[str | None, str | None]:
         email = None
         git = shutil.which("git")
         if git:
             try:
                 out = subprocess.run(
                     [git, "config", "user.email"],
+                    cwd=root,
+                    env=self._environ,
                     capture_output=True,
                     text=True,
                     check=False,

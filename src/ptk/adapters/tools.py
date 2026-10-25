@@ -3,9 +3,8 @@
 * Chocolatey needs an administrator shell; without one ptk explains what to do.
   Bootstrapping Chocolatey itself only happens on explicit request.
 * Downloads are verified (sha256) and unpacked into the user's tool folder:
-  ``%LOCALAPPDATA%\\ptk\\tools\\<name>`` or ``~/.local/share/ptk/tools/<name>``
-  (``PTK_TOOLS_DIR`` overrides). Their ``bin`` folders go first on PATH for
-  every command ptk runs.
+  ``%LOCALAPPDATA%\\ptk\\tools\\<name>/<identity>`` or ``~/.local/share/ptk/tools/<name>/<identity>``
+  (``PTK_TOOLS_DIR`` overrides). Only the selected identities enter an action PATH.
 * apt/dnf use ``sudo -n`` (no password prompt hidden behind a running command).
 """
 
@@ -26,7 +25,8 @@ from pathlib import Path
 from ..application.ports import ProcessRunner
 from ..domain.errors import PtkError
 from ..domain.execution.model import CommandSpec
-from ..domain.tools import InstallMethod
+from ..domain.tools import InstallMethod, tool_identity
+from .locking import file_lock
 
 WINDOWS = sys.platform.startswith("win")
 MARKER = ".ptk-tool.json"
@@ -80,37 +80,34 @@ class SystemToolInstaller:
         self.tools_dir = tools_dir or default_tools_dir(environ)
         self._admin = admin
         self._windows = windows
-        self._uv_bin: str | None = None
 
     # -- PATH ---------------------------------------------------------------------------
 
-    def bin_dirs(self) -> list[str]:
-        dirs: list[str] = []
-        if self.tools_dir.is_dir():
-            for marker in sorted(self.tools_dir.glob(f"*/{MARKER}")):
-                try:
-                    data = json.loads(marker.read_text(encoding="utf-8"))
-                except ValueError:
-                    continue
-                dirs.append(str(marker.parent / data.get("bin", "")))
-        uv_bin = self._uv_tool_bin()
-        if uv_bin:
-            dirs.append(uv_bin)
+    def bin_dirs(self, tools=None) -> list[str]:
+        dirs = []
+        for name, spec in (tools or {}).items():
+            folder = self.tools_dir / name / tool_identity(spec)
+            marker = folder / MARKER
+            if marker.is_file():
+                data = json.loads(marker.read_text(encoding="utf-8"))
+                binary = (folder / data.get("bin", "")).resolve()
+                if not binary.is_relative_to(folder.resolve()):
+                    raise PtkError(f"invalid installed tool bin directory: {marker}")
+                dirs.append(str(binary))
         return dirs
 
-    def _uv_tool_bin(self) -> str | None:
-        if self._uv_bin is None:
-            lines: list[str] = []
-            outcome = self._runner.run(
-                CommandSpec(
-                    argv=[self._uv, "tool", "dir", "--bin"],
-                    env=self._environ,
-                    timeout=20,
-                ),
-                lines.append,
-            )
-            self._uv_bin = lines[-1].strip() if outcome.exit_code == 0 and lines else ""
-        return self._uv_bin or None
+    def clean_environment(self, env):
+        result = dict(env)
+        for key in list(result):
+            if key.upper() == "PATH":
+                sep = ";" if self._windows else ":"
+                result[key] = sep.join(
+                    p
+                    for p in result[key].split(sep)
+                    if p
+                    and not Path(p).resolve().is_relative_to(self.tools_dir.resolve())
+                )
+        return result
 
     # -- install ------------------------------------------------------------------------
 
@@ -124,7 +121,14 @@ class SystemToolInstaller:
             "apt": self._system,
             "dnf": self._system,
         }[method.kind]
-        handler(name, method, out)
+        if method.kind in {"download", "uv_tool"}:
+            target = self.tools_dir / name / method.identity
+            with file_lock(target.with_suffix(".lock"), timeout=1800):
+                if (target / MARKER).is_file():
+                    return
+                handler(name, method, out)
+        else:
+            handler(name, method, out)
 
     def _run(
         self,
@@ -183,12 +187,28 @@ class SystemToolInstaller:
     def _uv_tool(
         self, name: str, method: InstallMethod, out: Callable[[str], None]
     ) -> None:
+        target = self.tools_dir / name / method.identity
+        if target.exists():
+            shutil.rmtree(target)
+        target.parent.mkdir(parents=True, exist_ok=True)
         self._run(
-            [self._uv, "tool", "install", "--force", method.package],
-            out,
-            "uv tool install",
+            [self._uv, "venv", str(target)], out, "create isolated tool environment"
         )
-        self._uv_bin = None  # may have been created just now
+        python = target / ("Scripts/python.exe" if self._windows else "bin/python")
+        self._run(
+            [self._uv, "pip", "install", "--python", str(python), method.package],
+            out,
+            "install isolated tool",
+        )
+        (target / MARKER).write_text(
+            json.dumps(
+                {
+                    "bin": "Scripts" if self._windows else "bin",
+                    "package": method.package,
+                }
+            ),
+            encoding="utf-8",
+        )
 
     def _system(
         self, name: str, method: InstallMethod, out: Callable[[str], None]
@@ -211,7 +231,7 @@ class SystemToolInstaller:
     ) -> None:
         source = method.download
         assert source is not None
-        target = self.tools_dir / name
+        target = self.tools_dir / name / method.identity
         with tempfile.TemporaryDirectory(prefix="ptk-download-") as tmp:
             file = Path(tmp) / (source.url.rsplit("/", 1)[-1] or "download")
             out(f"downloading {source.url}")
@@ -240,7 +260,13 @@ class SystemToolInstaller:
                 shutil.copy2(file, staging / file.name)
                 (staging / file.name).chmod(0o755)
             entries = list(staging.iterdir())
-            root = entries[0] if len(entries) == 1 and entries[0].is_dir() else staging
+            root = staging
+            if (
+                not (source.bin and (staging / source.bin).is_dir())
+                and len(entries) == 1
+                and entries[0].is_dir()
+            ):
+                root = entries[0]
             if target.exists():
                 shutil.rmtree(target)
             target.parent.mkdir(parents=True, exist_ok=True)

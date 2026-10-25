@@ -502,7 +502,7 @@ def creds_list(ctx: click.Context, name: str | None) -> None:
     for row in rows:
         supplier = f"[green]{row.provider}[/]" if row.provider else "[red]missing[/]"
         missing |= row.provider is None
-        details = "" if row.provider else "; ".join(row.notes)
+        details = "; ".join(row.notes)
         table.add_row(row.key.ref, supplier, row.key.env_var, escape(details))
     console.print(table)
     if missing:

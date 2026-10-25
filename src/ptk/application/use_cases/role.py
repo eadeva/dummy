@@ -21,7 +21,7 @@ def resolve_role(project: Project | None, host: HostEnvironment) -> Role:
         return forced  # type: ignore[return-value]
     if project is None or project.maintainers is None:
         return "user"
-    email, user = host.user_identity()
+    email, user = host.user_identity(project.root)
     for m in project.maintainers.maintainers:
         if m.email and email and m.email.lower() == email.lower():
             return "maintainer"

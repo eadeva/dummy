@@ -1,0 +1,14 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ptk-example-extension"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[project.entry-points."ptk.steps"]
+"example.check" = "ptk_example:check"
+
+[tool.hatch.build.targets.wheel]
+packages = ["ptk_example"]

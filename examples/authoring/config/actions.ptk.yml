@@ -1,0 +1,11 @@
+actions:
+  build:
+    params:
+      jobs: {type: int}
+    steps:
+      - describe:
+          uses: echo
+          with: {message: 'Building ${vh.variant} with ${params.jobs} jobs'}
+      - generate:
+          uses: variant.generate
+          with: {generators: [header], output: '_bin/${vh.variant}'}

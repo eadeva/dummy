@@ -1,0 +1,13 @@
+repository:
+  alias: example
+  config_path: config
+project:
+  name: Authoring example
+  default_action: build
+include: [actions.ptk.yml]
+variants: variants.ptk.yml
+param_defaults:
+  jobs: 4
+environment:
+  isolate: true
+  inherit_path: false

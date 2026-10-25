@@ -10,8 +10,10 @@ sets, retries, timeouts, ``continue_on_error`` and cancellation (Ctrl+C).
 from __future__ import annotations
 
 import dataclasses
+import shutil
 import threading
 import time
+import uuid
 from collections.abc import Callable, Mapping, Sequence
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -119,20 +121,6 @@ class PrepareRun:
         action = self._action(project, request.action)
         project = tools_for_actions(project, [request.action])
         config = project.config
-        if (
-            self._tools is not None
-            and action.required_tool_names
-            and not request.dry_run
-            and not any(s.uses == "tools.ensure" for s in action.walk_steps())
-        ):
-            problems = self._tools.problems(project, request.action)
-            if problems:
-                lines = "\n".join(f"  - {s.name}: {s.problem}" for s in problems)
-                raise PtkError(
-                    f"'{request.action}' needs tools that are missing or too old:\n{lines}\n"
-                    f"  install them with: ptk setup install --action {request.action} "
-                    f"(or run the action with --setup)"
-                )
         if not visible(action.audience, request.role):
             raise PtkError(
                 f"'{request.action}' is a maintainer-only action "
@@ -199,7 +187,7 @@ class PrepareRun:
         )
 
         layout = layout_of(project)
-        run_id = self._clock().strftime("%Y%m%d-%H%M%S")
+        run_id = self._clock().strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8]
         dirs = {
             "bin_dir": str(layout.bin_dir(variant_name)),
             "log_dir": str(layout.action_log_dir(variant_name, request.action)),
@@ -259,15 +247,16 @@ class PrepareRun:
             env_spec = config.environment
             pre = scope(host_env)
             base = envs.base_environment(
-                host_env,
+                self._tools.clean_environment(host_env) if self._tools else host_env,
                 os_name=os_name,
+                inherit_path=env_spec.inherit_path,
                 isolate=env_spec.isolate,
                 keep=env_spec.keep,
                 set_={k: to_text(pre(v)) for k, v in env_spec.set.items()},
                 unset=env_spec.unset,
                 path_prepend=[
                     *(
-                        self._tools.paths() if self._tools else []
+                        self._tools.paths(project) if self._tools else []
                     ),  # ptk-installed tools
                     *(to_text(pre(p)) for p in env_spec.path_prepend),
                 ],
@@ -298,6 +287,27 @@ class PrepareRun:
             }
         except SubstitutionError as exc:
             raise PtkError(f"action '{request.action}': {exc}") from None
+
+        if (
+            self._tools is not None
+            and action.required_tool_names
+            and not request.dry_run
+            and not any(s.uses == "tools.ensure" for s in action.walk_steps())
+        ):
+            problems = [
+                status
+                for status in self._tools.status(
+                    project, action.required_tool_names, env=base
+                )
+                if not status.ok
+            ]
+            if problems:
+                lines = "\n".join(f"  - {s.name}: {s.problem}" for s in problems)
+                raise PtkError(
+                    f"'{request.action}' needs tools that are missing or too old:\n{lines}\n"
+                    f"  install them with: ptk setup install --action {request.action} "
+                    f"(or run the action with --setup)"
+                )
 
         symbols.update(
             {
@@ -431,6 +441,7 @@ class RunAction:
         builtins: Mapping[str, BuiltinStep] | None = None,
         max_parallel: int | None = None,
         path_provider: Callable[[], list[str]] | None = None,
+        environment_check=None,
     ):
         self._host = host
         self._runner = runner
@@ -438,6 +449,7 @@ class RunAction:
         self._builtins = dict(BUILTINS if builtins is None else builtins)
         self._max_parallel = max_parallel
         self._path_provider = path_provider
+        self._environment_check = environment_check
         self._powershell: str | None = None
         self._python_lock = threading.Lock()
 
@@ -458,6 +470,11 @@ class RunAction:
         start = time.monotonic()
         self._run_start = start
         Path(plan.dirs["bin_dir"]).mkdir(parents=True, exist_ok=True)
+        # Previous inputs are preserved with their log summary by the observer.
+        reports = Path(plan.dirs["reports_dir"])
+        if reports.is_dir():
+            shutil.rmtree(reports)
+        reports.mkdir(parents=True, exist_ok=True)
         self._emit("run_started", plan)
         results = self._run_sequence(plan.steps)
         status = _combine(results)
@@ -656,6 +673,8 @@ class RunAction:
                             on_output=out,
                         )
                 command = self._command(prepared, step, runtime)
+                if self._environment_check:
+                    self._environment_check(plan.action, command.env, command.cwd)
                 result.command = prepared.mask(command.display())
                 self._emit("step_started", step, result.command)
                 self._describe_command(step, command, runtime)
@@ -778,7 +797,11 @@ class RunAction:
 
     def _powershell_name(self) -> str:
         if self._powershell is None:
-            self._powershell = "pwsh" if self._runner.which("pwsh") else "powershell"
+            self._powershell = (
+                self._runner.which("pwsh")
+                or self._runner.which("powershell")
+                or "powershell"
+            )
         return self._powershell
 
     def _describe_command(

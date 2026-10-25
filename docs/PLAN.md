@@ -601,7 +601,7 @@ formatted with `ruff format`. CI runs `ruff check` and `ruff format --check`.
 | M7 ✅ | Unified reporting | JSON, JUnit, HTML, Markdown, GitHub summary; contributors API |
 | M8 ✅ | Shared configs: pre-commit, ruff, clang-format, clang-tidy, clangd | `configs sync/check/--diff` |
 | M9 ✅ | Tools: model, Chocolatey, uv-tool, download, `setup`, `self-setup`, `doctor`, installers | missing tools detected and installed (Windows run by user) |
-| M10 ✅ | Runnable quickstart, schema-generated reference, eleven authoring skills, native process tests and CI matrix | Sphinx `-W`, lint and tests passed on Linux/Windows with Python 3.12/3.13 (run 40195082145) |
+| M10 ✅ | Runnable quickstart, schema-generated reference, thirteen authoring skills, native process tests and CI matrix | Sphinx `-W`, lint and tests passed on Linux/Windows with Python 3.12/3.13 (run 40195082145) |
 | M11 ✅ | `setup migrate` (alias `migrate`), scoped background steps, optional variant YAML GUI and plugin discovery | done |
 
 ---
@@ -719,3 +719,18 @@ Former top-level commands remain hidden compatibility aliases.
   Global options precede the alias; bare VMR invocation lists repositories.
 - Regression coverage checks path separation, includes/overlays, root boundaries,
   aliases, member containment, Git indirection, per-repository execution and access.
+
+## Review corrections and shared VMR operations
+
+- Fixed process-group escalation, vault lost updates, repository-scoped identity
+  and credential tests, stale/historical report inputs and cross-layer true tool
+  requirements. Editor schema and generated reference describe authored inputs.
+- Isolated child environments default on, with explicit host-variable/PATH opt-ins.
+  Managed tool versions coexist by definition identity; actions select paths and
+  verify tools in their actual subprocess environment. System/custom installers
+  remain shared host operations, not isolated package managers.
+- VMR shares credential coordination, config views/validation, host/per-repo
+  diagnostics, variant views/checks and report summaries. Tool installation and
+  mutable project operations remain repository-qualified.
+- Added `ptk-vmr` and `ptk-plugin-development` skills with tested starter artifacts;
+  synchronized existing skills and documented checkout-based reuse.

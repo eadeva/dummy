@@ -15,8 +15,10 @@ download -> apt/dnf (only when system package managers are allowed).
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
@@ -45,6 +47,7 @@ class InstallMethod:
     version: str | None = None
     download: DownloadSource | None = None
     options: dict[str, Any] = field(default_factory=dict)
+    identity: str = ""
 
     def describe(self) -> str:
         if self.kind.startswith("plugin:"):
@@ -54,7 +57,7 @@ class InstallMethod:
                 f" --version {self.version}" if self.version else ""
             )
         if self.kind == "uv_tool":
-            return f"uv tool install {self.package}"
+            return f"isolated Python tool {self.package}"
         if self.kind == "download":
             return f"download {self.package}"
         return f"sudo {self.kind} install {self.package}"
@@ -111,8 +114,14 @@ def install_methods(
             methods.append(InstallMethod("apt", spec.apt))
         if spec.dnf:
             methods.append(InstallMethod("dnf", spec.dnf))
-    return methods
+    return [replace(method, identity=tool_identity(spec)) for method in methods]
 
 
 def check_command(name: str, spec: ToolSpec) -> str:
     return spec.check or f"{name} --version"
+
+
+def tool_identity(spec: ToolSpec) -> str:
+    """Stable identity for an effective tool definition (versions and sources)."""
+    data = spec.model_dump(mode="json", exclude={"description"})
+    return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()[:20]

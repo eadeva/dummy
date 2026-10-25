@@ -24,6 +24,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 from ...domain.credentials import SecretKey
 from ...domain.errors import PtkError
+from ..locking import file_lock
 
 AAD = b"ptk-vault-v1"
 SCRYPT = {"n": 2**15, "r": 8, "p": 1}
@@ -70,6 +71,10 @@ class Vault:
         return self.path.is_file()
 
     def create(self) -> None:
+        with file_lock(self.path.with_suffix(".lock")):
+            self._create()
+
+    def _create(self) -> None:
         if self.exists:
             raise PtkError(f"a vault already exists at {self.path}")
         password = self._password(True)
@@ -87,17 +92,24 @@ class Vault:
         return self._entries
 
     def set(self, name: str, value: str) -> None:
-        if not self.exists:
-            self.create()
-        self.entries()[name] = value
-        self._save()
+        with file_lock(self.path.with_suffix(".lock")):
+            if not self.exists:
+                self._create()
+            else:
+                self._open()  # refresh under lock; never save a stale snapshot
+            self.entries()[name] = value
+            self._save()
 
     def remove(self, name: str) -> bool:
-        if not self.exists or name not in self.entries():
-            return False
-        del self.entries()[name]
-        self._save()
-        return True
+        with file_lock(self.path.with_suffix(".lock")):
+            if not self.exists:
+                return False
+            self._open()
+            if name not in self.entries():
+                return False
+            del self.entries()[name]
+            self._save()
+            return True
 
     # -- internals ---------------------------------------------------------------------
 
@@ -114,7 +126,8 @@ class Vault:
             data = base64.b64decode(doc["data"])
         except (ValueError, KeyError) as exc:
             raise PtkError(f"{self.path} is not a ptk vault ({exc})") from None
-        key = self._key or _derive(self._password(False), salt, kdf)
+        key = self._key if self._salt == salt else None
+        key = key or _derive(self._password(False), salt, kdf)
         try:
             plain = AESGCM(key).decrypt(nonce, data, AAD)
         except InvalidTag:
@@ -169,10 +182,10 @@ class VaultProvider:
     def get(self, key: SecretKey) -> str | None:
         if not self.vault.exists:
             return None
-        return self.vault.entries().get(key.ref)
+        return self.vault.entries().get(key.storage_ref)
 
     def store(self, key: SecretKey, value: str) -> None:
-        self.vault.set(key.ref, value)
+        self.vault.set(key.storage_ref, value)
 
     def remove(self, key: SecretKey) -> bool:
-        return self.vault.remove(key.ref)
+        return self.vault.remove(key.storage_ref)
