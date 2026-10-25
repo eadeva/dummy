@@ -67,6 +67,15 @@ example folders have no previous output. Filesystem identity checks account for
 Windows path capitalization. CMake integration failures report the selected
 executable, its version, output and generated script to diagnose local tool issues.
 
+VMR discovery tests use real temporary directories and relative Git pointers,
+including nested paths and git-repo worktree metadata. They check that unrelated
+repositories under a workspace remain standalone, missing indexes fail without
+recursive scanning, and manual markers select only bounded member paths.
+Read-count assertions verify per-invocation caching across routing, versioning
+and credentials without timing-sensitive performance thresholds. A subsequent
+CLI invocation must see changes to the member index. Symlink tests skip only
+when the platform cannot create symlinks; ``gitdir:`` coverage runs everywhere.
+
 Documentation and skills
 ------------------------
 

@@ -16,7 +16,7 @@ from pydantic import BaseModel, ValidationError
 from ...domain.config import rules as config_rules
 from ...domain.config import tree as t
 from ...domain.config.defaults import apply_defaults, normalize_requirements
-from ...domain.config.model import ACTION_RE, MaintainersSpec, PtkConfig
+from ...domain.config.model import ACTION_RE, MaintainersSpec, PtkConfig, WorkspaceSpec
 from ...domain.config.schema_walk import unknown_keys
 from ...domain.errors import ConfigError, Location, Problem
 from ..ports import CX_FILE, LOCAL_FILE, MAINTAINERS_FILE, ConfigSource, HostEnvironment
@@ -148,6 +148,16 @@ class LoadProject:
         root = main.parent
         first_read = len(self._source.files)
         main_tree = self._source.read(main)
+        marker = t.get(main_tree, ("virtual_monorepo",))
+        if marker is not None and marker.value is True:
+            raise ConfigError(
+                [
+                    Problem(
+                        "this is a VMR workspace marker; select a member repository's .main.ptk.yml",
+                        location=marker.loc,
+                    )
+                ]
+            )
         metadata = t.get(main_tree, ("repository", "config_path"))
         config_root = (root / metadata.value).resolve() if metadata else root
         is_ci = self._host.is_ci() if ci is None else ci
@@ -200,6 +210,19 @@ class LoadProject:
         if problems:
             raise ConfigError(problems)
         config = PtkConfig.model_validate(t.to_plain(tree))
+        effective_marker = t.get(tree, ("virtual_monorepo",))
+        if (effective_marker is not None) != (marker is not None) or (
+            marker is not None and effective_marker.value != marker.value
+        ):
+            raise ConfigError(
+                [
+                    Problem(
+                        "virtual_monorepo must be defined in the entry file and cannot be overridden",
+                        "virtual_monorepo",
+                        t.locate(tree, ("virtual_monorepo",)),
+                    )
+                ]
+            )
         original_repository = t.get(main_tree, ("repository",))
         effective_repository = (
             config.repository.model_dump() if config.repository else None
@@ -364,7 +387,26 @@ class ExportSchema:
         # Project content may be supplied entirely by includes.
         schema["required"] = []
         schema["properties"]["repository"] = {"$ref": "#/$defs/RepositorySpec"}
-        schema.setdefault("required", []).append("repository")
+        # Authored omission means automatic discovery, not explicit standalone.
+        schema["properties"]["virtual_monorepo"].pop("default", None)
+        workspace = WorkspaceSpec.model_json_schema()
+        schema["properties"]["members"] = workspace["properties"]["members"]
+        schema["allOf"] = [
+            {
+                "if": {
+                    "properties": {"virtual_monorepo": {"const": True}},
+                    "required": ["virtual_monorepo"],
+                },
+                "then": {
+                    "properties": {
+                        key: False
+                        for key in schema["properties"]
+                        if key not in {"virtual_monorepo", "members"}
+                    }
+                },
+                "else": {"required": ["repository"], "properties": {"members": False}},
+            }
+        ]
         schema["title"] = "ptk configuration (*.ptk.yml)"
         schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
         return schema

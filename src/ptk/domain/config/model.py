@@ -19,7 +19,14 @@ from __future__ import annotations
 import re
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    field_validator,
+    model_validator,
+)
 
 from ..variants.model import ProductLineSpec
 from ..versioning import VersionDependency, VersioningSpec
@@ -77,6 +84,23 @@ def _listify(value: Any) -> Any:
 class RepositorySpec(_Strict):
     alias: str = Field(pattern=r"^[a-z][a-z0-9-]*$")
     config_path: str = Field(min_length=1)
+
+
+class WorkspaceSpec(_Strict):
+    """A manual VMR entry file; paths are relative to its containing directory."""
+
+    virtual_monorepo: StrictBool
+    members: list[str] | None = Field(
+        default=None,
+        description="Exact workspace-relative repository paths; omission checks direct children only.",
+    )
+
+    @field_validator("virtual_monorepo")
+    @classmethod
+    def _enabled(cls, value: bool) -> bool:
+        if not value:
+            raise ValueError("a workspace marker requires virtual_monorepo: true")
+        return value
 
 
 class ProjectSpec(_Strict):
@@ -466,6 +490,10 @@ class ReportingSpec(_Strict):
 
 class PtkConfig(_Strict):
     repository: RepositorySpec | None = None
+    virtual_monorepo: StrictBool = Field(
+        default=False,
+        description="Entry-only discovery flag: omit for automatic Git membership, false for standalone, true for a workspace marker.",
+    )
     schema_version: Literal[1] = 1
     ptk_version: str | None = None  # required ptk version range, e.g. ">=0.1,<0.2"
     project: ProjectSpec

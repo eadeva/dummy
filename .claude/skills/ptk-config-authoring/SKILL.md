@@ -27,7 +27,7 @@ description: Create or change ptk YAML configuration, includes, layers and subst
 
 11. Use `param_defaults` for shared defaults on explicitly declared parameters; action defaults win. Use `cx.ptk.yml` for workflows and preserve per-tool requirement inheritance.
 
-The root `.main.ptk.yml` requires `repository: {alias: lowercase-name, config_path: relative/directory}`. Entry includes and automatic tool/CX/local/maintainer files use that directory; fragment includes stay fragment-relative and commands use the repository root. In `.repo` VMR workspaces, invoke `ptk <repository-alias> <command>`.
+A project's root `.main.ptk.yml` requires `repository: {alias: lowercase-name, config_path: relative/directory}`. Entry includes and automatic tool/CX/local/maintainer files use that directory; fragment includes stay fragment-relative and commands use the repository root. In VMR workspaces, invoke `ptk <repository-alias> <command>`. A separate manual workspace marker contains only `virtual_monorepo: true` and optional `members: [nested/repo, other]`; without a list, only direct child directories are checked. It needs no repository metadata. Omit the flag on project entries for automatic detection; explicit `false` keeps a project standalone and excludes it from VMR listings. Keep discovery fields literal and entry-only, never in includes, overlays or CLI overrides. See the `ptk-vmr` skill for Git-pointer membership and bounded discovery.
 
 Start from `examples/authoring/.main.ptk.yml` and its fragments for a complete tested configuration. Read `docs/configuration.rst` for default environment isolation and explicit inheritance.
 

@@ -33,7 +33,7 @@ from .adapters.shared_configs import PackageConfigFiles
 from .adapters.tools import SystemToolInstaller
 from .adapters.versioning import VersionIO, version_generator
 from .adapters.vscode_file import TasksFile
-from .adapters.workspace import repositories, workspace_root
+from .adapters.workspace import WorkspaceDiscovery
 from .application.ports import (
     ConfigSource,
     HostEnvironment,
@@ -91,6 +91,9 @@ class App:
     installer: SystemToolInstaller
     prompter: Prompter
     secret_providers: dict[str, SecretProvider]
+    workspace: WorkspaceDiscovery = field(
+        default_factory=WorkspaceDiscovery, repr=False
+    )
     _plugin_cache: dict = field(default_factory=dict, repr=False)
     _active_plugins: tuple | None = field(default=None, repr=False)
     _base_providers: dict | None = field(default=None, repr=False)
@@ -161,7 +164,7 @@ class App:
         key = id(project)
         if key not in self._credentials:
             definitions = project.config.credentials
-            workspace = workspace_root(project.root)
+            workspace = self.workspace.root(project.root)
             if workspace is not None:
                 workspace_id = hashlib.sha256(str(workspace).encode()).hexdigest()[:12]
                 definitions = {
@@ -191,8 +194,8 @@ class App:
 
     def versions(self):
         def dependency(member, alias):
-            root = workspace_root(member.root)
-            entries = repositories(root) if root else {}
+            root = self.workspace.root(member.root)
+            entries = self.workspace.repositories(root) if root else {}
             if alias not in entries:
                 raise PtkError(
                     f"version dependency {alias!r} is not a repository in this VMR"
@@ -312,6 +315,7 @@ def create_app(
     python_envs: PythonEnvManager | None = None,
     prompter: Prompter | None = None,
     secret_providers: dict[str, SecretProvider] | None = None,
+    workspace: WorkspaceDiscovery | None = None,
 ) -> App:
     host = host or SystemHost(environ)
     runner = runner or SubprocessRunner()
@@ -322,6 +326,7 @@ def create_app(
     configs = SharedConfigs(PackageConfigFiles())
     machine = Environment(host, runner, uv)
     return App(
+        workspace=workspace if workspace is not None else WorkspaceDiscovery(),
         host=host,
         init_project=InitProject(FileProjectScaffold()),
         load_project=LoadProject(source or FileConfigSource(), host, version),

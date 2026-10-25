@@ -704,13 +704,25 @@ Former top-level commands remain hidden compatibility aliases.
   commands and outputs use the repository root.
 - Upward standalone discovery stops at Git boundaries. Explicit `--config`
   selects one project, bypassing VMR grouping.
-- `.repo` ancestry or Git indirection into `.repo` activates VMR mode. Use
-  `.repo/project.list` when available; otherwise discover working-tree roots.
+- `.repo` in the invocation directory activates VMR mode. Inside a repository,
+  only its root `.git` symlink/junction or `gitdir:` file resolving inside `.repo`
+  establishes automatic membership; proximity to a parent `.repo` is insufficient.
+- Git-repo members come from `.repo/project.list`; a missing index reports an
+  error with `repo sync` guidance. There is no recursive discovery fallback.
+- Manual workspaces use `.main.ptk.yml` with `virtual_monorepo: true` at the
+  workspace root. Inspect direct child directories by default, or use an explicit
+  `members` list for nested paths. A project's explicit `virtual_monorepo: false`
+  opts out; omission enables automatic discovery. These fields are entry-only.
+- Entry metadata and member indexes are cached per invocation and reused by
+  routing, credentials and version dependencies. Unselected project includes
+  remain unloaded. Manual members receive workspace context through root routing;
+  direct invocation inside an ordinary manual member is standalone.
 - Every participating member needs its own root entry file and unique alias.
   CLI: `ptk <alias> <original command>`, including setup, variants and actions.
   Global options precede the alias; bare VMR invocation lists repositories.
 - Regression coverage checks path separation, includes/overlays, root boundaries,
-  aliases, member containment, Git indirection, per-repository execution and access.
+  aliases, member containment, Git indirection, manual markers, explicit opt-out,
+  bounded discovery, cache refresh, per-repository execution and access.
 
 ## Review corrections and shared VMR operations
 

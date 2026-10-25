@@ -21,7 +21,7 @@ import yaml
 from pydantic import ValidationError
 
 from ...domain.config.defaults import normalize_requirements
-from ...domain.config.model import RepositorySpec
+from ...domain.config.model import RepositorySpec, WorkspaceSpec
 from ...domain.config.tree import Node, merge, to_plain
 from ...domain.errors import ConfigError, Location, Problem
 
@@ -96,6 +96,55 @@ class YamlConfigReader:
         stack = (*_stack, path)
         base_file = path
         if path.name == ".main.ptk.yml":
+            flags = (
+                [v for k, v in node.value if k.value == "virtual_monorepo"]
+                if isinstance(node, yaml.MappingNode)
+                else []
+            )
+            if len(flags) > 1:
+                raise ConfigError(
+                    [
+                        Problem(
+                            "duplicate key 'virtual_monorepo'",
+                            location=self._loc(flags[1], path),
+                        )
+                    ]
+                )
+            flag = None
+            if flags:
+                if flags[0].tag != "tag:yaml.org,2002:bool":
+                    raise ConfigError(
+                        [
+                            Problem(
+                                "virtual_monorepo must be a boolean",
+                                location=self._loc(flags[0], path),
+                            )
+                        ]
+                    )
+                flag = self._construct(flags[0], path, loader, stack)
+            if flag is not None and flag.value:
+                # Workspace markers have no includes or project configuration.
+                unknown = [
+                    k
+                    for k, _ in node.value
+                    if k.value not in WorkspaceSpec.model_fields
+                ]
+                if unknown:
+                    raise ConfigError(
+                        [
+                            Problem(
+                                f"unknown workspace field {k.value!r}",
+                                location=self._loc(k, path),
+                            )
+                            for k in unknown
+                        ]
+                    )
+                tree = self._literal_metadata(node, path, loader, stack)
+                try:
+                    WorkspaceSpec.model_validate(to_plain(tree))
+                except ValidationError as exc:
+                    raise ConfigError([Problem(str(exc), location=tree.loc)]) from None
+                return tree
             # Read discovery metadata before resolving any include (including tags).
             entries = (
                 [v for k, v in node.value if k.value == "repository"]
@@ -111,7 +160,7 @@ class YamlConfigReader:
                         )
                     ]
                 )
-            metadata = self._construct(entries[0], path, loader, stack)
+            metadata = self._literal_metadata(entries[0], path, loader, stack)
             try:
                 spec = RepositorySpec.model_validate(to_plain(metadata))
             except ValidationError as exc:
@@ -141,7 +190,10 @@ class YamlConfigReader:
             # to their own containing directory; diagnostics keep the real filename.
             self.entry_bases[path] = directory
             if metadata_only:
-                return Node({"repository": metadata}, self._loc(node, path))
+                values = {"repository": metadata}
+                if flag is not None:
+                    values["virtual_monorepo"] = flag
+                return Node(values, self._loc(node, path))
         tree = self._construct(node, base_file, loader, stack)
         if not tree.is_map:
             if require_mapping:
@@ -149,12 +201,53 @@ class YamlConfigReader:
                     [Problem("top level must be a mapping", location=tree.loc)]
                 )
             return tree
-        return self._apply_top_level_includes(normalize_requirements(tree), path, stack)
+        tree = self._apply_top_level_includes(normalize_requirements(tree), path, stack)
+        marker = tree.value.get("virtual_monorepo")
+        original = flag if path.name == ".main.ptk.yml" else None
+        if (marker is not None) != (original is not None) or (
+            marker is not None and marker.value != original.value
+        ):
+            raise ConfigError(
+                [
+                    Problem(
+                        "virtual_monorepo must be defined in the entry file and cannot be overridden",
+                        location=tree.loc,
+                    )
+                ]
+            )
+        return tree
 
     # ------------------------------------------------------------------ construction
 
     def _loc(self, node: yaml.Node, path: Path) -> Location:
         return Location(_display(path, self.display_root), node.start_mark.line + 1)
+
+    def _literal_metadata(
+        self, node: yaml.Node, path: Path, loader: _Loader, stack: tuple[Path, ...]
+    ) -> Node:
+        """Discovery cannot read includes or execute merge directives."""
+
+        def check(item: yaml.Node, ancestors: frozenset[int]) -> None:
+            if id(item) in ancestors or not item.tag.startswith("tag:yaml.org,2002:"):
+                raise ConfigError(
+                    [
+                        Problem(
+                            "discovery metadata must be literal YAML without tags or cycles",
+                            location=self._loc(item, path),
+                        )
+                    ]
+                )
+            if isinstance(item, yaml.MappingNode):
+                children = [part for pair in item.value for part in pair]
+            elif isinstance(item, yaml.SequenceNode):
+                children = item.value
+            else:
+                children = []
+            for child in children:
+                check(child, ancestors | {id(item)})
+
+        check(node, frozenset())
+        return self._construct(node, path, loader, stack)
 
     def _construct(
         self, node: yaml.Node, path: Path, loader: _Loader, stack: tuple[Path, ...]

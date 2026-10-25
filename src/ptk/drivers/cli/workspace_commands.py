@@ -71,7 +71,7 @@ def build_commands(root, entries):
             yield (
                 alias,
                 CliState(
-                    create_app(),
+                    create_app(workspace=parent.app.workspace),
                     config=entry,
                     overrides=parent.overrides,
                     ci=parent.ci,

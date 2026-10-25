@@ -4,7 +4,7 @@ Authoring configuration
 Files and precedence
 --------------------
 
-Place ``.main.ptk.yml`` at the repository root. It must declare an alias and
+Place a project's ``.main.ptk.yml`` at the repository root. It must declare an alias and
 configuration directory, for example::
 
    repository:
@@ -32,6 +32,20 @@ Automatic discovery searches upwards and stops at a Git repository boundary.
 The old ``main.ptk.yml`` filename is not discovered. ``--config`` explicitly
 selects an entry file, including standalone exported snapshots.
 Use global ``--no-ci`` to inspect local behavior independently of the host.
+
+A manual VMR has a separate workspace-root ``.main.ptk.yml`` with
+``virtual_monorepo: true`` and an optional ``members: [nested/repository, other]``
+list of exact relative paths. This marker has no ``repository``, includes or
+project settings. Without ``members``, ptk checks direct child directories only;
+each participating project still declares its own alias and configuration path.
+Git-repo workspaces instead use ``.repo/project.list`` and need no PTK marker.
+
+In a project entry file, omit ``virtual_monorepo`` for automatic detection or
+set it to ``false`` to remain standalone and opt out of workspace listings.
+The field requires a YAML boolean, and cannot be supplied by fragments, overlays
+or ``--set``. Repository metadata and workspace markers must be literal YAML,
+without include tags or merge directives. See :doc:`cli` for membership rules
+and how commands behave from workspace roots and member directories.
 
 Mappings merge deeply; lists replace. ``!replace`` replaces a node,
 ``!append`` extends a list, and ``!include`` inserts another file. Unknown

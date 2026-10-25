@@ -1,5 +1,7 @@
 """Repository discovery and VMR dispatch through the real CLI."""
 
+import os
+
 import pytest
 import yaml
 from click.testing import CliRunner
@@ -51,6 +53,12 @@ def workspace(tmp_path):
     (tmp_path / ".repo" / "project.list").write_text("nested/a\nb\nignored\n")
     a = repository(tmp_path / "nested/a", "firmware")
     b = repository(tmp_path / "b", "bootloader")
+    for main in (a, b):
+        target = tmp_path / ".repo/projects" / main.parent.relative_to(tmp_path)
+        target.mkdir(parents=True)
+        (main.parent / ".git").write_text(
+            f"gitdir: {os.path.relpath(target, main.parent)}\n"
+        )
     (tmp_path / "ignored").mkdir()
     return a, b
 
@@ -202,6 +210,9 @@ def test_symlink_git_and_unindexed_workspaces(tmp_path):
     except OSError:
         pytest.skip("symlinks unavailable")
     assert workspace_root(main.parent) == root
+    with pytest.raises(PtkError, match="missing VMR project index.*repo sync"):
+        repositories(root)
+    (root / ".repo/project.list").write_text("nested/a\n")
     assert repositories(root) == {"a": main}
 
 

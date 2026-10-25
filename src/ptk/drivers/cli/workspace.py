@@ -7,7 +7,6 @@ from pathlib import Path
 
 import rich_click as click
 
-from ...adapters.workspace import repositories, workspace_root
 from ...bootstrap import create_app
 from ...domain.errors import PtkError
 from .actions import ProjectGroup
@@ -21,7 +20,7 @@ class RepositoryGroup(ProjectGroup):
     def make_context(self, info_name, args, parent=None, **extra):
         parent_state = state_of(parent)
         extra["obj"] = CliState(
-            app=create_app(),
+            app=create_app(workspace=parent_state.app.workspace),
             config=self.entry_file,
             overrides=parent_state.overrides,
             ci=parent_state.ci,
@@ -31,12 +30,21 @@ class RepositoryGroup(ProjectGroup):
 
 
 class WorkspaceGroup(ProjectGroup):
+    def resolve_command(self, ctx, args):
+        # Scaffolding uses its destination, not the caller's project or workspace.
+        if args[:2] == ["setup", "init"] or args[:1] == ["init"]:
+            ctx.meta["vmr_repositories"] = None
+        return super().resolve_command(ctx, args)
+
     def _repositories(self, ctx):
         if "vmr_repositories" not in ctx.meta:
             # An explicit entry file intentionally selects standalone mode.
-            root = None if ctx.params.get("config") else workspace_root(Path.cwd())
             try:
-                ctx.meta["vmr_repositories"] = repositories(root) if root else None
+                discovery = state_of(ctx).app.workspace
+                root = None if ctx.params.get("config") else discovery.root(Path.cwd())
+                ctx.meta["vmr_repositories"] = (
+                    discovery.repositories(root) if root else None
+                )
             except (PtkError, OSError) as exc:
                 raise click.ClickException(str(exc)) from None
         repos = ctx.meta["vmr_repositories"]

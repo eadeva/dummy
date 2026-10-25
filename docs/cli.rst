@@ -78,15 +78,41 @@ when both spellings supply a value. Persistent editing refuses global config ove
 Virtual monorepositories (VMR)
 ------------------------------
 
-A ``.repo`` directory in the current directory or an ancestor activates VMR
-mode. A member's ``.git`` symlink or ``gitdir:`` file also identifies the VMR
-when its target is inside that workspace's ``.repo`` directory. Ordinary Git
-worktrees do not activate VMR mode merely because they have a ``.git`` file.
+A ``.repo`` directory in the current directory activates VMR mode. From inside
+a repository, ptk finds its root and resolves that root's ``.git`` symlink,
+junction or ``gitdir:`` file. A target inside a workspace's ``.repo`` directory
+establishes membership, including nested project paths and git-repo worktrees.
+An ordinary Git directory or worktree does not establish membership. Discovery
+stops at the nearest repository boundary; an ancestor or parent containing
+``.repo`` alone is not enough.
 
-When present, ``.repo/project.list`` defines the member paths. Otherwise ptk
-walks working-tree roots, skipping Git metadata and symlinked directory trees.
-Only members with a root ``.main.ptk.yml`` participate. Duplicate aliases and
-member paths outside the workspace fail discovery.
+Git-repo members come from ``.repo/project.list``. A missing index is an error
+with ``repo sync`` guidance. There is no recursive filesystem scan or manifest
+parsing fallback, and a git-repo workspace does not need a root PTK file.
+
+For a manual VMR, place a ``.main.ptk.yml`` containing only
+``virtual_monorepo: true`` at the **workspace root**. The containing directory
+is the workspace, not its parent. By default only direct child directories are
+checked. To select nested repositories or a subset, list exact relative paths::
+
+   virtual_monorepo: true
+   members:
+     - firmware/core
+     - bootloader
+
+``members: []`` selects no repositories. Only members with a root
+``.main.ptk.yml`` participate. Symlinked directories are excluded from automatic
+child discovery; explicit paths must resolve inside the workspace. Duplicate
+aliases and paths outside the workspace fail discovery. If a manual marker and
+``.repo`` coexist, the git-repo index takes precedence.
+
+A repository can explicitly opt out with ``virtual_monorepo: false`` in its
+own entry file; it is then standalone and excluded from the workspace listing.
+Omit the field for automatic membership. Discovery fields must be literal YAML
+in the entry file; includes, overlays and CLI overrides cannot supply or change
+them. Discovery reads entry metadata without loading unselected repositories'
+includes. Metadata and the member index are cached for one invocation and shared
+by routing, credentials and version dependencies; the next invocation rereads them.
 
 Commands are grouped under the configured repository alias::
 
@@ -97,7 +123,9 @@ Commands are grouped under the configured repository alias::
    ptk bootloader variant list
    ptk --set vars.mode=debug firmware build
 
-The same grouping applies from a member's subdirectory. Each repository has
+For git-repo members, the same grouping applies from a member's subdirectory.
+Manual VMR commands are invoked from the marked workspace; inside an ordinary
+member repository, ptk remains standalone. Each repository has
 isolated configuration, tools, plugins, permissions and output directories.
 ``ptk firmware`` runs that repository's default action; bare ``ptk`` lists the
 repositories. There is no implicit run across all repositories. Global options
@@ -122,7 +150,9 @@ catalog. Repository commands remain available for all these operations.
 
 VMR credential storage is namespaced by workspace location and definition
 identity unless ``credentials.NAME.namespace`` explicitly sets a stable scope.
-This applies even with explicit ``--config`` inside a VMR. Identical definitions
+Git-pointer membership preserves this scope even with explicit ``--config``.
+Manual VMR members receive workspace scope when routed from the marked workspace;
+direct standalone invocation does not infer a parent workspace. Identical definitions
 share a scope; conflicting definitions cannot overwrite each other in the vault
 or keyring. Moving a workspace or changing a definition changes its automatic
 scope: provision again or configure a stable namespace. Explicit env and gopass

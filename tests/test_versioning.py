@@ -266,6 +266,9 @@ def test_vmr_explicit_dependencies_and_cycle(tmp_path):
     for name in ("engine", "frontend"):
         root = tmp_path / name
         root.mkdir()
+        target = tmp_path / ".repo/projects" / f"{name}.git"
+        target.mkdir(parents=True)
+        (root / ".git").write_text(f"gitdir: ../.repo/projects/{name}.git\n")
         config = {
             "repository": {"alias": name, "config_path": "."},
             "project": {"name": name},

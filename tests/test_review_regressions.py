@@ -134,7 +134,10 @@ def test_requirement_true_preserves_earlier_action_settings(write, load):
 def test_schema_describes_authored_files():
     schema = ExportSchema().execute()
     assert "include" in schema["properties"]
-    assert schema["required"] == ["repository"]
+    assert schema["allOf"][0]["else"]["required"] == ["repository"]
+    assert schema["allOf"][0]["if"]["required"] == ["virtual_monorepo"]
+    assert schema["allOf"][0]["then"]["properties"]["repository"] is False
+    assert "default" not in schema["properties"]["virtual_monorepo"]
     assert {"type": "string"} in schema["properties"]["variants"]["anyOf"]
     assert any(
         s.get("type") == "array"

@@ -242,6 +242,14 @@ lifecycle and the `ptk.variant_gui` editor plugin interface.
 
 ## VMR workspaces and isolated environments
 
+VMR mode activates at a git-repo workspace root containing `.repo`, or inside a
+member whose root `.git` pointer resolves into `.repo`. A parent `.repo` alone
+does not establish membership. PTK reads `.repo/project.list` without recursively
+scanning the workspace. For manual workspaces, put `virtual_monorepo: true` in a
+workspace-root `.main.ptk.yml`; it checks direct children, or exact paths from an
+optional `members: [nested/repository, other]` list. Each participating repository
+still needs its own `.main.ptk.yml` with an alias and configuration path.
+
 In a `.repo` workspace, use `ptk repos`, shared `ptk setup creds list`,
 `ptk setup config validate`, `ptk setup doctor`, `ptk variant list/check`,
 and `ptk report list/summary`. Actions and installation stay repository-specific:
