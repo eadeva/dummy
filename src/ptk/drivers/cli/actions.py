@@ -384,8 +384,9 @@ class ProjectGroup(click.RichGroup):
 
     def format_help(self, ctx: click.Context, formatter: Any) -> None:
         """Project actions in their own panel, above ptk's built-in commands."""
-        builtins = super().list_commands(ctx)
-        actions = [n for n in self.list_commands(ctx) if n not in builtins]
+        all_builtins = super().list_commands(ctx)
+        builtins = [n for n in all_builtins if not self.commands[n].hidden]
+        actions = [n for n in self.list_commands(ctx) if n not in all_builtins]
         groups = []
         if actions:
             groups.append(

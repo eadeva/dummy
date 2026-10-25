@@ -1,6 +1,7 @@
 """Grouped setup navigation, compatibility, and side-effect boundaries."""
 
 import json
+import re
 
 import pytest
 from click.testing import CliRunner
@@ -73,3 +74,12 @@ def test_html_help_lists_canonical_tree(invoke, tmp_path):
     assert "ptk setup config validate" in html
     assert "ptk setup creds set" in html
     assert 'id="cmd-config-validate"' not in html
+
+
+def test_root_help_hides_legacy_aliases(invoke):
+    result = invoke("--help")
+    assert result.exit_code == 0
+    output = Text.from_ansi(result.output).plain
+    assert re.search(r"(?m)^\s*[│|]?\s*setup\s{2,}", output)
+    for name in ("config", "configs", "creds", "self-setup", "doctor", "vscode"):
+        assert not re.search(rf"(?m)^\s*[│|]?\s*{name}\s{{2,}}", output), output
