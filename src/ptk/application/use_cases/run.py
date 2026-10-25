@@ -119,7 +119,7 @@ class PrepareRun:
                 lines = "\n".join(f"  - {s.name}: {s.problem}" for s in problems)
                 raise PtkError(
                     f"'{request.action}' needs tools that are missing or too old:\n{lines}\n"
-                    f"  install them with: ptk setup --action {request.action} "
+                    f"  install them with: ptk setup install --action {request.action} "
                     f"(or run the action with --setup)"
                 )
         if not visible(action.audience, request.role):

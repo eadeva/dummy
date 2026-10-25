@@ -1,4 +1,4 @@
-"""``ptk doctor`` (diagnose) and ``ptk self-setup`` (get a machine ready)."""
+"""``ptk setup doctor`` (diagnose) and ``ptk setup self`` (get a machine ready)."""
 
 from __future__ import annotations
 
@@ -119,7 +119,7 @@ class Doctor:
                         f"credential {row.key.ref}",
                         WARN,
                         "not available",
-                        f"ptk creds set {row.key.credential} {row.key.field}",
+                        f"ptk setup creds set {row.key.credential} {row.key.field}",
                     )
                 )
         try:
@@ -130,7 +130,7 @@ class Doctor:
                         f"config {item.path.name}",
                         state,
                         item.status,
-                        "" if state == OK else "ptk configs sync",
+                        "" if state == OK else "ptk setup configs sync",
                     )
                 )
         except PtkError as exc:
@@ -140,7 +140,7 @@ class Doctor:
             checks.append(
                 Check("pre-commit hook", OK, "installed")
                 if hook.is_file()
-                else Check("pre-commit hook", WARN, "not installed", "ptk self-setup")
+                else Check("pre-commit hook", WARN, "not installed", "ptk setup self")
             )
         return checks
 
@@ -199,7 +199,7 @@ class SelfSetup:
                         f"credential {row.key.ref}",
                         WARN,
                         "not available",
-                        f"ptk creds set {row.key.credential} {row.key.field}",
+                        f"ptk setup creds set {row.key.credential} {row.key.field}",
                     )
                 )
         return checks

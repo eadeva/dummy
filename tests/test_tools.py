@@ -174,7 +174,7 @@ def test_missing_tool_blocks_run(project):
     assert result.exit_code == 2
     assert (
         "mytool: not found" in result.output
-        and "ptk setup --action build" in result.output
+        and "ptk setup install --action build" in result.output
     )
     assert project("dry-run", "build").exit_code == 0  # dry runs never block
 

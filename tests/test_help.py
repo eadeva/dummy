@@ -86,4 +86,4 @@ def test_help_without_project_still_lists_commands(tmp_path, monkeypatch):
     )
     assert result.exit_code == 0
     html = out.read_text()
-    assert "could not be loaded" in html and "ptk config validate" in html
+    assert "could not be loaded" in html and "ptk setup config validate" in html

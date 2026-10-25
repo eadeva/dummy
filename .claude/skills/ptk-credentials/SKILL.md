@@ -10,7 +10,7 @@ description: Declare, provision or troubleshoot ptk credentials without exposing
 
 2. Declare fields and an ordered provider chain; default order is env, keyring, gopass, vault, prompt.
 
-3. Diagnose using `ptk creds setup` and `ptk creds list NAME`. Use `ptk creds set NAME FIELD --store vault` for hidden input when appropriate.
+3. Diagnose using `ptk setup creds setup` and `ptk setup creds list NAME`. Use `ptk setup creds set NAME FIELD --store vault` for hidden input when appropriate.
 
 4. Map secrets into individual step environment variables with `secrets: {TOKEN: service.token}`.
 

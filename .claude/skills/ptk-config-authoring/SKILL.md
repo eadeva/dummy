@@ -15,10 +15,10 @@ description: Create or change ptk YAML configuration, includes, layers and subst
 
 5. Use `${vars.name}`, `${params.name}`, `${env:NAME:-fallback}` and `${vh.*}`; escape literal references with `$${...}`.
 
-6. Inspect origins with `ptk config show --sources` before changing an unexpected effective value.
+6. Inspect origins with `ptk setup config show --sources` before changing an unexpected effective value.
 
-7. Export `ptk config schema -o schema.json` for editor support. Treat loader directives separately from model fields.
+7. Export `ptk setup config schema -o schema.json` for editor support. Treat loader directives separately from model fields.
 
-8. Verify with `ptk config validate`, then `ptk dry-run ACTION` for every affected variant.
+8. Verify with `ptk setup config validate`, then `ptk dry-run ACTION` for every affected variant.
 
 9. Avoid unknown keys, unresolved references, recursive includes and unsupported `plugins` expectations.

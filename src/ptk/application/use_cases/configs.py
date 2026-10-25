@@ -1,7 +1,7 @@
 """Shared base configs with project overlays (use case ``SharedConfigs``).
 
 Only the configs listed under ``configs:`` are managed. The effective files
-are committed; ``ptk configs check`` keeps them in sync in CI.
+are committed; ``ptk setup configs check`` keeps them in sync in CI.
 """
 
 from __future__ import annotations

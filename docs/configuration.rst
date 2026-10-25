@@ -13,7 +13,7 @@ Use global ``--no-ci`` to inspect local behavior independently of the host.
 Mappings merge deeply; lists replace. ``!replace`` replaces a node,
 ``!append`` extends a list, and ``!include`` inserts another file. Paths in
 includes are relative to the including file. Unknown fields fail validation;
-``ptk config show --sources`` identifies their source files and lines.
+``ptk setup config show --sources`` identifies their source files and lines.
 
 A ``variants`` string names a separate variant file. Other schema fields use
 the types in :doc:`reference`. ``ptk_version`` is a version requirement; this

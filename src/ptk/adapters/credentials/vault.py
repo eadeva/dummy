@@ -104,7 +104,7 @@ class Vault:
     def _open(self) -> None:
         if not self.exists:
             raise PtkError(
-                f"no vault yet ({self.path}); create one with 'ptk creds setup'"
+                f"no vault yet ({self.path}); create one with 'ptk setup creds setup'"
             )
         try:
             doc = json.loads(self.path.read_text(encoding="utf-8"))
@@ -162,7 +162,7 @@ class VaultProvider:
         if not self.vault.exists:
             return (
                 False,
-                "no vault yet ('ptk creds setup' or 'ptk creds set' creates one)",
+                "no vault yet ('ptk setup creds setup' or 'ptk setup creds set' creates one)",
             )
         return True, ""
 

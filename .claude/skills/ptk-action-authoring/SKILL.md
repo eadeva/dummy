@@ -24,4 +24,4 @@ description: Add or modify ptk actions, parameters, nested steps, conditions and
 
 9. After changes, run the affected action in a disposable example and inspect logs and reports.
 
-10. Regenerate `ptk vscode tasks --users-only` if committing tasks; verify maintainer-only actions stay hidden for users.
+10. Regenerate `ptk setup vscode tasks --users-only` if committing tasks; verify maintainer-only actions stay hidden for users.

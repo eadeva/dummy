@@ -50,9 +50,9 @@ actions:
   build: {requires_tools: [cmake], steps: [...]}
 ```
 
-Runs check `requires_tools` first; `ptk setup` (or `ptk build --setup`) installs what is
+Runs check `requires_tools` first; `ptk setup install` (or `ptk build --setup`) installs what is
 missing - Chocolatey on Windows, `uv tool`, sha256-verified downloads, apt/dnf only with
-`--allow-system`. `ptk doctor` diagnoses a machine; `ptk self-setup` gets it ready.
+`--allow-system`. `ptk setup doctor` diagnoses a machine; `ptk setup self` gets it ready.
 Install ptk itself with `install/install.sh` or `install/install.ps1`.
 
 ## Shared configs
@@ -66,9 +66,9 @@ configs:
   clangd:       {}
 ```
 
-`ptk configs sync` merges ptk's base configs with your overlays into `.pre-commit-config.yaml`,
+`ptk setup configs sync` merges ptk's base configs with your overlays into `.pre-commit-config.yaml`,
 `.clang-format`, `.clang-tidy`, `.clangd` and `ruff-base.toml` (your `ruff.toml` extends it).
-Commit them; `ptk configs check` in CI catches stale files.
+Commit them; `ptk setup configs check` in CI catches stale files.
 
 ## Reports
 
@@ -90,7 +90,7 @@ credentials:
 ```
 
 Looked up in order `env -> keyring -> gopass -> vault -> prompt` (configurable per
-credential). `ptk creds set artifactory token` stores a value (typed hidden); the
+credential). `ptk setup creds set artifactory token` stores a value (typed hidden); the
 built-in vault is an AES-GCM file protected by a master password - no external tool
 needed. Steps get secrets only as environment variables (`secrets: {TOKEN: artifactory.token}`),
 and ptk masks them in its execution output. Child programs must not expand them
@@ -123,10 +123,10 @@ Loading order: `main.ptk.yml` (+ includes) → `ci.ptk.yml` (in CI) →
 
 * mappings merge deeply, lists are replaced; `!replace`, `!append` and
   `!include file-or-glob` give explicit control
-* every value remembers its file and line: `ptk config show --sources`
+* every value remembers its file and line: `ptk setup config show --sources`
 * unknown keys, unknown names in conditions and `${...}` references are errors
   with `file:line` and "did you mean ..."
-* `ptk config schema -o .ptk/schema.json` for editor autocompletion
+* `ptk setup config schema -o .ptk/schema.json` for editor autocompletion
 
 ## Commands available now
 
@@ -137,12 +137,12 @@ ptk ACTION [--PARAM VALUE]... [-V VARIANT] [--from STEP] [--to STEP] [--params F
            [-q] [--args-for STEP="ARGS"]... [-- ARGS]
 ptk dry-run [ACTION [same options]] [--env]   what would run - nothing is executed
 ptk run [ACTION] [-p NAME=VALUE]... [same options]   generic form for scripts and CI
-ptk config validate | show [PATH] [--sources] [--format yaml|json] | schema [-o FILE]
+ptk setup config validate | show [PATH] [--sources] [--format yaml|json] | schema [-o FILE]
 ptk variant list [--names] | show [NAME] [--json] [--all] | explain NAME FEATURE | check [NAMES] [--strict]
-ptk vscode tasks [--check] [--command "uv run ptk"] [--users-only]
-ptk creds setup [--vault] | set NAME [FIELD] [--store S] | list | test NAME | remove NAME
-ptk configs sync [NAMES] [--diff] | check [NAMES]
-ptk setup [--action A]... [--dry-run] [--allow-system] | doctor | self-setup [--tools]
+ptk setup vscode tasks [--check] [--command "uv run ptk"] [--users-only]
+ptk setup creds setup [--vault] | set NAME [FIELD] [--store S] | list | test NAME | remove NAME
+ptk setup configs sync [NAMES] [--diff] | check [NAMES]
+ptk setup [--action A]... [--dry-run] [--allow-system] | ptk setup doctor | ptk setup self [--tools]
 ptk report export [ACTION] [-V v] [--run ID] [-f FORMAT]... | open [ACTION] [--run ID]
 ptk help [--no-open] [-o FILE]       full help as an HTML page, opened in your browser
 ```

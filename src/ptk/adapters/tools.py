@@ -146,13 +146,13 @@ class SystemToolInstaller:
     ) -> None:
         if not shutil.which("choco", path=self._environ.get("PATH")):
             raise PtkError(
-                "Chocolatey is not installed - run 'ptk setup --bootstrap-choco' in an "
+                "Chocolatey is not installed - run 'ptk setup install --bootstrap-choco' in an "
                 "administrator terminal, or install the tool another way"
             )
         if not self._admin():
             raise PtkError(
                 f"Chocolatey needs an administrator terminal: open one and run "
-                f"'ptk setup' again (or: {method.describe()} -y)"
+                f"'ptk setup install' again (or: {method.describe()} -y)"
             )
         argv = ["choco", "install", method.package, "-y", "--no-progress"]
         if method.version:

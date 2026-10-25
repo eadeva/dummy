@@ -2,7 +2,7 @@
 
 Every value of a loaded configuration is a ``Node`` that remembers where it
 came from. Merging layers keeps those locations, so any final value can be
-traced to ``file:line`` (``ptk config show --sources``) and validation errors
+traced to ``file:line`` (``ptk setup config show --sources``) and validation errors
 point to the right place.
 
 Merge rules

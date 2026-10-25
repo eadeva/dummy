@@ -1,4 +1,4 @@
-"""Credential chain: env, keyring, gopass, vault, prompt; ptk creds commands."""
+"""Credential chain: env, keyring, gopass, vault, prompt; ptk setup creds commands."""
 
 from __future__ import annotations
 
@@ -129,7 +129,7 @@ def test_missing_lists_what_was_tried(tmp_path):
     text = str(info.value)
     assert "env: PTK_CRED_ART_USER is not set" in text
     assert "vault: no vault yet" in text and "prompt: not interactive" in text
-    assert "ptk creds set art user" in text
+    assert "ptk setup creds set art user" in text
 
 
 def test_prompt_is_last_and_only_interactive(tmp_path):

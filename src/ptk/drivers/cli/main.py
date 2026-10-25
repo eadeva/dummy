@@ -7,6 +7,7 @@ the generic form and ``ptk dry-run ACTION`` previews either.
 
 from __future__ import annotations
 
+import copy
 import json
 import sys
 from pathlib import Path
@@ -389,7 +390,7 @@ def _read_secret(ctx: click.Context, question: str) -> str:
     if not sys.stdin.isatty():
         return sys.stdin.read().rstrip("\r\n")  # e.g. piped from a secret manager
     raise PtkError(
-        "no terminal: pipe the value in, e.g. 'gopass show -o x | ptk creds set NAME'"
+        "no terminal: pipe the value in, e.g. 'gopass show -o x | ptk setup creds set NAME'"
     )
 
 
@@ -415,7 +416,7 @@ def creds_list(ctx: click.Context, name: str | None) -> None:
         table.add_row(row.key.ref, supplier, row.key.env_var, escape(details))
     console.print(table)
     if missing:
-        console.print("[dim]store a value with: ptk creds set NAME [FIELD][/]")
+        console.print("[dim]store a value with: ptk setup creds set NAME [FIELD][/]")
 
 
 @creds_group.command("set")
@@ -492,10 +493,10 @@ def creds_setup(ctx: click.Context, create_vault: bool) -> None:
         console.print(f"[green]vault created[/] at {escape(str(vault.path))}")
     table = Table("provider", "status", "notes", box=None, pad_edge=False)
     hints = {
-        "env": "CI: set the variables shown by 'ptk creds list'",
+        "env": "CI: set the variables shown by 'ptk setup creds list'",
         "keyring": "OS keyring: Windows Credential Manager, macOS Keychain, Linux desktop",
         "gopass": "recommended for teams: gopass setup --crypto age (no gpg needed)",
-        "vault": "built-in encrypted file: ptk creds setup --vault",
+        "vault": "built-in encrypted file: ptk setup creds setup --vault",
         "prompt": "asks in the terminal, never stored",
     }
     for name, provider in providers.items():
@@ -508,7 +509,7 @@ def creds_setup(ctx: click.Context, create_vault: bool) -> None:
 # --------------------------------------------------------------------------- setup
 
 
-@cli.command("setup")
+@click.command("install")
 @click.option(
     "-a",
     "--action",
@@ -668,7 +669,7 @@ def configs_check(ctx: click.Context, names: tuple[str, ...]) -> None:
     items = _state(ctx).app.shared_configs.plan(project, list(names) or None)
     _show_config_results(items, project.root)
     if any(item.status != "up to date" for item in items):
-        console.print("run 'ptk configs sync' and commit the result")
+        console.print("run 'ptk setup configs sync' and commit the result")
         sys.exit(1)
 
 
@@ -822,7 +823,7 @@ def vscode_tasks(
             )
             return
         console.print(
-            f"[red]{escape(str(result.path))} is out of date[/] - run 'ptk vscode tasks'",
+            f"[red]{escape(str(result.path))} is out of date[/] - run 'ptk setup vscode tasks'",
             highlight=False,
         )
         sys.exit(1)
@@ -945,6 +946,59 @@ def help_command(ctx: click.Context, output: Path | None, no_open: bool) -> None
         console.print(
             "[dim]no browser available here - open the file above on a machine with a desktop[/]"
         )
+
+
+@click.pass_context
+def _setup_dispatch(ctx: click.Context, **options: Any) -> None:
+    """Group configuration, installation and credential management."""
+    supplied = any(
+        ctx.get_parameter_source(name) == click.core.ParameterSource.COMMANDLINE
+        for name in options
+    )
+    if ctx.invoked_subcommand is not None:
+        if supplied:
+            raise click.UsageError(
+                "Put installation options after 'setup install', "
+                "not before a setup subcommand.",
+                ctx,
+            )
+        return
+    if supplied:
+        # Compatibility: ptk setup --action A --dry-run.
+        ctx.invoke(setup_command, **options)
+    else:
+        click.echo(ctx.get_help())
+
+
+def _group_setup_commands() -> None:
+    setup = click.Group(
+        "setup",
+        callback=_setup_dispatch,
+        help="Configure the project, install tools and manage credentials.",
+        invoke_without_command=True,
+        params=list(setup_command.params),
+        epilog="Use 'ptk setup install' for tool installation. "
+        "Legacy 'ptk setup --action A' remains supported.",
+    )
+    setup.add_command(setup_command, "install")
+    for old, new in (
+        ("config", "config"),
+        ("configs", "configs"),
+        ("creds", "creds"),
+        ("self-setup", "self"),
+        ("doctor", "doctor"),
+        ("vscode", "vscode"),
+    ):
+        command = cli.commands[old]
+        setup.add_command(command, new)
+        # Separate object: hiding the legacy alias must not hide the new command.
+        alias = copy.copy(command)
+        alias.hidden = True
+        cli.add_command(alias, old)
+    cli.add_command(setup)
+
+
+_group_setup_commands()
 
 
 def main() -> None:

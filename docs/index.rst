@@ -8,6 +8,7 @@ isolated command environments, logs and reports. Python 3.12 or newer is require
    :maxdepth: 2
 
    quickstart
+   cli
    configuration
    reference
    skills

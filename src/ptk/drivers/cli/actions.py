@@ -147,7 +147,7 @@ def common_options(*, dry_run: bool) -> list[click.Parameter]:
             click.Option(
                 ["--setup"],
                 is_flag=True,
-                help="Install missing or outdated tools of the action first (ptk setup).",
+                help="Install missing or outdated tools of the action first (ptk setup install).",
             )
         )
     params.append(

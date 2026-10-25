@@ -16,7 +16,7 @@ description: Manage ptk shared pre-commit, Ruff and clang configuration with pro
 
 5. For clang YAML, inspect map/list/null merge behavior; clang-tidy checks and CheckOptions have special rules.
 
-6. Preview `ptk configs sync --diff`, apply `ptk configs sync`, then run `ptk configs check`.
+6. Preview `ptk setup configs sync --diff`, apply `ptk setup configs sync`, then run `ptk setup configs check`.
 
 7. Commit effective files and overlays together so CI and tools see the same configuration.
 

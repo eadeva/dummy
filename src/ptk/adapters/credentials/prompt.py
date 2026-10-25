@@ -27,7 +27,7 @@ class ConsolePrompter:
 
 
 class PromptProvider:
-    """Asks once per ptk run; the answer is not stored (use 'ptk creds set')."""
+    """Asks once per ptk run; the answer is not stored (use 'ptk setup creds set')."""
 
     name = "prompt"
     can_store = False
