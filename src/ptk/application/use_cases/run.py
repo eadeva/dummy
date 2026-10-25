@@ -56,6 +56,8 @@ MIN_MASK_LENGTH = 4  # shorter values would garble normal output; warned about
 class RunRequest:
     action: str | None = None  # None: project.default_action
     variant: str | None = None
+    all_variants: bool = False
+    feature_overrides: Mapping[str, str] = field(default_factory=dict)
     params: Mapping[str, Any] = field(default_factory=dict)  # from the command line
     params_file: Mapping[str, Any] = field(default_factory=dict)  # from --params FILE
     start: str | None = None  # --from
@@ -137,11 +139,31 @@ class PrepareRun:
         vh_env: dict[str, str] = {}
         symbols: dict[str, Any] = {}
         if variants.has_variants:
+            if request.feature_overrides:
+                selected = variants.name_of(request.variant)
+                edited = config.model_copy(deep=True)
+                for name, value in request.feature_overrides.items():
+                    if name not in variants.line.feature_index:
+                        raise PtkError(f"unknown feature '{name}'")
+                    try:
+                        typed = variants.line.feature(name).parse_text(value)
+                    except ValueError as exc:
+                        raise PtkError(f"{name}: {exc}") from None
+                    edited.variants.variants[selected].features[name] = typed
+                project = dataclasses.replace(project, config=edited)
+                config = edited
+                variants = VariantService(project)
             resolved = variants.resolve(request.variant)
+            if resolved.errors:
+                raise PtkError(
+                    "invalid variant: " + "; ".join(map(str, resolved.errors))
+                )
             variant_name = resolved.name
             vh_ns = variants.namespace(resolved)
             vh_env = variants.environment(resolved)
             symbols = dict(variants.symbols(resolved))
+        elif request.feature_overrides:
+            raise PtkError("feature overrides require variants")
         elif request.variant:
             raise PtkError(f"--variant {request.variant}: this project has no variants")
 

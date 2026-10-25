@@ -12,6 +12,7 @@ Maintainer-only actions are hidden from users and refused when invoked.
 
 from __future__ import annotations
 
+import dataclasses
 import shlex
 import sys
 import threading
@@ -114,6 +115,21 @@ def param_option(name: str, spec: ParamSpec) -> click.Option:
 def common_options(*, dry_run: bool) -> list[click.Parameter]:
     params: list[click.Parameter] = [
         click.Option(
+            ["--all-variants"], is_flag=True, help="Run all concrete variants."
+        ),
+        click.Option(
+            ["--feature", "-bo", "features"],
+            multiple=True,
+            metavar="FEATURE=VALUE",
+            help="Override a variant feature for this invocation.",
+        ),
+        click.Option(
+            ["-mp", "legacy_params"],
+            multiple=True,
+            metavar="NAME=VALUE",
+            help="Compatibility alias for declared action parameter values.",
+        ),
+        click.Option(
             ["-V", "--variant"],
             help="Variant (name or alias); default: the configured default variant.",
         ),
@@ -176,6 +192,9 @@ def build_request(
     params: dict[str, Any] | None = None,
     extra: tuple[str, ...] = (),
     variant: str | None = None,
+    all_variants: bool = False,
+    features: tuple[str, ...] = (),
+    legacy_params: tuple[str, ...] = (),
     start: str | None = None,
     end: str | None = None,
     params_path: Path | None = None,
@@ -185,7 +204,19 @@ def build_request(
     return RunRequest(
         action=action,
         variant=variant,
-        params=params or {},
+        all_variants=all_variants,
+        feature_overrides={
+            **pairs(
+                tuple(
+                    v[3:]
+                    for v in ctx.find_root().params.get("overrides", ())
+                    if v.startswith("vh.")
+                ),
+                "--set vh",
+            ),
+            **pairs(features, "--feature"),
+        },
+        params={**pairs(legacy_params, "--param"), **(params or {})},
         params_file=params_file(params_path),
         start=start,
         end=end,
@@ -204,18 +235,59 @@ def execute(
     show_env: bool = False,
     setup: bool = False,
 ) -> None:
-    """Prepare the request; show it (dry run) or run it and exit with its status."""
     state = state_of(ctx)
     project = state.project()
+    if request.all_variants and request.variant:
+        raise PtkError("use --all-variants or --variant, not both")
+    service = state.app.variants(project)
+    if request.all_variants:
+        names = service.line.buildable()
+        if not names:
+            raise PtkError("no concrete variants configured")
+    elif request.variant:
+        names = list(
+            dict.fromkeys(
+                service.name_of(n.strip()) for n in request.variant.split(",")
+            )
+        )
+    else:
+        names = [None]
     if setup:
         action = request.action or project.config.project.default_action
         if action:
             install_tools(state, project, [action])
-    prepared = state.app.prepare_run(project).execute(project, request)
+    # Preflight the whole selection before executing the first variant.
+    prepared = [
+        state.app.prepare_run(project).execute(
+            project, dataclasses.replace(request, variant=name, all_variants=False)
+        )
+        for name in names
+    ]
+    codes = []
+    for item in prepared:
+        code = _execute_one(ctx, request, prepared=item, quiet=quiet, show_env=show_env)
+        codes.append(code)
+        if code == 130:
+            break
+    if not request.dry_run:
+        sys.exit(130 if 130 in codes else max(codes, default=0))
+
+
+def _execute_one(
+    ctx: click.Context,
+    request: RunRequest,
+    *,
+    quiet: bool = False,
+    show_env: bool = False,
+    prepared=None,
+) -> int:
+    """Prepare the request; show it (dry run) or run it and exit with its status."""
+    state = state_of(ctx)
+    project = prepared.project
     runner = state.app.run_action(project)
     if request.dry_run:
         present.dry_run(console, prepared, runner, show_env=show_env)
-        return
+        return 0
     level = console_level(
         project.config.logging.level, verbose=state.verbose, quiet=quiet
     )
@@ -247,7 +319,7 @@ def execute(
     present.summary(console, result)
     write_reports(state, project, prepared.plan, result)
     codes = {Status.PASSED: 0, Status.SKIPPED: 0, Status.CANCELLED: 130}
-    sys.exit(codes.get(result.status, 1))
+    return codes.get(result.status, 1)
 
 
 def install_tools(

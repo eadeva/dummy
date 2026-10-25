@@ -197,6 +197,61 @@ def _value(value: Any) -> str:
     return "-" if value is None else str(value)
 
 
+def _write_variant_change(ctx, name, features, output, dry_run, **options):
+    from ...adapters.config.edits import write_overlay
+    from ...application.use_cases.variant_changes import variant_patch
+
+    state = _state(ctx)
+    if state.overrides:
+        raise PtkError(
+            "Do not combine persistent variant edits with global --set overrides"
+        )
+    project = state.project()
+    patch = variant_patch(project, name, pairs(features, "--feature"), **options)
+    target = output or project.root / "local.ptk.yml"
+    text = write_overlay(target, patch, dry_run=dry_run)
+    click.echo(
+        text if dry_run else f"Updated {target}. YAML comments are not retained."
+    )
+    if output and not dry_run:
+        click.echo("Include this overlay in your project to activate it.")
+
+
+@variant_group.command("set")
+@click.argument("name")
+@click.argument("features", nargs=-1)
+@click.option("-o", "--output", type=click.Path(path_type=Path, dir_okay=False))
+@click.option("--dry-run", is_flag=True)
+@click.pass_context
+@guarded
+def variant_set(ctx, name, features, output, dry_run):
+    """Select the default variant and optionally set FEATURE=VALUE in local.ptk.yml."""
+    _write_variant_change(ctx, name, features, output, dry_run)
+
+
+@variant_group.command("new")
+@click.argument("name")
+@click.option("--extends", help="Base variant or alias.")
+@click.option("--feature", "features", multiple=True, metavar="FEATURE=VALUE")
+@click.option("--component", "components", multiple=True)
+@click.option("-o", "--output", type=click.Path(path_type=Path, dir_okay=False))
+@click.option("--dry-run", is_flag=True)
+@click.pass_context
+@guarded
+def variant_new(ctx, name, extends, features, components, output, dry_run):
+    """Create a validated variant in local.ptk.yml (or an explicit overlay)."""
+    _write_variant_change(
+        ctx,
+        name,
+        features,
+        output,
+        dry_run,
+        create=True,
+        extends=extends,
+        components=components,
+    )
+
+
 @variant_group.command("gui")
 @click.option(
     "--plugin",

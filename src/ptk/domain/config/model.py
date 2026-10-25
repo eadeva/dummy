@@ -50,6 +50,7 @@ RESERVED_PARAMS = {
     "to",
     "variant",
     "all_variants",
+    "feature",
     "dry_run",
     "setup",
     "set",

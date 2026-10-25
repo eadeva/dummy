@@ -56,3 +56,23 @@ M11 commands
 supported legacy configurations; ``ptk migrate`` remains an alias.
 ``ptk variant gui [--plugin NAME] [--output FILE]`` opens the optional desktop
 variant editor. See :doc:`m11` for prerequisites and semantics.
+
+Variant editing and matrices
+----------------------------
+
+``ptk variant new NAME --extends BASE --feature SIZE=4`` creates a variant.
+``ptk variant set NAME SIZE=5`` selects the default and optionally changes features.
+Both validate first, write ``local.ptk.yml`` by default, and accept ``--dry-run``
+or ``--output FILE`` for an explicit overlay. Existing unrelated YAML keys are
+preserved; formatting/comments are not. Include explicit overlays yourself.
+
+``ptk build --all-variants`` runs every concrete variant sequentially.
+``ptk build -V small,large`` selects a subset, deduplicating aliases. All selections
+are prepared before the first run; each receives its own logs and report. Failures
+produce an overall nonzero exit code; cancellation stops the remaining selection.
+The same selection works with ``dry-run``.
+
+``--feature SIZE=4`` (legacy ``-bo SIZE=4``) overrides a feature for this invocation.
+Global ``--set vh.SIZE=4`` is also supported. ``-mp jobs=4`` is the compatibility
+spelling for declared action parameters. Generated typed options take precedence
+when both spellings supply a value. Persistent editing refuses global config overrides.

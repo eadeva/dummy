@@ -55,7 +55,9 @@ def state_of(ctx: click.Context) -> CliState:
         root.obj = CliState(
             app=create_app(),
             config=params.get("config"),
-            overrides=tuple(params.get("overrides") or ()),
+            overrides=tuple(
+                v for v in (params.get("overrides") or ()) if not v.startswith("vh.")
+            ),
             ci=params.get("ci"),
             verbose=params.get("verbose") or 0,
         )
