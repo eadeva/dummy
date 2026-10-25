@@ -19,7 +19,7 @@ from ptk.domain.errors import PtkError
 from ptk.domain.tools import check_version, install_methods, parse_version, satisfies
 from ptk.drivers.cli.main import cli
 
-pytestmark = pytest.mark.skipif(sys.platform.startswith("win"), reason="POSIX shell")
+posix_only = pytest.mark.skipif(sys.platform.startswith("win"), reason="POSIX shell")
 
 
 def test_versions():
@@ -72,9 +72,11 @@ class FakeRunner:
         return None
 
 
-def test_chocolatey_commands(tmp_path):
-    (tmp_path / "choco").write_text("")
-    (tmp_path / "choco").chmod(0o755)
+def test_chocolatey_commands(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "ptk.adapters.tools.shutil.which",
+        lambda program, path=None: str(tmp_path / "choco") if path else None,
+    )
     env = {"PATH": str(tmp_path)}
     method = install_methods(
         ToolSpec(choco={"package": "llvm", "version": "18.1.8"}),
@@ -166,6 +168,7 @@ def project(write, tmp_path):
     return invoke
 
 
+@posix_only
 def test_missing_tool_blocks_run(project):
     result = project("build")
     assert result.exit_code == 2
@@ -176,6 +179,7 @@ def test_missing_tool_blocks_run(project):
     assert project("dry-run", "build").exit_code == 0  # dry runs never block
 
 
+@posix_only
 def test_setup_installs_download_and_puts_it_on_path(project):
     preview = project("setup", "--action", "build", "--dry-run")
     assert "would install via download" in preview.output and not project.tools.exists()
@@ -187,18 +191,21 @@ def test_setup_installs_download_and_puts_it_on_path(project):
     assert ran.exit_code == 0 and "mytool 1.2.3" in ran.output
 
 
+@posix_only
 def test_run_with_setup_flag(project):
     result = project("build", "--setup")
     assert result.exit_code == 0, result.output
     assert "installed via download" in result.output
 
 
+@posix_only
 def test_checksum_mismatch(project):
     project.write_sha("0" * 64)
     result = project("setup", "--action", "build")
     assert result.exit_code == 1 and "sha256 mismatch" in result.output
 
 
+@posix_only
 def test_wrong_version_and_system_packages(project):
     result = project("setup", "--action", "other")
     assert result.exit_code == 1
@@ -208,12 +215,14 @@ def test_wrong_version_and_system_packages(project):
     assert "--allow-system" in result.output
 
 
+@posix_only
 def test_doctor_reports_tool_problems(project):
     result = project("doctor")
     assert result.exit_code == 1
     assert "tool mytool" in result.output and "ptk setup" in result.output
 
 
+@posix_only
 def test_self_setup(project):
     (project.root / "main.ptk.yml").write_text(
         (project.root / "main.ptk.yml").read_text() + "configs: {clang-format: {}}\n"

@@ -7,9 +7,9 @@ unified logging and reporting. See [`docs/PLAN.md`](docs/PLAN.md) for the full p
 **Status:** M1 (configuration meta-model and loader), M2 (variant core), M3
 (execution engine, dry run, HTML help), M4 (unified logging), M5 (generated
 CLI, maintainer visibility, VS Code tasks), M6 (credentials), M7 (reporting), M8 (shared configs) and M9 (tools,
-setup, doctor, installers) are done. M10 is in progress: a runnable offline
-quickstart, Sphinx documentation and Linux/Windows CI have been added.
-The full reference and authoring skills remain pending.
+setup, doctor, installers) are done. M10 adds a runnable offline quickstart, Sphinx documentation with a generated
+configuration reference, eleven authoring skills and Linux/Windows CI.
+See the plan for remaining features outside this milestone.
 
 ```bash
 uv sync                     # install with dev dependencies
@@ -86,14 +86,15 @@ credentials:
     fields: [user, token]
     env: {token: ARTIFACTORY_TOKEN}          # CI
     gopass: {path: team/artifactory}         # optional
-    test: curl -fsS -u "$ARTIFACTORY_USER:$ARTIFACTORY_TOKEN" https://repo.example.com/api/system/ping
+    # Optional test: use a helper that reads secrets from its environment.
 ```
 
 Looked up in order `env -> keyring -> gopass -> vault -> prompt` (configurable per
 credential). `ptk creds set artifactory token` stores a value (typed hidden); the
 built-in vault is an AES-GCM file protected by a master password - no external tool
 needed. Steps get secrets only as environment variables (`secrets: {TOKEN: artifactory.token}`),
-and they are masked everywhere. keyring support: `uv tool install "ptk[keyring]"`.
+and ptk masks them in its execution output. Child programs must not expand them
+into command-line arguments or write them to report input files. keyring support: `uv tool install "ptk[keyring]"`.
 
 ## Configuration files
 

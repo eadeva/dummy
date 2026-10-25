@@ -1,0 +1,27 @@
+---
+name: ptk-docs-writing
+description: Document ptk features, configuration or project actions and maintain
+  tested examples.
+---
+
+# ptk-docs-writing
+
+1. Read `docs/index.rst`, `docs/configuration.rst` and the implementation for the feature.
+
+2. Use reStructuredText for Sphinx pages and add new pages to the toctree.
+
+3. Generate model reference tables through the ptk-schema directive; do not copy field lists that can drift.
+
+4. Use literalinclude for runnable configuration and scripts; add tests that execute the same source examples.
+
+5. Verify command names and options against `ptk COMMAND --help` before publishing instructions.
+
+6. Clearly separate supported behavior from planned commands and plugin integrations.
+
+7. Build with `uv sync --group docs` then `uv run sphinx-build -W --keep-going -b html docs docs/_build/html`.
+
+8. Run example tests and skill-catalog validation; inspect generated pages for missing tables and broken internal links.
+
+9. Keep credentials fictional, use project-relative paths, and describe platform-specific requirements.
+
+10. Update the relevant .claude/skills instructions when changing an authoring workflow.

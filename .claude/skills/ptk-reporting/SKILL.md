@@ -1,0 +1,24 @@
+---
+name: ptk-reporting
+description: Add ptk report formats, import tool results or troubleshoot report generation.
+---
+
+# ptk-reporting
+
+1. Read `src/ptk/domain/reporting/model.py`, `src/ptk/adapters/reporting/` and the ReportStore port.
+
+2. Write tool results to PTK_STEP_REPORTS_DIR or `${run.reports_dir}` for the producing step.
+
+3. Use `report.import` with file globs to copy results from other folders; set optional only when absence is acceptable.
+
+4. Recognized inputs are JUnit XML, Cobertura XML and SARIF; select output formats under reporting.formats.
+
+5. Inspect `report.json`, then regenerate with `ptk report export ACTION -f html` or open with `ptk report open ACTION`.
+
+6. Keep report problems separate from the action exit status and preserve skipped/allowed-failure semantics.
+
+7. Test malformed files, escaping, totals and relative log links when changing exporters/importers.
+
+8. Add adapters behind existing ports and wire them in bootstrap. Entry-point discovery for external contributor plugins is not yet implemented.
+
+9. Never include secrets in imported results; masking engine logs does not sanitize arbitrary third-party files.

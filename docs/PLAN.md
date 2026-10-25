@@ -665,7 +665,7 @@ formatted with `ruff format`. CI runs `ruff check` and `ruff format --check`.
 | M7 ✅ | Unified reporting | JSON, JUnit, HTML, Markdown, GitHub summary; contributors API |
 | M8 ✅ | Shared configs: pre-commit, ruff, clang-format, clang-tidy, clangd | `configs sync/check/--diff` |
 | M9 ✅ | Tools: model, Chocolatey, uv-tool, download, `setup`, `self-setup`, `doctor`, installers | missing tools detected and installed (Windows run by user) |
-| M10 🚧 | Runnable offline quickstart, initial Sphinx docs and CI Linux + Windows added; full reference, skills and native Windows coverage pending | docs build with `-W`; all skills present; CI verified on both platforms |
+| M10 🚧 | Runnable quickstart, schema-generated reference, eleven authoring skills, native process tests and CI matrix implemented | docs build with `-W`; all skills present; final CI verification pending |
 | M11 | Optional: `ptk migrate`, background steps, variant GUI plugin | — |
 
 ---
@@ -679,7 +679,7 @@ formatted with `ruff format`. CI runs `ruff check` and `ruff format --check`.
 | Python manager | uv (required) |
 | Steps format | ordered list |
 | Variant matrix | levels become enum features; aliases supported |
-| Credentials | env → gopass (age) → vault → prompt; no `keyring` |
+| Credentials | env → optional keyring → gopass (age) → vault → prompt |
 | Frozen executable | not supported |
 | Platforms | Windows, Linux (incl. headless) |
 | Delivery | git bundle, or branch push once GitHub write access is connected |

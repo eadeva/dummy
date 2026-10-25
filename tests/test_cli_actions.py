@@ -8,6 +8,7 @@ import sys
 
 import pytest
 from click.testing import CliRunner
+from rich.text import Text
 
 from ptk.adapters.vscode_file import strip_jsonc
 from ptk.domain import vscode
@@ -53,7 +54,7 @@ def invoke(write):
 
 
 def test_action_help_has_typed_options(invoke):
-    out = invoke("build", "--help").output
+    out = Text.from_ansi(invoke("build", "--help").output).plain
     for text in (
         "--jobs",
         "INTEGER",
