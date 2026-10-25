@@ -531,7 +531,7 @@ so `ptk build --help` documents the project's real options.
 |---------|------|
 | `ACTIONS.<a>.PHASES` / `SETS` / `steps` | `actions.<a>.steps` (top-level = phases) |
 | `parallel: true` | `parallel: true` |
-| `execute_if: {VAR: value}` | `when: "VAR == 'value'"` |
+| `execute_if` | Dropped from required legacy migration scope by user decision |
 | `only_variants` / `omit_variants` | `when: "variant in [...]"` / `not in` |
 | `variant_overrides` / `*_cx` | `when` blocks, `ci.ptk.yml` overlay |
 | `game_stopper: false` | `continue_on_error: true` |
@@ -540,7 +540,7 @@ so `ptk build --help` documents the project's real options.
 | `-bo name=value` | variant feature override `--feature FEATURE=value` / `--set vh.FEATURE=value` (alias `-bo` kept) |
 | `-mp name=value` | declared `params` / `--set` (alias `-mp` kept) |
 | `shell_run_command`, `custom_script` | `run:` |
-| `ENV_ISOLATION` | `environment:` |
+| `ENV_ISOLATION` | Deferred from required legacy migration scope by user decision |
 | `$VAR{...}` / env replacement | `${vars.x}` / `${env:X}` |
 | `variant_matrix` + `variants` | product line with enum features + aliases |
 
@@ -678,3 +678,21 @@ Former top-level commands remain hidden compatibility aliases.
 - Generator format restrictions and cooperative Python timeouts are documented.
 - Package name/index availability and publishing a release remain delivery decisions.
   Code is delivered on `ChatGPT_version`; it has not been merged into the base branch.
+
+## Scope clarification: legacy migration and filters
+
+- `execute_if` support is no longer required. Legacy `ENV_ISOLATION` migration is
+  deferred. Their absence is not an unfinished release requirement. Existing
+  runtime environment configuration is separate from migration compatibility.
+- Requested explicit filters: `only_variants` and `omit_variants` at both action
+  and step level; `only_cx` at both levels; `only_mantainers` at action level
+  (the existing equivalent is `audience: maintainer`). Direct filter field support
+  is a follow-up requirement, not yet implemented by this scope clarification.
+  The converter currently handles only/omit variants on steps through `when`.
+- The exact meaning of CX is not established by the repository. Confirm it before
+  implementing `only_cx` or interpreting `DEFAULT_PARAMETERS_CX` / `*_cx`.
+- `variant_matrix`, `variant_overrides`, global defaults and the CX-suffixed names
+  were conceptual legacy mappings, not verified requirements backed by legacy
+  configuration fixtures. They need a user decision before being counted as work
+  required to finish this project. Current features already provide named variants,
+  inherited feature/data values, feature overrides and per-action parameter defaults.

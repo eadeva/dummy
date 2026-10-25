@@ -26,10 +26,15 @@ mappings, recursively. Commands may be strings or argv lists. The converter maps
 * Action-local ``DEFAULT_PARAMETERS`` scalar/list values to typed defaults.
 
 Already-current fields are retained and validated. Unsupported keys or conflicting
-old/new spellings stop conversion. In particular, translate ``execute_if`` manually:
-the old variable's environment/feature/configuration scope is ambiguous.
-``variant_matrix``, ``variant_overrides``, ``*_cx``, global default parameters and
-``ENV_ISOLATION`` need manual conversion using the mapping in ``docs/PLAN.md``.
+old/new spellings stop conversion. ``execute_if`` migration has been dropped from
+the required scope; legacy ``ENV_ISOLATION`` migration is deferred. If an input
+still contains these fields, remove or translate them explicitly before conversion;
+the converter will not silently discard conditions or environment settings.
+
+The meanings and need for ``variant_matrix``, ``variant_overrides``, ``*_cx`` and
+global defaults have not been confirmed against actual legacy configurations.
+They are not currently automatic migration features. See the scope clarification
+in ``docs/PLAN.md``; in particular, the meaning of CX requires confirmation.
 There is no claim of automatic compatibility with every historical config dialect.
 Do not put literal credentials in configuration files or migration previews.
 
