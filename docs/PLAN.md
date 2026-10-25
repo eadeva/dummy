@@ -696,3 +696,25 @@ Former top-level commands remain hidden compatibility aliases.
   configuration fixtures. They need a user decision before being counted as work
   required to finish this project. Current features already provide named variants,
   inherited feature/data values, feature overrides and per-action parameter defaults.
+
+## Confirmed scope after CX clarification (supersedes legacy requirements)
+
+- CX means execution in GitHub Actions/workflows. Prefer a `cx.ptk.yml` overlay
+  for workflow-specific settings; a separate `only_cx` filter is not required
+  unless an individual-step use case emerges. The current loader still uses
+  `ci.ptk.yml`; adopting the requested filename remains an implementation change.
+- No legacy compatibility or migration is required for completion. Existing
+  optional migration support does not create obligations to cover old dialects.
+- Drop `variant_matrix` as a separate deliverable. Explicit named variants,
+  inheritance, feature overrides and multi-variant runs cover the accepted need;
+  automatic Cartesian-product expansion is not required.
+- Add shared action-parameter defaults. `vars` already supplies reusable values,
+  but does not automatically declare parameters or apply defaults to all actions.
+  Shared defaults must apply only to parameters explicitly declared by an action,
+  with action-specific defaults taking precedence.
+- Discussed tool-file organization: `tools.ptk.yml` for shared tool definitions
+  and `<action>.tools.ptk.yml` for action requirements/additional definitions.
+  These names currently work as explicitly included fragments, not automatically
+  discovered files. Tool definitions and requirements are separate: declaring a
+  tool does not require it for every action. A shared requirement list for tools
+  needed by every action would be an additional model feature.
