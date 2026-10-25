@@ -48,9 +48,11 @@ def test_seven_generators_and_language_values(tmp_path):
     assert ".. code-block:: json" in (tmp_path / "variant.rst").read_text()
 
 
-@pytest.mark.skipif(not shutil.which("cmake"), reason="cmake not installed")
 def test_cmake_consumes_generated_values(tmp_path):
     cmake = shutil.which("cmake")
+    assert cmake is not None, (
+        "CMake is a dev dependency; run uv sync, then uv run ptk test"
+    )
     version = subprocess.run(
         [cmake, "--version"],
         check=False,

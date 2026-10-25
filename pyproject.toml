@@ -27,6 +27,7 @@ ptk = "ptk.drivers.cli.main:main"
 dev = [
   "pytest>=8",
   "ruff>=0.6",
+  "cmake==3.30.9",  # Native integration tests use this project's executable.
 ]
 
 docs = ["sphinx==9.1.0"]

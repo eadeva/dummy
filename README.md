@@ -291,3 +291,7 @@ An installed `ptk` can run these directly. Actions use this checkout's Python
 project and its `dev`/`docs` dependency groups, rather than the global tool's
 Python environment. Git version discovery falls back to `pyproject.toml` when
 release tags are unavailable. The default action is `test`.
+
+The `dev` group includes pinned CMake for generator integration tests. uv selects
+the project environment's CMake ahead of host PATH entries, so the test action
+does not require a separate machine-wide CMake installation.

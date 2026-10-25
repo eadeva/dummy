@@ -26,6 +26,11 @@ The action's Python runtime always selects this checkout's uv project.
 ``docs``, installing missing dependencies as needed. Groups remain defined in
 ``pyproject.toml`` rather than duplicated in PTK tool definitions.
 
+The ``dev`` group includes pinned CMake for the native generator integration
+test. uv puts the project's executables first on PATH, so a host CMake launcher
+from another Python installation cannot shadow this dependency. CMake is
+installed inside the project environment; no machine-wide installation is needed.
+
 ``ptk test -- tests/test_init.py -q`` selects tests and forwards pytest options.
 JUnit results go to ``_reports/default/test/pytest/pytest.xml`` and are included
 in PTK's report, even when pytest fails. HTML docs go to
@@ -49,8 +54,9 @@ Continuous integration
 ----------------------
 
 GitHub Actions runs the test suite on Ubuntu and Windows with Python 3.12, 3.13
-and 3.14. CI checks that CMake is available so the generated CMake integration
-test cannot silently skip. CI calls ``ptk test``, ``ptk check`` and ``ptk docs`` for the same workflows used locally. Existing
+and 3.14. CI checks the project's CMake with ``uv run cmake --version``. The
+generated CMake integration test requires that dependency and cannot silently
+skip. CI calls ``ptk test``, ``ptk check`` and ``ptk docs`` for the same workflows used locally. Existing
 POSIX-only tests remain skipped on Windows; the quickstart integration tests
 exercise actual Python processes and report generation on both platforms.
 A green Linux run alone does not establish that Windows works.
