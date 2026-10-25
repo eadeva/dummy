@@ -56,16 +56,13 @@ def from_plain(value: Any, loc: Location | None = None) -> Node:
 
 
 def merge(base: Node | None, overlay: Node, _path: Path = ()) -> Node:
-    if (
-        base is not None
-        and base.is_map
-        and overlay.value is True
-        and len(_path) >= 2
-        and _path[-2] == "requires_tools"
-    ):
-        return _strip_ops(base)
     if base is None or overlay.op == "replace":
         return _strip_ops(overlay)
+    requirement = (len(_path) == 2 and _path[0] == "requires_tools") or (
+        len(_path) == 4 and _path[0] == "actions" and _path[2] == "requires_tools"
+    )
+    if base.is_map and overlay.value is True and requirement:
+        return _strip_ops(base)
     if overlay.op == "append":
         if base.is_list and overlay.is_list:
             return Node(

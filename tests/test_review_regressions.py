@@ -176,3 +176,11 @@ def test_isolated_action_environment_does_not_inherit_secrets(write, load, monke
     assert "UNRELATED_TOKEN" not in prepared.plan.base_env
     assert prepared.plan.base_env["KEPT"] == "yes"
     assert "/other-repo/bin" not in prepared.plan.base_env["PATH"]
+
+
+def test_requirement_merge_does_not_change_arbitrary_variable_maps():
+    from ptk.domain.config.tree import from_plain, merge, to_plain
+
+    before = from_plain({"vars": {"requires_tools": {"x": {"setting": 1}}}})
+    after = from_plain({"vars": {"requires_tools": {"x": True}}})
+    assert to_plain(merge(before, after))["vars"]["requires_tools"]["x"] is True
