@@ -10,6 +10,7 @@ from __future__ import annotations
 import copy
 import json
 import sys
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +21,7 @@ from rich.table import Table
 
 from ... import __version__
 from ...application.use_cases.help import HelpCommand, HelpOption
+from ...application.use_cases.init import InitResult
 from ...domain.errors import ConfigError, PtkError
 from .access import AccessGroup
 from .actions import (
@@ -33,6 +35,7 @@ from .actions import (
 from .state import console, err_console, guarded, state_of
 from .versioning import version_group
 from .workspace import WorkspaceGroup
+from .workspace_commands import RESERVED as WORKSPACE_COMMANDS
 
 _state = state_of
 
@@ -1062,11 +1065,19 @@ def help_command(ctx: click.Context, output: Path | None, no_open: bool) -> None
 @click.argument(
     "directory", default=".", type=click.Path(path_type=Path, file_okay=False)
 )
-@click.option("--name", help="Project name (default: destination directory name).")
 @click.option(
-    "--config-dir", help="Repository-relative configuration directory (default: ptk)."
+    "--name", help="Single-project name (default: destination directory name)."
 )
-@click.option("--yes", "-y", is_flag=True, help="Use defaults without prompting.")
+@click.option(
+    "--config-dir",
+    help="Required configuration folder, relative to each repository root; prompted on a terminal.",
+)
+@click.option(
+    "--yes",
+    "-y",
+    is_flag=True,
+    help="Do not prompt; supply --config-dir when initializing.",
+)
 @click.option("--dry-run", is_flag=True, help="Preview files without writing them.")
 @click.pass_context
 @guarded
@@ -1078,38 +1089,85 @@ def init_command(
     config_dir: str | None,
     yes: bool,
 ) -> None:
-    """Create a runnable project without overwriting existing configuration."""
+    """Initialize unconfigured VMR members, or create one project at DIRECTORY."""
     state = _state(ctx)
     if state.config is not None or state.overrides:
         raise click.UsageError(
             "init uses DIRECTORY; do not combine it with --config or --set"
         )
     target = directory.resolve()
-    if config_dir is None:
-        config_dir = (
-            click.prompt(
-                "PTK configuration directory (relative to repository root)",
-                default="ptk",
-            )
-            if not yes and sys.stdin.isatty()
-            else "ptk"
+    workspace = None
+    if ctx.get_parameter_source("directory") != click.core.ParameterSource.COMMANDLINE:
+        # A broken parent config must not prevent creating a new child project.
+        # An existing entry in the target itself remains protected by preflight.
+        with suppress(ConfigError):
+            workspace = state.app.workspace.root(target)
+    members = state.app.workspace.initialization_members(workspace) if workspace else []
+    if workspace and name is not None:
+        raise click.UsageError(
+            "--name requires an explicit DIRECTORY when initializing in a VMR"
         )
+    pending = any(member.skip_reason is None for member in members)
+    if config_dir is None and (workspace is None or pending):
+        if yes or not sys.stdin.isatty():
+            raise click.UsageError(
+                "Supply --config-dir PATH; the configuration folder is required "
+                "and is relative to each repository root."
+            )
+        config_dir = click.prompt(
+            "PTK configuration directory (relative to each repository root)"
+        )
+    if workspace is not None:
+        results = (
+            state.app.init_project.execute_workspace(
+                workspace,
+                members,
+                config_path=config_dir,
+                dry_run=dry_run,
+                reserved=WORKSPACE_COMMANDS | {"init"},
+            )
+            if pending
+            else {}
+        )
+        for member in members:
+            label = member.root.relative_to(workspace).as_posix()
+            if member.skip_reason:
+                console.print(f"[{label}] skipped: {member.skip_reason}", markup=False)
+            else:
+                console.print(f"[{label}]", markup=False)
+                _show_init_result(member.root, results[member.root])
+        console.print(
+            f"{'Would initialize' if dry_run else 'Initialized'} {len(results)} repositories; "
+            f"skipped {len(members) - len(results)}."
+        )
+        if not dry_run and results:
+            console.print(
+                "Next: run 'ptk repos', then 'ptk ALIAS setup config validate' and 'ptk ALIAS hello'."
+            )
+        return
     result = state.app.init_project.execute(
         target, name, config_path=config_dir, dry_run=dry_run
     )
-    for file, content in result.files.items():
-        console.print(
-            f"{'would create' if dry_run else 'created'} {target / file}", markup=False
-        )
-        if dry_run:
-            console.print(content, markup=False, highlight=False)
-    if result.kept_gitignore:
-        console.print(
-            "Kept existing .gitignore content and appended missing PTK ignore rules."
-        )
+    _show_init_result(target, result)
     if not dry_run:
         console.print(
             "Next: change to the project directory, then run 'ptk setup config validate', 'ptk hello' and 'ptk build'."
+        )
+
+
+def _show_init_result(target: Path, result: InitResult) -> None:
+    for file, content in result.files.items():
+        console.print(
+            f"{'would create' if result.dry_run else 'created'} {target / file}",
+            markup=False,
+        )
+        if result.dry_run:
+            console.print(content, markup=False, highlight=False)
+    if result.kept_gitignore:
+        console.print(
+            "Would keep existing .gitignore content and append missing PTK ignore rules."
+            if result.dry_run
+            else "Kept existing .gitignore content and appended missing PTK ignore rules."
         )
 
 

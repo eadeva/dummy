@@ -10,16 +10,18 @@ Create your own project
 
 From the installed CLI, preview and initialize a new directory::
 
-   ptk setup init my-project --name "My project" --dry-run
-   ptk setup init my-project --name "My project"
+   ptk setup init my-project --name "My project" --config-dir config/ptk --dry-run
+   ptk setup init my-project --name "My project" --config-dir config/ptk
    cd my-project
    ptk setup config validate
    ptk hello --message "It works"
    ptk build -V release
 
-The terminal wizard asks where configuration files should live (default ``ptk``).
-Use ``--config-dir config/ptk --yes`` for an unattended setup; redirected input
-also uses the default unless ``--config-dir`` is supplied. The root
+The configuration folder must be supplied by the user. Omit ``--config-dir`` on
+a terminal to enter it at the prompt; there is no default. Scripts, redirected
+input and ``--yes`` require ``--config-dir PATH``. The path is relative to the
+repository root, including when the same choice is applied to multiple VMR
+repositories. The root
 ``.main.ptk.yml`` contains only repository metadata and the project include.
 The chosen directory contains ``project.ptk.yml`` as its include index, plus:
 
@@ -50,7 +52,10 @@ rules are appended. The project name defaults to the destination directory name.
 The command works without an existing project, including inside a directory
 whose parent contains a ptk project. ``DIRECTORY`` is the initialization target;
 do not combine this command with global ``--config`` or ``--set`` options.
-Bare ``ptk setup init`` initializes the current directory; ``ptk init`` is an alias.
+Outside a VMR, ``ptk setup init`` initializes the current directory. In a VMR,
+it initializes all checked-out members without a root ``.main.ptk.yml``, skips
+configured repositories, and asks for the common config folder once.
+Use an explicit DIRECTORY to initialize only one project. ``ptk init`` is an alias.
 
 Run the repository example
 --------------------------

@@ -101,8 +101,9 @@ def build_commands(root, entries):
 
     setup = click.RichGroup(
         "setup",
-        help="Shared credentials, validation and diagnostics. Install tools under a repository.",
+        help="Initialize missing configs; shared credentials, validation and diagnostics. Install tools under a repository.",
     )
+    setup.add_command(originals["setup"].commands["init"])
     config = click.RichGroup(
         "config", help="Inspect and validate all repository configurations."
     )

@@ -31,7 +31,7 @@ class RepositoryGroup(ProjectGroup):
 
 class WorkspaceGroup(ProjectGroup):
     def resolve_command(self, ctx, args):
-        # Scaffolding uses its destination, not the caller's project or workspace.
+        # Init resolves its scope itself, including members without PTK config.
         if args[:2] == ["setup", "init"] or args[:1] == ["init"]:
             ctx.meta["vmr_repositories"] = None
         return super().resolve_command(ctx, args)

@@ -11,7 +11,7 @@ install tools or change configuration. Project actions remain top-level commands
    * - Command
      - Purpose
    * - ``ptk setup init [DIRECTORY]``
-     - Create a runnable project without overwriting existing files
+     - Initialize missing VMR configs, or create one project at DIRECTORY
    * - ``ptk setup config show|validate|schema``
      - Inspect, validate and export project configuration
    * - ``ptk setup configs sync|check``
@@ -136,7 +136,7 @@ Shared VMR commands
 -------------------
 
 Alongside repository aliases, the VMR root exposes ``repos``, ``help``,
-``setup config show/validate/schema``, ``setup doctor``, ``setup creds``,
+``setup init``, ``setup config show/validate/schema``, ``setup doctor``, ``setup creds``,
 ``variant list/check`` and ``report list/summary``. ``report list --history``
 includes retained historical runs. Configuration and variant output is labelled
 by repository; projects without variants are skipped. Doctor checks the host
@@ -176,8 +176,47 @@ Version commands
 ignored snapshot. There are no bump/set/tag commands. In VMR mode use
 ``ptk ALIAS version ...``. See :doc:`versioning` for sources and generators.
 
-``ptk setup init`` asks for a configuration directory on a terminal. Use
-``--config-dir PATH --yes`` for scripts. Root metadata stays minimal; initial
+``ptk setup init`` requires a configuration directory supplied by the user.
+Enter it at the terminal prompt or pass ``--config-dir PATH``; there is no
+default. Scripts and ``--yes`` require the option. The path is relative to each
+repository root. Root metadata stays minimal; initial
 configuration fragments live in topic folders under PATH. ``actions/hello.ptk.yml``
 and ``actions/build.ptk.yml`` provide separate runnable examples. Optional fields
 are documented in comments. Existing files are never overwritten.
+
+In VMR mode, omit DIRECTORY to initialize **all checked-out members without a
+root .main.ptk.yml**. This works before any member has PTK configuration and from
+a git-repo member's subdirectory. Existing entry files are skipped, even when
+their configuration is invalid, and the workspace root is not scaffolded.
+Running the command again skips the newly configured repositories::
+
+   ptk setup init --config-dir config/ptk --dry-run
+   ptk setup init --config-dir config/ptk --yes
+   ptk repos
+   ptk firmware setup config validate
+
+The configuration directory is prompted once and applied relative to each new
+repository root: ``config/ptk`` becomes ``<repo>/config/ptk`` in every new member,
+regardless of the invocation directory. When all members are configured, the
+command reports skips without prompting. Generated aliases avoid existing aliases and workspace command names;
+duplicate folder names use relative paths and numeric suffixes as needed.
+Output identifies each initialized or skipped member and prints a final count.
+``--name`` is available only with an explicit single-project DIRECTORY in VMR mode.
+
+Git-repo initialization uses every path in ``.repo/project.list``, including
+unconfigured members. Entries not checked out are reported and skipped without
+creating checkout directories. Manual workspaces use their explicit ``members``
+list, or direct child directories with ``.git`` or ``.main.ptk.yml``; unrelated
+folders such as build outputs are not initialized. Discovery does not recurse.
+
+``--dry-run`` previews all new configurations without writing anything. All new
+members are preflighted before writing, so an existing scaffold fragment blocks
+the batch without overwriting it or partly initializing other members. A later
+write failure can leave earlier members initialized; rerunning skips those members.
+Existing ``.gitignore`` content is preserved, with only missing rules appended.
+
+An explicit DIRECTORY always selects one project, even from inside a VMR::
+
+   ptk setup init path/to/new-repository --name firmware --config-dir config/ptk --yes
+
+Outside VMR mode, omitting DIRECTORY continues to initialize the current directory.

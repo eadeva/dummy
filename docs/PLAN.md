@@ -749,6 +749,16 @@ Former top-level commands remain hidden compatibility aliases.
 - C header, CMake, MSBuild, Python and JSON generation preserves unchanged mtimes.
 - Init asks for a config directory, emits minimal root metadata and complete
   runnable fragments, preflights existing files and adds missing ignore rules.
+- The config folder is required user input with no implicit default: prompt on
+  a terminal or require `--config-dir PATH` for scripts/`--yes`. Interpret it
+  relative to each repository root and apply one choice across new VMR members.
+- In a VMR, `setup init` without DIRECTORY uses the full member list to initialize
+  checked-out repositories without a root `.main.ptk.yml`. Existing entries and
+  missing checkouts are skipped; the workspace root stays untouched. Prompt once,
+  preflight all new members, avoid alias collisions, and report per-member results.
+  Dry runs write nothing and repeat runs skip configured members. Explicit DIRECTORY
+  keeps single-project behavior; manual automatic selection requires a direct
+  child Git repository or PTK entry, so build folders are not scaffolded.
 - Snapshots are manually retained/cleaned; Git uses reachable tags and rejects
   shallow history by default. Discovery commands must be authored read-only.
 

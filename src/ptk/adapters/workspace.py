@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from ..application.ports import WorkspaceMember
 from ..domain.config.tree import Node, get
 from ..domain.errors import PtkError
 from .config.yaml_loader import YamlConfigReader
@@ -37,6 +38,7 @@ class WorkspaceDiscovery:
         self._metadata: dict[Path, Node] = {}
         self._roots: dict[Path, Path | None] = {}
         self._members: dict[Path, dict[str, Path]] = {}
+        self._paths: dict[Path, tuple[Path, ...]] = {}
 
     def metadata(self, main: Path) -> Node:
         if main not in self._metadata:
@@ -95,7 +97,36 @@ class WorkspaceDiscovery:
             )
         return path
 
-    def _read_repositories(self, root: Path) -> dict[str, Path]:
+    def member_paths(self, root: Path) -> tuple[Path, ...]:
+        """List all bounded members, including repositories without PTK yet."""
+        root = root.resolve()
+        if root not in self._paths:
+            self._paths[root] = self._read_member_paths(root)
+        return self._paths[root]
+
+    def initialization_members(self, root: Path) -> list[WorkspaceMember]:
+        result = []
+        for directory in self.member_paths(root):
+            main = directory / ".main.ptk.yml"
+            if not directory.is_dir():
+                result.append(WorkspaceMember(directory, skip_reason="not checked out"))
+            elif main.exists() or main.is_symlink():
+                # Even invalid, partial or symlinked entries are existing config.
+                # Read only metadata to reserve known aliases; never load includes.
+                alias = None
+                try:
+                    node = get(self.metadata(main), ("repository", "alias"))
+                    alias = node.value if node is not None else None
+                except (PtkError, OSError, UnicodeError):
+                    pass
+                result.append(
+                    WorkspaceMember(directory, alias, "PTK config already exists")
+                )
+            else:
+                result.append(WorkspaceMember(directory))
+        return result
+
+    def _read_member_paths(self, root: Path) -> tuple[Path, ...]:
         repo = root / ".repo"
         main = root / ".main.ptk.yml"
         if repo.is_dir():
@@ -126,11 +157,19 @@ class WorkspaceDiscovery:
                     path
                     for path in root.iterdir()
                     if path.is_dir()
+                    and path.name not in {".git", ".repo", ".ptk"}
                     and not path.is_symlink()
                     and not path.is_junction()
+                    and any(
+                        (path / marker).exists() or (path / marker).is_symlink()
+                        for marker in (".git", ".main.ptk.yml")
+                    )
                 ]
+        return tuple(sorted(set(candidates)))
+
+    def _read_repositories(self, root: Path) -> dict[str, Path]:
         result = {}
-        for directory in sorted(set(candidates)):
+        for directory in self.member_paths(root):
             main = directory / ".main.ptk.yml"
             if not main.is_file():
                 continue

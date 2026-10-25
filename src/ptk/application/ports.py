@@ -220,6 +220,13 @@ class ProjectScaffold(Protocol):
         """
 
 
+@dataclass(frozen=True)
+class WorkspaceMember:
+    root: Path
+    alias: str | None = None
+    skip_reason: str | None = None
+
+
 class VersionDiscovery(Protocol):
     """External version sources and atomic generated snapshot storage."""
 

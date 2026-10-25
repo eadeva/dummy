@@ -60,7 +60,9 @@ def test_missing_index_does_not_fall_back_to_scanning(tmp_path, monkeypatch):
     assert result.exit_code != 0
     assert "missing VMR project index" in result.output and "repo sync" in result.output
     # Init is independent of existing workspace discovery and uses its target.
-    result = CliRunner().invoke(cli, ["setup", "init", "new-member", "--yes"])
+    result = CliRunner().invoke(
+        cli, ["setup", "init", "new-member", "--config-dir", "ptk", "--yes"]
+    )
     assert result.exit_code == 0, result.output
     assert (tmp_path / "new-member/.main.ptk.yml").is_file()
 

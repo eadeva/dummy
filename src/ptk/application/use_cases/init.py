@@ -1,13 +1,14 @@
 """Create a runnable project with a minimal entry file and organized config."""
 
 import re
+from collections.abc import Collection
 from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
 
 from ...domain.errors import PtkError
-from ..ports import ProjectScaffold
+from ..ports import ProjectScaffold, WorkspaceMember
 
 IGNORE = """# ptk generated workspace and local overrides
 .ptk/
@@ -27,12 +28,25 @@ class InitResult:
     dry_run: bool
 
 
+def repository_alias(name: str) -> str:
+    alias = re.sub(r"[^a-z0-9-]+", "-", name.lower()).strip("-")
+    if not alias or not alias[0].isalpha():
+        alias = "repo-" + (alias or "project")
+    return alias
+
+
 class InitProject:
     def __init__(self, scaffold: ProjectScaffold):
         self._scaffold = scaffold
 
     def execute(
-        self, target: Path, name: str | None = None, *, config_path="ptk", dry_run=False
+        self,
+        target: Path,
+        name: str | None = None,
+        *,
+        config_path: str,
+        dry_run=False,
+        alias: str | None = None,
     ):
         name = target.resolve().name if name is None else name.strip()
         if not name or any(ord(char) < 32 for char in name):
@@ -55,9 +69,7 @@ class InitProject:
             raise PtkError(
                 "configuration directory cannot be a generated or Git metadata directory"
             )
-        alias = re.sub(r"[^a-z0-9-]+", "-", name.lower()).strip("-")
-        if not alias or not alias[0].isalpha():
-            alias = "repo-" + (alias or "project")
+        alias = repository_alias(name) if alias is None else alias
 
         def dump(value):
             return yaml.safe_dump(value, sort_keys=False, allow_unicode=True)
@@ -299,3 +311,43 @@ maintainers: []
         )
         kept = self._scaffold.create(target, files, dry_run=dry_run)
         return InitResult(files, kept, dry_run)
+
+    def execute_workspace(
+        self,
+        root: Path,
+        members: list[WorkspaceMember],
+        *,
+        config_path: str,
+        dry_run=False,
+        reserved: Collection[str] = (),
+    ) -> dict[Path, InitResult]:
+        """Preflight all new repositories and keep existing configurations intact."""
+        used = set(reserved) | {member.alias for member in members if member.alias}
+        plans = {}
+        for member in members:
+            if member.skip_reason is not None:
+                continue
+            alias = repository_alias(member.root.name)
+            if alias in used:
+                alias = repository_alias(member.root.relative_to(root).as_posix())
+            base, suffix = alias, 2
+            while alias in used:
+                alias = f"{base}-{suffix}"
+                suffix += 1
+            used.add(alias)
+            plans[member.root] = self.execute(
+                member.root, config_path=config_path, dry_run=True, alias=alias
+            )
+        if dry_run:
+            return plans
+        results = {}
+        for directory, plan in plans.items():
+            try:
+                kept = self._scaffold.create(directory, plan.files, dry_run=False)
+            except PtkError as exc:
+                raise PtkError(
+                    f"{exc}\nInitialized {len(results)} repositories before this error; "
+                    "rerun setup init to initialize the remaining repositories."
+                ) from None
+            results[directory] = InitResult(plan.files, kept, False)
+        return results

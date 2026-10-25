@@ -23,7 +23,7 @@ description: Create or change ptk YAML configuration, includes, layers and subst
 
 9. Avoid unknown keys, unresolved references, recursive includes and unsupported `plugins` expectations.
 
-10. For a new project, preview `ptk setup init DIRECTORY --dry-run`, then run `ptk setup init DIRECTORY`. Existing configuration is refused and existing .gitignore content is preserved with missing ignore rules appended. Run `ptk setup config validate` and both `ptk hello` and `ptk build` in the new directory. The starter groups fragments by topic and loads `actions/*.ptk.yml`; retain separate action files and commented examples.
+10. For a new project, obtain the user's config-folder choice, preview `ptk setup init DIRECTORY --config-dir PATH --dry-run`, then run without `--dry-run`. The path is required and relative to the repository root; there is no default. On a terminal, omit the option to prompt. In VMR mode, omit DIRECTORY to initialize all checked-out members lacking `.main.ptk.yml`; configured repositories are skipped. Apply the one folder choice relative to each new member's root. Aliases are made unique, and existing .gitignore content is preserved with missing rules appended. Preflight conflicts in new members stop the batch before writes. Validate new configs and run their hello/build actions, using repository aliases in a VMR. Retain separate action files and commented examples under the starter's topic folders.
 
 11. Use `param_defaults` for shared defaults on explicitly declared parameters; action defaults win. Use `cx.ptk.yml` for workflows and preserve per-tool requirement inheritance.
 

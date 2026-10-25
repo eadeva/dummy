@@ -76,6 +76,13 @@ and credentials without timing-sensitive performance thresholds. A subsequent
 CLI invocation must see changes to the member index. Symlink tests skip only
 when the platform cannot create symlinks; ``gitdir:`` coverage runs everywhere.
 
+``tests/test_workspace_init.py`` exercises empty and mixed VMRs, invocation from
+member subdirectories, manual member lists, missing checkouts, alias collisions,
+single-directory targeting, required config-folder input and one-time prompting.
+Filesystem snapshots verify
+that previews, repeated initialization and preflight failures preserve existing
+configuration, while generated member actions run through the real CLI.
+
 Documentation and skills
 ------------------------
 

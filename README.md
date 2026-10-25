@@ -19,8 +19,8 @@ uv run ruff check && uv run ruff format --check   # ruff default rules
 ## Create a project
 
 ```bash
-ptk setup init my-project --dry-run
-ptk setup init my-project
+ptk setup init my-project --config-dir config/ptk --dry-run
+ptk setup init my-project --config-dir config/ptk
 cd my-project
 ptk hello
 ```
@@ -267,13 +267,20 @@ these are repository files, not automatically installed by the PTK wheel.
 
 ## Version discovery and initialization
 
-`ptk setup init` asks for the configuration directory (default `ptk`); use
-`--config-dir config/ptk --yes` in scripts. It creates a minimal root entry and
+`ptk setup init` requires a configuration folder, supplied at the terminal prompt
+or with `--config-dir config/ptk`. The path is relative to the repository root;
+there is no implicit default. Scripts must supply `--config-dir`. It creates a minimal root entry and
 two runnable actions in `actions/hello.ptk.yml` and `actions/build.ptk.yml`.
 Variants, tools, versioning, environment, credentials and shared settings have
 separate folders with commented configuration examples. `project.ptk.yml` includes
 them; the conventional CX and maintainer entry files remain at the config root.
 Run `ptk hello` for messages and `ptk build` for generated version files. Existing files are protected; missing ignore rules are appended.
+
+In a VMR, `ptk setup init` initializes every checked-out member without a root
+`.main.ptk.yml`, skips configured repositories, and leaves the workspace root alone.
+The config folder is chosen once and applied relative to each new member's root.
+Preview with `ptk setup init --config-dir config/ptk --dry-run`; repeat the command safely as more repositories arrive.
+Use `ptk setup init DIRECTORY` to initialize just one project.
 
 Versions can come from Git tags, manifests/text files, environment variables,
 commands or explicit values. Components inherit unless given a source. Every

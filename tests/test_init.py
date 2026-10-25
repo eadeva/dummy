@@ -21,7 +21,9 @@ def test_use_case_renders_valid_configuration(tmp_path):
     import yaml
 
     files = MemoryScaffold()
-    result = InitProject(files).execute(tmp_path, 'My "project": #1', dry_run=True)
+    result = InitProject(files).execute(
+        tmp_path, 'My "project": #1', config_path="ptk", dry_run=True
+    )
     entry = yaml.safe_load(result.files[".main.ptk.yml"])
     assert set(entry) == {"repository", "include"}
     config = yaml.safe_load(result.files["ptk/project.ptk.yml"])
@@ -34,7 +36,7 @@ def test_use_case_renders_valid_configuration(tmp_path):
 def test_invalid_name_has_no_side_effects(tmp_path, name):
     scaffold = MemoryScaffold()
     with pytest.raises(PtkError, match="project name"):
-        InitProject(scaffold).execute(tmp_path, name)
+        InitProject(scaffold).execute(tmp_path, name, config_path="ptk")
     assert not hasattr(scaffold, "files")
 
 
@@ -42,7 +44,11 @@ def test_new_project_runs(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
     target = tmp_path / "new project"
-    result = runner.invoke(cli, ["setup", "init", str(target)], catch_exceptions=False)
+    result = runner.invoke(
+        cli,
+        ["setup", "init", str(target), "--config-dir", "ptk"],
+        catch_exceptions=False,
+    )
     assert result.exit_code == 0, result.output
     assert "local.ptk.yml" in (target / ".gitignore").read_text()
     base = ["-c", str(target / ".main.ptk.yml"), "--no-ci"]
@@ -56,7 +62,9 @@ def test_new_project_runs(tmp_path, monkeypatch):
 
 def test_dry_run_does_not_create_directory(tmp_path):
     target = tmp_path / "preview"
-    result = CliRunner().invoke(cli, ["setup", "init", str(target), "--dry-run"])
+    result = CliRunner().invoke(
+        cli, ["setup", "init", str(target), "--config-dir", "ptk", "--dry-run"]
+    )
     assert result.exit_code == 0, result.output
     assert "schema_version: 1" in result.output
     assert not target.exists()
@@ -66,7 +74,9 @@ def test_existing_config_is_preserved(tmp_path):
     main = tmp_path / ".main.ptk.yml"
     main.write_text("unchanged")
     for args in ([], ["--dry-run"]):
-        result = CliRunner().invoke(cli, ["setup", "init", str(tmp_path), *args])
+        result = CliRunner().invoke(
+            cli, ["setup", "init", str(tmp_path), "--config-dir", "ptk", *args]
+        )
         assert result.exit_code == 2
         assert "refusing to overwrite" in result.output
         assert main.read_text() == "unchanged"
@@ -76,7 +86,7 @@ def test_existing_config_is_preserved(tmp_path):
 def test_existing_gitignore_is_preserved_and_alias_works(tmp_path):
     ignore = tmp_path / ".gitignore"
     ignore.write_text("my-own-rule\n")
-    result = CliRunner().invoke(cli, ["init", str(tmp_path)])
+    result = CliRunner().invoke(cli, ["init", str(tmp_path), "--config-dir", "ptk"])
     assert result.exit_code == 0, result.output
     assert "Kept existing .gitignore" in result.output
     assert ignore.read_text().startswith("my-own-rule\n")
@@ -88,7 +98,9 @@ def test_init_does_not_use_parent_project(tmp_path, monkeypatch):
     child = tmp_path / "child"
     child.mkdir()
     monkeypatch.chdir(child)
-    result = CliRunner().invoke(cli, ["setup", "init"], catch_exceptions=False)
+    result = CliRunner().invoke(
+        cli, ["setup", "init", "--config-dir", "ptk"], catch_exceptions=False
+    )
     assert result.exit_code == 0, result.output
     assert (child / ".main.ptk.yml").is_file()
 
@@ -168,7 +180,9 @@ def test_init_preflights_all_files(tmp_path):
     folder = tmp_path / "ptk/tools"
     folder.mkdir(parents=True)
     (folder / "tools.ptk.yml").write_text("keep me")
-    result = CliRunner().invoke(cli, ["setup", "init", str(tmp_path)])
+    result = CliRunner().invoke(
+        cli, ["setup", "init", str(tmp_path), "--config-dir", "ptk"]
+    )
     assert result.exit_code == 2
     assert not (tmp_path / ".main.ptk.yml").exists()
     assert (folder / "tools.ptk.yml").read_text() == "keep me"
@@ -178,7 +192,9 @@ def test_scaffold_nested_includes_variants_and_ci(tmp_path):
     from ptk.application.use_cases.variants import VariantService
     from ptk.bootstrap import create_app
 
-    result = CliRunner().invoke(cli, ["setup", "init", str(tmp_path), "--yes"])
+    result = CliRunner().invoke(
+        cli, ["setup", "init", str(tmp_path), "--config-dir", "ptk", "--yes"]
+    )
     assert result.exit_code == 0, result.output
     for ci in (False, True):
         project = create_app().load_project.execute(
