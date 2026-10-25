@@ -7,6 +7,6 @@ actions:
     steps:
       - sphinx:
           python: {project: ., groups: [docs]}
-          run: [python, -m, sphinx, -W, --keep-going, -b, html, docs, docs/_build/html]
+          run: [python, -m, sphinx, -W, --keep-going, -b, html, docs, "${run.build_dir}/html"]
           passthrough: true
           timeout: 600
