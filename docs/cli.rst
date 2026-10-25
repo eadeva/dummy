@@ -26,6 +26,8 @@ install tools or change configuration. Project actions remain top-level commands
      - Diagnose the local installation and project
    * - ``ptk setup vscode tasks``
      - Generate editor tasks
+   * - ``ptk setup vscode`` / ``ptk setup vscode skills [--check]``
+     - Set up tasks and offline skills/docs, or manage the skills alone
    * - ``ptk variant list|show|explain|check``
      - Inspect the product line
    * - ``ptk report open|export``

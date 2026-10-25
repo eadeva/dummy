@@ -737,7 +737,7 @@ Former top-level commands remain hidden compatibility aliases.
   diagnostics, variant views/checks and report summaries. Tool installation and
   mutable project operations remain repository-qualified.
 - Added `ptk-vmr` and `ptk-plugin-development` skills with tested starter artifacts;
-  synchronized existing skills and documented checkout-based reuse.
+  synchronized existing skills; project-facing skills now ship with offline references.
 
 ## Version discovery and organized initialization (implemented)
 
@@ -772,10 +772,25 @@ Former top-level commands remain hidden compatibility aliases.
 
 ## PTK self-hosted development commands
 
-- Replaced repository starter actions with test/check/docs, one default variant,
+- Replaced repository starter actions with test/check/docs/package, one default variant,
   and no components; preserved topic-based configuration under config/ptk.
 - Python project runtimes accept explicit dependency groups, using pyproject.toml
   as the source for pytest/Ruff/Sphinx dependencies.
 - CI exercises the same PTK actions, with JUnit results and strict Sphinx builds.
 - Fixed the repository Git tag match and added package-metadata fallback for
   untagged, shallow and source-only checkouts.
+
+## Package preparation and portable editor resources
+
+- `ptk package` builds an sdist and a wheel from that sdist, validates metadata,
+  smoke-tests the installed wheel in a consumer project and produces HTML docs,
+  checksums and a manifest. Output stays local; no upload, tag or version bump.
+- The wheel ships eleven project-facing skills and allowlisted lightweight docs
+  and examples. Sphinx and release tooling remain development dependencies.
+  Full rendered HTML is a separate artifact; package metadata uses pyproject.toml.
+- `ptk setup vscode` generates tasks and installs offline skills under .github/skills
+  plus version-matched docs, examples and schema under .github/ptk. Tasks and skills
+  can be updated separately; `skills --check` performs a read-only drift check.
+- Generated resource hashes protect local edits and unrelated GitHub files during
+  upgrades. Maintainer skills for PTK development/docs stay in its source checkout.
+- CI prepares packages and tests the installed wheel on both Linux and Windows.

@@ -1,0 +1,36 @@
+Preparing an Artifactory release
+==================================
+
+Run ``uv run ptk package`` (or ``ptk package`` from this checkout). The action
+selects the uv ``release`` and ``docs`` dependency groups and creates::
+
+   _bin/default/package/
+     dist/ptk-VERSION-py3-none-any.whl
+     dist/ptk-VERSION.tar.gz
+     docs/ptk-VERSION-docs.zip
+     SHA256SUMS
+     manifest.json
+
+Nothing is uploaded, tagged or version-bumped. No Artifactory endpoint or
+credentials are needed. The version comes from ``project.version`` in
+``pyproject.toml``; preparing artifacts does not convert a development version
+into a final release.
+
+The action builds a source distribution and then the wheel from that archive,
+using the build dependencies supplied by uv. It checks package metadata with
+``twine check --strict``, installs the wheel without dependency downloads into
+a temporary target, and runs the installed CLI in a separate consumer project.
+That smoke test validates config creation and offline VS Code skill setup;
+runtime dependencies come from the action's environment. It builds Sphinx HTML
+with warnings treated as errors and computes SHA-256 checksums for the artifacts.
+
+Only a previous unmodified output owned by this action is replaced. Build or
+validation failures leave the previous successful artifacts intact. Additional
+or modified files in the output directory are preserved by refusing replacement.
+
+The wheel includes lightweight reference documentation, runnable example sources
+and eleven project authoring skills. It does not include rendered HTML or require
+Sphinx at runtime. The full HTML documentation is the separate docs ZIP, suitable
+for a documentation site or an Artifactory generic repository. Only the wheel and
+source archive in ``dist`` belong in an Artifactory Python package repository.
+See :doc:`editor` for installing version-matched offline skills and docs.

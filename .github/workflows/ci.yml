@@ -41,3 +41,17 @@ jobs:
       - run: uv sync
       - run: sudo apt-get update && sudo apt-get install -y xvfb xauth python3-tk
       - run: xvfb-run --auto-servernum uv run ptk test -- -q tests/test_variant_editor_gui.py
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.13.4'
+          python-version: '3.12'
+      - run: uv sync --group release --group docs
+      - run: uv run ptk package

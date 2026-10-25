@@ -6,7 +6,7 @@ description: Add or change ptk components, features, inherited variants, aliases
 
 # ptk-variant-model
 
-1. Read `src/ptk/domain/variants/model.py` and `rules.py`.
+1. Read [docs/configuration.rst](../../../docs/configuration.rst) and inspect the variant models in `ptk setup config schema`.
 
 2. Keep features UPPER_SNAKE_CASE; use component names for component declarations and generated COMPONENT_* names in conditions.
 
@@ -24,4 +24,4 @@ description: Add or change ptk components, features, inherited variants, aliases
 
 9. Use `ptk variant set/new --dry-run` before updating local overlays; `variant gui` exports a validated standalone copy. Run matrices with `--all-variants` or `-V a,b`.
 
-10. Use `variant.generate` for bundled formats or enabled generator plugins. See `docs/plugins.rst` for names, outputs and format restrictions.
+10. Use `variant.generate` for bundled formats or enabled generator plugins. See [docs/plugins.rst](../../../docs/plugins.rst) for names, outputs and format restrictions.

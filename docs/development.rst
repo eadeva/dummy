@@ -19,6 +19,7 @@ Run from the repository root; the project uses its own PTK configuration in
    uv run ptk test
    uv run ptk check
    uv run ptk docs
+   uv run ptk package
 
 An installed ``ptk`` can run the same actions without the ``uv run`` prefix.
 The action's Python runtime always selects this checkout's uv project.
@@ -89,6 +90,17 @@ Documentation and skills
 The configuration reference is generated from the validation models. Thirteen
 repository-local authoring skills are shipped under ``.claude/skills`` and
 included in the documentation. Tests check catalog completeness and source links.
+The wheel bundles eleven project-facing skills, reference docs and examples
+through the allowlist in ``src/ptk/authoring_bundle.py``. Keep the canonical skill
+files in ``.claude/skills``; do not maintain another copy for installed users.
+Consumer skill instructions must not depend on PTK's ``src`` or ``tests`` folders.
+
+``ptk package`` selects the release/docs groups, builds the wheel from an sdist,
+checks metadata, and smoke-tests an installed wheel in a separate project before
+staging artifacts. Linux and Windows packaging jobs run this same action. The
+wheel smoke test reuses installed runtime dependencies, with no dependency fetch
+or upload. See :doc:`packaging` for artifact layout and :doc:`editor` for offline
+resources and protected upgrades.
 
 Native Windows tests cover batch files, PowerShell, timeouts and cancellation.
 Chocolatey command construction and administrator checks use a fake runner on

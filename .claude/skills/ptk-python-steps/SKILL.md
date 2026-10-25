@@ -5,7 +5,7 @@ description: Choose and diagnose Python runtimes for ptk scripts and Python tool
 
 # ptk-python-steps
 
-1. Read `src/ptk/adapters/python_env.py` and the PythonSpec schema.
+1. Read [docs/configuration.rst](../../../docs/configuration.rst) and the PythonSpec definition from `ptk setup config schema`.
 
 2. Choose exactly one runtime: `uvx` for a tool, `venv` for requirement files/packages, `project` for a uv project, or `interpreter: cli` for ptk's environment.
 
@@ -19,4 +19,4 @@ description: Choose and diagnose Python runtimes for ptk scripts and Python tool
 
 7. Verify with the relevant action and inspect its debug log; test paths containing spaces on Windows and Linux.
 
-8. Consult `tests/test_run.py` for cached venv behavior. Account for uv availability and downloads when selecting tests.
+8. Inspect debug logs to verify which cached environment is selected. Account for uv availability and downloads when choosing a runtime.

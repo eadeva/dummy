@@ -157,6 +157,8 @@ ptk run [ACTION] [-p NAME=VALUE]... [same options]   generic form for scripts an
 ptk setup config validate | show [PATH] [--sources] [--format yaml|json] | schema [-o FILE]
 ptk variant list [--names] | show [NAME] [--json] [--all] | explain NAME FEATURE | check [NAMES] [--strict]
 ptk setup vscode tasks [--check] [--command "uv run ptk"] [--users-only]
+ptk setup vscode                 # tasks plus offline project skills/docs
+ptk setup vscode skills [--check]
 ptk setup creds setup [--vault] | set NAME [FIELD] [--store S] | list | test NAME | remove NAME
 ptk setup configs sync [NAMES] [--diff] | check [NAMES]
 ptk setup [--action A]... [--dry-run] [--allow-system] | ptk setup doctor | ptk setup self [--tools]
@@ -263,7 +265,12 @@ shared host operations. See `docs/configuration.rst` and `docs/cli.rst`.
 
 For a complete tested starter, copy `examples/authoring`. For a plugin starter,
 use `examples/plugin`. The authoring skill catalog is in `docs/skills.rst`;
-these are repository files, not automatically installed by the PTK wheel.
+the wheel bundles eleven project-facing skills and lightweight offline references.
+Run `ptk setup vscode` in a consuming repository to create tasks, copy skills to
+`.github/skills`, and install version-matched docs, examples and a configuration
+schema under `.github/ptk`. Relative links work without a PTK checkout or network
+access. `ptk setup vscode skills --check` checks drift; updates preserve custom
+skills and refuse to overwrite local edits. See [editor setup](docs/editor.rst).
 
 ## Version discovery and initialization
 
@@ -291,6 +298,12 @@ rewriting unchanged content. See [versioning](docs/versioning.rst) for variant
 release lines, explicit VMR dependencies and `ptk version show/check/generate`.
 
 ## Develop PTK using PTK
+
+To prepare release artifacts without publishing, run `uv run ptk package`.
+It builds a wheel and source archive, checks metadata, smoke-tests the installed
+wheel in a consumer repository, and creates a separate HTML documentation ZIP
+and checksums under `_bin/default/package`. Only `dist/` contains Python upload
+artifacts; nothing is uploaded. See [package preparation](docs/packaging.rst).
 
 The repository configuration in `config/ptk` has one `default` variant and no
 components. From the repository root:

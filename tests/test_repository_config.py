@@ -19,7 +19,7 @@ def test_repository_actions_and_single_component_free_variant():
     app = create_app()
     project = app.load_project.execute(config_file=ROOT / ".main.ptk.yml", ci=False)
     assert project.config.repository.alias == "ptk"
-    assert set(project.config.actions) == {"test", "docs", "check"}
+    assert set(project.config.actions) == {"test", "docs", "check", "package"}
     assert project.config.project.default_action == "test"
     assert list(project.config.variants.variants) == ["default"]
     assert not project.config.variants.components

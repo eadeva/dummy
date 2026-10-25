@@ -137,6 +137,14 @@ class TasksFile(Protocol):
     def write(self, data: dict) -> None: ...
 
 
+class AuthoringResources(Protocol):
+    def bundle(self) -> dict[str, bytes]: ...
+
+    def sync(
+        self, root: Path, files: dict[str, bytes], *, version: str, check: bool
+    ) -> list[str]: ...
+
+
 # --------------------------------------------------------------------------- credentials
 
 

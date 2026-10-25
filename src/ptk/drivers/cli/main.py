@@ -861,9 +861,43 @@ def report_open(
 # --------------------------------------------------------------------------- vscode
 
 
-@cli.group("vscode", cls=AccessGroup)
-def vscode_group() -> None:
-    """VS Code integration."""
+@cli.group("vscode", cls=AccessGroup, invoke_without_command=True)
+@click.pass_context
+@guarded
+def vscode_group(ctx: click.Context) -> None:
+    """Set up tasks and offline project skills; subcommands update either part."""
+    if ctx.invoked_subcommand is None:
+        # Preflight skills before changing tasks if managed files conflict.
+        _state(ctx).app.setup_authoring.execute(_state(ctx).project().root, check=True)
+        ctx.invoke(
+            vscode_tasks, check=False, command="ptk", users_only=False, output=None
+        )
+        ctx.invoke(vscode_skills, check=False)
+
+
+@vscode_group.command("skills")
+@click.option(
+    "--check",
+    is_flag=True,
+    help="Check installed skills/docs without writing; exit 1 if outdated.",
+)
+@click.pass_context
+@guarded
+def vscode_skills(ctx: click.Context, check: bool) -> None:
+    """Install version-matched skills under .github/skills and docs under .github/ptk."""
+    state = _state(ctx)
+    result = state.app.setup_authoring.execute(state.project().root, check=check)
+    if check:
+        console.print(
+            "PTK skills and docs are "
+            + ("out of date" if result.paths else "up to date")
+        )
+        if result.paths:
+            ctx.exit(1)
+    else:
+        console.print(
+            f"PTK skills and docs: {result.skill_count} skills, {len(result.paths)} files updated."
+        )
 
 
 @vscode_group.command("tasks")

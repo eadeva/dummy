@@ -5,7 +5,7 @@ description: Create or change ptk YAML configuration, includes, layers and subst
 
 # ptk-config-authoring
 
-1. Read `docs/configuration.rst` and the models in `src/ptk/domain/config/model.py`.
+1. Read [docs/configuration.rst](../../../docs/configuration.rst); export `ptk setup config schema -o schema.json` when exact field names are needed.
 
 2. Use `.main.ptk.yml` as the entry point and `*.ptk.yml` fragments. Keep `local.ptk.yml` untracked.
 
@@ -29,6 +29,6 @@ description: Create or change ptk YAML configuration, includes, layers and subst
 
 A project's root `.main.ptk.yml` requires `repository: {alias: lowercase-name, config_path: relative/directory}`. Entry includes and automatic tool/CX/local/maintainer files use that directory; fragment includes stay fragment-relative and commands use the repository root. In VMR workspaces, invoke `ptk <repository-alias> <command>`. A separate manual workspace marker contains only `virtual_monorepo: true` and optional `members: [nested/repo, other]`; without a list, only direct child directories are checked. It needs no repository metadata. Omit the flag on project entries for automatic detection; explicit `false` keeps a project standalone and excludes it from VMR listings. Keep discovery fields literal and entry-only, never in includes, overlays or CLI overrides. See the `ptk-vmr` skill for Git-pointer membership and bounded discovery.
 
-Start from `examples/authoring/.main.ptk.yml` and its fragments for a complete tested configuration. Read `docs/configuration.rst` for default environment isolation and explicit inheritance.
+Start from [examples/authoring/.main.ptk.yml](../../../examples/authoring/.main.ptk.yml) and its fragments for a complete tested configuration. Read [docs/configuration.rst](../../../docs/configuration.rst) for default environment isolation and explicit inheritance.
 
-For version discovery, read `docs/versioning.rst` and exercise `tests/test_versioning.py`. Keep `.main.ptk.yml` minimal; use `ptk setup init --config-dir PATH` for starter fragments. Maintain `versioning.ptk.yml`, never commit `.gen.version.ptk.yml`. Use `PTK_VERSION_ALIAS_COMPONENT_NAME` and `${version.projects.alias.value}`; generators consume the run snapshot. Declare VMR version dependencies and their variants explicitly. Do not add bump/tag operations.
+For version discovery, read [docs/versioning.rst](../../../docs/versioning.rst). Keep `.main.ptk.yml` minimal; use `ptk setup init --config-dir PATH` for starter fragments. Maintain `versioning.ptk.yml`, never commit `.gen.version.ptk.yml`. Use `PTK_VERSION_ALIAS_COMPONENT_NAME` and `${version.projects.alias.value}`; generators consume the run snapshot. Declare VMR version dependencies and their variants explicitly. Do not add bump/tag operations.

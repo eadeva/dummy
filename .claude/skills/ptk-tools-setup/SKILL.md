@@ -6,7 +6,7 @@ description: Declare tool checks and installers or diagnose ptk setup, doctor an
 
 # ptk-tools-setup
 
-1. Read `src/ptk/domain/tools.py`, `src/ptk/adapters/tools.py` and the tool model.
+1. Read [docs/configuration.rst](../../../docs/configuration.rst) and [docs/cli.rst](../../../docs/cli.rst); use `ptk setup config schema` for tool fields.
 
 2. Declare a check command, version range and version_regex matching the actual output.
 
@@ -26,6 +26,6 @@ description: Declare tool checks and installers or diagnose ptk setup, doctor an
 
 10. Test adapters with fake runners or local archives; do not install machine-wide tools in unit tests.
 
-11. Global and action `requires_tools` merge per tool: unmentioned tools stay inherited, `name: false` disables one, and settings mappings override only that action. Tool files load automatically; see `docs/configuration.rst`.
+11. Global and action `requires_tools` merge per tool: unmentioned tools stay inherited, `name: false` disables one, and settings mappings override only that action. Tool files load automatically; see [docs/configuration.rst](../../../docs/configuration.rst).
 
 Managed installations coexist by version/source identity. Verify the action-selected PATH; never append the entire cache. System and plugin installers remain host-shared. Use `environment.keep` for required host variables; PATH inheritance is a separate opt-in.

@@ -5,7 +5,7 @@ description: Add ptk report formats, import tool results or troubleshoot report 
 
 # ptk-reporting
 
-1. Read `src/ptk/domain/reporting/model.py`, `src/ptk/adapters/reporting/` and the ReportStore port.
+1. Read the report commands in [docs/cli.rst](../../../docs/cli.rst) and extension contracts in [docs/plugins.rst](../../../docs/plugins.rst).
 
 2. Write tool results to PTK_STEP_REPORTS_DIR or `${run.reports_dir}` for the producing step.
 
@@ -19,7 +19,7 @@ description: Add ptk report formats, import tool results or troubleshoot report 
 
 7. Test malformed files, escaping, totals and relative log links when changing exporters/importers.
 
-8. Register external exporters/contributors with `ptk.reporters` / `ptk.report_contributors` and select the installed distribution in `plugins`. Follow `docs/plugins.rst`.
+8. Register external exporters/contributors with `ptk.reporters` / `ptk.report_contributors` and select the installed distribution in `plugins`. Follow [docs/plugins.rst](../../../docs/plugins.rst).
 
 9. `report: false` excludes a step subtree from reports and imports, but does not hide audit logs or change failure status.
 

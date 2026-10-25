@@ -10,6 +10,7 @@ from pathlib import Path
 
 from . import __version__
 from .adapters import help_html
+from .adapters.authoring import AuthoringFiles
 from .adapters.builtins import (
     file_cleaner,
     files_copy,
@@ -43,6 +44,7 @@ from .application.ports import (
     RunObserver,
     SecretProvider,
 )
+from .application.use_cases.authoring import SetupAuthoring
 from .application.use_cases.configs import SharedConfigs
 from .application.use_cases.credentials import CredentialService
 from .application.use_cases.help import BuildHelp, HelpDocument
@@ -83,6 +85,7 @@ class App:
     python_envs: PythonEnvManager
     build_help: BuildHelp
     vscode_tasks: VSCodeTasks
+    setup_authoring: SetupAuthoring
     reports: ReportService
     shared_configs: SharedConfigs
     tools: ToolService
@@ -337,6 +340,7 @@ def create_app(
         or UvPythonEnvManager(runner, environ=dict(host.variables)),
         build_help=BuildHelp(version),
         vscode_tasks=VSCodeTasks(TasksFile),
+        setup_authoring=SetupAuthoring(AuthoringFiles(), version),
         reports=ReportService(FileReportStore(host.variables), version),
         shared_configs=configs,
         tools=tools,

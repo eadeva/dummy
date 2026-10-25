@@ -6,7 +6,7 @@ description: Declare, provision or troubleshoot ptk credentials without exposing
 
 # ptk-credentials
 
-1. Read `src/ptk/domain/credentials.py` and `src/ptk/application/use_cases/credentials.py`.
+1. Read [docs/configuration.rst](../../../docs/configuration.rst) and [docs/cli.rst](../../../docs/cli.rst); inspect the credential fields with `ptk setup config schema`.
 
 2. Declare fields and an ordered provider chain; default order is env, keyring, gopass, vault, prompt.
 

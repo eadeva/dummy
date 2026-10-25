@@ -21,6 +21,8 @@ def test_plan_skills_are_shipped_and_documented():
         assert path.parent.name in catalog
         for reference in re.findall(r"`((?:src/|docs/|tests/)[^`]+)`", body):
             assert (ROOT / reference).exists(), (path, reference)
+        for reference in re.findall(r"\]\(([^)]+)\)", body):
+            assert (path.parent / reference).exists(), (path, reference)
 
 
 def test_authoring_starter_runs_from_its_configuration_directory(tmp_path, monkeypatch):

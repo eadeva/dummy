@@ -1,9 +1,9 @@
 Authoring skills
 ================
 
-Repository-local assistant instructions live in ``.claude/skills``. They describe
-the implemented CLI and point to source files and verification commands.
-Paths inside a skill are relative to the repository root.
+Canonical assistant instructions live in ``.claude/skills``. Eleven project-facing
+skills use links relative to their SKILL.md files and are bundled with the wheel.
+Two maintainer skills operate on PTK's own source checkout.
 
 ptk-config-authoring
 --------------------
@@ -75,12 +75,15 @@ ptk-docs-writing
 Using these skills
 ------------------
 
-These are repository-local instructions; installing the PTK wheel does not
-install assistant skills. In a checkout, explicitly point your assistant to the
-relevant ``.claude/skills/<name>/SKILL.md``. Paths in the skills assume the PTK
-repository root. To reuse them elsewhere, retain access to the referenced PTK
-source/docs/examples or adapt those references to a pinned checkout. Do not
-assume every assistant discovers the ``.claude`` directory automatically.
+Run ``ptk setup vscode`` to install tasks and project-facing skills in a consuming
+repository, or ``ptk setup vscode skills`` for the skills alone. The installer
+copies skills into ``.github/skills`` and version-matched offline documentation,
+examples and the schema into ``.github/ptk``. It rewrites relative links for that
+layout; no PTK source checkout is required. See :doc:`editor` for update and check
+behavior. Installing the wheel alone does not modify any consuming repository.
+
+The development and docs-writing skills remain checkout-only. Point an assistant
+working on PTK itself to those source skills explicitly.
 
 Tests validate the catalog and references, execute the authoring starter and
 load the plugin example through its declared distribution entry point.

@@ -6,7 +6,7 @@ description: Manage ptk shared pre-commit, Ruff and clang configuration with pro
 
 # ptk-shared-configs
 
-1. Read `src/ptk/domain/shared_configs.py` and `src/ptk/resources/configs/`.
+1. Read [docs/configuration.rst](../../../docs/configuration.rst); inspect available configuration fields with `ptk setup config schema` and preview effective files with `ptk setup configs sync --diff`.
 
 2. Manage only tools declared under `configs`. Edit overlays rather than generated outputs.
 
