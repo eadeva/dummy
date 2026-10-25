@@ -1,5 +1,5 @@
 Plugins, generators and additional built-ins
-===========================================
+============================================
 
 Loading installed plugins
 -------------------------

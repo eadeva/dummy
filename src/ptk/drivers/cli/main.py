@@ -203,7 +203,7 @@ def _write_variant_change(ctx, name, features, output, dry_run, **options):
     from ...application.use_cases.variant_changes import variant_patch
 
     state = _state(ctx)
-    if state.overrides:
+    if ctx.find_root().params.get("overrides"):
         raise PtkError(
             "Do not combine persistent variant edits with global --set overrides"
         )

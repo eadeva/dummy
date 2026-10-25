@@ -22,3 +22,5 @@ description: Modify ptk core code, adapters, use cases or extension interfaces.
 8. Update docs, examples and relevant authoring skills with behavior changes. Keep secrets and generated workspace outputs out of git.
 
 9. Review CI results before marking a milestone complete; record explicit remaining limitations in PLAN.md.
+
+10. Extension contracts and explicit distribution loading are documented in `docs/plugins.rst`; test third-party entry points without importing unselected distributions.

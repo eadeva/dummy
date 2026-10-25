@@ -19,6 +19,8 @@ description: Add ptk report formats, import tool results or troubleshoot report 
 
 7. Test malformed files, escaping, totals and relative log links when changing exporters/importers.
 
-8. Add adapters behind existing ports and wire them in bootstrap. Entry-point discovery for external contributor plugins is not yet implemented.
+8. Register external exporters/contributors with `ptk.reporters` / `ptk.report_contributors` and select the installed distribution in `plugins`. Follow `docs/plugins.rst`.
+
+10. `report: false` excludes a step subtree from reports and imports, but does not hide audit logs or change failure status.
 
 9. Never include secrets in imported results; masking engine logs does not sanitize arbitrary third-party files.

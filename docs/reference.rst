@@ -8,8 +8,8 @@ Use ``ptk setup config show`` to inspect effective defaults for your project.
 
 Loader directives such as ``include`` and YAML tags are processed before these
 models. See :doc:`configuration` for loading, short forms and validation rules.
-The presence of a field does not guarantee a planned integration is implemented:
-``plugins`` is currently accepted but does not load entry points.
+``plugins`` selects installed distributions for entry-point loading; see
+:doc:`plugins` for the extension contracts and configuration examples.
 
 Export a machine-readable schema for editor integration::
 

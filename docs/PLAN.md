@@ -18,7 +18,7 @@ unified logging and reporting.
 | **Generic** | No project-specific code in the core. Projects describe *what* to run in YAML; domain specifics come as plugins. |
 | **User-friendly configuration** | Short forms, good defaults, strict validation with "did you mean …", `file:line` in every error, JSON Schema for editor autocompletion. |
 | **Reproducible** | Every command runs with an explicit environment; the CLI process is never mutated; reports record what ran, with which values and from where. |
-| **Safe by default** | Secrets never on command lines or in logs; unknown names are errors; no silent fallbacks. |
+| **Safe by default** | Credential references never on command lines; supported secret inputs masked in logs; unknown names are errors; no silent fallbacks. |
 | **Testable** | Clean Architecture; every use case runs against in-memory fakes. |
 
 **Targets:** Python **3.12+**, **Windows and Linux** (Linux also headless),
@@ -101,7 +101,7 @@ main.ptk.yml               ptk_version, project, include, main settings
   → local.ptk.yml           personal overrides (git-ignored)
   → --set key=value           command line
   → validate (pydantic, extra=forbid, suggestions)
-  → late substitution         just before a step runs
+  → run preparation          substitute all selected steps before execution
 ```
 
 - **Merge rules:** mappings merge deeply, lists replace.
@@ -113,7 +113,7 @@ main.ptk.yml               ptk_version, project, include, main settings
 
   ```
   ${env:NAME}  ${env:NAME:-default}  ${vars.x}  ${params.x}
-  ${vh.variant}  ${vh.features.X}  ${secret:name.field}  ${project.root}  ${run.dir}
+  ${vh.variant}  ${vh.features.X}  ${secret:name.field}  ${project.root}  ${run.build_dir}
   ```
 
   `$${...}` escapes. Values are typed; secrets are masked wherever printed.
@@ -197,8 +197,8 @@ Reuse the core of `variant_handler` (already built and tested), trimmed for the 
   - `${vh.*}` substitution; `VH_*` (and optionally legacy `BO_*`) env vars per command
   - `--variant <name|alias>[,...]`, `--all-variants`
 - **Commands:** `ptk variant list | show | explain | check | set | new | gui`.
-- **Generators** (header, CMake, Bazel, Make, Yocto, Robot, Sphinx) as plugin package;
-  step `uses: variant.generate`.
+- **Generators** (header, CMake, Bazel, Make, Yocto, Robot, Sphinx) bundled with an extension interface;
+  step `uses: variant.generate` (seven bundled generators; external extensions use `ptk.generators`).
 
 ---
 
@@ -211,60 +211,7 @@ restrict or reorder it with `providers: [...]`. The first provider with a value
 wins; the value is cached for the rest of the ptk run.
 
 | Provider | Where | Notes |
-|----------|-------|-------|
-| `env` | CI | `credentials.<name>.env.<field>`, else `PTK_CRED_<NAME>_<FIELD>`; read-only |
-| `keyring` | Windows, macOS, Linux desktops | optional extra `ptk[keyring]`; skipped when not installed or no real backend (headless Linux); service `ptk`, user `<name>.<field>` |
-| `gopass` | Windows, headless Linux, teams | `gopass show --password` / `insert --force` via stdin; path `gopass.path/<field>` (default `ptk/<name>/<field>`); recommend the **age** backend (no gpg-agent/pinentry); team sharing via git |
-| `vault` | everywhere, no external tool | one file per user (`%APPDATA%\\ptk\\vault.json`, `~/.config/ptk/vault.json`, `PTK_VAULT_FILE`); AES-256-GCM, key from the master password via scrypt; names and values encrypted; tampering detected; written atomically, mode 600; password asked once per run or `PTK_VAULT_PASSWORD` |
-| `prompt` | interactive only | never in CI or without a terminal; not stored |
-
-Keys are shared by all projects of a user (`artifactory.token` is the same
-everywhere). More providers (HashiCorp Vault, ...) can be added behind the same
-port.
-
-### 4.2 Commands
-
-`ptk setup creds setup [--vault]` (which providers work here and how to set them up;
-`--vault` creates the vault) · `ptk setup creds set <name> [field] [--store keyring|gopass|vault]`
-(value typed hidden or piped in, never an argument) · `ptk setup creds list [name]`
-(which provider supplies what - never values, never prompts) ·
-`ptk setup creds test <name>` (runs the credential's `test` command with its values as
-environment variables) · `ptk setup creds remove <name> [field] [--store ...]`.
-
-### 4.3 Rules
-
-- Secrets reach commands only as environment variables of that single step -
-  never as arguments (visible in process lists), never written unencrypted.
-- All secrets the selected steps need are resolved **before the first step
-  starts**: a missing credential stops the run with a list of what was tried,
-  and no prompt appears in the middle of parallel steps. Skipped steps need none.
-- Masked in console, log files, events, reports and `ptk dry-run` output
-  (dry runs never look secrets up).
-- Access tokens preferred over passwords.
-
-----------|-------|-------|
-| `env` | CI | names configured per credential |
-| `gopass` | Windows, headless Linux | `gopass show -o <path>` / `gopass insert`; recommend **age** backend (no gpg-agent/pinentry); team sharing via git |
-| `vault` | everywhere, no external tool | AES-GCM file in the user's config dir, key from master password (scrypt); unlocked once per session |
-| `prompt` | interactive only | never in CI |
-
-First provider returning a value wins. More providers (e.g. Windows Credential
-Manager, HashiCorp Vault) as plugins.
-
-### 4.2 Commands
-
-`ptk setup creds setup` (detect gopass, guide `gopass setup --crypto age`, or create vault) ·
-`ptk setup creds set <name>` · `ptk setup creds list` (which provider supplies what — never values) ·
-`ptk setup creds test <name>` (optional check command per credential) · `ptk setup creds remove <name>`.
-
-### 4.3 Rules
-
-- Secrets reach commands only as environment variables of that single step —
-  never as arguments (visible in process lists), never written unencrypted.
-- Masked in console, log files, events, reports and `ptk dry-run` output.
-- Access tokens preferred over passwords; expiry warnings when known.
-
----
+|---
 
 ## 5. Main point 4 — Actions, step sets, steps
 
@@ -432,21 +379,7 @@ configs:
 ### 8.2 Per tool
 
 | Config | Strategy | Output |
-|--------|----------|--------|
-| **a) pre-commit** | base hooks (pre-commit-hooks, ruff, clang-format) + overlay merged by repo URL and hook id; overlay changes `rev`/`args`/`files`/..., adds repos and hooks (also `local`), `disable: true` removes a hook or a repo; `ptk setup self` installs the hooks | `.pre-commit-config.yaml` |
-| **b) ruff** | base = ruff's default rules + `I`, `B`, `UP`, `SIM` (as ptk's own code) written to `ruff-base.toml` (committed - not `.ptk/`, which is git-ignored); the project's `ruff.toml` contains `extend = "ruff-base.toml"` plus its own settings (created if missing; an existing one is never edited, ptk says what to add) | `ruff-base.toml` |
-| **c) clang-format** | base YAML + overlay, deep merge (maps merge, lists replace, `null` deletes) | `.clang-format` |
-| **c) clang-tidy** | `Checks`/`WarningsAsErrors` combined (overlay `-x` drops `x`, `x` drops `-x`), `CheckOptions` merged by key (list or mapping form, `null` deletes), base key order kept | `.clang-tidy` |
-| **c) clangd** | base + overlay, deep merge | `.clangd` |
-
---------|----------|--------|
-| **a) pre-commit** | generated: base hooks + overlay merged by repo URL + hook id; overlay can add, change (`args`, `files`, `exclude`) or disable hooks; `ptk setup self` installs the hooks | `.pre-commit-config.yaml` |
-| **b) ruff** | base = ruff's default rules (default rule set and line length) plus `I`, `B`, `UP`, `SIM`, same as ptk's own code; native `extend`: base shipped to `.ptk/configs/ruff-base.toml`, project `ruff.toml` contains `extend = ".ptk/configs/ruff-base.toml"` plus overrides | `ruff.toml` (project-owned) |
-| **c) clang-format** | generated: base YAML + overlay, same merge rules as the config loader | `.clang-format` |
-| **c) clang-tidy** | generated: `Checks` combined (base + overlay, `-check` removes), `CheckOptions` merged by key | `.clang-tidy` |
-| **c) clangd** | generated: base + overlay | `.clangd` |
-
-Base configs are versioned with ptk; upgrading ptk shows a diff of the
+|Base configs are versioned with ptk; upgrading ptk shows a diff of the
 effective files (`ptk setup configs sync --diff`).
 
 ---
@@ -474,7 +407,7 @@ tools:
 - Actions declare `requires_tools`. Before a run ptk checks them (version from
   the `check` command against the range); missing or wrong tools stop the run
   with what to do. `ptk <action> --setup` installs them first. Dry runs never block.
-- `ptk setup [--action A]... [--dry-run] [--allow-system] [--bootstrap-choco]`.
+- `ptk setup install [--action A]... [--dry-run] [--allow-system] [--bootstrap-choco]`.
 - Install order: Windows `choco -> uv tool -> download`; Linux/macOS
   `uv tool -> download -> apt/dnf` (apt/dnf only with `--allow-system`, via
   `sudo -n`). After installing, the tool is checked again.
@@ -512,8 +445,8 @@ tools:
 
 ## 9b. Maintainer-only commands
 
-- Actions (and built-in command groups such as tool/config maintenance) can be
-  marked `audience: maintainer`.
+- Actions can be marked `audience: maintainer`; built-in groups use
+  `command_audience: {setup.creds: maintainer}`.
 - `maintainers.ptk.yml` (committed, next to `main.ptk.yml`) lists maintainers by git
   e-mail and/or OS user name. ptk compares it with `git config user.email` and the
   OS user; `PTK_ROLE=maintainer` forces the role (e.g. in CI).
@@ -534,11 +467,12 @@ ptk dry-run [<action> [same options]]  what would run - nothing is executed
 ptk run [<action>] [...]                generic form (scripts, CI); -p NAME=VALUE
 ptk help [--no-open] [-o FILE]          full help as HTML, opened in the browser
 ptk setup init [DIRECTORY] [--name NAME] [--dry-run]  scaffold a project
+ptk setup migrate SOURCE [-o FILE] [--dry-run]  conservative legacy conversion
 ptk setup config  show [--sources] | validate | schema
 ptk variant list | show | explain | check | set | new | gui
 ptk setup creds   setup | set | list | test | remove
 ptk setup configs sync [--diff] | check
-ptk setup   [--action A] [--dry-run]
+ptk setup install [--action A] [--dry-run]
 ptk setup self | doctor
 ptk setup vscode  tasks [--check] [--command CMD] [--users-only]
 ptk report  open | export
@@ -603,7 +537,7 @@ so `ptk build --help` documents the project's real options.
 | `game_stopper: false` | `continue_on_error: true` |
 | `non_blocking` | `background: true` (scoped finite processes) |
 | `DEFAULT_PARAMETERS(_CX)` | `params` defaults, `ci.ptk.yml` |
-| `-bo name=value` | variant feature override `--set vh.FEATURE=value` (alias `-bo` kept) |
+| `-bo name=value` | variant feature override `--feature FEATURE=value` / `--set vh.FEATURE=value` (alias `-bo` kept) |
 | `-mp name=value` | declared `params` / `--set` (alias `-mp` kept) |
 | `shell_run_command`, `custom_script` | `run:` |
 | `ENV_ISOLATION` | `environment:` |
@@ -642,7 +576,7 @@ most common pitfalls — kept in sync with the implementation (definition of don
 - **Domain / use cases:** unit tests with in-memory fakes (no files, no processes).
 - **Adapters:** real subprocesses, real uv (skipped if absent), temp directories;
   gopass/Chocolatey adapters with fake binaries + optional real-tool tests.
-- **End-to-end:** example project (`examples/demo`) run for several variants.
+- **End-to-end:** example project (`examples/quickstart`) run for several variants.
 - **CI:** Linux + Windows matrix (Windows covers `.bat`, PowerShell, Chocolatey).
 - **Docs:** Sphinx docs-as-code built with `-W`; examples executed in tests.
 
@@ -668,7 +602,7 @@ formatted with `ruff format`. CI runs `ruff check` and `ruff format --check`.
 | M8 ✅ | Shared configs: pre-commit, ruff, clang-format, clang-tidy, clangd | `configs sync/check/--diff` |
 | M9 ✅ | Tools: model, Chocolatey, uv-tool, download, `setup`, `self-setup`, `doctor`, installers | missing tools detected and installed (Windows run by user) |
 | M10 ✅ | Runnable quickstart, schema-generated reference, eleven authoring skills, native process tests and CI matrix | Sphinx `-W`, lint and tests passed on Linux/Windows with Python 3.12/3.13 (run 40195082145) |
-| M11 | `setup migrate` (alias `migrate`), scoped background steps, optional variant YAML GUI and plugin discovery | done |
+| M11 ✅ | `setup migrate` (alias `migrate`), scoped background steps, optional variant YAML GUI and plugin discovery | done |
 
 ---
 
@@ -712,6 +646,35 @@ Former top-level commands remain hidden compatibility aliases.
   preserve result ordering, and use existing timeout/retry/cancellation handling.
 - `variant gui` lazily opens the Tk editor or an explicitly selected installed
   `ptk.variant_gui` entry point. Export is a validated standalone project snapshot;
-  existing source files are preserved. GUI layout needs a desktop for manual QA.
+  existing source files are preserved. A real Tk event-loop test under Xvfb covers validation and export in CI;
+  native desktop appearance remains a manual acceptance check.
 - Regression coverage includes real process overlap/cancellation, failure reporting,
   migration preview/round-trip/overwrite protection, variant constraints and plugin dispatch.
+
+## Detail-plan completion after M11
+
+- Fixed `path`/`secret` CLI parameters. Secret options request hidden input; values
+  are masked in run metadata and only substituted into step environments.
+- `report: false` hides complete step subtrees from exported reports/contributions,
+  while audit logs and overall failure status remain intact.
+- Groups and built-ins support retries and deadlines. Built-in Python handlers
+  cooperate with cancellation; they are not forcibly killed like subprocesses.
+- Added `variant set/new`, validated atomic local overlays, `--all-variants`, comma
+  selections, feature overrides and `-bo`/`-mp` compatibility spellings.
+- Implemented all six extension entry-point groups from section 1, selected by
+  installed distribution names in `plugins`. Contracts are in `docs/plugins.rst`.
+- Added the remaining setup/file/generator built-ins and seven bundled generators.
+- Added configurable maintainer visibility for built-in command groups and aliases.
+- Native Linux/Windows behavior, extension integration and generator outputs are
+  covered in tests; the CI GUI job exercises the real Tk event loop under Xvfb.
+
+### Explicit release / acceptance boundaries
+
+- Migration supports the documented legacy subset. Expanding historical dialect
+  support requires representative source configurations; no options are dropped silently.
+- The GUI is a validated YAML editor with export, not a graphical feature-tree designer.
+  Native Windows/Linux appearance and real machine-wide Chocolatey/gopass setup remain
+  user-environment acceptance checks; CI does not claim those installations occurred.
+- Generator format restrictions and cooperative Python timeouts are documented.
+- Package name/index availability and publishing a release remain delivery decisions.
+  Code is delivered on `ChatGPT_version`; it has not been merged into the base branch.

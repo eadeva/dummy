@@ -101,5 +101,5 @@ Select one using ``ptk variant gui --plugin my_editor``. The callable receives
 ``(session: VariantEditorSession, output: pathlib.Path)``. Use
 ``session.initial_text()``, ``session.validate(text)`` and ``session.render(text)``;
 ``ptk.adapters.variant_editor.save_edit`` performs validated exclusive export.
-Plugins are explicitly selected installed Python code; project ``plugins:`` does
-not automatically load them. The bundled editor is selected by ``tkinter``.
+GUI plugins are selected by ``--plugin``; the project ``plugins:`` allow-list
+loads other extension groups described in :doc:`plugins`. The bundled editor is selected by ``tkinter``.

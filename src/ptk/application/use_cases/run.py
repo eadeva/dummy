@@ -36,7 +36,9 @@ from ...domain.execution.params import resolve_params
 from ...domain.execution.planning import PlanContext, plan_action
 from ...domain.logging import Level
 from ...domain.suggest import did_you_mean
+from ...domain.variants.model import ResolvedVariant
 from ..ports import (
+    CancelToken,
     HostEnvironment,
     ProcessRunner,
     PythonEnvManager,
@@ -384,8 +386,8 @@ class BuiltinContext:
     root: Path  # project root
     build_dir: Path  # the step's build folder
     reports_dir: Path  # the step's reports folder (picked up by the report)
-    cancel: object | None = None  # cooperative cancellation: is_set()
-    variant: object | None = None  # resolved variant for generators
+    cancel: CancelToken | None = None  # cooperative cancellation: is_set()
+    variant: ResolvedVariant | None = None  # resolved variant for generators
 
 
 BuiltinStep = Callable[[PlannedStep, Callable[[str], None], BuiltinContext], int]

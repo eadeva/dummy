@@ -43,10 +43,11 @@ Native Windows tests cover batch files, PowerShell, timeouts and cancellation.
 Chocolatey command construction and administrator checks use a fake runner on
 both platforms; CI does not perform real machine-wide Chocolatey installations.
 
-Roadmap boundaries
-------------------
+Acceptance boundaries
+---------------------
 
-Plugin entry-point loading, variant generators and additional variant
-editing commands remain planned. M11 is optional and covers migration,
-background steps and a GUI plugin. Do not treat these roadmap entries as
-implemented interfaces. See ``docs/configuration.rst`` for current limitations.
+Plugin contracts and generators are documented in :doc:`plugins`; variant editing
+and matrix commands in :doc:`cli`; M11 behavior and migration limits in :doc:`m11`.
+The GUI CI job uses Xvfb and the real Tk event loop to test validation/export.
+Native desktop appearance and real machine-wide tool/credential setup still need
+acceptance on the target machines. Publishing and merging are separate decisions.

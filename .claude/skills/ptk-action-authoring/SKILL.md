@@ -25,3 +25,5 @@ description: Add or modify ptk actions, parameters, nested steps, conditions and
 9. After changes, run the affected action in a disposable example and inspect logs and reports.
 
 10. Regenerate `ptk setup vscode tasks --users-only` if committing tasks; verify maintainer-only actions stay hidden for users.
+
+10. Background processes are finite and joined at their containing group boundary. Group retries repeat all children; Python handlers must cooperate with deadlines. Use `files.clean` only within generated workspace folders.
