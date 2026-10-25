@@ -97,3 +97,27 @@ def test_windows_script(tmp_path, suffix):
     outcome = SubprocessRunner().run(command, lines.append)
     assert outcome.exit_code == 0, (outcome, lines)
     assert "native-script-ok" in lines
+
+
+def test_cli_redirected_legacy_encoding_does_not_abort_action(tmp_path):
+    """Exercise the real entry point, not Click's UTF-8 in-memory test streams."""
+    import subprocess
+
+    config = tmp_path / ".main.ptk.yml"
+    config.write_text(
+        "repository: {alias: demo, config_path: .}\n"
+        "project: {name: demo}\n"
+        "actions:\n  hello:\n    steps:\n"
+        "      - greet: {uses: echo, with: {message: 'caf\u00e9 \U0001f9ea'}}\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [sys.executable, "-m", "ptk.drivers.cli.main", "-c", str(config), "hello"],
+        env={**os.environ, "PYTHONIOENCODING": "cp1252:strict"},
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr.decode("cp1252")
+    output = result.stdout.decode("cp1252")
+    assert "caf\u00e9" in output and "\\U0001f9ea" in output
+    assert "passed" in output

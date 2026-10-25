@@ -1172,6 +1172,12 @@ cli.add_command(version_group)
 
 
 def main() -> None:
+    # Redirected Windows streams may use cp1252. Preserve the selected encoding,
+    # but never let a status symbol or user output abort an otherwise valid run.
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is not None:
+            reconfigure(errors="backslashreplace")
     cli(prog_name="ptk")
 
 
