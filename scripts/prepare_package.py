@@ -69,6 +69,19 @@ entry.load()()
 """
 
 
+def check_skill_links(project: Path) -> None:
+    # Windows temporary paths can contain short names or redirected ancestors.
+    # Compare canonical paths on both sides of the containment check.
+    github = (project / ".github").resolve()
+    for skill in (github / "skills").glob("*/SKILL.md"):
+        for link in re.findall(r"\]\(([^)]+)\)", skill.read_text(encoding="utf-8")):
+            target = (skill.parent / link).resolve()
+            if not target.is_relative_to(github) or not target.exists():
+                raise ValueError(
+                    f"broken installed skill reference: {skill.name}: {link}"
+                )
+
+
 def smoke(wheel: Path, temporary: Path) -> None:
     installed = temporary / "installed"
     run(
@@ -93,13 +106,7 @@ def smoke(wheel: Path, temporary: Path) -> None:
         run("-I", "-c", SMOKE, str(installed), *args, cwd=project)
     assert (project / ".github/skills/ptk-config-authoring/SKILL.md").is_file()
     assert (project / ".github/ptk/docs/configuration.rst").is_file()
-    for skill in (project / ".github/skills").glob("*/SKILL.md"):
-        for link in re.findall(r"\]\(([^)]+)\)", skill.read_text(encoding="utf-8")):
-            target = (skill.parent / link).resolve()
-            if not target.is_relative_to(project / ".github") or not target.exists():
-                raise ValueError(
-                    f"broken installed skill reference: {skill.name}: {link}"
-                )
+    check_skill_links(project)
 
 
 def prepare(output: Path) -> Path:
