@@ -46,7 +46,7 @@ both platforms; CI does not perform real machine-wide Chocolatey installations.
 Roadmap boundaries
 ------------------
 
-Plugin entry-point loading, variant generators, init and additional variant
+Plugin entry-point loading, variant generators and additional variant
 editing commands remain planned. M11 is optional and covers migration,
 background steps and a GUI plugin. Do not treat these roadmap entries as
 implemented interfaces. See ``docs/configuration.rst`` for current limitations.

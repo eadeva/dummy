@@ -10,6 +10,8 @@ install tools or change configuration. Project actions remain top-level commands
 
    * - Command
      - Purpose
+   * - ``ptk setup init [DIRECTORY]``
+     - Create a runnable project without overwriting existing files
    * - ``ptk setup config show|validate|schema``
      - Inspect, validate and export project configuration
    * - ``ptk setup configs sync|check``
@@ -38,6 +40,8 @@ Put global options before the group, and installation options after ``install``:
    uv run ptk -c examples/quickstart/main.ptk.yml setup config validate
    uv run ptk -c examples/quickstart/main.ptk.yml setup install --action build --dry-run
    uv run ptk -c examples/quickstart/main.ptk.yml setup creds list
+
+The ``ptk init`` alias also remains available.
 
 The former top-level ``config``, ``configs``, ``creds``, ``self-setup``, ``doctor``
 and ``vscode`` commands remain callable aliases, hidden from help and completion.

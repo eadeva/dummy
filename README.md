@@ -18,6 +18,17 @@ uv run pytest
 uv run ruff check && uv run ruff format --check   # ruff default rules
 ```
 
+## Create a project
+
+```bash
+ptk setup init my-project --dry-run
+ptk setup init my-project
+cd my-project
+ptk hello
+```
+
+Existing configuration and `.gitignore` files are preserved.
+
 ## Runnable quickstart
 
 From the repository root:

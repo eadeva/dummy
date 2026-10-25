@@ -118,7 +118,7 @@ Maintainer visibility and current limits
 ``audience: maintainer`` is hidden from other users, including generated help
 and VS Code tasks. This is a convenience feature, not a security boundary.
 
-``init``, ``variant set/new/gui``, migration, background steps, variant generators
+``variant set/new/gui``, migration, background steps, variant generators
 and plugin entry-point discovery remain planned. Do not rely on roadmap examples
 for these features. Use the commands shown by ``ptk --help`` and the runnable
 quickstart as the supported starting point.

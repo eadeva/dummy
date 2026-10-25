@@ -207,3 +207,11 @@ class ToolInstaller(Protocol):
     def install(
         self, name: str, method: InstallMethod, out: Callable[[str], None]
     ) -> None: ...
+
+
+class ProjectScaffold(Protocol):
+    def create(self, target: Path, files: dict[str, str], *, dry_run: bool) -> bool:
+        """Create new scaffold files; return whether an existing .gitignore was kept.
+
+        Refuse existing main.ptk.yml. A dry run performs checks without writes.
+        """

@@ -5,6 +5,31 @@ From the repository root, install ptk and its development dependencies::
 
    uv sync
 
+Create your own project
+-----------------------
+
+From the installed CLI, preview and initialize a new directory::
+
+   ptk setup init my-project --name "My project" --dry-run
+   ptk setup init my-project --name "My project"
+   cd my-project
+   ptk setup config validate
+   ptk hello --message "It works"
+
+This creates ``main.ptk.yml`` with a portable built-in echo action and a
+``.gitignore`` for local overrides and generated workspace folders. The project
+name defaults to the destination directory name. An existing ``main.ptk.yml``
+is never overwritten, including in preview mode. An existing ``.gitignore``
+is preserved; review its rules yourself. No tools or credentials are installed.
+
+The command works without an existing project, including inside a directory
+whose parent contains a ptk project. ``DIRECTORY`` is the initialization target;
+do not combine this command with global ``--config`` or ``--set`` options.
+Bare ``ptk setup init`` initializes the current directory; ``ptk init`` is an alias.
+
+Run the repository example
+--------------------------
+
 The quickstart uses only the Python interpreter running ptk. It needs no CMake,
 compiler, credentials, or network connection once ptk is installed. Commands
 below work from the repository root on Linux and Windows::

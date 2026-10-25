@@ -948,6 +948,41 @@ def help_command(ctx: click.Context, output: Path | None, no_open: bool) -> None
         )
 
 
+@click.command("init")
+@click.argument(
+    "directory", default=".", type=click.Path(path_type=Path, file_okay=False)
+)
+@click.option("--name", help="Project name (default: destination directory name).")
+@click.option("--dry-run", is_flag=True, help="Preview files without writing them.")
+@click.pass_context
+@guarded
+def init_command(
+    ctx: click.Context, directory: Path, name: str | None, dry_run: bool
+) -> None:
+    """Create a runnable project without overwriting existing configuration."""
+    state = _state(ctx)
+    if state.config is not None or state.overrides:
+        raise click.UsageError(
+            "init uses DIRECTORY; do not combine it with --config or --set"
+        )
+    target = directory.resolve()
+    result = state.app.init_project.execute(target, name, dry_run=dry_run)
+    for file, content in result.files.items():
+        console.print(
+            f"{'would create' if dry_run else 'created'} {target / file}", markup=False
+        )
+        if dry_run:
+            console.print(content, markup=False, highlight=False)
+    if result.kept_gitignore:
+        console.print(
+            "Kept existing .gitignore. Add ptk workspace folders and local.ptk.yml if needed."
+        )
+    if not dry_run:
+        console.print(
+            "Next: change to the project directory, then run 'ptk setup config validate' and 'ptk hello'."
+        )
+
+
 @click.pass_context
 def _setup_dispatch(ctx: click.Context, **options: Any) -> None:
     """Group configuration, installation and credential management."""
@@ -981,6 +1016,10 @@ def _group_setup_commands() -> None:
         "Legacy 'ptk setup --action A' remains supported.",
     )
     setup.add_command(setup_command, "install")
+    setup.add_command(init_command, "init")
+    alias = copy.copy(init_command)
+    alias.hidden = True
+    cli.add_command(alias, "init")
     for old, new in (
         ("config", "config"),
         ("configs", "configs"),

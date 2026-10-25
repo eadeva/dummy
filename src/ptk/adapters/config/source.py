@@ -24,7 +24,7 @@ class FileConfigSource:
             [
                 Problem(
                     f"no {MAIN_FILE} found in {start} or any parent directory "
-                    f"(create one with 'ptk init')"
+                    f"(create one with 'ptk setup init')"
                 )
             ]
         )

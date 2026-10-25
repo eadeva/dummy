@@ -22,3 +22,5 @@ description: Create or change ptk YAML configuration, includes, layers and subst
 8. Verify with `ptk setup config validate`, then `ptk dry-run ACTION` for every affected variant.
 
 9. Avoid unknown keys, unresolved references, recursive includes and unsupported `plugins` expectations.
+
+10. For a new project, preview `ptk setup init DIRECTORY --dry-run`, then run `ptk setup init DIRECTORY`. Existing configuration is refused and an existing .gitignore is preserved. Run `ptk setup config validate` and `ptk hello` in the new directory.

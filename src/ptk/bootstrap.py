@@ -20,6 +20,7 @@ from .adapters.logging.files import FileLogObserver
 from .adapters.process import SubprocessRunner
 from .adapters.python_env import UvPythonEnvManager, find_uv
 from .adapters.reporting.store import FileReportStore
+from .adapters.scaffold import FileProjectScaffold
 from .adapters.shared_configs import PackageConfigFiles
 from .adapters.tools import SystemToolInstaller
 from .adapters.vscode_file import TasksFile
@@ -35,6 +36,7 @@ from .application.ports import (
 from .application.use_cases.configs import SharedConfigs
 from .application.use_cases.credentials import CredentialService
 from .application.use_cases.help import BuildHelp, HelpDocument
+from .application.use_cases.init import InitProject
 from .application.use_cases.project import (
     ExportSchema,
     LoadProject,
@@ -55,6 +57,7 @@ from .domain.logging import file_level
 @dataclass
 class App:
     host: HostEnvironment
+    init_project: InitProject
     load_project: LoadProject
     show_config: ShowConfig
     export_schema: ExportSchema
@@ -135,6 +138,7 @@ def create_app(
     machine = Environment(host, runner, uv)
     return App(
         host=host,
+        init_project=InitProject(FileProjectScaffold()),
         load_project=LoadProject(source or FileConfigSource(), host, version),
         show_config=ShowConfig(),
         export_schema=ExportSchema(),

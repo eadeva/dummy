@@ -122,7 +122,7 @@ main.ptk.yml               ptk_version, project, include, main settings
 
 - Short forms: `run: "cmake --build ."` instead of a full mapping.
 - Defaults everywhere (working dir = project root, `continue_on_error: false`, ...).
-- `ptk init` scaffolds a project; `ptk dry-run <action>` shows the expanded step
+- `ptk setup init` (`ptk init` alias) scaffolds a project; `ptk dry-run <action>` shows the expanded step
   tree with evaluated conditions, final commands and parameter sources before
   running anything.
 - `ptk help` opens the full help as an offline HTML page in the default browser
@@ -533,7 +533,7 @@ ptk                                     run project.default_action
 ptk dry-run [<action> [same options]]  what would run - nothing is executed
 ptk run [<action>] [...]                generic form (scripts, CI); -p NAME=VALUE
 ptk help [--no-open] [-o FILE]          full help as HTML, opened in the browser
-ptk init                                scaffold a project
+ptk setup init [DIRECTORY] [--name NAME] [--dry-run]  scaffold a project
 ptk setup config  show [--sources] | validate | schema
 ptk variant list | show | explain | check | set | new | gui
 ptk setup creds   setup | set | list | test | remove
@@ -690,3 +690,12 @@ Configuration, shared configs, credentials, tool installation, self-setup, docto
 and VS Code task generation are grouped under `ptk setup`. See `docs/cli.rst`.
 Bare `ptk setup` displays help; `ptk setup install` installs configured tools.
 Former top-level commands remain hidden compatibility aliases.
+
+## Post-M10 completion: project initialization
+
+- Implemented `ptk setup init [DIRECTORY] [--name NAME] [--dry-run]` and the hidden
+  `ptk init` alias, closing the scaffold feature described in section 2.3.
+- Generates a portable `hello` action and a new `.gitignore` when absent.
+- Refuses existing configuration, preserves existing ignore rules, and previews
+  without writing files. Does not install tools or access credentials.
+- M11 migration, background steps and a variant GUI remain optional and unimplemented.
