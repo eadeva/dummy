@@ -1,0 +1,7 @@
+# Shared formatter/linter configuration. Enable entries you intend to use.
+configs: {}
+# Replace configs: {} with, for example:
+# configs:
+#   ruff: {enabled: true}           # Python lint/format configuration.
+#   clang-format: {enabled: true}   # C/C++ formatting configuration.
+# Run `ptk setup configs sync` to generate the enabled configuration files.

@@ -1,0 +1,6 @@
+# Release variant; select with -V release.
+variants:
+  release:
+    description: Release build
+    features:
+      DEBUG: false

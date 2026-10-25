@@ -1,0 +1,11 @@
+# Child commands get only OS essentials and explicitly kept variables.
+environment:
+  isolate: true
+  inherit_path: false
+  keep: []
+# Under environment, customize only what commands need:
+#   keep: [HTTP_PROXY, HTTPS_PROXY]  # Copy named variables from the caller.
+#   set: {BUILD_MODE: reproducible} # Set values for all actions.
+#   unset: [UNWANTED_VARIABLE]      # Remove inherited variables.
+#   path_prepend: [/opt/sdk/bin]    # Explicit extra executable paths.
+#   path_append: []

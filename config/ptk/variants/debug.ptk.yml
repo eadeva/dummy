@@ -1,0 +1,6 @@
+# Development variant; feature values are exported as VH_* variables.
+variants:
+  debug:
+    description: Development build
+    features:
+      DEBUG: true

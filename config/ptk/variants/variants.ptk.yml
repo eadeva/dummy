@@ -1,0 +1,14 @@
+# Variant model: includes here are relative to variants/.
+# Add a separate file per variant and include it below.
+include:
+- debug.ptk.yml
+- release.ptk.yml
+default: debug
+components:
+  core:
+    description: Example project component
+    features:
+      DEBUG:
+        type: bool
+        default: true
+        help: Enable debug behavior

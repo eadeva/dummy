@@ -1,0 +1,9 @@
+# Conventional entry point: loaded automatically for GitHub Actions/workflows.
+# This file stays at the configuration root so PTK can discover it.
+environment:
+  set:
+    PTK_CI: "true"
+# Optional action override; place at the top level:
+# actions:
+#   build:
+#     env: {BUILD_MODE: ci}

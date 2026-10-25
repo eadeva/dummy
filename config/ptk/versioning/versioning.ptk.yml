@@ -1,0 +1,19 @@
+# Literal version works before you create any Git tags.
+versioning:
+  project:
+    source: git
+    version: "v*"
+    strip_prefix: v      # v1.2.3 becomes 1.2.3.
+    dirty: suffix        # suffix, ignore or error.
+  components:
+    core:
+      source: inherit
+
+# To discover a tagged version, replace project above with:
+#   project:
+#     source: git
+#     match: "v*"          # Select reachable tags matching this pattern.
+#     strip_prefix: v      # v1.2.3 becomes 1.2.3.
+#     dirty: suffix        # suffix, ignore or error.
+# A separately versioned component can use source: file, path: VERSION.
+# Paths in version sources are relative to the repository root.

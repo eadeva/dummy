@@ -1,0 +1,22 @@
+# Second action: a portable build starter; no compiler installation needed.
+# Run `ptk build -V release`; replace/extend these steps for your build.
+actions:
+  build:
+    help: Generate version files for C/C++ and CMake
+    steps:
+    - header:
+        uses: version.generate
+        with:
+          format: c_header
+          output: ${run.bin_dir}/generated/version.h
+    - cmake:
+        uses: version.generate
+        with:
+          format: cmake
+          output: ${run.bin_dir}/generated/version.cmake
+# After declaring cmake in tools/tools.ptk.yml, add beside steps:
+#     requires_tools: {cmake: true}
+# Example additional step (under steps, after creating CMakeLists.txt):
+#       - configure:
+#           run: [cmake, -S, ., -B, "${run.build_dir}"]
+#           timeout: 120
