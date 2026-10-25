@@ -179,6 +179,13 @@ def _check_values(
 ) -> list[PathProblem]:
     problems: list[PathProblem] = []
     for ref in iter_references(value):
+        if ref.startswith("params.") and action is not None:
+            param = action.params.get(ref.split(".")[1])
+            if param and param.type == "secret" and not allow_secret:
+                problems.append(
+                    (path, "secret parameters may only be used in step env values")
+                )
+                continue
         ns, rest = split_reference(ref)
         if ns == "secret":
             if not allow_secret:

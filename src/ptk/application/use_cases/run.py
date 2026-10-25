@@ -175,7 +175,12 @@ class PrepareRun:
             "reports_dir": str(layout.reports_dir(variant_name, request.action)),
             "build_dir": str(layout.build_dir(variant_name, request.action)),
         }
-        secret_values: set[str] = set()
+        secret_params = {
+            n for n, spec in action.params.items() if spec.type == "secret"
+        }
+        secret_values: set[str] = {
+            str(params[n]) for n in secret_params if params.get(n)
+        }
 
         def secret(ref: str) -> str:
             if request.dry_run:
@@ -249,7 +254,11 @@ class PrepareRun:
                     "PTK_REPORTS_DIR": dirs["reports_dir"],
                 }
             )
-            base.update(envs.param_variables(params))
+            base.update(
+                envs.param_variables(
+                    {n: v for n, v in params.items() if n not in secret_params}
+                )
+            )
             base.update(vh_env)
             action_scope = scope(base)
             base.update({k: to_text(action_scope(v)) for k, v in action.env.items()})
@@ -282,7 +291,7 @@ class PrepareRun:
             action=request.action,
             variant=variant_name,
             run_id=run_id,
-            params=params,
+            params={n: MASK if n in secret_params else v for n, v in params.items()},
             param_sources=sources,
             steps=steps,
             base_env=base,
@@ -326,6 +335,21 @@ class Cancelled(threading.Event):
     """Set on Ctrl+C: running processes are terminated, nothing new starts."""
 
 
+class CancellationScope:
+    """Local deadline combined with a parent's cancellation (safe in parallel)."""
+
+    def __init__(self, parent, timeout: float | None = None):
+        self.parent = parent
+        self.deadline = time.monotonic() + timeout if timeout else None
+
+    @property
+    def expired(self) -> bool:
+        return self.deadline is not None and time.monotonic() >= self.deadline
+
+    def is_set(self) -> bool:
+        return self.parent.is_set() or self.expired
+
+
 @dataclass(frozen=True)
 class BuiltinContext:
     """What a built-in step (``uses:``) may work with."""
@@ -333,6 +357,8 @@ class BuiltinContext:
     root: Path  # project root
     build_dir: Path  # the step's build folder
     reports_dir: Path  # the step's reports folder (picked up by the report)
+    cancel: object | None = None  # cooperative cancellation: is_set()
+    variant: object | None = None  # resolved variant for generators
 
 
 BuiltinStep = Callable[[PlannedStep, Callable[[str], None], BuiltinContext], int]
@@ -352,7 +378,11 @@ def _builtin_wait(
 ) -> int:
     seconds = float(step.with_.get("seconds", 1))
     out(f"waiting {seconds:g}s")
-    time.sleep(seconds)
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        if ctx.cancel is not None and ctx.cancel.is_set():
+            return 1
+        time.sleep(min(0.05, max(0, end - time.monotonic())))
     return 0
 
 
@@ -434,7 +464,8 @@ class RunAction:
 
     # -- tree --------------------------------------------------------------------------
 
-    def _run_sequence(self, steps: list[PlannedStep]) -> list[StepResult]:
+    def _run_sequence(self, steps: list[PlannedStep], cancel=None) -> list[StepResult]:
+        cancel = cancel or self._cancel
         # Background jobs are scoped to this sequence, never detached. Preserve
         # configuration order in summaries while observers receive live events.
         results: list[StepResult | Future[StepResult]] = []
@@ -450,22 +481,20 @@ class RunAction:
                         for r in results
                         if isinstance(r, Future)
                     )
-                    if failed or self._cancel.is_set():
+                    if failed or cancel.is_set():
                         results.append(
                             self._not_run(
                                 step,
-                                Status.CANCELLED
-                                if self._cancel.is_set()
-                                else Status.SKIPPED,
+                                Status.CANCELLED if cancel.is_set() else Status.SKIPPED,
                                 "cancelled"
-                                if self._cancel.is_set()
+                                if cancel.is_set()
                                 else "not run: an earlier step failed",
                             )
                         )
                     elif step.spec.background and not step.skip_reason:
-                        results.append(pool.submit(self._run_step, step))
+                        results.append(pool.submit(self._run_step, step, cancel))
                     else:
-                        result = self._run_step(step)
+                        result = self._run_step(step, cancel)
                         results.append(result)
                         failed = result.blocking_failure
                 return [r.result() if isinstance(r, Future) else r for r in results]
@@ -474,13 +503,14 @@ class RunAction:
                 self._cancel.set()
                 raise
 
-    def _run_parallel(self, steps: list[PlannedStep]) -> list[StepResult]:
+    def _run_parallel(self, steps: list[PlannedStep], cancel=None) -> list[StepResult]:
+        cancel = cancel or self._cancel
         workers = max(1, min(len(steps), self._max_parallel or len(steps)))
         with ThreadPoolExecutor(
             max_workers=workers, thread_name_prefix="ptk-step"
         ) as pool:
             try:
-                return list(pool.map(self._run_step, steps))
+                return list(pool.map(lambda step: self._run_step(step, cancel), steps))
             except BaseException:
                 self._cancel.set()
                 raise
@@ -509,24 +539,35 @@ class RunAction:
         result.children = [self._not_run(c, status, message) for c in step.children]
         return result
 
-    def _run_step(self, step: PlannedStep) -> StepResult:
+    def _run_step(self, step: PlannedStep, cancel=None) -> StepResult:
+        cancel = cancel or self._cancel
         if step.skip_reason:
             return self._not_run(step, Status.SKIPPED, step.skip_reason)
-        if self._cancel.is_set():
+        if cancel.is_set():
             return self._not_run(step, Status.CANCELLED, "cancelled")
         if step.kind == "set":
             self._emit("step_started", step, None)
             start = time.monotonic()
-            children = (
-                self._run_parallel(step.children)
-                if step.spec.parallel
-                else self._run_sequence(step.children)
-            )
+            for attempt in range(1, step.spec.retries + 2):
+                attempts = attempt
+                scope = CancellationScope(cancel, step.spec.timeout)
+                children = (
+                    self._run_parallel(step.children, scope)
+                    if step.spec.parallel
+                    else self._run_sequence(step.children, scope)
+                )
+                status = Status.FAILED if scope.expired else _combine(children)
+                if status is Status.PASSED or cancel.is_set():
+                    break
             result = StepResult(
                 step.path,
                 step.name,
                 step.kind,
-                status=_combine(children),
+                status=status,
+                attempts=attempts,
+                message=f"timed out after {step.spec.timeout:g}s"
+                if scope.expired
+                else "",
                 duration=time.monotonic() - start,
                 start=start - self._run_start,
                 children=children,
@@ -535,11 +576,11 @@ class RunAction:
                 result.allowed_failure = True
             self._emit("step_finished", step, result)
             return result
-        return self._run_leaf(step)
+        return self._run_leaf(step, cancel)
 
     # -- leaves ------------------------------------------------------------------------
 
-    def _run_leaf(self, step: PlannedStep) -> StepResult:
+    def _run_leaf(self, step: PlannedStep, cancel) -> StepResult:
         prepared = self._prepared
         plan = prepared.plan
         layout = prepared.layout
@@ -560,8 +601,17 @@ class RunAction:
             if step.kind == "uses":
                 result.command = f"uses {step.spec.uses}"
                 self._emit("step_started", step, result.command)
-                exit_code, message = self._run_builtin(step, out)
-                result.attempts = 1
+                for attempt in range(1, step.spec.retries + 2):
+                    scope = CancellationScope(cancel, step.spec.timeout)
+                    exit_code, message = self._run_builtin(step, out, scope)
+                    result.attempts = attempt
+                    if scope.expired:
+                        exit_code, message = (
+                            1,
+                            f"timed out after {step.spec.timeout:g}s",
+                        )
+                    if exit_code == 0 or cancel.is_set():
+                        break
             else:
                 runtime = None
                 if step.python is not None:
@@ -585,19 +635,22 @@ class RunAction:
                             f"exit code {exit_code} - retry {attempt - 1}/{step.spec.retries}",
                             step,
                         )
-                    outcome = self._runner.run(command, out, self._cancel)
+                    outcome = self._runner.run(command, out, cancel)
                     exit_code = outcome.exit_code
                     message = outcome.error or ""
                     if outcome.timed_out:
                         message = f"timed out after {step.spec.timeout:g}s"
                     if outcome.cancelled or exit_code == 0:
                         break
-                if self._cancel.is_set():
+                if cancel.is_set():
                     result.status = Status.CANCELLED
                     message = message or "cancelled"
         except (PtkError, SubstitutionError, ValueError, OSError) as exc:
             exit_code, message = 1, str(exc)
             self._log(Level.ERROR, message, step)
+        if cancel.is_set():
+            result.status = Status.CANCELLED
+            message = message or "cancelled"
         result.exit_code = exit_code
         result.message = prepared.mask(message)
         result.duration = time.monotonic() - start
@@ -613,7 +666,7 @@ class RunAction:
         return result
 
     def _run_builtin(
-        self, step: PlannedStep, out: Callable[[str], None]
+        self, step: PlannedStep, out: Callable[[str], None], cancel
     ) -> tuple[int, str]:
         name = step.spec.uses or ""
         handler = self._builtins.get(name)
@@ -625,6 +678,10 @@ class RunAction:
         prepared = self._prepared
         plan = prepared.plan
         ctx = BuiltinContext(
+            cancel=cancel,
+            variant=VariantService(prepared.project).resolve(plan.variant)
+            if prepared.project.config.variants
+            else None,
             root=prepared.project.root,
             build_dir=Path(
                 prepared.layout.build_dir(plan.variant, plan.action, step.path)

@@ -22,6 +22,10 @@ class ReportService:
         self._version = version
 
     def build(self, project: Project, summary: dict[str, Any]) -> Report:
+        summary = {
+            **summary,
+            "steps": [s for s in summary.get("steps", []) if s.get("report", True)],
+        }
         reports_dir = self._reports_dir(project, summary)
         labels = [s["step"] for s in summary.get("steps", [])]
         contributions = self._store.contributions(reports_dir, labels)

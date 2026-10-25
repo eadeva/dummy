@@ -66,7 +66,7 @@ def param_option(name: str, spec: ParamSpec) -> click.Option:
     hints = []
     if spec.required:
         hints.append("required")
-    if spec.default is not None:
+    if spec.default is not None and spec.type != "secret":
         default = (
             spec.default
             if not isinstance(spec.default, list)
@@ -79,6 +79,13 @@ def param_option(name: str, spec: ParamSpec) -> click.Option:
         f" [dim]\\[{escape(', '.join(hints))}][/]" if hints else ""
     )
     dest = PARAM_PREFIX + name
+    if spec.type == "secret":
+        return click.Option(
+            [option_name(name), dest],
+            is_flag=True,
+            default=None,
+            help=help_text + " Prompt for a hidden value (or configure env:).",
+        )
     if spec.type == "bool":
         flag = option_name(name)
         return click.Option(
@@ -86,6 +93,7 @@ def param_option(name: str, spec: ParamSpec) -> click.Option:
         )
     kinds: dict[str, Any] = {
         "str": click.STRING,
+        "path": click.Path(),
         "int": click.INT,
         "float": click.FLOAT,
         "list": click.STRING,
@@ -307,6 +315,11 @@ def action_command(
             for key, value in options.items()
             if key.startswith(PARAM_PREFIX) and value is not None
         }
+        for param in list(given):
+            if spec.params[param].type == "secret":
+                given[param] = (
+                    "********" if dry_run else click.prompt(param, hide_input=True)
+                )
         quiet = options.pop("quiet", False)
         show_env = options.pop("show_env", False)
         setup = options.pop("setup", False)

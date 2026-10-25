@@ -102,6 +102,10 @@ class ParamSpec(_Strict):
 
     @model_validator(mode="after")
     def _check(self) -> ParamSpec:
+        if self.type == "secret" and self.default is not None:
+            raise ValueError(
+                "secret parameters must use env or hidden input, not defaults"
+            )
         if self.type == "choice":
             if not self.choices:
                 raise ValueError("choice parameters need 'choices'")

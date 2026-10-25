@@ -123,3 +123,20 @@ remain planned. Migration, background process steps and the optional variant
 GUI (including its plugin entry points) are described in :doc:`m11`. Do not rely on roadmap examples
 for these features. Use the commands shown by ``ptk --help`` and the runnable
 quickstart as the supported starting point.
+
+Additional execution controls
+-----------------------------
+
+``path`` parameters accept paths containing spaces. ``secret`` parameters use
+``env:`` or a hidden prompt requested with ``--PARAM`` (without a value).
+They have no literal defaults, are masked in run metadata, are not exported as
+``PTK_PARAM_*``, and may be substituted only in step ``env``. Prefer credential
+providers for reusable credentials. Never pass secret values as CLI arguments.
+
+``report: false`` excludes a step and its descendants from exported reports and
+tool-result imports; audit logs and the overall failure status remain complete.
+Groups and built-ins support retries and deadlines. A group deadline cancels its
+children, without cancelling unrelated groups. Repeating a group repeats all of
+its children, so enable retries only for repeatable work. Built-in/plugin Python
+handlers must cooperate with ``ctx.cancel.is_set()``; Python threads cannot safely
+be forcibly terminated. ``wait`` cooperates with deadlines and Ctrl+C.

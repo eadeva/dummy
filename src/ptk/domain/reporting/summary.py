@@ -44,10 +44,14 @@ def header(plan: ActionPlan) -> dict[str, Any]:
 
 
 def run_summary(plan: ActionPlan, result: RunResult) -> dict[str, Any]:
+    hidden = [s.path for s in plan.walk() if not s.spec.report]
     return {
         **header(plan),
         "status": result.status.value,
         "started_at": result.started_at,
         "duration": round(result.duration, 3),
-        "steps": [step_dict(r) for r in result.walk()],
+        "steps": [
+            {**step_dict(r), "report": not any(r.path[: len(p)] == p for p in hidden)}
+            for r in result.walk()
+        ],
     }
