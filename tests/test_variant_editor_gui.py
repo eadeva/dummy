@@ -39,6 +39,8 @@ def test_real_editor_validation_and_export(tmp_path, monkeypatch):
 
     def interact():
         try:
+            # Timers can fire before initial geometry idle callbacks on a busy CI host.
+            root.update_idletasks()
             widgets = list(descendants(root))
             editor = next(
                 w
