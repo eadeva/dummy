@@ -111,7 +111,7 @@ Use canonical dotted paths, for example::
      report: all
 
 Supported keys are ``setup``, its immediate commands/groups (``config``, ``configs``,
-``creds``, ``vscode``, ``install``, ``self``, ``doctor``, ``init``, ``migrate``),
+``creds``, ``vscode``, ``install``, ``self``, ``doctor``, ``init``),
 ``variant`` and ``report``. Restrictions apply to descendants and compatibility
 aliases, normal/HTML help and completion. Roles use ``maintainers.ptk.yml`` as
 for actions. This is command visibility, not a security boundary.

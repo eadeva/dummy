@@ -1113,34 +1113,6 @@ def init_command(
         )
 
 
-@click.command("migrate")
-@click.argument("source", type=click.Path(path_type=Path, exists=True, dir_okay=False))
-@click.option(
-    "-o",
-    "--output",
-    type=click.Path(path_type=Path, dir_okay=False),
-    default=".main.ptk.yml",
-)
-@click.option("--name", help="Project name when absent in the legacy file.")
-@click.option(
-    "--dry-run", is_flag=True, help="Validate and print converted YAML without writing."
-)
-@guarded
-def migrate_command(
-    source: Path, output: Path, name: str | None, dry_run: bool
-) -> None:
-    """Convert supported legacy configuration fields; refuse ambiguous input."""
-    from ...adapters.migration import convert_file
-
-    text = convert_file(source, output, name=name, dry_run=dry_run)
-    if dry_run:
-        click.echo(text)
-    else:
-        click.echo(
-            f"Created {output}. Review it, then run 'ptk setup config validate'."
-        )
-
-
 @click.pass_context
 def _setup_dispatch(ctx: click.Context, **options: Any) -> None:
     """Group configuration, installation and credential management."""
@@ -1174,10 +1146,6 @@ def _group_setup_commands() -> None:
         "Legacy 'ptk setup --action A' remains supported.",
     )
     setup.add_command(setup_command, "install")
-    setup.add_command(migrate_command, "migrate")
-    migrate_alias = copy.copy(migrate_command)
-    migrate_alias.hidden = True
-    cli.add_command(migrate_alias, "migrate")
     setup.add_command(init_command, "init")
     alias = copy.copy(init_command)
     alias.hidden = True

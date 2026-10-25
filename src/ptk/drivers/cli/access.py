@@ -12,7 +12,6 @@ ALIASES = {
     "self-setup": "setup.self",
     "doctor": "setup.doctor",
     "init": "setup.init",
-    "migrate": "setup.migrate",
 }
 
 

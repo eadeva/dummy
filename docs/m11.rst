@@ -1,42 +1,5 @@
-Migration, background steps and variant editor
-==============================================
-
-Legacy migration
-----------------
-
-Use a new output path and review the preview first::
-
-   ptk setup migrate old-config.yaml --name demo --dry-run
-   ptk setup migrate old-config.yaml --name demo --output .main.ptk.yml
-   ptk setup config validate
-
-``ptk migrate`` is an alias. Conversion never modifies the source and refuses
-existing output files, including symlinks. It validates the converted schema and
-cross-references before writing. The output directory must already exist.
-
-Supported legacy shapes are ``ACTIONS`` mappings with action ``PHASES``, ``SETS``
-or ``steps``. Step collections may be ordered mappings or lists of single-name
-mappings, recursively. Commands may be strings or argv lists. The converter maps:
-
-* ``VARS`` and ``$VAR{name}`` to ``vars`` and ``${vars.name}``.
-* ``shell_run_command`` and ``custom_script`` to ``run``.
-* Boolean ``game_stopper`` to inverted ``continue_on_error``.
-* ``non_blocking`` to ``background``.
-* ``only_variants`` / ``omit_variants`` to combined ``when`` conditions.
-* Action-local ``DEFAULT_PARAMETERS`` scalar/list values to typed defaults.
-
-Already-current fields are retained and validated. Unsupported keys or conflicting
-old/new spellings stop conversion. ``execute_if`` migration has been dropped from
-the required scope; legacy ``ENV_ISOLATION`` migration is deferred. If an input
-still contains these fields, remove or translate them explicitly before conversion;
-the converter will not silently discard conditions or environment settings.
-
-Legacy compatibility is not a completion requirement. CX has been clarified as
-GitHub Actions execution; the runtime uses ``cx.ptk.yml`` for workflow overrides.
-No automatic conversion of legacy ``variant_matrix``, ``variant_overrides`` or
-``*_cx`` dialects is promised. Shared defaults now use ``param_defaults``.
-There is no claim of automatic compatibility with every historical config dialect.
-Do not put literal credentials in configuration files or migration previews.
+Background steps and variant editor
+===================================
 
 Background process steps
 ------------------------

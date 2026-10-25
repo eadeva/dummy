@@ -467,7 +467,6 @@ ptk dry-run [<action> [same options]]  what would run - nothing is executed
 ptk run [<action>] [...]                generic form (scripts, CI); -p NAME=VALUE
 ptk help [--no-open] [-o FILE]          full help as HTML, opened in the browser
 ptk setup init [DIRECTORY] [--name NAME] [--dry-run]  scaffold a project
-ptk setup migrate SOURCE [-o FILE] [--dry-run]  conservative legacy conversion
 ptk setup config  show [--sources] | validate | schema
 ptk variant list | show | explain | check | set | new | gui
 ptk setup creds   setup | set | list | test | remove
@@ -544,9 +543,7 @@ so `ptk build --help` documents the project's real options.
 | `$VAR{...}` / env replacement | `${vars.x}` / `${env:X}` |
 | `variant_matrix` + `variants` | product line with enum features + aliases |
 
-A conservative one-off converter is available as `ptk setup migrate old-config.yaml`
-(alias `ptk migrate`). Unsupported/ambiguous legacy fields require manual conversion;
-see `docs/m11.rst` for the supported subset.
+Legacy conversion is not supported; configurations must use the current schema.
 
 ---
 
@@ -602,7 +599,7 @@ formatted with `ruff format`. CI runs `ruff check` and `ruff format --check`.
 | M8 ✅ | Shared configs: pre-commit, ruff, clang-format, clang-tidy, clangd | `configs sync/check/--diff` |
 | M9 ✅ | Tools: model, Chocolatey, uv-tool, download, `setup`, `self-setup`, `doctor`, installers | missing tools detected and installed (Windows run by user) |
 | M10 ✅ | Runnable quickstart, schema-generated reference, thirteen authoring skills, native process tests and CI matrix | Sphinx `-W`, lint and tests passed on Linux/Windows with Python 3.12/3.13 (run 40195082145) |
-| M11 ✅ | `setup migrate` (alias `migrate`), scoped background steps, optional variant YAML GUI and plugin discovery | done |
+| M11 ✅ | Scoped background steps, optional variant YAML GUI and plugin discovery | done |
 
 ---
 
@@ -634,14 +631,11 @@ Former top-level commands remain hidden compatibility aliases.
 - Generates a portable `hello` action and a new `.gitignore` when absent.
 - Refuses existing configuration, preserves existing ignore rules, and previews
   without writing files. Does not install tools or access credentials.
-- M11 is implemented with documented limits: conservative migration, finite scoped
+- M11 is implemented with documented limits: finite scoped
   background processes, and a desktop YAML variant editor with validated export.
 
 ## M11 implementation
 
-- Migration supports the explicit legacy subset in `docs/m11.rst`, previews without
-  writes, validates output and refuses existing destinations. Ambiguous scopes and
-  unsupported options stop conversion; sources are never changed.
 - Background `run` steps overlap subsequent work, join at their sequence boundary,
   preserve result ordering, and use existing timeout/retry/cancellation handling.
 - `variant gui` lazily opens the Tk editor or an explicitly selected installed
@@ -649,7 +643,7 @@ Former top-level commands remain hidden compatibility aliases.
   existing source files are preserved. A real Tk event-loop test under Xvfb covers validation and export in CI;
   native desktop appearance remains a manual acceptance check.
 - Regression coverage includes real process overlap/cancellation, failure reporting,
-  migration preview/round-trip/overwrite protection, variant constraints and plugin dispatch.
+  variant constraints and plugin dispatch.
 
 ## Detail-plan completion after M11
 
@@ -670,8 +664,6 @@ Former top-level commands remain hidden compatibility aliases.
 
 ### Explicit release / acceptance boundaries
 
-- Migration supports the documented legacy subset. Expanding historical dialect
-  support requires representative source configurations; no options are dropped silently.
 - The GUI is a validated YAML editor with export, not a graphical feature-tree designer.
   Native Windows/Linux appearance and real machine-wide Chocolatey/gopass setup remain
   user-environment acceptance checks; CI does not claim those installations occurred.
@@ -685,7 +677,7 @@ Former top-level commands remain hidden compatibility aliases.
   overlay; `--ci` / `--no-ci` can force mode. No legacy filename is required.
 - Legacy migration is not a completion requirement. `execute_if`, legacy
   `ENV_ISOLATION`, `*_cx`, `variant_overrides` and `DEFAULT_PARAMETERS_CX` do not
-  create further legacy obligations. Existing optional migration remains available.
+  create further legacy obligations. The legacy converter and both CLI spellings have been removed.
 - Drop `variant_matrix` as a separate deliverable. Named variants, inheritance,
   feature overrides and multi-variant execution cover the accepted requirement.
 - Shared `param_defaults` applies only to explicitly declared action parameters.

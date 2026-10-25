@@ -143,7 +143,7 @@ and VS Code tasks. This is a convenience feature, not a security boundary.
 
 Variant editing, matrix runs and legacy CLI aliases are described in :doc:`cli`.
 The installed plugin interfaces, generators and built-in command visibility are
-covered in :doc:`plugins`. Migration and desktop GUI limitations are in :doc:`m11`.
+covered in :doc:`plugins`. Background process and desktop GUI limitations are in :doc:`m11`.
 
 
 Additional execution controls

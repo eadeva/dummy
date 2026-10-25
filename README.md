@@ -230,15 +230,14 @@ src/ptk/
 
 Dependencies point inwards only; the domain has no I/O.
 
-### Migration, background jobs and variant editing
+### Background jobs and variant editing
 
-- `ptk setup migrate old-config.yaml --dry-run` previews supported legacy conversion.
 - `background: true` lets a finite `run` step overlap subsequent steps; PTK waits at
   the containing group's end and includes failures in the report.
 - `ptk variant gui` opens an optional Tk YAML editor with validation and export to
   a new standalone project file. A graphical desktop and Python Tk support are needed.
 
-See [M11 features and limitations](docs/m11.rst) for migration coverage, process
+See [M11 features and limitations](docs/m11.rst) for process
 lifecycle and the `ptk.variant_gui` editor plugin interface.
 
 ## VMR workspaces and isolated environments
