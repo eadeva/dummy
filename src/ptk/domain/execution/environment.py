@@ -88,7 +88,10 @@ def base_environment(
         key = _find_key(env, name, windows)
         if key:
             del env[key]
-    env.update(set_)
+    for name, value in set_.items():
+        # Windows environment names are case-insensitive, including Path/PATH.
+        key = _find_key(env, name, windows) or name
+        env[key] = value
     path_key = _find_key(env, "PATH", windows) or "PATH"
     parts = [p for p in env.get(path_key, "").split(sep) if p]
     parts = [*path_prepend, *parts, *path_append]

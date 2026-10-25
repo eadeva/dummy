@@ -11,3 +11,4 @@ _logs/
 _reports/
 .ptk/
 local.ptk.yml
+docs/_build/

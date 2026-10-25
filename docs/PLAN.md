@@ -665,7 +665,7 @@ formatted with `ruff format`. CI runs `ruff check` and `ruff format --check`.
 | M7 ✅ | Unified reporting | JSON, JUnit, HTML, Markdown, GitHub summary; contributors API |
 | M8 ✅ | Shared configs: pre-commit, ruff, clang-format, clang-tidy, clangd | `configs sync/check/--diff` |
 | M9 ✅ | Tools: model, Chocolatey, uv-tool, download, `setup`, `self-setup`, `doctor`, installers | missing tools detected and installed (Windows run by user) |
-| M10 | Example project, docs-as-code, skills, CI Linux + Windows | docs build with `-W`; all skills present |
+| M10 🚧 | Runnable offline quickstart, initial Sphinx docs and CI Linux + Windows added; full reference, skills and native Windows coverage pending | docs build with `-W`; all skills present; CI verified on both platforms |
 | M11 | Optional: `ptk migrate`, background steps, variant GUI plugin | — |
 
 ---

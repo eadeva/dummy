@@ -251,3 +251,28 @@ def test_python_runtime_for_scripts_and_commands():
         one(["ruff", "check"]), env={}, cwd=".", os_name="linux", python=uvx
     )
     assert cmd.argv == ["uv", "tool", "run", "--from", "ruff", "ruff", "check"]
+
+
+@pytest.mark.parametrize("os_name", ["windows", "linux"])
+def test_environment_set_respects_platform_case_rules(os_name):
+    host = {"Path": "old", "Token": "old-token"}
+    result = envs.base_environment(
+        host,
+        os_name=os_name,
+        isolate=False,
+        keep=[],
+        set_={"PATH": "new", "TOKEN": "new-token"},
+        unset=[],
+        path_prepend=["tools"],
+        path_append=[],
+    )
+    assert host == {"Path": "old", "Token": "old-token"}
+    if os_name == "windows":
+        assert result == {"Path": "tools;new", "Token": "new-token"}
+    else:
+        assert result == {
+            "Path": "old",
+            "Token": "old-token",
+            "PATH": "tools:new",
+            "TOKEN": "new-token",
+        }

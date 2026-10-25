@@ -7,13 +7,37 @@ unified logging and reporting. See [`docs/PLAN.md`](docs/PLAN.md) for the full p
 **Status:** M1 (configuration meta-model and loader), M2 (variant core), M3
 (execution engine, dry run, HTML help), M4 (unified logging), M5 (generated
 CLI, maintainer visibility, VS Code tasks), M6 (credentials), M7 (reporting), M8 (shared configs) and M9 (tools,
-setup, doctor, installers) are done.
+setup, doctor, installers) are done. M10 is in progress: a runnable offline
+quickstart, Sphinx documentation and Linux/Windows CI have been added.
+The full reference and authoring skills remain pending.
 
 ```bash
 uv sync                     # install with dev dependencies
 uv run ptk --help
 uv run pytest
 uv run ruff check && uv run ruff format --check   # ruff default rules
+```
+
+## Runnable quickstart
+
+From the repository root:
+
+```bash
+uv sync
+uv run ptk -c examples/quickstart/main.ptk.yml dry-run build
+uv run ptk -c examples/quickstart/main.ptk.yml build -V debug
+uv run ptk -c examples/quickstart/main.ptk.yml build -V release
+```
+
+This example runs without compilers or credentials and writes logs and reports
+inside `examples/quickstart`. The existing firmware demo contains placeholders
+and is intended for configuration exploration and dry runs.
+
+Build the [documentation](docs/index.rst):
+
+```bash
+uv sync --group docs
+uv run sphinx-build -W --keep-going -b html docs docs/_build/html
 ```
 
 ## Tools
