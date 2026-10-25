@@ -62,7 +62,14 @@ actions:
 Runs check `requires_tools` first; `ptk setup install` (or `ptk build --setup`) installs what is
 missing - Chocolatey on Windows, `uv tool`, sha256-verified downloads, apt/dnf only with
 `--allow-system`. `ptk setup doctor` diagnoses a machine; `ptk setup self` gets it ready.
-Install ptk itself with `install/install.sh` or `install/install.ps1`.
+Install or refresh ptk itself with `sh install/install.sh` or
+`powershell -ExecutionPolicy Bypass -File install/install.ps1`.
+When run from a checkout, both scripts install that checkout (relative to the
+script, regardless of your current directory). Rerunning reinstalls even the same
+package version and updates compatible dependencies. Pull the desired branch
+first: installing a checkout does not run `git pull`. `PTK_SOURCE` overrides the
+source; a standalone downloaded script defaults to the `ptk` package index entry.
+Explicit version pins remain respected. Open a new terminal after installation.
 
 ## Shared configs
 

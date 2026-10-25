@@ -4,7 +4,7 @@
 #   $env:PTK_SOURCE = "git+https://github.com/<org>/ptk@v0.1.0"; .\install.ps1
 #
 # Environment:
-#   PTK_SOURCE   what 'uv tool install' installs (default: ptk, e.g. from your index)
+#   PTK_SOURCE   what 'uv tool install' installs (default: this checkout, otherwise ptk from your index)
 #   PTK_EXTRAS   optional extras, e.g. "keyring" (Windows Credential Manager)
 #   UV_INDEX_URL / UV_EXTRA_INDEX_URL   your package index (standard uv variables)
 $ErrorActionPreference = "Stop"
@@ -23,15 +23,26 @@ if (-not $uv) {
     }
 }
 
-$source = if ($env:PTK_SOURCE) { $env:PTK_SOURCE } else { "ptk" }
+$source = $env:PTK_SOURCE
+if (-not $source) {
+    $source = "ptk"
+    if ($PSScriptRoot) {
+        $checkout = Split-Path -Parent $PSScriptRoot
+        if ((Test-Path (Join-Path $checkout "pyproject.toml")) -and
+            (Test-Path (Join-Path $checkout "src/ptk") -PathType Container)) {
+            $source = $checkout
+        }
+    }
+}
 if ($env:PTK_EXTRAS) {
     if ($source -match "://|@") { Say "PTK_EXTRAS is ignored for URL sources" }
     else { $source = "$source[$($env:PTK_EXTRAS)]" }
 }
 
-Say "installing $source"
-uv tool install --force --python 3.12 $source
+Say "installing/updating $source"
+# Reinstall even when the package version is unchanged; refresh resolution too.
+uv tool install --force --reinstall --upgrade --python 3.12 $source
 if ($LASTEXITCODE -ne 0) { throw "uv tool install failed" }
 uv tool update-shell | Out-Null
 
-Say "done - open a new terminal, then run: ptk doctor"
+Say "done - open a new terminal, then run: ptk setup doctor"
