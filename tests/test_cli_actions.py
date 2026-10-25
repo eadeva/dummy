@@ -42,11 +42,11 @@ actions:
 
 @pytest.fixture
 def invoke(write):
-    root = write({"main.ptk.yml": PROJECT})
+    root = write({".main.ptk.yml": PROJECT})
 
     def _invoke(*args: str, role: str = "user"):
         env = {**HOST, "PTK_ROLE": role}
-        base = ["--config", str(root / "main.ptk.yml"), "--no-ci"]
+        base = ["--config", str(root / ".main.ptk.yml"), "--no-ci"]
         return CliRunner(env=env).invoke(cli, [*base, *args], catch_exceptions=False)
 
     _invoke.root = root
@@ -120,9 +120,9 @@ def test_maintainer_actions_hidden_and_refused_for_users(invoke):
 
 def test_broken_config_still_shows_help(write):
     root = write(
-        {"main.ptk.yml": "project: {name: t}\nactions: {build: {stepz: []}}\n"}
+        {".main.ptk.yml": "project: {name: t}\nactions: {build: {stepz: []}}\n"}
     )
-    base = ["--config", str(root / "main.ptk.yml")]
+    base = ["--config", str(root / ".main.ptk.yml")]
     help_out = CliRunner(env=HOST).invoke(
         cli, [*base, "--help"], catch_exceptions=False
     )

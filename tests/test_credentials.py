@@ -273,7 +273,7 @@ actions:
 
 @pytest.fixture
 def cli_env(write, tmp_path):
-    root = write({"main.ptk.yml": PROJECT})
+    root = write({".main.ptk.yml": PROJECT})
     env = {
         **HOST,
         "PTK_VAULT_FILE": str(tmp_path / "v" / "vault.json"),
@@ -281,7 +281,7 @@ def cli_env(write, tmp_path):
     }
 
     def invoke(*args, input=None):
-        base = ["--config", str(root / "main.ptk.yml"), "--no-ci"]
+        base = ["--config", str(root / ".main.ptk.yml"), "--no-ci"]
         return CliRunner(env=env).invoke(
             cli, [*base, *args], input=input, catch_exceptions=False
         )

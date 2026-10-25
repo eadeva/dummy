@@ -16,10 +16,23 @@ class FileConfigSource:
 
     def find_main(self, start: Path) -> Path:
         start = start.resolve()
+        found = None
         for directory in [start, *start.parents]:
             candidate = directory / MAIN_FILE
-            if candidate.is_file():
-                return candidate
+            if found is None and candidate.is_file():
+                found = candidate
+            if (directory / ".git").exists() or (directory / ".git").is_symlink():
+                if found is not None and found.parent != directory:
+                    raise ConfigError(
+                        [
+                            Problem(
+                                f"{MAIN_FILE} must be at repository root: {directory}"
+                            )
+                        ]
+                    )
+                break
+        if found is not None:
+            return found
         raise ConfigError(
             [
                 Problem(

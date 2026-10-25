@@ -12,12 +12,12 @@ from ptk.drivers.cli.main import cli
 
 @pytest.fixture
 def invoke(write):
-    root = write({"main.ptk.yml": "project: {name: demo}\n"})
+    root = write({".main.ptk.yml": "project: {name: demo}\n"})
 
     def call(*args):
         return CliRunner().invoke(
             cli,
-            ["-c", str(root / "main.ptk.yml"), "--no-ci", *args],
+            ["-c", str(root / ".main.ptk.yml"), "--no-ci", *args],
             catch_exceptions=False,
         )
 

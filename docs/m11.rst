@@ -7,7 +7,7 @@ Legacy migration
 Use a new output path and review the preview first::
 
    ptk setup migrate old-config.yaml --name demo --dry-run
-   ptk setup migrate old-config.yaml --name demo --output main.ptk.yml
+   ptk setup migrate old-config.yaml --name demo --output .main.ptk.yml
    ptk setup config validate
 
 ``ptk migrate`` is an alias. Conversion never modifies the source and refuses

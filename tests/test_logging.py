@@ -48,7 +48,7 @@ actions:
 
 def project(write, level="info", keep=10):
     text = PROJECT.replace("LEVEL", level).replace("KEEP", str(keep))
-    return write({"main.ptk.yml": text})
+    return write({".main.ptk.yml": text})
 
 
 def run(root: Path, token: str = "t0ps3cret"):
@@ -176,7 +176,7 @@ def test_short_secret_is_not_masked_but_warned(write):
 
 def test_console_verbosity(write):
     root = project(write)
-    args = ["--config", str(root / "main.ptk.yml"), "--no-ci"]
+    args = ["--config", str(root / ".main.ptk.yml"), "--no-ci"]
     env = {**HOST, "PTK_CRED_REPO_TOKEN": "t0ps3cret"}
     normal = CliRunner(env=env).invoke(cli, [*args, "run"], catch_exceptions=False)
     assert "debug:" not in normal.output and "warning: exit code 2" in normal.output

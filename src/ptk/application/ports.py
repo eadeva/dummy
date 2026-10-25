@@ -22,7 +22,7 @@ from ..domain.logging import Level
 from ..domain.reporting.model import Contribution, Report
 from ..domain.tools import InstallMethod
 
-MAIN_FILE = "main.ptk.yml"
+MAIN_FILE = ".main.ptk.yml"
 CX_FILE = "cx.ptk.yml"
 LOCAL_FILE = "local.ptk.yml"
 MAINTAINERS_FILE = "maintainers.ptk.yml"
@@ -32,7 +32,7 @@ class ConfigSource(Protocol):
     """Reads ptk configuration files into located trees."""
 
     def find_main(self, start: Path) -> Path:
-        """Locate ``main.ptk.yml`` in ``start`` or a parent directory."""
+        """Locate ``.main.ptk.yml`` in ``start`` or a parent directory."""
 
     def read(self, file: Path) -> Node:
         """Read a file including everything it includes."""
@@ -213,5 +213,5 @@ class ProjectScaffold(Protocol):
     def create(self, target: Path, files: dict[str, str], *, dry_run: bool) -> bool:
         """Create new scaffold files; return whether an existing .gitignore was kept.
 
-        Refuse existing main.ptk.yml. A dry run performs checks without writes.
+        Refuse existing .main.ptk.yml. A dry run performs checks without writes.
         """

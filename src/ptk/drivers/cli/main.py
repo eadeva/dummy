@@ -31,6 +31,7 @@ from .actions import (
     pairs,
 )
 from .state import console, err_console, guarded, state_of
+from .workspace import WorkspaceGroup
 
 _state = state_of
 
@@ -45,7 +46,7 @@ click.rich_click.SHOW_ARGUMENTS = True
 
 
 @click.group(
-    cls=ProjectGroup,
+    cls=WorkspaceGroup,
     context_settings={"help_option_names": ["-h", "--help"]},
     invoke_without_command=True,
 )
@@ -54,7 +55,7 @@ click.rich_click.SHOW_ARGUMENTS = True
     "--config",
     type=click.Path(path_type=Path, dir_okay=False, exists=True),
     is_eager=True,  # known before --help lists the project's actions
-    help="Path to main.ptk.yml (default: search upwards from the current directory).",
+    help="Path to .main.ptk.yml (default: search upwards from the current directory).",
 )
 @click.option(
     "-s",
@@ -94,6 +95,12 @@ def cli(
     state = state_of(ctx)
     if ctx.invoked_subcommand is not None:
         return
+    if (
+        isinstance(ctx.command, WorkspaceGroup)
+        and ctx.command._repositories(ctx) is not None
+    ):
+        click.echo(ctx.get_help())
+        return
     project = state.try_project()  # outside a project / broken config: show the help
     default = project.config.project.default_action if project else None
     if default is None:
@@ -119,7 +126,7 @@ def config_group() -> None:
 @click.pass_context
 @guarded
 def config_validate(ctx: click.Context) -> None:
-    """Validate main.ptk.yml and everything it includes."""
+    """Validate .main.ptk.yml and everything it includes."""
     project = _state(ctx).project()
     console.print(
         f"[green]configuration is valid[/] ({len(project.files)} file(s), "
@@ -209,7 +216,7 @@ def _write_variant_change(ctx, name, features, output, dry_run, **options):
         )
     project = state.project()
     patch = variant_patch(project, name, pairs(features, "--feature"), **options)
-    target = output or project.root / "local.ptk.yml"
+    target = output or project.config_root / "local.ptk.yml"
     text = write_overlay(target, patch, dry_run=dry_run)
     click.echo(
         text if dry_run else f"Updated {target}. YAML comments are not retained."
@@ -737,7 +744,7 @@ def configs_sync(ctx: click.Context, names: tuple[str, ...], diff: bool) -> None
     items = service.sync(project, list(names) or None)
     if not items:
         console.print(
-            "no shared configs configured (add them under 'configs:' in main.ptk.yml)"
+            "no shared configs configured (add them under 'configs:' in .main.ptk.yml)"
         )
     _show_config_results(items, project.root)
 
@@ -891,6 +898,12 @@ def vscode_tasks(
     default build task (Ctrl+Shift+B).
     """
     state = _state(ctx)
+    parent = ctx
+    while parent is not None:
+        if getattr(parent.command, "repository_boundary", False):
+            command = f"{command} {parent.info_name}"
+            break
+        parent = parent.parent
     result = state.app.vscode_tasks.execute(
         state.project(),
         state.role(),
@@ -937,7 +950,7 @@ def _collect_commands(
         command: click.Command, parent: click.Context | None, path: list[str]
     ) -> None:
         name = path[-1] if path else "ptk"
-        sub = click.Context(command, info_name=name, parent=parent)
+        sub = click.Context(command, info_name=name, parent=parent, obj=state_of(ctx))
         options = []
         for param in command.get_params(sub):
             if not isinstance(param, click.Option) or param.hidden:
@@ -986,7 +999,11 @@ def _collect_commands(
                 if child is not None and not child.hidden and not is_action:
                     visit(child, sub, [*path, child_name])
 
-    visit(group, None, [])
+    # Collect only the selected repository, even when the real root is a VMR.
+    standalone = ProjectGroup(
+        commands=group.commands, params=group.params, help=group.help
+    )
+    visit(standalone, None, [])
     return result
 
 
@@ -1018,6 +1035,15 @@ def help_command(ctx: click.Context, output: Path | None, no_open: bool) -> None
     doc = state.app.build_help.execute(
         project, _collect_commands(cli, ctx, role), role, error
     )
+    parent = ctx
+    while parent is not None:
+        if getattr(parent.command, "repository_boundary", False):
+            prefix = f"ptk {parent.info_name}"
+            for item in [*doc.commands, *doc.actions]:
+                if item.usage == "ptk" or item.usage.startswith("ptk "):
+                    item.usage = prefix + item.usage[3:]
+            break
+        parent = parent.parent
     if output is None:
         base = project.root / ".ptk" if project else Path(tempfile.gettempdir()) / "ptk"
         output = base / "help.html"
@@ -1072,7 +1098,7 @@ def init_command(
     "-o",
     "--output",
     type=click.Path(path_type=Path, dir_okay=False),
-    default="main.ptk.yml",
+    default=".main.ptk.yml",
 )
 @click.option("--name", help="Project name when absent in the legacy file.")
 @click.option(

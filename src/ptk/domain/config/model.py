@@ -1,6 +1,6 @@
 """Meta-model of the ptk configuration (entities).
 
-Entry point is ``main.ptk.yml``; further ``*.ptk.yml`` files are pulled in
+Entry point is ``.main.ptk.yml``; further ``*.ptk.yml`` files are pulled in
 with ``include:``. Unknown keys are errors everywhere.
 
 Steps are written as an ordered list of single-key mappings::
@@ -72,6 +72,11 @@ def _listify(value: Any) -> Any:
 
 
 # --------------------------------------------------------------------------- project
+
+
+class RepositorySpec(_Strict):
+    alias: str = Field(pattern=r"^[a-z][a-z0-9-]*$")
+    config_path: str = Field(min_length=1)
 
 
 class ProjectSpec(_Strict):
@@ -446,6 +451,7 @@ class ReportingSpec(_Strict):
 
 
 class PtkConfig(_Strict):
+    repository: RepositorySpec | None = None
     schema_version: Literal[1] = 1
     ptk_version: str | None = None  # required ptk version range, e.g. ">=0.1,<0.2"
     project: ProjectSpec

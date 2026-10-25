@@ -7,10 +7,11 @@ from ptk.drivers.cli.main import cli
 
 
 def setup(tmp_path):
-    file = tmp_path / "main.ptk.yml"
+    file = tmp_path / ".main.ptk.yml"
     file.write_text(
         yaml.safe_dump(
             {
+                "repository": {"alias": "demo", "config_path": "."},
                 "project": {"name": "matrix", "default_action": "go"},
                 "variants": {
                     "default": "small",

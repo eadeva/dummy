@@ -39,6 +39,11 @@ class Project:
     ci: bool = False
     warnings: list[Problem] = field(default_factory=list)
 
+    @property
+    def config_root(self) -> Path:
+        spec = self.config.repository
+        return (self.root / spec.config_path).resolve() if spec else self.root
+
     def location(self, path: t.Path) -> Location | None:
         return t.locate(self.tree, path)
 
@@ -142,10 +147,12 @@ class LoadProject:
         root = main.parent
         first_read = len(self._source.files)
         main_tree = self._source.read(main)
+        metadata = t.get(main_tree, ("repository", "config_path"))
+        config_root = (root / metadata.value).resolve() if metadata else root
         is_ci = self._host.is_ci() if ci is None else ci
         overlays = []
         for name, enabled in ((CX_FILE, is_ci), (LOCAL_FILE, True)):
-            layer_file = root / name
+            layer_file = config_root / name
             if enabled and self._source.exists(layer_file):
                 overlays.append((name, self._source.read(layer_file)))
 
@@ -153,7 +160,7 @@ class LoadProject:
         # Files already included explicitly retain that placement and are not applied twice.
         tree = t.from_plain({})
         layers = []
-        global_tools = root / "tools.ptk.yml"
+        global_tools = config_root / "tools.ptk.yml"
         if global_tools not in self._source.files[first_read:] and self._source.exists(
             global_tools
         ):
@@ -165,7 +172,7 @@ class LoadProject:
             if actions is not None and actions.is_map:
                 names.update(n for n in actions.value if ACTION_RE.fullmatch(n))
         for name in sorted(names):
-            tool_file = root / f"{name}.tools.ptk.yml"
+            tool_file = config_root / f"{name}.tools.ptk.yml"
             if tool_file not in self._source.files[first_read:] and self._source.exists(
                 tool_file
             ):
@@ -191,6 +198,22 @@ class LoadProject:
         if problems:
             raise ConfigError(problems)
         config = PtkConfig.model_validate(t.to_plain(tree))
+        original_repository = t.get(main_tree, ("repository",))
+        effective_repository = (
+            config.repository.model_dump() if config.repository else None
+        )
+        if original_repository is not None and effective_repository != t.to_plain(
+            original_repository
+        ):
+            raise ConfigError(
+                [
+                    Problem(
+                        "repository metadata must be defined in the entry file and cannot be overridden",
+                        "repository",
+                        t.locate(tree, ("repository",)),
+                    )
+                ]
+            )
         semantic = [
             Problem(message, t.display_path(tree, path), t.locate(tree, path))
             for path, message in config_rules.validate(config)
@@ -208,7 +231,7 @@ class LoadProject:
             layers=layers,
             ci=is_ci,
         )
-        maintainers_file = root / MAINTAINERS_FILE
+        maintainers_file = config_root / MAINTAINERS_FILE
         if self._source.exists(maintainers_file):
             m_tree = self._source.read(maintainers_file)
             m_problems = unknown_keys(MaintainersSpec, m_tree)
@@ -320,6 +343,8 @@ class ExportSchema:
             )
             schema = json.loads(text)
             schema["$defs"].pop("StepSpec", None)
+        schema["properties"]["repository"] = {"$ref": "#/$defs/RepositorySpec"}
+        schema.setdefault("required", []).append("repository")
         schema["title"] = "ptk configuration (*.ptk.yml)"
         schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
         return schema

@@ -28,7 +28,9 @@ class Host:
 
 
 def demo_project():
-    return create_app(environ={}).load_project.execute(DEMO)
+    return create_app(environ={}).load_project.execute(
+        config_file=DEMO / ".main.ptk.yml"
+    )
 
 
 def test_role_from_maintainers_file_and_override():
@@ -64,7 +66,7 @@ def test_help_command_writes_page(tmp_path):
     out = tmp_path / "help.html"
     result = CliRunner().invoke(
         cli,
-        ["--config", str(DEMO / "main.ptk.yml"), "help", "--no-open", "-o", str(out)],
+        ["--config", str(DEMO / ".main.ptk.yml"), "help", "--no-open", "-o", str(out)],
         catch_exceptions=False,
     )
     assert result.exit_code == 0, result.output

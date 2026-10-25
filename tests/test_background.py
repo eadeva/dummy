@@ -15,9 +15,13 @@ from ptk.domain.execution.model import Status
 
 
 def execute(tmp_path, steps, cancel=None):
-    (tmp_path / "main.ptk.yml").write_text(
+    (tmp_path / ".main.ptk.yml").write_text(
         yaml.safe_dump(
-            {"project": {"name": "background"}, "actions": {"go": {"steps": steps}}}
+            {
+                "repository": {"alias": "demo", "config_path": "."},
+                "project": {"name": "background"},
+                "actions": {"go": {"steps": steps}},
+            }
         )
     )
     app = create_app(environ=dict(os.environ))

@@ -16,9 +16,9 @@ From the installed CLI, preview and initialize a new directory::
    ptk setup config validate
    ptk hello --message "It works"
 
-This creates ``main.ptk.yml`` with a portable built-in echo action and a
+This creates ``.main.ptk.yml`` with a portable built-in echo action and a
 ``.gitignore`` for local overrides and generated workspace folders. The project
-name defaults to the destination directory name. An existing ``main.ptk.yml``
+name defaults to the destination directory name. An existing ``.main.ptk.yml``
 is never overwritten, including in preview mode. An existing ``.gitignore``
 is preserved; review its rules yourself. No tools or credentials are installed.
 
@@ -34,10 +34,10 @@ The quickstart uses only the Python interpreter running ptk. It needs no CMake,
 compiler, credentials, or network connection once ptk is installed. Commands
 below work from the repository root on Linux and Windows::
 
-   uv run ptk -c examples/quickstart/main.ptk.yml config validate
-   uv run ptk -c examples/quickstart/main.ptk.yml dry-run build -V debug
-   uv run ptk -c examples/quickstart/main.ptk.yml build -V debug --message "Hello from ptk"
-   uv run ptk -c examples/quickstart/main.ptk.yml build -V release
+   uv run ptk -c examples/quickstart/.main.ptk.yml config validate
+   uv run ptk -c examples/quickstart/.main.ptk.yml dry-run build -V debug
+   uv run ptk -c examples/quickstart/.main.ptk.yml build -V debug --message "Hello from ptk"
+   uv run ptk -c examples/quickstart/.main.ptk.yml build -V release
 
 ``dry-run`` displays the commands without executing the steps. ``build`` first
 writes ``examples/quickstart/_bin/<variant>/message.txt``, then runs a parallel
@@ -49,7 +49,7 @@ Inspect the results
 
 Open ``examples/quickstart/_reports/debug/build/report.html`` in a browser, or::
 
-   uv run ptk -c examples/quickstart/main.ptk.yml report open build -V debug
+   uv run ptk -c examples/quickstart/.main.ptk.yml report open build -V debug
 
 JSON, JUnit XML and Markdown reports are written alongside the HTML. Logs are in
 ``examples/quickstart/_logs/debug/build``. Previous logs are retained according
@@ -58,7 +58,7 @@ to the project's history setting.
 Read the configuration and workload
 -----------------------------------
 
-.. literalinclude:: ../examples/quickstart/main.ptk.yml
+.. literalinclude:: ../examples/quickstart/.main.ptk.yml
    :language: yaml
 
 .. literalinclude:: ../examples/quickstart/demo.py

@@ -61,7 +61,7 @@ def test_unsupported_or_ambiguous_fields_fail(extra):
 def test_migration_cli_preview_alias_and_overwrite(tmp_path):
     source = tmp_path / "old.yml"
     source.write_text(yaml.safe_dump(LEGACY))
-    target = tmp_path / "main.ptk.yml"
+    target = tmp_path / ".main.ptk.yml"
     runner = CliRunner()
     args = [str(source), "--output", str(target)]
     preview = runner.invoke(cli, ["setup", "migrate", *args, "--dry-run"])

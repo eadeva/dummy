@@ -35,9 +35,9 @@ From the repository root:
 
 ```bash
 uv sync
-uv run ptk -c examples/quickstart/main.ptk.yml dry-run build
-uv run ptk -c examples/quickstart/main.ptk.yml build -V debug
-uv run ptk -c examples/quickstart/main.ptk.yml build -V release
+uv run ptk -c examples/quickstart/.main.ptk.yml dry-run build
+uv run ptk -c examples/quickstart/.main.ptk.yml build -V debug
+uv run ptk -c examples/quickstart/.main.ptk.yml build -V release
 ```
 
 This example runs without compilers or credentials and writes logs and reports
@@ -113,14 +113,14 @@ All ptk files end in `.ptk.yml`:
 
 | File | Purpose |
 |------|---------|
-| `main.ptk.yml` | entry point: `ptk_version`, project, includes, main settings |
+| `.main.ptk.yml` | entry point: `ptk_version`, project, includes, main settings |
 | `*.ptk.yml` | fragments pulled in with `include:` (e.g. `ptk/actions/*.ptk.yml`) |
 | `cx.ptk.yml` | applied automatically in CI |
 | `local.ptk.yml` | personal overrides (git-ignore it) |
 | `maintainers.ptk.yml` | who sees maintainer-only actions |
 
 ```yaml
-# main.ptk.yml
+# .main.ptk.yml
 schema_version: 1
 ptk_version: ">=0.1,<0.2"          # ptk refuses to run with another version
 project: {name: demo, default_action: build}
@@ -129,7 +129,7 @@ variants: ptk/variants.ptk.yml       # plain string = include this file here
 vars: {preset: "${vh.variant}"}
 ```
 
-Loading order: `main.ptk.yml` (+ includes) → `cx.ptk.yml` (in CI) →
+Loading order: `.main.ptk.yml` (+ includes) → `cx.ptk.yml` (in CI) →
 `local.ptk.yml` → `--set PATH=VALUE`.
 
 * mappings merge deeply, lists are replaced; `!replace`, `!append` and
@@ -142,7 +142,7 @@ Loading order: `main.ptk.yml` (+ includes) → `cx.ptk.yml` (in CI) →
 ## Commands available now
 
 ```
-ptk [-c main.ptk.yml] [--set PATH=VALUE]... [--ci/--no-ci] [-v|-vv]
+ptk [-c .main.ptk.yml] [--set PATH=VALUE]... [--ci/--no-ci] [-v|-vv]
 ptk                                  run the default action (project.default_action)
 ptk ACTION [--PARAM VALUE]... [-V VARIANT] [--from STEP] [--to STEP] [--params FILE]
            [-q] [--args-for STEP="ARGS"]... [-- ARGS]

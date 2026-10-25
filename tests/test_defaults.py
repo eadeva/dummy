@@ -47,14 +47,14 @@ def prepare(root, environ=None, **request):
 
 
 def test_default_action_is_used_when_no_action_given(write):
-    root = write({"main.ptk.yml": PROJECT})
+    root = write({".main.ptk.yml": PROJECT})
     plan = prepare(root, variant="slow")
     assert plan.action == "hello"
     assert prepare(root, action="other", variant="slow").action == "other"
 
 
 def test_parameter_defaults_per_variant_vars_and_env(write):
-    root = write({"main.ptk.yml": PROJECT})
+    root = write({".main.ptk.yml": PROJECT})
     slow = prepare(root, variant="slow")
     assert slow.params == {
         "who": "world",
@@ -74,7 +74,7 @@ def test_parameter_defaults_per_variant_vars_and_env(write):
 
 
 def test_template_default_is_type_checked_at_run_time(write):
-    root = write({"main.ptk.yml": PROJECT.replace("mode: quick}", "mode: reckless}")})
+    root = write({".main.ptk.yml": PROJECT.replace("mode: quick}", "mode: reckless}")})
     with pytest.raises(
         PtkError, match="parameter 'mode': expected one of careful, quick"
     ):
@@ -84,7 +84,7 @@ def test_template_default_is_type_checked_at_run_time(write):
 def test_defaults_can_be_overridden_per_layer(write):
     root = write(
         {
-            "main.ptk.yml": PROJECT,
+            ".main.ptk.yml": PROJECT,
             "local.ptk.yml": "actions: {hello: {params: {who: {default: me}}}}\n",
         }
     )
@@ -99,7 +99,7 @@ def test_defaults_can_be_overridden_per_layer(write):
     ],
 )
 def test_invalid_default_references_are_config_errors(write, snippet, message):
-    root = write({"main.ptk.yml": PROJECT.replace("who: {default: world}", snippet)})
+    root = write({".main.ptk.yml": PROJECT.replace("who: {default: world}", snippet)})
     with pytest.raises(ConfigError, match=message.replace("$", r"\$")):
         create_app(environ={}).load_project.execute(root)
 
@@ -107,7 +107,7 @@ def test_invalid_default_references_are_config_errors(write, snippet, message):
 def test_default_action_must_exist_and_be_public(write):
     root = write(
         {
-            "main.ptk.yml": PROJECT.replace(
+            ".main.ptk.yml": PROJECT.replace(
                 "default_action: hello", "default_action: helo"
             )
         }
@@ -116,7 +116,7 @@ def test_default_action_must_exist_and_be_public(write):
         create_app(environ={}).load_project.execute(root)
     root = write(
         {
-            "main.ptk.yml": PROJECT.replace(
+            ".main.ptk.yml": PROJECT.replace(
                 "  other:\n    steps", "  other:\n    audience: maintainer\n    steps"
             ).replace("default_action: hello", "default_action: other")
         }
@@ -126,14 +126,14 @@ def test_default_action_must_exist_and_be_public(write):
 
 
 def test_no_action_and_no_default(write):
-    root = write({"main.ptk.yml": PROJECT.replace(", default_action: hello", "")})
+    root = write({".main.ptk.yml": PROJECT.replace(", default_action: hello", "")})
     with pytest.raises(PtkError, match="no project.default_action"):
         prepare(root, variant="slow")
 
 
 def test_plain_ptk_runs_default_action(write):
-    root = write({"main.ptk.yml": PROJECT})
-    args = ["--config", str(root / "main.ptk.yml"), "--no-ci"]
+    root = write({".main.ptk.yml": PROJECT})
+    args = ["--config", str(root / ".main.ptk.yml"), "--no-ci"]
     result = CliRunner(env=HOST).invoke(cli, args, catch_exceptions=False)
     assert result.exit_code == 0, result.output
     assert "hello world careful vanilla-plain 1" in result.output
@@ -150,6 +150,6 @@ def test_plain_ptk_outside_a_project_shows_help(tmp_path, monkeypatch):
 
 
 def test_demo_toolchain_follows_variant():
-    args = ["--config", str(DEMO / "main.ptk.yml"), "--no-ci", "dry-run"]
+    args = ["--config", str(DEMO / ".main.ptk.yml"), "--no-ci", "dry-run"]
     us = CliRunner().invoke(cli, [*args, "-V", "b_us"], catch_exceptions=False)
     assert "-DTOOLCHAIN=arm-clang" in us.output and "build (dry run" in us.output

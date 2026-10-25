@@ -147,7 +147,7 @@ actions:
 @pytest.fixture
 def project(write, tmp_path):
     url, sha = make_tool_archive(tmp_path)
-    root = write({"main.ptk.yml": PROJECT.format(url=url, sha=sha)})
+    root = write({".main.ptk.yml": PROJECT.format(url=url, sha=sha)})
     env = {
         "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
         "HOME": str(tmp_path / "home"),
@@ -157,13 +157,14 @@ def project(write, tmp_path):
     }
 
     def invoke(*args):
-        base = ["--config", str(root / "main.ptk.yml"), "--no-ci"]
+        base = ["--config", str(root / ".main.ptk.yml"), "--no-ci"]
         return CliRunner(env=env).invoke(cli, [*base, *args], catch_exceptions=False)
 
     invoke.root = root
     invoke.tools = tmp_path / "tools"
-    invoke.write_sha = lambda sha: (root / "main.ptk.yml").write_text(
+    invoke.write_sha = lambda sha: (root / ".main.ptk.yml").write_text(
         PROJECT.format(url=url, sha=sha)
+        + "\nrepository: {alias: demo, config_path: .}\n"
     )
     return invoke
 
@@ -224,8 +225,8 @@ def test_doctor_reports_tool_problems(project):
 
 @posix_only
 def test_self_setup(project):
-    (project.root / "main.ptk.yml").write_text(
-        (project.root / "main.ptk.yml").read_text() + "configs: {clang-format: {}}\n"
+    (project.root / ".main.ptk.yml").write_text(
+        (project.root / ".main.ptk.yml").read_text() + "configs: {clang-format: {}}\n"
     )
     result = project("self-setup")
     assert (
@@ -238,7 +239,7 @@ def test_per_os_download_is_validated(write, load):
 
     root = write(
         {
-            "main.ptk.yml": """
+            ".main.ptk.yml": """
         project: {name: t}
         tools:
           a: {download: {linux: {urll: "x"}}}
@@ -249,7 +250,7 @@ def test_per_os_download_is_validated(write, load):
         load(root)
     root = write(
         {
-            "main.ptk.yml": """
+            ".main.ptk.yml": """
         project: {name: t}
         tools:
           a: {download: {linux: {url: "file:///x"}, windows: {url: "file:///y"}}}

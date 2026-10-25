@@ -4,16 +4,39 @@ Authoring configuration
 Files and precedence
 --------------------
 
-Start with ``main.ptk.yml``. Put reusable fragments in ``*.ptk.yml`` and load
-them with ``include: [ptk/actions/*.ptk.yml]``. Includes are merged in order.
-The loader then applies ``cx.ptk.yml`` when CI is enabled, ``local.ptk.yml``,
-and command-line ``--set PATH=VALUE`` overrides. Keep local overrides out of git.
+Place ``.main.ptk.yml`` at the repository root. It must declare an alias and
+configuration directory, for example::
+
+   repository:
+     alias: firmware
+     config_path: tooling/ptk
+   project:
+     name: Firmware
+   include: [actions.ptk.yml]
+
+The alias uses lowercase letters, digits and hyphens, starting with a letter.
+``config_path`` is a relative, existing directory inside the repository; ``.``
+keeps configuration alongside the entry file. Entry-file includes (including
+``!include`` and ``variants:``) resolve from this directory. Includes inside
+fragments remain relative to the fragment itself.
+
+Automatic ``tools.ptk.yml``, ``<action>.tools.ptk.yml``, ``cx.ptk.yml``,
+``local.ptk.yml`` and ``maintainers.ptk.yml`` are discovered in that directory.
+The loader applies shared tool files, main/includes, CX when enabled, local,
+and finally CLI ``--set`` overrides. Repository metadata cannot be overridden.
+Keep local overrides out of git. ``variant set/new`` writes the local overlay
+in this configuration directory. Commands, workspace outputs and shared tool
+configuration outputs still use the repository root.
+
+Automatic discovery searches upwards and stops at a Git repository boundary.
+The old ``main.ptk.yml`` filename is not discovered. ``--config`` explicitly
+selects an entry file, including standalone exported snapshots.
 Use global ``--no-ci`` to inspect local behavior independently of the host.
 
 Mappings merge deeply; lists replace. ``!replace`` replaces a node,
-``!append`` extends a list, and ``!include`` inserts another file. Paths in
-includes are relative to the including file. Unknown fields fail validation;
-``ptk setup config show --sources`` identifies their source files and lines.
+``!append`` extends a list, and ``!include`` inserts another file. Unknown
+fields fail validation; ``ptk setup config show --sources`` identifies their
+source files and lines.
 
 A ``variants`` string names a separate variant file. Other schema fields use
 the types in :doc:`reference`. ``ptk_version`` is a version requirement; this
@@ -143,7 +166,7 @@ be forcibly terminated. ``wait`` cooperates with deadlines and Ctrl+C.
 Shared defaults and tool files
 ------------------------------
 
-``tools.ptk.yml`` and ``<action>.tools.ptk.yml`` in the project root are loaded
+``tools.ptk.yml`` and ``<action>.tools.ptk.yml`` in the configuration directory are loaded
 automatically when present. Action filenames are discovered for actions declared
 in the main configuration, its includes, global tools file or enabled overlays.
 Files already included explicitly are not applied again automatically.

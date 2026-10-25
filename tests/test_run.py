@@ -79,7 +79,7 @@ print("step", os.environ["PTK_STEP"], "variant", os.environ["PTK_VARIANT"])
 def project(write):
     root = write(
         {
-            "main.ptk.yml": PROJECT.replace("${sys}", sys.executable).replace(
+            ".main.ptk.yml": PROJECT.replace("${sys}", sys.executable).replace(
                 "print(os.environ['GREETING']", "print(os.environ.get('GREETING', '-')"
             ),
             "tools/show.py": SHOW,
@@ -194,7 +194,7 @@ def test_secret_of_skipped_step_is_not_needed(project):
 def test_timeout_and_retries(write):
     root = write(
         {
-            "main.ptk.yml": """
+            ".main.ptk.yml": """
         project: {name: t}
         actions:
           go:
@@ -213,7 +213,7 @@ def test_timeout_and_retries(write):
 
     root = write(
         {
-            "main.ptk.yml": """
+            ".main.ptk.yml": """
         project: {name: t}
         actions:
           go:
@@ -230,7 +230,7 @@ def test_timeout_and_retries(write):
 def test_cancel_kills_process_tree(write):
     root = write(
         {
-            "main.ptk.yml": """
+            ".main.ptk.yml": """
         project: {name: t}
         actions:
           go:
@@ -255,7 +255,7 @@ def test_cancel_kills_process_tree(write):
 def test_program_not_found(write):
     root = write(
         {
-            "main.ptk.yml": """
+            ".main.ptk.yml": """
         project: {name: t}
         actions:
           go:
@@ -271,7 +271,7 @@ def test_program_not_found(write):
 def test_builtin_steps(write):
     root = write(
         {
-            "main.ptk.yml": """
+            ".main.ptk.yml": """
         project: {name: t}
         actions:
           go:
@@ -291,7 +291,7 @@ def test_builtin_steps(write):
 def test_python_venv_and_plain_script(write):
     root = write(
         {
-            "main.ptk.yml": """
+            ".main.ptk.yml": """
             project: {name: t}
             actions:
               go:

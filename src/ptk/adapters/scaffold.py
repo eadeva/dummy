@@ -11,7 +11,7 @@ def _exists(path: Path) -> bool:
 
 class FileProjectScaffold:
     def create(self, target: Path, files: dict[str, str], *, dry_run: bool) -> bool:
-        main = target / "main.ptk.yml"
+        main = target / ".main.ptk.yml"
         ignore = target / ".gitignore"
         if _exists(target) and not target.is_dir():
             raise PtkError(f"project directory is not a directory: {target}")
@@ -26,7 +26,7 @@ class FileProjectScaffold:
             # Exclusive creation also protects against a concurrent initializer.
             with main.open("x", encoding="utf-8") as handle:
                 created.append(main)
-                handle.write(files["main.ptk.yml"])
+                handle.write(files[".main.ptk.yml"])
             if not keep_ignore:
                 try:
                     with ignore.open("x", encoding="utf-8") as handle:

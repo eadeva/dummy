@@ -5,7 +5,7 @@ from click.testing import CliRunner
 from ptk.drivers.cli.main import cli
 from tests.conftest import DEMO
 
-CONFIG = ["--config", str(DEMO / "main.ptk.yml"), "--no-ci"]
+CONFIG = ["--config", str(DEMO / ".main.ptk.yml"), "--no-ci"]
 
 
 def run(*args):
@@ -24,7 +24,7 @@ def test_config_validate_and_show():
         "help": "Parallel jobs",
     }
     sources = run("config", "show", "project", "--sources")
-    assert "main.ptk.yml:7" in sources.output
+    assert ".main.ptk.yml:7" in sources.output
 
 
 def test_set_override():
@@ -80,7 +80,7 @@ def test_run_errors_are_clean():
 def test_run_executes_and_returns_exit_code(write):
     root = write(
         {
-            "main.ptk.yml": """
+            ".main.ptk.yml": """
         project: {name: t}
         actions:
           ok: {steps: [{hi: "echo hi-there"}]}
@@ -88,7 +88,7 @@ def test_run_executes_and_returns_exit_code(write):
         """
         }
     )
-    config = ["--config", str(root / "main.ptk.yml"), "--no-ci"]
+    config = ["--config", str(root / ".main.ptk.yml"), "--no-ci"]
     ok = CliRunner().invoke(cli, [*config, "run", "ok"], catch_exceptions=False)
     assert ok.exit_code == 0 and "hi-there" in ok.output
     bad = CliRunner().invoke(cli, [*config, "run", "bad"], catch_exceptions=False)

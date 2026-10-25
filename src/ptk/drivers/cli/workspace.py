@@ -1,0 +1,73 @@
+"""VMR command routing, with an isolated application for each selected repository."""
+
+from __future__ import annotations
+
+import functools
+from pathlib import Path
+
+import rich_click as click
+
+from ...adapters.workspace import repositories, workspace_root
+from ...bootstrap import create_app
+from ...domain.errors import PtkError
+from .actions import ProjectGroup
+from .state import CliState, state_of
+
+
+class RepositoryGroup(ProjectGroup):
+    repository_boundary = True
+
+    def make_context(self, info_name, args, parent=None, **extra):
+        parent_state = state_of(parent)
+        extra["obj"] = CliState(
+            app=create_app(),
+            config=self.entry_file,
+            overrides=parent_state.overrides,
+            ci=parent_state.ci,
+            verbose=parent_state.verbose,
+        )
+        return super().make_context(info_name, args, parent=parent, **extra)
+
+
+class WorkspaceGroup(ProjectGroup):
+    def _repositories(self, ctx):
+        if "vmr_repositories" not in ctx.meta:
+            # An explicit entry file intentionally selects standalone mode.
+            root = None if ctx.params.get("config") else workspace_root(Path.cwd())
+            try:
+                ctx.meta["vmr_repositories"] = repositories(root) if root else None
+            except (PtkError, OSError) as exc:
+                raise click.ClickException(str(exc)) from None
+        return ctx.meta["vmr_repositories"]
+
+    def list_commands(self, ctx):
+        repos = self._repositories(ctx)
+        return sorted(repos) if repos is not None else super().list_commands(ctx)
+
+    def get_command(self, ctx, cmd_name):
+        repos = self._repositories(ctx)
+        if repos is None:
+            return super().get_command(ctx, cmd_name)
+        if cmd_name not in repos:
+            return None
+
+        @functools.wraps(self.callback)
+        def selected_callback():
+            return self.callback(config=None, overrides=(), ci=None, verbose=0)
+
+        group = RepositoryGroup(
+            cmd_name,
+            commands=self.commands,
+            callback=selected_callback,
+            invoke_without_command=True,
+            context_settings=self.context_settings,
+            help=f"Commands for repository {cmd_name} ({repos[cmd_name].parent}).",
+        )
+        group.entry_file = repos[cmd_name]
+        return group
+
+    def format_help(self, ctx, formatter):
+        if self._repositories(ctx) is None:
+            return super().format_help(ctx, formatter)
+        # ProjectGroup's panel builder assumes built-ins; VMR lists repositories.
+        return click.RichGroup.format_help(self, ctx, formatter)

@@ -22,7 +22,9 @@ def allowed(ctx, name):
     if project is None or state.role() == "maintainer":
         return True
     parts = [name]
-    while ctx.parent is not None:
+    while ctx.parent is not None and not getattr(
+        ctx.command, "repository_boundary", False
+    ):
         parts.insert(0, ctx.info_name)
         ctx = ctx.parent
     if parts[0] in ALIASES:

@@ -7,32 +7,32 @@ from tests.conftest import MINIMAL
 def test_layers_ci_local_and_overrides(write, load):
     root = write(
         {
-            "main.ptk.yml": MINIMAL + "vars: {where: main, a: 1}\n",
+            ".main.ptk.yml": MINIMAL + "vars: {where: main, a: 1}\n",
             "cx.ptk.yml": "vars: {where: ci}",
             "local.ptk.yml": "vars: {where: local, b: 2}",
         }
     )
     project = load(root)
     assert project.config.vars == {"where": "local", "a": 1, "b": 2}
-    assert project.layers == ["main.ptk.yml", "local.ptk.yml"]
+    assert project.layers == [".main.ptk.yml", "local.ptk.yml"]
     ci = load(
         root,
         environ={"GITHUB_ACTIONS": "true"},
         overrides=["vars.where=cli", "vars.n=5"],
     )
     assert ci.ci and ci.config.vars["where"] == "cli" and ci.config.vars["n"] == 5
-    assert ci.layers[:3] == ["main.ptk.yml", "cx.ptk.yml", "local.ptk.yml"]
+    assert ci.layers[:3] == [".main.ptk.yml", "cx.ptk.yml", "local.ptk.yml"]
 
 
 def test_found_from_subdirectory(write, load):
-    root = write({"main.ptk.yml": MINIMAL, "src/deep/x.txt": ""})
+    root = write({".main.ptk.yml": MINIMAL, "src/deep/x.txt": ""})
     assert load(root / "src" / "deep").root == root
 
 
 def test_unknown_keys_with_suggestions_and_lines(write, load):
     root = write(
         {
-            "main.ptk.yml": """
+            ".main.ptk.yml": """
         project: {name: demo}
         actions:
           build:
@@ -44,7 +44,7 @@ def test_unknown_keys_with_suggestions_and_lines(write, load):
         load(root)
     text = str(exc.value)
     assert (
-        "main.ptk.yml:4: actions.build.stpes: unknown key 'stpes' (did you mean 'steps'?)"
+        ".main.ptk.yml:4: actions.build.stpes: unknown key 'stpes' (did you mean 'steps'?)"
         in text
     )
 
@@ -52,7 +52,7 @@ def test_unknown_keys_with_suggestions_and_lines(write, load):
 def test_semantic_errors(write, load):
     root = write(
         {
-            "main.ptk.yml": """
+            ".main.ptk.yml": """
         project: {name: demo, default_action: biuld}
         vars: {x: "${vars.y}"}
         actions:
@@ -81,10 +81,10 @@ def test_semantic_errors(write, load):
 
 
 def test_version_check(write, load):
-    root = write({"main.ptk.yml": "ptk_version: '>=99'\n" + MINIMAL})
+    root = write({".main.ptk.yml": "ptk_version: '>=99'\n" + MINIMAL})
     with pytest.raises(ConfigError, match="needs ptk >=99"):
         load(root)
-    root2 = write({"main.ptk.yml": "ptk_version: 'not a range'\n" + MINIMAL})
+    root2 = write({".main.ptk.yml": "ptk_version: 'not a range'\n" + MINIMAL})
     with pytest.raises(ConfigError, match="invalid version range"):
         load(root2)
 
@@ -92,7 +92,7 @@ def test_version_check(write, load):
 def test_maintainers_file(write, load):
     root = write(
         {
-            "main.ptk.yml": MINIMAL,
+            ".main.ptk.yml": MINIMAL,
             "maintainers.ptk.yml": "maintainers: [{email: a@b.c}]",
         }
     )

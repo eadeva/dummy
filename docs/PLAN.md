@@ -1,7 +1,7 @@
 # ptk — Implementation Plan
 
 > **ptk** (*project tool kit*): a generic, configuration-driven project CLI.
-> All configuration files end in `.ptk.yml`: entry point `main.ptk.yml` (ptk version + main fields),
+> All configuration files end in `.ptk.yml`: entry point `.main.ptk.yml` (ptk version + main fields),
 > fragments `*.ptk.yml`, layers `cx.ptk.yml` and `local.ptk.yml`, and `maintainers.ptk.yml`.
 > Workspace folders: `_builds/`, `_bin/`, `_logs/`, `_reports/` (structured by variant / action / step).
 
@@ -95,7 +95,7 @@ src/ptk/
 ### 2.2 Loading pipeline
 
 ```
-main.ptk.yml               ptk_version, project, include, main settings
+.main.ptk.yml               ptk_version, project, include, main settings
   → include: [...]            merged in order (files or globs)
   → cx.ptk.yml              applied automatically in CI
   → local.ptk.yml           personal overrides (git-ignored)
@@ -108,7 +108,7 @@ main.ptk.yml               ptk_version, project, include, main settings
   Tags: `!replace` (replace whole mapping), `!append` (append to list),
   `!include file.yaml` (insert a file at this point).
 - **Provenance:** every value knows file and line → `ptk setup config show --sources`,
-  errors as `main.ptk.yml:42: actions.build.params.jobs: expected int`.
+  errors as `.main.ptk.yml:42: actions.build.params.jobs: expected int`.
 - **Substitution** (one syntax, unknown names are errors):
 
   ```
@@ -189,7 +189,7 @@ Reuse the core of `variant_handler` (already built and tested), trimmed for the 
 - **Resolution with sources:** every value knows whether it is a default, set by
   which variant layer, forced off by a dependency, or inactive.
 - **Simplifications for users:**
-  - small product lines inline in `main.ptk.yml`, larger ones in separate files
+  - small product lines inline in `.main.ptk.yml`, larger ones in separate files
   - matrix levels become enum features (`PLATFORM: [tc397, tc399]`)
   - free-form `data:` merged through inheritance (e.g. toolchain, flash layout)
 - **Integration:**
@@ -447,7 +447,7 @@ tools:
 
 - Actions can be marked `audience: maintainer`; built-in groups use
   `command_audience: {setup.creds: maintainer}`.
-- `maintainers.ptk.yml` (committed, next to `main.ptk.yml`) lists maintainers by git
+- `maintainers.ptk.yml` (committed, next to `.main.ptk.yml`) lists maintainers by git
   e-mail and/or OS user name. ptk compares it with `git config user.email` and the
   OS user; `PTK_ROLE=maintainer` forces the role (e.g. in CI).
 - For everyone else these commands are hidden from `--help`, the HTML help (`ptk help`), VS Code
@@ -691,7 +691,7 @@ Former top-level commands remain hidden compatibility aliases.
 - Shared `param_defaults` applies only to explicitly declared action parameters.
   Explicit action defaults override shared values; required parameters remain
   required. Inherited defaults retain provenance and undergo normal type checks.
-- Automatically load project-root `tools.ptk.yml` and `<action>.tools.ptk.yml`.
+- Automatically load configuration-directory `tools.ptk.yml` and `<action>.tools.ptk.yml`.
   Explicit includes are not applied a second time. Main/includes override auto
   files; CX, local and CLI layers follow. See `docs/configuration.rst` for ordering.
 - **Tool requirements override per tool.** Unmentioned global requirements stay;
@@ -703,3 +703,19 @@ Former top-level commands remain hidden compatibility aliases.
 - Explicit action/step `only_variants` and `omit_variants` fields discussed earlier
   remain a separate follow-up; current runtime filtering uses `when` on steps.
   Maintainer action visibility uses `audience: maintainer`.
+
+## Repository discovery and VMR (implemented)
+
+- Root `.main.ptk.yml` declares `repository.alias` and `repository.config_path`.
+  No automatic discovery of the old filename. Configuration and execution roots
+  are separate; includes/automatic files use the configuration directory while
+  commands and outputs use the repository root.
+- Upward standalone discovery stops at Git boundaries. Explicit `--config`
+  selects one project, bypassing VMR grouping.
+- `.repo` ancestry or Git indirection into `.repo` activates VMR mode. Use
+  `.repo/project.list` when available; otherwise discover working-tree roots.
+- Every participating member needs its own root entry file and unique alias.
+  CLI: `ptk <alias> <original command>`, including setup, variants and actions.
+  Global options precede the alias; bare VMR invocation lists repositories.
+- Regression coverage checks path separation, includes/overlays, root boundaries,
+  aliases, member containment, Git indirection, per-repository execution and access.

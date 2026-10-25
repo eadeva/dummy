@@ -7,7 +7,7 @@ description: Create or change ptk YAML configuration, includes, layers and subst
 
 1. Read `docs/configuration.rst` and the models in `src/ptk/domain/config/model.py`.
 
-2. Use `main.ptk.yml` as the entry point and `*.ptk.yml` fragments. Keep `local.ptk.yml` untracked.
+2. Use `.main.ptk.yml` as the entry point and `*.ptk.yml` fragments. Keep `local.ptk.yml` untracked.
 
 3. Preserve merge order: included files, CI overlay, local overlay, command-line overrides.
 
@@ -26,3 +26,5 @@ description: Create or change ptk YAML configuration, includes, layers and subst
 10. For a new project, preview `ptk setup init DIRECTORY --dry-run`, then run `ptk setup init DIRECTORY`. Existing configuration is refused and an existing .gitignore is preserved. Run `ptk setup config validate` and `ptk hello` in the new directory.
 
 11. Use `param_defaults` for shared defaults on explicitly declared parameters; action defaults win. Use `cx.ptk.yml` for workflows and preserve per-tool requirement inheritance.
+
+The root `.main.ptk.yml` requires `repository: {alias: lowercase-name, config_path: relative/directory}`. Entry includes and automatic tool/CX/local/maintainer files use that directory; fragment includes stay fragment-relative and commands use the repository root. In `.repo` VMR workspaces, invoke `ptk <repository-alias> <command>`.

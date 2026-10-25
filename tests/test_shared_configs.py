@@ -101,7 +101,7 @@ actions: {noop: {steps: [{x: "true"}]}}
 def invoke(write):
     root = write(
         {
-            "main.ptk.yml": PROJECT,
+            ".main.ptk.yml": PROJECT,
             "ptk/pc.yaml": "repos:\n  - {repo: https://github.com/pre-commit/mirrors-clang-format, disable: true}\n",
             "ptk/cf.yaml": "ColumnLimit: 120\n",
         }
@@ -109,7 +109,9 @@ def invoke(write):
 
     def _invoke(*args):
         return CliRunner().invoke(
-            cli, ["--config", str(root / "main.ptk.yml"), *args], catch_exceptions=False
+            cli,
+            ["--config", str(root / ".main.ptk.yml"), *args],
+            catch_exceptions=False,
         )
 
     _invoke.root = root
@@ -169,7 +171,7 @@ def test_unknown_config_and_missing_overlay(invoke):
 
 def test_ruff_overlay_is_a_config_error(write, load):
     root = write(
-        {"main.ptk.yml": "project: {name: x}\nconfigs: {ruff: {overlay: r.toml}}\n"}
+        {".main.ptk.yml": "project: {name: x}\nconfigs: {ruff: {overlay: r.toml}}\n"}
     )
     with pytest.raises(ConfigError, match="ruff needs no overlay"):
         load(root)

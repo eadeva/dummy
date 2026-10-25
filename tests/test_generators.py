@@ -59,10 +59,11 @@ def test_cmake_consumes_generated_values(tmp_path):
 
 
 def test_builtin_generation_copy_clean_and_configs(tmp_path):
-    config = tmp_path / "main.ptk.yml"
+    config = tmp_path / ".main.ptk.yml"
     config.write_text(
         yaml.safe_dump(
             {
+                "repository": {"alias": "demo", "config_path": "."},
                 "project": {"name": "builtins"},
                 "configs": {"ruff": {}},
                 "variants": {"variants": {"demo": {}}},
@@ -111,7 +112,7 @@ def test_file_cleanup_and_generation_reject_path_escape(tmp_path):
     from ptk.adapters.builtins import file_cleaner, variant_generator
     from ptk.domain.errors import PtkError
 
-    protected = tmp_path / "main.ptk.yml"
+    protected = tmp_path / ".main.ptk.yml"
     protected.write_text("keep")
     ctx = SimpleNamespace(
         root=tmp_path,
@@ -121,8 +122,8 @@ def test_file_cleanup_and_generation_reject_path_escape(tmp_path):
     )
     clean = file_cleaner([tmp_path / "_builds"])
     with pytest.raises(PtkError, match="only permits descendants"):
-        clean(SimpleNamespace(with_={"paths": ["main.ptk.yml"]}), lambda _: None, ctx)
-    generate = variant_generator({"escape": lambda _: {"../../main.ptk.yml": "bad"}})
+        clean(SimpleNamespace(with_={"paths": [".main.ptk.yml"]}), lambda _: None, ctx)
+    generate = variant_generator({"escape": lambda _: {"../../.main.ptk.yml": "bad"}})
     with pytest.raises(PtkError, match="must be inside"):
         generate(SimpleNamespace(with_={"generators": ["escape"]}), lambda _: None, ctx)
     assert protected.read_text() == "keep"

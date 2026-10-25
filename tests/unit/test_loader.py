@@ -7,7 +7,7 @@ from ptk.domain.config import tree as t
 from ptk.domain.errors import ConfigError
 
 
-def read(root: Path, name: str = "main.ptk.yml"):
+def read(root: Path, name: str = "fragment.ptk.yml"):
     reader = YamlConfigReader(display_root=root)
     return reader.read(root / name), reader
 
@@ -15,7 +15,7 @@ def read(root: Path, name: str = "main.ptk.yml"):
 def test_include_order_and_main_file_wins(write):
     root = write(
         {
-            "main.ptk.yml": """
+            "fragment.ptk.yml": """
             include: [parts/*.ptk.yml]
             vars: {a: main}
         """,
@@ -33,7 +33,7 @@ def test_include_order_and_main_file_wins(write):
 def test_include_tag_glob_merges_mappings_and_concatenates_lists(write):
     root = write(
         {
-            "main.ptk.yml": """
+            "fragment.ptk.yml": """
             tools: !include tools/*.ptk.yml
             list: !include lists/*.ptk.yml
         """,
@@ -53,7 +53,7 @@ def test_include_tag_glob_merges_mappings_and_concatenates_lists(write):
 def test_replace_and_append_tags(write):
     root = write(
         {
-            "main.ptk.yml": """
+            "fragment.ptk.yml": """
         include: [base.ptk.yml]
         environment:
           set: !replace {ONLY: "1"}
@@ -73,7 +73,7 @@ def test_replace_and_append_tags(write):
 def test_variants_string_is_include_sugar(write):
     root = write(
         {
-            "main.ptk.yml": "variants: product/line.ptk.yml",
+            "fragment.ptk.yml": "variants: product/line.ptk.yml",
             "product/line.ptk.yml": "default: a\nvariants: {a: {}}",
         }
     )
@@ -83,18 +83,18 @@ def test_variants_string_is_include_sugar(write):
 @pytest.mark.parametrize(
     "files, message",
     [
-        ({"main.ptk.yml": "a: 1\na: 2"}, "duplicate key 'a'"),
+        ({"fragment.ptk.yml": "a: 1\na: 2"}, "duplicate key 'a'"),
         (
             {
-                "main.ptk.yml": "include: [x.ptk.yml]",
-                "x.ptk.yml": "include: [main.ptk.yml]",
+                "fragment.ptk.yml": "include: [x.ptk.yml]",
+                "x.ptk.yml": "include: [fragment.ptk.yml]",
             },
             "include cycle",
         ),
-        ({"main.ptk.yml": "include: [missing.ptk.yml]"}, "included file not found"),
-        ({"main.ptk.yml": "a: !foo 1"}, "unknown tag !foo"),
-        ({"main.ptk.yml": "a: [1"}, "invalid YAML"),
-        ({"main.ptk.yml": "- 1"}, "top level must be a mapping"),
+        ({"fragment.ptk.yml": "include: [missing.ptk.yml]"}, "included file not found"),
+        ({"fragment.ptk.yml": "a: !foo 1"}, "unknown tag !foo"),
+        ({"fragment.ptk.yml": "a: [1"}, "invalid YAML"),
+        ({"fragment.ptk.yml": "- 1"}, "top level must be a mapping"),
     ],
 )
 def test_errors_have_locations(write, files, message):
@@ -108,7 +108,7 @@ def test_errors_have_locations(write, files, message):
 def test_yaml_anchors_and_merge_keys(write):
     root = write(
         {
-            "main.ptk.yml": """
+            "fragment.ptk.yml": """
         defaults: &d {timeout: 10, retries: 1}
         step: {<<: *d, retries: 3}
     """
@@ -120,7 +120,7 @@ def test_yaml_anchors_and_merge_keys(write):
 def test_locate_and_display_path_for_steps(write):
     root = write(
         {
-            "main.ptk.yml": """
+            "fragment.ptk.yml": """
         actions:
           build:
             steps:

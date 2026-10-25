@@ -17,3 +17,5 @@ vars:
 
 layout:
   root: .
+
+repository: {alias: demo, config_path: .}

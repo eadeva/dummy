@@ -71,10 +71,11 @@ def test_installed_plugin_distribution_end_to_end(tmp_path, monkeypatch):
     monkeypatch.syspath_prepend(str(package))
     root = tmp_path / "project"
     root.mkdir()
-    config = root / "main.ptk.yml"
+    config = root / ".main.ptk.yml"
     config.write_text(
         yaml.safe_dump(
             {
+                "repository": {"alias": "demo", "config_path": "."},
                 "project": {"name": "plugins"},
                 "plugins": ["ptk-test-plugin"],
                 "reporting": {"formats": ["text"]},

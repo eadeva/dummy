@@ -20,7 +20,7 @@ actions:
 def test_per_tool_override_disable_and_preserve_unmentioned(write, load):
     root = write(
         {
-            "main.ptk.yml": MAIN,
+            ".main.ptk.yml": MAIN,
             "tools.ptk.yml": """
 tools:
   cmake: {version: '>=3', check: cmake --version, choco: cmake}
@@ -54,13 +54,13 @@ actions:
         p.location(("actions", "build", "params", "jobs", "default")).file
         == "tools.ptk.yml"
     )
-    assert p.layers == ["tools.ptk.yml", "build.tools.ptk.yml", "main.ptk.yml"]
+    assert p.layers == ["tools.ptk.yml", "build.tools.ptk.yml", ".main.ptk.yml"]
 
 
 def test_cx_overrides_and_requirement_layers_merge_by_tool(write, load):
     root = write(
         {
-            "main.ptk.yml": MAIN
+            ".main.ptk.yml": MAIN
             + "\ntools: {a: {}, b: {}, c: {}}\nrequires_tools: [a]\n",
             "build.tools.ptk.yml": "actions: {build: {requires_tools: [b]}}",
             "cx.ptk.yml": "param_defaults: {jobs: 12}\nactions: {build: {requires_tools: {c: true, a: false}}}",
@@ -78,18 +78,18 @@ def test_cx_overrides_and_requirement_layers_merge_by_tool(write, load):
 def test_explicit_include_is_not_loaded_twice(write, load):
     root = write(
         {
-            "main.ptk.yml": "include: [tools.ptk.yml]\n" + MAIN,
+            ".main.ptk.yml": "include: [tools.ptk.yml]\n" + MAIN,
             "tools.ptk.yml": "vars: {items: !append [one]}\nparam_defaults: {jobs: 4}",
         }
     )
     p = load(root)
     assert p.config.vars["items"] == ["one"]
-    assert p.layers == ["main.ptk.yml"]
+    assert p.layers == [".main.ptk.yml"]
 
 
 def test_global_default_validated_for_each_parameter(write, load):
     root = write(
-        {"main.ptk.yml": MAIN, "tools.ptk.yml": "param_defaults: {jobs: wrong}"}
+        {".main.ptk.yml": MAIN, "tools.ptk.yml": "param_defaults: {jobs: wrong}"}
     )
     with pytest.raises(ConfigError, match="tools.ptk.yml"):
         load(root)
@@ -147,7 +147,7 @@ def test_tool_checks_and_install_selection_use_action_settings(write, load):
 
     root = write(
         {
-            "main.ptk.yml": MAIN,
+            ".main.ptk.yml": MAIN,
             "tools.ptk.yml": 'tools: {cmake: {version: ">=3", uv_tool: cmake}, git: {}}\nrequires_tools: [cmake, git]',
             "build.tools.ptk.yml": 'actions: {build: {requires_tools: {cmake: {version: ">=4"}, git: false}}}',
         }

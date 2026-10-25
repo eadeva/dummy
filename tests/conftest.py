@@ -12,13 +12,16 @@ DEMO = Path(__file__).resolve().parents[1] / "examples" / "demo"
 
 @pytest.fixture
 def write(tmp_path: Path):
-    """write({"main.ptk.yml": "...", "a/b.ptk.yml": "..."}) -> project root."""
+    """write({".main.ptk.yml": "...", "a/b.ptk.yml": "..."}) -> project root."""
 
     def _write(files: dict[str, str]) -> Path:
         for rel, text in files.items():
             target = tmp_path / rel
             target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(textwrap.dedent(text).lstrip("\n"), encoding="utf-8")
+            text = textwrap.dedent(text).lstrip("\n")
+            if target.name == ".main.ptk.yml" and "repository:" not in text:
+                text = text.rstrip() + "\nrepository: {alias: demo, config_path: .}\n"
+            target.write_text(text, encoding="utf-8")
         return tmp_path
 
     return _write
@@ -30,6 +33,8 @@ def load():
 
     def _load(root: Path, environ: dict[str, str] | None = None, **kwargs):
         app = create_app(environ=environ or {})
+        if root == DEMO:
+            kwargs.setdefault("config_file", DEMO / ".main.ptk.yml")
         return app.load_project.execute(root, **kwargs)
 
     return _load

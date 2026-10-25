@@ -13,10 +13,11 @@ from ptk.drivers.cli.main import cli
 
 
 def project(tmp_path, steps, **action):
-    file = tmp_path / "main.ptk.yml"
+    file = tmp_path / ".main.ptk.yml"
     file.write_text(
         yaml.safe_dump(
             {
+                "repository": {"alias": "demo", "config_path": "."},
                 "project": {"name": "controls"},
                 "actions": {"go": {"steps": steps, **action}},
             }

@@ -61,7 +61,7 @@ class SharedConfigs:
                 known = list(project.config.configs) or list(sc.CONFIG_FILES)
                 raise PtkError(
                     f"config '{name}' is not managed by this project{did_you_mean(name, known)}"
-                    " (list it under 'configs:' in main.ptk.yml)"
+                    " (list it under 'configs:' in .main.ptk.yml)"
                 )
         result = []
         for name, spec in configured.items():

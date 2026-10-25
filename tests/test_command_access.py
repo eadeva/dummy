@@ -5,10 +5,11 @@ from ptk.drivers.cli.main import cli
 
 
 def test_builtin_policy_applies_to_alias_help_and_execution(tmp_path, monkeypatch):
-    config = tmp_path / "main.ptk.yml"
+    config = tmp_path / ".main.ptk.yml"
     config.write_text(
         yaml.safe_dump(
             {
+                "repository": {"alias": "demo", "config_path": "."},
                 "project": {"name": "access"},
                 "command_audience": {"setup.creds": "maintainer"},
             }

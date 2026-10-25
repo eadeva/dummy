@@ -23,7 +23,7 @@ def test_use_case_renders_valid_configuration(tmp_path):
 
     files = MemoryScaffold()
     result = InitProject(files).execute(tmp_path, 'My "project": #1', dry_run=True)
-    config = PtkConfig.model_validate(yaml.safe_load(result.files["main.ptk.yml"]))
+    config = PtkConfig.model_validate(yaml.safe_load(result.files[".main.ptk.yml"]))
     assert config.project.name == 'My "project": #1'
     assert config.project.default_action == "hello"
     assert files.dry_run
@@ -44,7 +44,7 @@ def test_new_project_runs(tmp_path, monkeypatch):
     result = runner.invoke(cli, ["setup", "init", str(target)], catch_exceptions=False)
     assert result.exit_code == 0, result.output
     assert "local.ptk.yml" in (target / ".gitignore").read_text()
-    base = ["-c", str(target / "main.ptk.yml"), "--no-ci"]
+    base = ["-c", str(target / ".main.ptk.yml"), "--no-ci"]
     assert runner.invoke(cli, [*base, "setup", "config", "validate"]).exit_code == 0
     ran = runner.invoke(cli, [*base, "hello", "--message", "custom message"])
     assert ran.exit_code == 0, ran.output
@@ -62,7 +62,7 @@ def test_dry_run_does_not_create_directory(tmp_path):
 
 
 def test_existing_config_is_preserved(tmp_path):
-    main = tmp_path / "main.ptk.yml"
+    main = tmp_path / ".main.ptk.yml"
     main.write_text("unchanged")
     for args in ([], ["--dry-run"]):
         result = CliRunner().invoke(cli, ["setup", "init", str(tmp_path), *args])
@@ -82,13 +82,13 @@ def test_existing_gitignore_is_preserved_and_alias_works(tmp_path):
 
 
 def test_init_does_not_use_parent_project(tmp_path, monkeypatch):
-    (tmp_path / "main.ptk.yml").write_text("invalid: parent")
+    (tmp_path / ".main.ptk.yml").write_text("invalid: parent")
     child = tmp_path / "child"
     child.mkdir()
     monkeypatch.chdir(child)
     result = CliRunner().invoke(cli, ["setup", "init"], catch_exceptions=False)
     assert result.exit_code == 0, result.output
-    assert (child / "main.ptk.yml").is_file()
+    assert (child / ".main.ptk.yml").is_file()
 
 
 def test_conflicting_global_options_rejected(tmp_path):
@@ -96,4 +96,4 @@ def test_conflicting_global_options_rejected(tmp_path):
         cli, ["--set", "project.name=other", "setup", "init", str(tmp_path)]
     )
     assert result.exit_code == 2
-    assert not (tmp_path / "main.ptk.yml").exists()
+    assert not (tmp_path / ".main.ptk.yml").exists()

@@ -18,9 +18,11 @@ import os
 from pathlib import Path
 
 import yaml
+from pydantic import ValidationError
 
 from ...domain.config.defaults import normalize_requirements
-from ...domain.config.tree import Node, merge
+from ...domain.config.model import RepositorySpec
+from ...domain.config.tree import Node, merge, to_plain
 from ...domain.errors import ConfigError, Location, Problem
 
 INCLUDE_SUGAR_KEYS = (
@@ -44,12 +46,18 @@ def _display(path: Path, root: Path | None) -> str:
 class YamlConfigReader:
     def __init__(self, display_root: Path | None = None):
         self.display_root = display_root
+        self.entry_bases: dict[Path, Path] = {}
         self.files: list[Path] = []  # every file read, in order
 
     # ------------------------------------------------------------------ public
 
     def read(
-        self, path: Path, *, _stack: tuple[Path, ...] = (), require_mapping: bool = True
+        self,
+        path: Path,
+        *,
+        _stack: tuple[Path, ...] = (),
+        require_mapping: bool = True,
+        metadata_only: bool = False,
     ) -> Node:
         path = path.resolve()
         if path in _stack:
@@ -82,7 +90,55 @@ class YamlConfigReader:
         if node is None:
             return Node({}, Location(_display(path, self.display_root), 1))
         stack = (*_stack, path)
-        tree = self._construct(node, path, loader, stack)
+        base_file = path
+        if path.name == ".main.ptk.yml":
+            # Read discovery metadata before resolving any include (including tags).
+            entries = (
+                [v for k, v in node.value if k.value == "repository"]
+                if isinstance(node, yaml.MappingNode)
+                else []
+            )
+            if len(entries) != 1:
+                raise ConfigError(
+                    [
+                        Problem(
+                            "entry file requires repository.alias and repository.config_path",
+                            location=Location(str(path)),
+                        )
+                    ]
+                )
+            metadata = self._construct(entries[0], path, loader, stack)
+            try:
+                spec = RepositorySpec.model_validate(to_plain(metadata))
+            except ValidationError as exc:
+                raise ConfigError([Problem(str(exc), location=metadata.loc)]) from None
+            directory = (path.parent / spec.config_path).resolve()
+            if Path(spec.config_path).is_absolute() or not directory.is_relative_to(
+                path.parent
+            ):
+                raise ConfigError(
+                    [
+                        Problem(
+                            "repository.config_path must stay within the repository",
+                            location=metadata.loc,
+                        )
+                    ]
+                )
+            if not directory.is_dir():
+                raise ConfigError(
+                    [
+                        Problem(
+                            f"configuration directory does not exist: {directory}",
+                            location=metadata.loc,
+                        )
+                    ]
+                )
+            # Only the entry file changes its include base. Fragments remain relative
+            # to their own containing directory; diagnostics keep the real filename.
+            self.entry_bases[path] = directory
+            if metadata_only:
+                return Node({"repository": metadata}, self._loc(node, path))
+        tree = self._construct(node, base_file, loader, stack)
         if not tree.is_map:
             if require_mapping:
                 raise ConfigError(
@@ -183,7 +239,9 @@ class YamlConfigReader:
     ) -> list[Path]:
         expanded = os.path.expandvars(os.path.expanduser(pattern))
         full = (
-            Path(expanded) if os.path.isabs(expanded) else base_file.parent / expanded
+            Path(expanded)
+            if os.path.isabs(expanded)
+            else self.entry_bases.get(base_file, base_file.parent) / expanded
         )
         if any(ch in expanded for ch in "*?["):
             matches = sorted(

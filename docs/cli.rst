@@ -37,9 +37,9 @@ install tools or change configuration. Project actions remain top-level commands
 
 Put global options before the group, and installation options after ``install``::
 
-   uv run ptk -c examples/quickstart/main.ptk.yml setup config validate
-   uv run ptk -c examples/quickstart/main.ptk.yml setup install --action build --dry-run
-   uv run ptk -c examples/quickstart/main.ptk.yml setup creds list
+   uv run ptk -c examples/quickstart/.main.ptk.yml setup config validate
+   uv run ptk -c examples/quickstart/.main.ptk.yml setup install --action build --dry-run
+   uv run ptk -c examples/quickstart/.main.ptk.yml setup creds list
 
 The ``ptk init`` alias also remains available.
 
@@ -76,3 +76,32 @@ The same selection works with ``dry-run``.
 Global ``--set vh.SIZE=4`` is also supported. ``-mp jobs=4`` is the compatibility
 spelling for declared action parameters. Generated typed options take precedence
 when both spellings supply a value. Persistent editing refuses global config overrides.
+
+Virtual monorepositories (VMR)
+------------------------------
+
+A ``.repo`` directory in the current directory or an ancestor activates VMR
+mode. A member's ``.git`` symlink or ``gitdir:`` file also identifies the VMR
+when its target is inside that workspace's ``.repo`` directory. Ordinary Git
+worktrees do not activate VMR mode merely because they have a ``.git`` file.
+
+When present, ``.repo/project.list`` defines the member paths. Otherwise ptk
+walks working-tree roots, skipping Git metadata and symlinked directory trees.
+Only members with a root ``.main.ptk.yml`` participate. Duplicate aliases and
+member paths outside the workspace fail discovery.
+
+Commands are grouped under the configured repository alias::
+
+   ptk --help
+   ptk firmware --help
+   ptk firmware build
+   ptk firmware setup install
+   ptk bootloader variant list
+   ptk --set vars.mode=debug firmware build
+
+The same grouping applies from a member's subdirectory. Each repository has
+isolated configuration, tools, plugins, permissions and output directories.
+``ptk firmware`` runs that repository's default action; bare ``ptk`` lists the
+repositories. There is no implicit run across all repositories. Global options
+precede the alias. ``ptk --config path/to/.main.ptk.yml build`` explicitly selects
+standalone mode. Generated VS Code tasks in VMR mode include the repository alias.

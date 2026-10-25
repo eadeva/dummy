@@ -50,6 +50,11 @@ class CliState:
 def state_of(ctx: click.Context) -> CliState:
     """The CLI state; created from the root options if the root callback has not
     run yet (click resolves sub-commands - our generated actions - before it)."""
+    current = ctx
+    while current is not None:
+        if isinstance(current.obj, CliState):
+            return current.obj
+        current = current.parent
     root = ctx.find_root()
     if not isinstance(root.obj, CliState):
         params = root.params

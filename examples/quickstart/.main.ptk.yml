@@ -37,3 +37,5 @@ actions:
                 run: [demo.py, extra]
                 python: {interpreter: cli}
                 when: CHECKS
+
+repository: {alias: quickstart, config_path: .}

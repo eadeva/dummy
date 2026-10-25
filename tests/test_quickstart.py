@@ -16,7 +16,7 @@ EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "quickstart"
 def test_quickstart(tmp_path, variant):
     root = tmp_path / "project with spaces"
     shutil.copytree(EXAMPLE, root)
-    base = ["-c", str(root / "main.ptk.yml"), "--no-ci"]
+    base = ["-c", str(root / ".main.ptk.yml"), "--no-ci"]
     runner = CliRunner(env={"PTK_ROLE": "user"})
     preview = runner.invoke(cli, [*base, "dry-run", "build", "-V", variant])
     assert preview.exit_code == 0, preview.output

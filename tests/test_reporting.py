@@ -190,12 +190,12 @@ actions:
 
 @pytest.fixture
 def project(write, tmp_path):
-    root = write({"main.ptk.yml": PROJECT, "tools/tidy.sarif": json.dumps(SARIF)})
+    root = write({".main.ptk.yml": PROJECT, "tools/tidy.sarif": json.dumps(SARIF)})
     summary = tmp_path / "gh-summary.md"
     env = {**HOST, "JUNIT": JUNIT, "GITHUB_STEP_SUMMARY": str(summary)}
 
     def invoke(*args):
-        base = ["--config", str(root / "main.ptk.yml"), "--no-ci"]
+        base = ["--config", str(root / ".main.ptk.yml"), "--no-ci"]
         return CliRunner(env=env).invoke(cli, [*base, *args], catch_exceptions=False)
 
     invoke.root = root
@@ -229,14 +229,14 @@ def test_reports_after_run(project):
 def test_report_import_without_match_fails(write):
     root = write(
         {
-            "main.ptk.yml": """
+            ".main.ptk.yml": """
         project: {name: x}
         actions: {go: {steps: [{grab: {uses: report.import, with: {files: [no/*.xml]}}}]}}
         """
         }
     )
     result = CliRunner(env=HOST).invoke(
-        cli, ["--config", str(root / "main.ptk.yml"), "go"], catch_exceptions=False
+        cli, ["--config", str(root / ".main.ptk.yml"), "go"], catch_exceptions=False
     )
     assert result.exit_code == 1 and "no files matched" in result.output
 
@@ -267,7 +267,7 @@ def test_report_export_and_history(project, monkeypatch):
 def test_reporting_disabled(write):
     root = write(
         {
-            "main.ptk.yml": """
+            ".main.ptk.yml": """
         project: {name: x}
         reporting: {formats: []}
         actions: {go: {steps: [{a: "echo hi"}]}}
@@ -275,7 +275,7 @@ def test_reporting_disabled(write):
         }
     )
     result = CliRunner(env=HOST).invoke(
-        cli, ["--config", str(root / "main.ptk.yml"), "go"], catch_exceptions=False
+        cli, ["--config", str(root / ".main.ptk.yml"), "go"], catch_exceptions=False
     )
     assert (
         result.exit_code == 0
