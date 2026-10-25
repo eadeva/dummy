@@ -39,5 +39,5 @@ jobs:
           version: '0.13.4'
           python-version: '3.12'
       - run: uv sync
-      - run: sudo apt-get update && sudo apt-get install -y xvfb xauth
+      - run: sudo apt-get update && sudo apt-get install -y xvfb xauth python3-tk
       - run: xvfb-run --auto-servernum uv run pytest -q tests/test_variant_editor_gui.py

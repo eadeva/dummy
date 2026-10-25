@@ -103,3 +103,26 @@ def test_builtin_generation_copy_clean_and_configs(tmp_path):
     assert (tmp_path / "_bin/demo/variant.h").exists()
     assert not (tmp_path / "_builds/demo/go/gen").exists()
     assert (tmp_path / "ruff-base.toml").exists()
+
+
+def test_file_cleanup_and_generation_reject_path_escape(tmp_path):
+    from types import SimpleNamespace
+
+    from ptk.adapters.builtins import file_cleaner, variant_generator
+    from ptk.domain.errors import PtkError
+
+    protected = tmp_path / "main.ptk.yml"
+    protected.write_text("keep")
+    ctx = SimpleNamespace(
+        root=tmp_path,
+        cancel=None,
+        variant=variant(),
+        build_dir=tmp_path / "_builds/gen",
+    )
+    clean = file_cleaner([tmp_path / "_builds"])
+    with pytest.raises(PtkError, match="only permits descendants"):
+        clean(SimpleNamespace(with_={"paths": ["main.ptk.yml"]}), lambda _: None, ctx)
+    generate = variant_generator({"escape": lambda _: {"../../main.ptk.yml": "bad"}})
+    with pytest.raises(PtkError, match="must be inside"):
+        generate(SimpleNamespace(with_={"generators": ["escape"]}), lambda _: None, ctx)
+    assert protected.read_text() == "keep"

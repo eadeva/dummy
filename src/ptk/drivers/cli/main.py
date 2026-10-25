@@ -187,7 +187,7 @@ def config_schema(ctx: click.Context, output: Path | None) -> None:
 
 @cli.group("variant", cls=AccessGroup)
 def variant_group() -> None:
-    """Inspect and edit variants: list, show, explain, check, gui."""
+    """Inspect and edit variants: list, show, explain, check, set, new, gui."""
 
 
 def _value(value: Any) -> str:

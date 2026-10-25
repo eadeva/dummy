@@ -104,3 +104,33 @@ def test_variant_selection_preflight_and_dry_run(tmp_path):
     )
     assert preview.exit_code == 0, preview.output
     assert not (tmp_path / "_logs").exists()
+
+
+def test_matrix_failure_preserves_later_runs(tmp_path):
+    import sys
+
+    file = setup(tmp_path)
+    config = yaml.safe_load(file.read_text())
+    config["actions"]["go"]["steps"].append(
+        {
+            "fail_small": {
+                "run": [sys.executable, "-c", "raise SystemExit(3)"],
+                "when": "variant == 'small'",
+            }
+        }
+    )
+    file.write_text(yaml.safe_dump(config))
+    result = CliRunner().invoke(cli, ["-c", str(file), "go", "--all-variants"])
+    assert result.exit_code == 1, result.output
+    summaries = {
+        json.loads(p.read_text())["variant"]: json.loads(p.read_text())["status"]
+        for p in (tmp_path / "_logs").rglob("run.json")
+    }
+    assert summaries == {"large": "passed", "small": "failed"}
+
+
+def test_global_feature_override(tmp_path):
+    file = setup(tmp_path)
+    result = CliRunner().invoke(cli, ["-c", str(file), "--set", "vh.SIZE=6", "go"])
+    assert result.exit_code == 0, result.output
+    assert "6 world" in result.output

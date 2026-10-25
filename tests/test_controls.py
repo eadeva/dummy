@@ -124,3 +124,32 @@ def test_builtin_timeout_and_retries(tmp_path):
     assert result.steps[0].attempts == 2
     assert "timed out" in result.steps[0].message
     assert result.duration < 2
+
+
+def test_group_retries_repeat_children_and_report_attempts(tmp_path):
+    _, app, p = project(
+        tmp_path,
+        [
+            {
+                "retry": {
+                    "retries": 1,
+                    "steps": [
+                        {
+                            "flaky": {
+                                "run": [
+                                    sys.executable,
+                                    "-c",
+                                    "from pathlib import Path; p=Path('seen'); existed=p.exists(); p.touch(); raise SystemExit(0 if existed else 1)",
+                                ]
+                            }
+                        }
+                    ],
+                }
+            }
+        ],
+    )
+    prepared = app.prepare_run(p).execute(p, RunRequest(action="go"))
+    result = app.run_action(p).execute(prepared)
+    assert result.status is Status.PASSED
+    assert result.steps[0].attempts == 2
+    assert result.steps[0].children[0].status is Status.PASSED

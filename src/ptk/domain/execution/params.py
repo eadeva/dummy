@@ -63,8 +63,9 @@ def resolve_params(
                 values[name], sources[name] = spec.default, "default"
             elif spec.required:
                 hint = f" or set {spec.env}" if spec.env else ""
+                value_hint = " (hidden prompt)" if spec.type == "secret" else " VALUE"
                 raise ParamError(
-                    f"parameter '{name}' is required (--{name.replace('_', '-')} VALUE{hint})"
+                    f"parameter '{name}' is required (--{name.replace('_', '-')}{value_hint}{hint})"
                 )
             else:
                 values[name], sources[name] = None, "unset"
