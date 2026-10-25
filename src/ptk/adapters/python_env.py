@@ -104,10 +104,13 @@ class UvPythonEnvManager:
             )
         if spec.project is not None:
             project = str((root / spec.project).resolve())
+            groups = [arg for name in spec.groups for arg in ("--group", name)]
+            prefix = [uv, "run", "--project", project, *groups]
             return PythonRuntime(
-                f"uv project {spec.project}",
-                script_prefix=[uv, "run", "--project", project, "python"],
-                command_prefix=[uv, "run", "--project", project],
+                f"uv project {spec.project}"
+                + (f" (groups: {', '.join(spec.groups)})" if spec.groups else ""),
+                script_prefix=[*prefix, "python"],
+                command_prefix=prefix,
             )
         if spec.interpreter == "cli":
             return PythonRuntime(

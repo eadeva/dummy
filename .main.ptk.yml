@@ -1,4 +1,4 @@
 repository:
-  alias: dummy
+  alias: ptk
   config_path: config/ptk
 include: project.ptk.yml

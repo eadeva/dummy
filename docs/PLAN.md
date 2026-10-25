@@ -747,3 +747,13 @@ Former top-level commands remain hidden compatibility aliases.
   environment, credentials and shared formatter/linter settings.
 - Commented optional field examples; starter actions remain runnable offline.
 - Conventional CX/maintainer entries remain at config root; other files use includes.
+
+## PTK self-hosted development commands
+
+- Replaced repository starter actions with test/check/docs, one default variant,
+  and no components; preserved topic-based configuration under config/ptk.
+- Python project runtimes accept explicit dependency groups, using pyproject.toml
+  as the source for pytest/Ruff/Sphinx dependencies.
+- CI exercises the same PTK actions, with JUnit results and strict Sphinx builds.
+- Fixed the repository Git tag match and added package-metadata fallback for
+  untagged, shallow and source-only checkouts.

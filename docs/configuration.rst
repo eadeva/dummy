@@ -83,7 +83,10 @@ The registered built-ins are ``echo``, ``wait``, ``report.import``,
 Python modes are mutually exclusive: ``uvx`` for a Python tool, ``venv`` for
 cached requirements/packages, ``project`` for a uv project, or
 ``interpreter: cli`` for ptk's interpreter. Pin tool versions in reproducible
-project configurations. Dry runs describe runtimes without creating them.
+project configurations. ``python: {project: ., groups: [docs]}`` adds dependency
+groups from that project's ``pyproject.toml`` to the uv run. ``groups`` is only
+valid with ``project`` mode; the normal uv default groups still apply.
+Dry runs describe runtimes without creating them.
 
 Substitution and conditions
 ---------------------------

@@ -9,10 +9,8 @@ include:
 - configs/configs.ptk.yml
 - actions/*.ptk.yml
 project:
-  name: dummy
-  default_action: hello
+  name: ptk
+  default_action: test
 variants: variants/variants.ptk.yml
-# Optional project-wide parameter defaults (only for declared parameters):
-# param_defaults: {jobs: 4}
-# logging: {level: info, keep_history: 10}
-# reporting: {formats: [json, html]}
+# Test dependencies and doc dependencies are declared once in pyproject.toml.
+# Each action runs this checkout, even when the invoking PTK was installed globally.

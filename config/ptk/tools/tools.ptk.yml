@@ -1,16 +1,6 @@
-# Tool definitions and global requirements. Nothing is installed by this starter.
-# Uncomment the tool, then enable it in an action's requires_tools.
+# PTK's developer tools are Python dependencies in pyproject.toml:
+# dev = pytest + ruff; docs = sphinx. The actions select those uv project groups.
+# uv is bootstrapped by install/install.sh or install/install.ps1.
+# No additional managed tools or machine-wide packages are required here.
 tools: {}
 requires_tools: {}
-# Replace tools: {} with, for example:
-# tools:
-#   cmake:
-#     version: ">=3.30,<4"           # Accepted version range.
-#     check: cmake --version         # Command used to verify the tool.
-#     uv_tool: "cmake==3.30.2"       # Isolated, pinned Python tool installation.
-# Or use a managed archive source for a tool:
-#     download:
-#       url: https://example.com/tool.zip  # Replace with the real download URL.
-#       sha256: REPLACE_WITH_SHA256       # Verify the downloaded archive.
-#       bin: bin                         # Executable directory inside the archive.
-# requires_tools: {cmake: true}     # Require globally instead of per action.

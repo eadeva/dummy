@@ -1,9 +1,5 @@
-# Conventional entry point: loaded automatically for GitHub Actions/workflows.
-# This file stays at the configuration root so PTK can discover it.
+# GitHub Actions/workflows overlay, automatically loaded in CI.
+# CI uses the same test/check/docs actions as developer machines.
 environment:
   set:
     PTK_CI: "true"
-# Optional action override; place at the top level:
-# actions:
-#   build:
-#     env: {BUILD_MODE: ci}

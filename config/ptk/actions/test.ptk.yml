@@ -1,0 +1,16 @@
+# Run the full suite: ptk test
+# Select tests/options: ptk test -- tests/test_init.py -q
+# JUnit output is collected in PTK's per-run test report, including failing runs.
+actions:
+  test:
+    help: Run PTK's pytest suite and collect JUnit results
+    environment:
+      # Integration tests intentionally probe host-installed Git, shells and uv.
+      # Python and test dependencies still come from this checkout's uv project.
+      inherit_path: true
+    steps:
+      - pytest:
+          python: {project: ., groups: [dev]}
+          run: [python, -m, pytest, "--junitxml=${run.reports_dir}/pytest.xml"]
+          passthrough: true
+          timeout: 900

@@ -9,7 +9,7 @@ description: Choose and diagnose Python runtimes for ptk scripts and Python tool
 
 2. Choose exactly one runtime: `uvx` for a tool, `venv` for requirement files/packages, `project` for a uv project, or `interpreter: cli` for ptk's environment.
 
-3. Pin package versions where reproducibility matters. Use `with` only with `uvx`.
+3. Pin package versions where reproducibility matters. Use `with` only with `uvx`. Use `groups: [dev, docs]` only with `project` to select pyproject dependency groups.
 
 4. Use `run: [script.py, arg]` for scripts and a tool command for uvx; do not feed a project script to a tool that does not run Python files.
 

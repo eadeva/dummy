@@ -274,3 +274,20 @@ variables such as `PTK_VERSION_ENGINE` and `PTK_VERSION_ENGINE_COMPONENT_SDK`.
 `version.generate` produces C headers, CMake, MSBuild, Python or JSON files without
 rewriting unchanged content. See [versioning](docs/versioning.rst) for variant
 release lines, explicit VMR dependencies and `ptk version show/check/generate`.
+
+## Develop PTK using PTK
+
+The repository configuration in `config/ptk` has one `default` variant and no
+components. From the repository root:
+
+```sh
+uv run ptk test                          # pytest + JUnit/PTK reports
+uv run ptk test -- tests/test_init.py -q  # selected tests and pytest options
+uv run ptk check                         # Ruff lint and format checks
+uv run ptk docs                          # docs/_build/html/index.html
+```
+
+An installed `ptk` can run these directly. Actions use this checkout's Python
+project and its `dev`/`docs` dependency groups, rather than the global tool's
+Python environment. Git version discovery falls back to `pyproject.toml` when
+release tags are unavailable. The default action is `test`.

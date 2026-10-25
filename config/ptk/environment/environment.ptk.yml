@@ -1,11 +1,18 @@
-# Child commands get only OS essentials and explicitly kept variables.
+# Keep commands isolated while allowing package access and the optional GUI tests.
+# The test action alone inherits PATH because it exercises host-installed tools.
 environment:
   isolate: true
   inherit_path: false
-  keep: []
-# Under environment, customize only what commands need:
-#   keep: [HTTP_PROXY, HTTPS_PROXY]  # Copy named variables from the caller.
-#   set: {BUILD_MODE: reproducible} # Set values for all actions.
-#   unset: [UNWANTED_VARIABLE]      # Remove inherited variables.
-#   path_prepend: [/opt/sdk/bin]    # Explicit extra executable paths.
-#   path_append: []
+  keep:
+    - PTK_UV
+    - UV_PYTHON
+    - UV_CACHE_DIR
+    - UV_INDEX_URL
+    - UV_EXTRA_INDEX_URL
+    - HTTP_PROXY
+    - HTTPS_PROXY
+    - NO_PROXY
+    - SSL_CERT_FILE
+    - REQUESTS_CA_BUNDLE
+    - DISPLAY
+    - XAUTHORITY

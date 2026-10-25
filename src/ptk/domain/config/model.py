@@ -186,9 +186,12 @@ class PythonSpec(_Strict):
     )  # extra packages for uvx
     venv: VenvSpec | None = None
     project: str | None = None  # uv run --project <dir>
+    groups: list[str] = Field(
+        default_factory=list
+    )  # dependency groups for project mode
     interpreter: Literal["cli"] | None = None  # ptk's own environment
 
-    @field_validator("with_", mode="before")
+    @field_validator("with_", "groups", mode="before")
     @classmethod
     def _as_list(cls, v: Any) -> Any:
         return _listify(v)
@@ -204,6 +207,13 @@ class PythonSpec(_Strict):
             raise ValueError(
                 "python needs exactly one of: uvx, venv, project, interpreter"
             )
+        if self.groups and self.project is None:
+            raise ValueError("'groups' is only allowed together with project")
+        if any(
+            not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", group)
+            for group in self.groups
+        ):
+            raise ValueError("invalid dependency group name")
         if self.with_ and self.uvx is None:
             raise ValueError("'with' is only allowed together with uvx")
         return self

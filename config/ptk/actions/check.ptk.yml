@@ -1,0 +1,14 @@
+# Read-only quality checks: ptk check
+# Formatting changes remain explicit: uv run ruff format.
+actions:
+  check:
+    help: Check PTK's lint rules and formatting
+    steps:
+      - lint:
+          python: {project: ., groups: [dev]}
+          run: [python, -m, ruff, check]
+          timeout: 120
+      - format:
+          python: {project: ., groups: [dev]}
+          run: [python, -m, ruff, format, --check]
+          timeout: 120

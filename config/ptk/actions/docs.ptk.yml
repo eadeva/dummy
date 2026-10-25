@@ -1,0 +1,12 @@
+# Build HTML: ptk docs
+# Open docs/_build/html/index.html afterwards. Warnings fail the action.
+# The docs dependency group is installed automatically by uv when needed.
+actions:
+  docs:
+    help: Build PTK's Sphinx documentation with warnings treated as errors
+    steps:
+      - sphinx:
+          python: {project: ., groups: [docs]}
+          run: [python, -m, sphinx, -W, --keep-going, -b, html, docs, docs/_build/html]
+          passthrough: true
+          timeout: 600
