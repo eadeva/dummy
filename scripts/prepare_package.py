@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import subprocess
 import sys
@@ -14,11 +15,13 @@ import zipfile
 from email.parser import Parser
 from pathlib import Path
 
+from ptk.package_version import package_version
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def run(*args: str, cwd: Path = ROOT) -> None:
-    subprocess.run([sys.executable, *args], cwd=cwd, check=True)
+def run(*args: str, cwd: Path = ROOT, env: dict[str, str] | None = None) -> None:
+    subprocess.run([sys.executable, *args], cwd=cwd, env=env, check=True)
 
 
 def sha256(path: Path) -> str:
@@ -120,7 +123,7 @@ def prepare(output: Path) -> Path:
     project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))[
         "project"
     ]
-    version = project["version"]
+    version = package_version(ROOT, resolved_version=os.environ.get("PTK_VERSION_PTK"))
     with tempfile.TemporaryDirectory(prefix=".ptk-package-", dir=output.parent) as work:
         temporary = Path(work)
         staged = temporary / "release"
@@ -128,7 +131,14 @@ def prepare(output: Path) -> Path:
         dist.mkdir(parents=True)
         # uv supplied the declared release dependencies. Build still creates the
         # wheel from the sdist, checking that all build inputs survived packaging.
-        run("-m", "build", "--no-isolation", "--outdir", str(dist))
+        run(
+            "-m",
+            "build",
+            "--no-isolation",
+            "--outdir",
+            str(dist),
+            env={**os.environ, "_PTK_BUILD_VERSION": version},
+        )
         wheels, sdists = list(dist.glob("*.whl")), list(dist.glob("*.tar.gz"))
         if len(wheels) != 1 or len(sdists) != 1:
             raise ValueError("expected exactly one wheel and one source distribution")
@@ -143,7 +153,9 @@ def prepare(output: Path) -> Path:
                 ).decode()
             )
             if metadata["Name"] != project["name"] or metadata["Version"] != version:
-                raise ValueError("distribution metadata differs from pyproject.toml")
+                raise ValueError(
+                    "distribution metadata differs from the PTK project/version"
+                )
             for name in (
                 "skills/ptk-config-authoring/SKILL.md",
                 "docs/configuration.rst",

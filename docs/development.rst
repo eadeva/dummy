@@ -43,9 +43,15 @@ formatting intentionally, use ``uv run ruff format``. The test action explicitly
 inherits caller PATH to exercise installed host tools; ordinary environment
 variables remain filtered. DISPLAY/XAUTHORITY are kept for optional GUI tests.
 
-Version discovery uses reachable ``v*`` Git tags, falling back to the package
-version in ``pyproject.toml`` for untagged, shallow or source-only checkouts.
+Package builds and action runs use the same Git-managed PTK version configuration.
+Reachable ``v*`` tags take precedence; untagged/shallow checkouts use the explicit
+development fallback in ``versioning.ptk.yml``. Source distributions freeze their
+resolved version in metadata, so rebuilding them does not require Git.
 Neither tests nor documentation builds require a release tag.
+uv's editable-build cache tracks Git commits/tags and version configuration.
+The installed CLI reports its installation version; reinstall after other local
+edits when needed with ``uv sync --reinstall-package ptk``. Package preparation
+always uses the newly resolved action snapshot.
 
 The documentation build treats warnings as errors. The quickstart configuration
 and script are included from their original files; the tests run that same example

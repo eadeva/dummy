@@ -51,6 +51,18 @@ def test_failed_build_preserves_previous_package_output(tmp_path, monkeypatch):
     assert list(tmp_path.iterdir()) == [output]
 
 
+def test_package_build_receives_the_resolved_run_version(tmp_path, monkeypatch):
+    monkeypatch.setenv("PTK_VERSION_PTK", "7.8.9-rc.1+2.gabc")
+
+    def check_build(*args, **kwargs):
+        assert kwargs["env"]["_PTK_BUILD_VERSION"] == "7.8.9rc1+2.gabc"
+        raise ValueError("checked snapshot")
+
+    monkeypatch.setattr(prepare_package, "run", check_build)
+    with pytest.raises(ValueError, match="checked snapshot"):
+        prepare_package.prepare(tmp_path / "package")
+
+
 def test_skill_link_check_accepts_aliased_project_root(tmp_path):
     project = tmp_path / "project"
     skill = project / ".github/skills/ptk-example/SKILL.md"

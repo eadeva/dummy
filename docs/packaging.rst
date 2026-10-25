@@ -12,9 +12,21 @@ selects the uv ``release`` and ``docs`` dependency groups and creates::
      manifest.json
 
 Nothing is uploaded, tagged or version-bumped. No Artifactory endpoint or
-credentials are needed. The version comes from ``project.version`` in
-``pyproject.toml``; preparing artifacts does not convert a development version
-into a final release.
+credentials are needed. The version comes from PTK's project versioning
+configuration in ``config/ptk/versioning/versioning.ptk.yml``. It is Git-managed:
+reachable ``v*`` tags are selected and the ``v`` prefix removed. Exact clean
+``v1.2.3`` becomes ``1.2.3``; commits after it add ``+N.gHASH`` and tracked dirty
+changes add the configured ``dirty`` suffix. Fetch full history and tags for
+release preparation. Untagged/shallow checkouts use the explicitly configured
+``0.1.0.dev0`` development fallback; no release tag is created automatically.
+
+The action consumes ``PTK_VERSION_PTK`` from its immutable run snapshot. Python
+metadata normalizes that value to PEP 440 and rejects incompatible versions.
+``pyproject.toml`` declares a dynamic version, so ordinary wheel/editable builds
+also use PTK's configuration engine. Runtime ``ptk.__version__`` reads installed
+distribution metadata. Source distributions freeze the resolved version in
+``PKG-INFO``: rebuilding a wheel without Git retains the original version,
+even inside another checkout or with a different build environment.
 
 The action builds a source distribution and then the wheel from that archive,
 using the build dependencies supplied by uv. It checks package metadata with

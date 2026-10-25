@@ -777,7 +777,7 @@ Former top-level commands remain hidden compatibility aliases.
 - Python project runtimes accept explicit dependency groups, using pyproject.toml
   as the source for pytest/Ruff/Sphinx dependencies.
 - CI exercises the same PTK actions, with JUnit results and strict Sphinx builds.
-- Fixed the repository Git tag match and added package-metadata fallback for
+- Fixed the repository Git tag match and added a configured development fallback for
   untagged, shallow and source-only checkouts.
 
 ## Package preparation and portable editor resources
@@ -787,7 +787,8 @@ Former top-level commands remain hidden compatibility aliases.
   checksums and a manifest. Output stays local; no upload, tag or version bump.
 - The wheel ships eleven project-facing skills and allowlisted lightweight docs
   and examples. Sphinx and release tooling remain development dependencies.
-  Full rendered HTML is a separate artifact; package metadata uses pyproject.toml.
+  Full rendered HTML is a separate artifact. Dynamic package metadata consumes the
+  Git-managed PTK project version; sdists preserve it for rebuilds without Git.
 - `ptk setup vscode` generates tasks and installs offline skills under .github/skills
   plus version-matched docs, examples and schema under .github/ptk. Tasks and skills
   can be updated separately; `skills --check` performs a read-only drift check.

@@ -317,8 +317,9 @@ uv run ptk docs                          # _builds/default/docs/sphinx/html/inde
 
 An installed `ptk` can run these directly. Actions use this checkout's Python
 project and its `dev`/`docs` dependency groups, rather than the global tool's
-Python environment. Git version discovery falls back to `pyproject.toml` when
-release tags are unavailable. The default action is `test`.
+Python environment. Package metadata uses the same Git-managed PTK versioning
+configuration as actions. Untagged/shallow checkouts use the development fallback
+in `versioning.ptk.yml`; source distributions retain their resolved version. The default action is `test`.
 
 The `dev` group includes pinned CMake for generator integration tests. uv selects
 the project environment's CMake ahead of host PATH entries, so the test action

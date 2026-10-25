@@ -1,5 +1,6 @@
-# Prefer reachable release tags. Untagged/source/shallow checkouts use package metadata.
-# This discovers versions only; it does not change the package version or Git tags.
+# Package metadata uses this Git-managed project version too.
+# Untagged/shallow checkouts use the explicit development fallback below.
+# Source distributions retain their resolved version without requiring Git.
 versioning:
   project:
     source: git
@@ -7,7 +8,5 @@ versioning:
     strip_prefix: v
     dirty: suffix
     fallback:
-      source: file
-      path: pyproject.toml
-      format: toml
-      key: project.version
+      source: literal
+      version: "0.1.0.dev0"
