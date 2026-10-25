@@ -219,6 +219,8 @@ def _rel(project: Project, path: Any) -> str:
 
 def _option(name: str, spec: ParamSpec) -> str:
     flag = "--" + name.replace("_", "-")
+    if spec.type == "secret":
+        return flag + " (hidden prompt)"
     if spec.type == "bool":
         return f"{flag} / --no-{flag[2:]}"
     metavar = {"int": "N", "float": "NUMBER", "list": "A,B,...", "choice": "CHOICE"}

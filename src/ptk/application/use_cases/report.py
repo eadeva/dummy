@@ -21,6 +21,10 @@ class ReportService:
         self._store = store
         self._version = version
 
+    @property
+    def version(self) -> str:
+        return self._version
+
     def build(self, project: Project, summary: dict[str, Any]) -> Report:
         summary = {
             **summary,

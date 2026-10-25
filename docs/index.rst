@@ -11,6 +11,7 @@ isolated command environments, logs and reports. Python 3.12 or newer is require
    cli
    configuration
    m11
+   plugins
    reference
    skills
    development

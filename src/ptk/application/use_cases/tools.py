@@ -38,6 +38,9 @@ class ToolService:
         self._runner = runner
         self._installer = installer
 
+    def set_installer(self, installer: ToolInstaller) -> None:
+        self._installer = installer
+
     def paths(self) -> list[str]:
         return self._installer.bin_dirs()
 

@@ -31,6 +31,7 @@ from ...domain.logging import console_level
 from ...domain.reporting.summary import run_summary
 from ...domain.suggest import did_you_mean
 from . import console as present
+from .access import AccessGroup
 from .state import console, err_console, guarded, report_error, state_of
 
 PARAM_PREFIX = "param__"  # keeps action parameters apart from the common options
@@ -428,7 +429,7 @@ def _broken(name: str, exc: PtkError) -> click.Command:
     return click.RichCommand(name, callback=callback, help="(configuration error)")
 
 
-class ProjectGroup(click.RichGroup):
+class ProjectGroup(AccessGroup):
     """A group whose commands include the actions of the current project.
 
     ``dry_run=True`` makes the action commands preview instead of run.

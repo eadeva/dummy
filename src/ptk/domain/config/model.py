@@ -352,6 +352,7 @@ class DownloadSource(_Strict):
 
 class ToolSpec(_Strict):
     description: str = ""
+    installers: dict[str, dict[str, Any]] = Field(default_factory=dict)
     version: str | None = None  # PEP 440 style range: ">=3.28,<4"
     check: str | None = None  # command printing the version
     version_regex: str = r"(\d+\.\d+(?:\.\d+)?)"
@@ -374,7 +375,7 @@ class GopassSpec(_Strict):
 class CredentialSpec(_Strict):
     description: str = ""
     fields: list[str] = Field(default_factory=lambda: ["token"])
-    providers: list[ProviderName] = Field(
+    providers: list[str] = Field(
         default_factory=lambda: ["env", "keyring", "gopass", "vault", "prompt"]
     )
     env: dict[str, str] = Field(default_factory=dict)  # field: ENV_VAR
@@ -426,9 +427,7 @@ class LoggingSpec(_Strict):
 
 
 class ReportingSpec(_Strict):
-    formats: list[Literal["json", "junit", "html", "markdown", "github"]] = Field(
-        default_factory=lambda: ["json", "html"]
-    )
+    formats: list[str] = Field(default_factory=lambda: ["json", "html"])
     dir: str | None = None
 
 
@@ -450,6 +449,23 @@ class PtkConfig(_Strict):
     logging: LoggingSpec = Field(default_factory=LoggingSpec)
     reporting: ReportingSpec = Field(default_factory=ReportingSpec)
     plugins: list[str] = Field(default_factory=list)
+    command_audience: dict[
+        Literal[
+            "setup",
+            "setup.config",
+            "setup.configs",
+            "setup.creds",
+            "setup.vscode",
+            "setup.install",
+            "setup.self",
+            "setup.doctor",
+            "setup.init",
+            "setup.migrate",
+            "variant",
+            "report",
+        ],
+        Literal["all", "maintainer"],
+    ] = Field(default_factory=dict)
 
     @field_validator("actions")
     @classmethod

@@ -16,7 +16,8 @@ download -> apt/dnf (only when system package managers are allowed).
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import InvalidVersion, Version
@@ -43,8 +44,11 @@ class InstallMethod:
     package: str  # package / requirement / url
     version: str | None = None
     download: DownloadSource | None = None
+    options: dict[str, Any] = field(default_factory=dict)
 
     def describe(self) -> str:
+        if self.kind.startswith("plugin:"):
+            return f"{self.kind} ({self.package})"
         if self.kind == "choco":
             return f"choco install {self.package}" + (
                 f" --version {self.version}" if self.version else ""
@@ -87,7 +91,10 @@ def satisfies(version: str, required: str) -> bool:
 def install_methods(
     spec: ToolSpec, os_name: str, *, allow_system: bool
 ) -> list[InstallMethod]:
-    methods: list[InstallMethod] = []
+    methods: list[InstallMethod] = [
+        InstallMethod(f"plugin:{name}", name, options=options)
+        for name, options in spec.installers.items()
+    ]
     choco = spec.choco
     if os_name == "windows" and choco is not None:
         source = choco if isinstance(choco, ChocoSource) else ChocoSource(package=choco)

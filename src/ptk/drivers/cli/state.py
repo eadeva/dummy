@@ -34,6 +34,7 @@ class CliState:
             self._project = self.app.load_project.execute(
                 config_file=self.config, overrides=self.overrides, ci=self.ci
             )
+        self.app.configure_project(self._project)
         return self._project
 
     def try_project(self) -> Project | None:

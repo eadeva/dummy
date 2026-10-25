@@ -118,11 +118,10 @@ Maintainer visibility and current limits
 ``audience: maintainer`` is hidden from other users, including generated help
 and VS Code tasks. This is a convenience feature, not a security boundary.
 
-``variant set/new``, variant generators and general step-plugin discovery
-remain planned. Migration, background process steps and the optional variant
-GUI (including its plugin entry points) are described in :doc:`m11`. Do not rely on roadmap examples
-for these features. Use the commands shown by ``ptk --help`` and the runnable
-quickstart as the supported starting point.
+Variant editing, matrix runs and legacy CLI aliases are described in :doc:`cli`.
+The installed plugin interfaces, generators and built-in command visibility are
+covered in :doc:`plugins`. Migration and desktop GUI limitations are in :doc:`m11`.
+
 
 Additional execution controls
 -----------------------------

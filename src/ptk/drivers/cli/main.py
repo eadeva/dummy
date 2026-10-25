@@ -21,6 +21,7 @@ from rich.table import Table
 from ... import __version__
 from ...application.use_cases.help import HelpCommand, HelpOption
 from ...domain.errors import ConfigError, PtkError
+from .access import AccessGroup
 from .actions import (
     ProjectGroup,
     build_request,
@@ -109,7 +110,7 @@ def cli(
 # --------------------------------------------------------------------------- config
 
 
-@cli.group("config")
+@cli.group("config", cls=AccessGroup)
 def config_group() -> None:
     """Inspect and validate the configuration."""
 
@@ -184,7 +185,7 @@ def config_schema(ctx: click.Context, output: Path | None) -> None:
 # --------------------------------------------------------------------------- variant
 
 
-@cli.group("variant")
+@cli.group("variant", cls=AccessGroup)
 def variant_group() -> None:
     """Inspect and edit variants: list, show, explain, check, gui."""
 
@@ -460,7 +461,7 @@ dry_run_group.params.extend(
 # --------------------------------------------------------------------------- creds
 
 
-@cli.group("creds")
+@cli.group("creds", cls=AccessGroup)
 def creds_group() -> None:
     """Credentials: env -> keyring -> gopass -> vault -> prompt. Values are never shown."""
 
@@ -506,7 +507,7 @@ def creds_list(ctx: click.Context, name: str | None) -> None:
 @click.argument("field", required=False)
 @click.option(
     "--store",
-    type=click.Choice(["keyring", "gopass", "vault"]),
+    type=str,
     help="Where to store it (default: first available of the credential's providers).",
 )
 @click.pass_context
@@ -528,7 +529,7 @@ def creds_set(
 @click.argument("field", required=False)
 @click.option(
     "--store",
-    type=click.Choice(["keyring", "gopass", "vault"]),
+    type=str,
     help="Only remove it from this store.",
 )
 @click.pass_context
@@ -694,7 +695,7 @@ def self_setup_command(ctx: click.Context, tools: bool, allow_system: bool) -> N
 # --------------------------------------------------------------------------- configs
 
 
-@cli.group("configs")
+@cli.group("configs", cls=AccessGroup)
 def configs_group() -> None:
     """Shared base configs (pre-commit, ruff, clang-format, clang-tidy, clangd) + overlays."""
 
@@ -758,7 +759,7 @@ def configs_check(ctx: click.Context, names: tuple[str, ...]) -> None:
 # --------------------------------------------------------------------------- report
 
 
-@cli.group("report")
+@cli.group("report", cls=AccessGroup)
 def report_group() -> None:
     """Reports of past runs: export them again or open them in the browser."""
 
@@ -786,7 +787,7 @@ def _report_target(ctx: click.Context, action: str | None) -> tuple[Any, str]:
     "--format",
     "formats",
     multiple=True,
-    type=click.Choice(["json", "junit", "html", "markdown", "github"]),
+    type=str,
     help="Formats (default: reporting.formats). Repeatable.",
 )
 @click.option(
@@ -849,7 +850,7 @@ def report_open(
 # --------------------------------------------------------------------------- vscode
 
 
-@cli.group("vscode")
+@cli.group("vscode", cls=AccessGroup)
 def vscode_group() -> None:
     """VS Code integration."""
 
@@ -1116,7 +1117,7 @@ def _setup_dispatch(ctx: click.Context, **options: Any) -> None:
 
 
 def _group_setup_commands() -> None:
-    setup = click.Group(
+    setup = AccessGroup(
         "setup",
         callback=_setup_dispatch,
         help="Configure the project, install tools and manage credentials.",

@@ -115,7 +115,12 @@ class PrepareRun:
             request = dataclasses.replace(request, action=config.project.default_action)
         assert request.action is not None
         action = self._action(project, request.action)
-        if self._tools is not None and action.requires_tools and not request.dry_run:
+        if (
+            self._tools is not None
+            and action.requires_tools
+            and not request.dry_run
+            and not any(s.uses == "tools.ensure" for s in action.walk_steps())
+        ):
             problems = self._tools.problems(project, request.action)
             if problems:
                 lines = "\n".join(f"  - {s.name}: {s.problem}" for s in problems)
@@ -421,12 +426,14 @@ class RunAction:
         python_envs: PythonEnvManager,
         builtins: Mapping[str, BuiltinStep] | None = None,
         max_parallel: int | None = None,
+        path_provider: Callable[[], list[str]] | None = None,
     ):
         self._host = host
         self._runner = runner
         self._python = python_envs
         self._builtins = dict(BUILTINS if builtins is None else builtins)
         self._max_parallel = max_parallel
+        self._path_provider = path_provider
         self._powershell: str | None = None
         self._python_lock = threading.Lock()
 
@@ -723,6 +730,9 @@ class RunAction:
         os_name = self._host.os_name()
         plan = prepared.plan
         env = dict(plan.base_env)
+        if self._path_provider:
+            for folder in reversed(self._path_provider()):
+                env = envs.prepend_path(env, folder, os_name=os_name)
         env.update(
             {
                 "PTK_STEP": step.label,
