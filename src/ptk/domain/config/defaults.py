@@ -1,4 +1,4 @@
-"""Apply shared action defaults while preserving their original source locations."""
+"""Apply shared job defaults while preserving their original source locations."""
 
 from . import tree as t
 
@@ -17,9 +17,9 @@ def normalize_requirements(tree: t.Node) -> t.Node:
     """Normalize list shorthand before layer merges, so requirements merge per name."""
     result = tree
     paths = [("requires_tools",)]
-    actions = t.get(tree, ("actions",))
-    if actions is not None and actions.is_map:
-        paths += [("actions", name, "requires_tools") for name in actions.value]
+    jobs = t.get(tree, ("jobs",))
+    if jobs is not None and jobs.is_map:
+        paths += [("jobs", name, "requires_tools") for name in jobs.value]
     for path in paths:
         node = t.get(tree, path)
         normalized = requirements(node)
@@ -30,16 +30,16 @@ def normalize_requirements(tree: t.Node) -> t.Node:
 
 def apply_defaults(tree: t.Node) -> t.Node:
     tree = normalize_requirements(tree)
-    actions = t.get(tree, ("actions",))
-    if actions is None or not actions.is_map:
+    jobs = t.get(tree, ("jobs",))
+    if jobs is None or not jobs.is_map:
         return tree
     tools = t.get(tree, ("requires_tools",))
     defaults = t.get(tree, ("param_defaults",))
     result = tree
-    for name, action in actions.value.items():
-        if not action.is_map:
+    for name, job in jobs.value.items():
+        if not job.is_map:
             continue
-        own_tools = action.value.get("requires_tools")
+        own_tools = job.value.get("requires_tools")
         if (
             tools is not None
             and tools.is_map
@@ -63,11 +63,11 @@ def apply_defaults(tree: t.Node) -> t.Node:
             result = t.merge(
                 result,
                 t.overlay_for(
-                    ("actions", name, "requires_tools"),
+                    ("jobs", name, "requires_tools"),
                     t.Node(effective.value, effective.loc, op="replace"),
                 ),
             )
-        params = action.value.get("params")
+        params = job.value.get("params")
         if (
             params is None
             or not params.is_map
@@ -85,7 +85,7 @@ def apply_defaults(tree: t.Node) -> t.Node:
                 result = t.merge(
                     result,
                     t.overlay_for(
-                        ("actions", name, "params", param, "default"),
+                        ("jobs", name, "params", param, "default"),
                         defaults.value[param],
                     ),
                 )

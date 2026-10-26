@@ -9,7 +9,7 @@ import rich_click as click
 
 from ...bootstrap import create_app
 from ...domain.errors import PtkError
-from .actions import ProjectGroup
+from .jobs import ProjectGroup
 from .state import CliState, state_of
 from .workspace_commands import RESERVED, build_commands
 

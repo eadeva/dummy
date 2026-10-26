@@ -29,7 +29,7 @@ def sha256(path: Path) -> str:
 
 
 def owned_output(output: Path) -> None:
-    """Only replace this action's unmodified previous output, never arbitrary files."""
+    """Only replace this job's unmodified previous output, never arbitrary files."""
     if output.is_symlink() or output.is_junction():
         raise ValueError(f"refusing linked output directory: {output}")
     if not output.exists():

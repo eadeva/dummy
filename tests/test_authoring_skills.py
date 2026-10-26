@@ -77,9 +77,7 @@ def test_plugin_starter_installed_entry_point_runs(tmp_path, monkeypatch):
                 "repository": {"alias": "plugin", "config_path": "."},
                 "project": {"name": "plugin"},
                 "plugins": [project["name"]],
-                "actions": {
-                    "check": {"steps": [{"example": {"uses": "example.check"}}]}
-                },
+                "jobs": {"check": {"steps": [{"example": {"uses": "example.check"}}]}},
             }
         )
     )

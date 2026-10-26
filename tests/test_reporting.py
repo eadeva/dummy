@@ -82,7 +82,7 @@ def test_importers_scan_step_folders(tmp_path):
 
 SUMMARY = {
     "project": "p",
-    "action": "ci",
+    "job": "ci",
     "variant": "v1",
     "run_id": "r1",
     "status": "failed",
@@ -152,7 +152,7 @@ def test_junit_export():
 
 def test_markdown_and_json_export():
     md = exporters.to_markdown(report())
-    assert md.startswith("## ❌ ptk ci — failed")
+    assert md.startswith("## Job - ci ❌ — failed")
     assert "| jobs | `4` | command line |" in md and "failed (allowed)" in md
     assert "**Tests:** 1 passed, 1 failed, 1 error, 1 skipped" in md
     data = json.loads(exporters.to_json(report()))
@@ -166,6 +166,8 @@ def test_markdown_and_json_export():
 
 def test_html_export(tmp_path):
     page = html.render(report(), link_root=Path("/w/_reports/v1/ci"))
+    assert "<h1>Job - ci</h1>" in page
+    assert "<title>Job - ci failed - p</title>" in page
     assert "pytest &lt;&amp;&gt;" in page and "<&>" not in page
     assert 'href="../../../_logs/v1/ci/checks/test.log"' in page
     assert "What failed" in page and "parser.bad" in page
@@ -177,10 +179,10 @@ def test_html_export(tmp_path):
 # --------------------------------------------------------------------------- end to end
 
 PROJECT = """
-project: {name: rep, default_action: ci}
+project: {name: rep, default_job: ci}
 environment: {keep: [JUNIT]}
 reporting: {formats: [json, junit, html, markdown, github]}
-actions:
+jobs:
   ci:
     steps:
       - unit: 'printf "%s" "$JUNIT" > "$PTK_STEP_REPORTS_DIR/results.xml"'
@@ -223,7 +225,7 @@ def test_reports_after_run(project):
         "tidy-2.sarif",
         "tidy.sarif",
     ]
-    assert project.summary.read_text().startswith("## ✅ ptk ci")
+    assert project.summary.read_text().startswith("## Job - ci ✅")
     assert "report: " in result.output
 
 
@@ -232,7 +234,7 @@ def test_report_import_without_match_fails(write):
         {
             ".main.ptk.yml": """
         project: {name: x}
-        actions: {go: {steps: [{grab: {uses: report.import, with: {files: [no/*.xml]}}}]}}
+        jobs: {go: {steps: [{grab: {uses: report.import, with: {files: [no/*.xml]}}}]}}
         """
         }
     )
@@ -271,7 +273,7 @@ def test_reporting_disabled(write):
             ".main.ptk.yml": """
         project: {name: x}
         reporting: {formats: []}
-        actions: {go: {steps: [{a: "echo hi"}]}}
+        jobs: {go: {steps: [{a: "echo hi"}]}}
         """
         }
     )

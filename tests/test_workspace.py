@@ -21,16 +21,16 @@ def repository(root, alias, *, config_path="config"):
         yaml.safe_dump(
             {
                 "repository": {"alias": alias, "config_path": config_path},
-                "project": {"name": alias, "default_action": "build"},
-                "include": ["actions.ptk.yml"],
+                "project": {"name": alias, "default_job": "build"},
+                "include": ["jobs.ptk.yml"],
             }
         )
     )
-    (root / config_path / "actions.ptk.yml").write_text(
+    (root / config_path / "jobs.ptk.yml").write_text(
         yaml.safe_dump(
             {
                 "vars": {"value": alias},
-                "actions": {
+                "jobs": {
                     "build": {
                         "steps": [
                             {
@@ -68,7 +68,7 @@ def test_config_base_execution_root_and_overlays(tmp_path, monkeypatch):
     config = main.parent / "tooling/ptk"
     (config / "tools.ptk.yml").write_text("tools: {ninja: {version: '>=1'}}")
     (config / "build.tools.ptk.yml").write_text(
-        "actions: {build: {requires_tools: {ninja: true}}}"
+        "jobs: {build: {requires_tools: {ninja: true}}}"
     )
     (config / "cx.ptk.yml").write_text("vars: {value: cx}")
     (config / "local.ptk.yml").write_text("vars: {value: local}")
@@ -77,13 +77,13 @@ def test_config_base_execution_root_and_overlays(tmp_path, monkeypatch):
     p = create_app(environ={}).load_project.execute(config, ci=True)
     assert p.root == tmp_path and p.config_root == config
     assert p.config.vars["value"] == "local"
-    assert p.config.actions["build"].required_tool_names == ["ninja"]
+    assert p.config.jobs["build"].required_tool_names == ["ninja"]
     assert p.maintainers is not None
     # The generated command executes relative to repo root, not config dir.
-    (config / "actions.ptk.yml").write_text(
+    (config / "jobs.ptk.yml").write_text(
         yaml.safe_dump(
             {
-                "actions": {
+                "jobs": {
                     "build": {
                         "steps": [
                             {
@@ -219,12 +219,10 @@ def test_symlink_git_and_unindexed_workspaces(tmp_path):
 def test_nested_include_bases_and_source_locations(tmp_path):
     main = repository(tmp_path, "demo")
     (tmp_path / "config/parts").mkdir()
-    (tmp_path / "config/actions.ptk.yml").write_text(
-        "include: [parts/values.ptk.yml]\n"
-    )
+    (tmp_path / "config/jobs.ptk.yml").write_text("include: [parts/values.ptk.yml]\n")
     (tmp_path / "config/parts/values.ptk.yml").write_text("vars: {value: fragment}\n")
     data = yaml.safe_load(main.read_text())
-    data["project"].pop("default_action")
+    data["project"].pop("default_job")
     main.write_text(yaml.safe_dump(data))
     project = create_app(environ={}).load_project.execute(tmp_path)
     assert project.config.vars["value"] == "fragment"
@@ -261,7 +259,7 @@ def test_unselected_repository_broken_include_does_not_block_command(
     tmp_path, monkeypatch
 ):
     _a, b = workspace(tmp_path)
-    (b.parent / "config/actions.ptk.yml").unlink()
+    (b.parent / "config/jobs.ptk.yml").unlink()
     monkeypatch.chdir(tmp_path)
     result = CliRunner().invoke(cli, ["firmware", "build"])
     assert result.exit_code == 0, result.output

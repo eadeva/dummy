@@ -89,7 +89,7 @@ class ReportStep:
 @dataclass
 class Report:
     project: str
-    action: str
+    job: str
     variant: str
     run_id: str
     status: str
@@ -163,7 +163,7 @@ def from_summary(
     ]
     report = Report(
         project=summary.get("project", ""),
-        action=summary.get("action", ""),
+        job=summary.get("job", ""),
         variant=summary.get("variant", ""),
         run_id=summary.get("run_id", ""),
         status=summary.get("status", "pending"),

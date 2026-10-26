@@ -1,9 +1,9 @@
-"""Run an action (use cases ``PrepareRun`` and ``RunAction``).
+"""Run a job (use cases ``PrepareRun`` and ``RunJob``).
 
-``PrepareRun`` turns configuration + request into an :class:`ActionPlan`
+``PrepareRun`` turns configuration + request into an :class:`JobPlan`
 (parameters, variant, environment, substituted steps, skip reasons); it has no
 side effects, so ``ptk dry-run`` is simply "prepare and show".
-``RunAction`` executes a plan through the ports: sequential and parallel step
+``RunJob`` executes a plan through the ports: sequential and parallel step
 sets, retries, timeouts, ``continue_on_error`` and cancellation (Ctrl+C).
 """
 
@@ -22,20 +22,20 @@ from pathlib import Path
 from typing import Any
 
 from ...domain import layout as lay
-from ...domain.config.model import ActionSpec
+from ...domain.config.model import JobSpec
 from ...domain.config.substitution import Scope, SubstitutionError, to_text
 from ...domain.errors import PtkError
 from ...domain.execution import environment as envs
 from ...domain.execution.commands import PythonRuntime, build_command
 from ...domain.execution.model import (
-    ActionPlan,
+    JobPlan,
     PlannedStep,
     RunResult,
     Status,
     StepResult,
 )
 from ...domain.execution.params import resolve_params
-from ...domain.execution.planning import PlanContext, plan_action
+from ...domain.execution.planning import PlanContext, plan_job
 from ...domain.logging import Level
 from ...domain.suggest import did_you_mean
 from ...domain.variants.model import ResolvedVariant
@@ -50,7 +50,7 @@ from ..ports import (
 )
 from .project import Project
 from .role import Role, visible
-from .tools import ToolService, tools_for_actions
+from .tools import ToolService, tools_for_jobs
 from .variants import VariantService
 
 MASK = "********"
@@ -59,7 +59,7 @@ MIN_MASK_LENGTH = 4  # shorter values would garble normal output; warned about
 
 @dataclass
 class RunRequest:
-    action: str | None = None  # None: project.default_action
+    job: str | None = None  # None: project.default_job
     variant: str | None = None
     all_variants: bool = False
     feature_overrides: Mapping[str, str] = field(default_factory=dict)
@@ -70,12 +70,12 @@ class RunRequest:
     passthrough: Sequence[str] = ()  # after "--"
     args_for: Mapping[str, list[str]] = field(default_factory=dict)
     dry_run: bool = False
-    role: Role = "user"  # maintainer-only actions are refused for users
+    role: Role = "user"  # maintainer-only jobs are refused for users
 
 
 @dataclass
 class PreparedRun:
-    plan: ActionPlan
+    plan: JobPlan
     project: Project
     layout: lay.Layout
     secret_values: set[str]  # values to mask in every output
@@ -117,21 +117,21 @@ class PrepareRun:
 
     def execute(self, project: Project, request: RunRequest) -> PreparedRun:
         config = project.config
-        if request.action is None:
-            if config.project.default_action is None:
-                names = ", ".join(config.actions) or "none configured"
+        if request.job is None:
+            if config.project.default_job is None:
+                names = ", ".join(config.jobs) or "none configured"
                 raise PtkError(
-                    "no action given and no project.default_action configured "
-                    f"(actions: {names})"
+                    "no job given and no project.default_job configured "
+                    f"(jobs: {names})"
                 )
-            request = dataclasses.replace(request, action=config.project.default_action)
-        assert request.action is not None
-        action = self._action(project, request.action)
-        project = tools_for_actions(project, [request.action])
+            request = dataclasses.replace(request, job=config.project.default_job)
+        assert request.job is not None
+        job = self._job(project, request.job)
+        project = tools_for_jobs(project, [request.job])
         config = project.config
-        if not visible(action.audience, request.role):
+        if not visible(job.audience, request.role):
             raise PtkError(
-                f"'{request.action}' is a maintainer-only action "
+                f"'{request.job}' is a maintainer-only job "
                 "(maintainers are listed in maintainers.ptk.yml; "
                 "PTK_ROLE=maintainer overrides the detection)"
             )
@@ -174,7 +174,7 @@ class PrepareRun:
             raise PtkError(f"--variant {request.variant}: this project has no variants")
 
         version_snapshot = (
-            self._versions.resolve(project, variant_name, request.action)
+            self._versions.resolve(project, variant_name, request.job)
             if self._versions
             else {}
         )
@@ -197,7 +197,7 @@ class PrepareRun:
             )(template)
 
         params, sources = resolve_params(
-            action.params,
+            job.params,
             cli=request.params,
             file_values=request.params_file,
             environ=host_env,
@@ -212,7 +212,7 @@ class PrepareRun:
                 / ".ptk"
                 / "versions"
                 / (variant_name or "default")
-                / request.action
+                / request.job
                 / run_id
                 / ".gen.version.ptk.yml"
             )
@@ -221,13 +221,11 @@ class PrepareRun:
         )
         dirs = {
             "bin_dir": str(layout.bin_dir(variant_name)),
-            "log_dir": str(layout.action_log_dir(variant_name, request.action)),
-            "reports_dir": str(layout.reports_dir(variant_name, request.action)),
-            "build_dir": str(layout.build_dir(variant_name, request.action)),
+            "log_dir": str(layout.job_log_dir(variant_name, request.job)),
+            "reports_dir": str(layout.reports_dir(variant_name, request.job)),
+            "build_dir": str(layout.build_dir(variant_name, request.job)),
         }
-        secret_params = {
-            n for n, spec in action.params.items() if spec.type == "secret"
-        }
+        secret_params = {n for n, spec in job.params.items() if spec.type == "secret"}
         secret_values: set[str] = {
             str(params[n]) for n in secret_params if params.get(n)
         }
@@ -246,20 +244,20 @@ class PrepareRun:
         def scope(env: Mapping[str, str], step_path: tuple[str, ...] = ()) -> Scope:
             run_ns = {
                 "id": run_id,
-                "action": request.action,
+                "job": request.job,
                 "variant": variant_name or lay.NO_VARIANT,
                 "step": "/".join(step_path),
                 **dirs,
             }
             if step_path:
                 run_ns["build_dir"] = str(
-                    layout.build_dir(variant_name, request.action, step_path)
+                    layout.build_dir(variant_name, request.job, step_path)
                 )
                 run_ns["reports_dir"] = str(
-                    layout.reports_dir(variant_name, request.action, step_path)
+                    layout.reports_dir(variant_name, request.job, step_path)
                 )
                 run_ns["log_file"] = str(
-                    layout.step_log(variant_name, request.action, step_path)
+                    layout.step_log(variant_name, request.job, step_path)
                 )
             return Scope(
                 env=env,
@@ -298,7 +296,7 @@ class PrepareRun:
                 {
                     "PTK_PROJECT": config.project.name,
                     "PTK_PROJECT_ROOT": str(project.root),
-                    "PTK_ACTION": request.action,
+                    "PTK_JOB": request.job,
                     "PTK_RUN_ID": run_id,
                     "PTK_VARIANT": variant_name or lay.NO_VARIANT,
                     "PTK_BIN_DIR": dirs["bin_dir"],
@@ -322,35 +320,35 @@ class PrepareRun:
             )
             if version_file:
                 base["PTK_VERSION_FILE"] = version_file
-            action_scope = scope(base)
-            if any(k.upper().startswith("PTK_VERSION_") for k in action.env):
+            job_scope = scope(base)
+            if any(k.upper().startswith("PTK_VERSION_") for k in job.env):
                 raise PtkError(
                     "PTK_VERSION_* variables are reserved for discovered versions"
                 )
-            base.update({k: to_text(action_scope(v)) for k, v in action.env.items()})
+            base.update({k: to_text(job_scope(v)) for k, v in job.env.items()})
             resolved_vars = {
-                name: action_scope.resolve(f"vars.{name}") for name in config.vars
+                name: job_scope.resolve(f"vars.{name}") for name in config.vars
             }
         except SubstitutionError as exc:
-            raise PtkError(f"action '{request.action}': {exc}") from None
+            raise PtkError(f"job '{request.job}': {exc}") from None
 
         tool_statuses = []
         if (
             self._tools is not None
-            and action.required_tool_names
+            and job.required_tool_names
             and not request.dry_run
-            and not any(s.uses == "tools.ensure" for s in action.walk_steps())
+            and not any(s.uses == "tools.ensure" for s in job.walk_steps())
         ):
             tool_statuses = self._tools.status(
-                project, action.required_tool_names, env=base
+                project, job.required_tool_names, env=base
             )
             problems = [status for status in tool_statuses if not status.ok]
             if problems:
                 lines = "\n".join(f"  - {s.name}: {s.problem}" for s in problems)
                 raise PtkError(
-                    f"'{request.action}' needs tools that are missing or too old:\n{lines}\n"
-                    f"  install them with: ptk setup install --action {request.action} "
-                    f"(or run the action with --setup)"
+                    f"'{request.job}' needs tools that are missing or too old:\n{lines}\n"
+                    f"  install them with: ptk setup install --job {request.job} "
+                    f"(or run the job with --setup)"
                 )
 
         symbols.update(
@@ -370,10 +368,10 @@ class PrepareRun:
             passthrough=list(request.passthrough),
             args_for=dict(request.args_for),
         )
-        steps = plan_action(action.steps, ctx, start=request.start, end=request.end)
-        plan = ActionPlan(
+        steps = plan_job(job.steps, ctx, start=request.start, end=request.end)
+        plan = JobPlan(
             project=config.project.name,
-            action=request.action,
+            job=request.job,
             variant=variant_name,
             run_id=run_id,
             params={n: MASK if n in secret_params else v for n, v in params.items()},
@@ -399,7 +397,7 @@ class PrepareRun:
                     else {}
                 ),
                 "tools": [dataclasses.asdict(s) for s in tool_statuses],
-                "required_tools": list(action.required_tool_names),
+                "required_tools": list(job.required_tool_names),
             },
         )
         # resolve every secret the selected steps need now: a missing credential
@@ -427,17 +425,15 @@ class PrepareRun:
         )
 
     @staticmethod
-    def _action(project: Project, name: str) -> ActionSpec:
-        actions = project.config.actions
-        if name not in actions:
-            hint = did_you_mean(name, actions)
+    def _job(project: Project, name: str) -> JobSpec:
+        jobs = project.config.jobs
+        if name not in jobs:
+            hint = did_you_mean(name, jobs)
             listing = (
-                f" (actions: {', '.join(actions)})"
-                if actions
-                else " - no actions are configured"
+                f" (jobs: {', '.join(jobs)})" if jobs else " - no jobs are configured"
             )
-            raise PtkError(f"unknown action '{name}'{hint}{listing}")
-        return actions[name]
+            raise PtkError(f"unknown job '{name}'{hint}{listing}")
+        return jobs[name]
 
 
 # --------------------------------------------------------------------------- execution
@@ -502,7 +498,7 @@ def _builtin_wait(
 BUILTINS: dict[str, BuiltinStep] = {"echo": _builtin_echo, "wait": _builtin_wait}
 
 
-class RunAction:
+class RunJob:
     """Executes prepared runs; one ``execute`` at a time per instance."""
 
     def __init__(
@@ -559,7 +555,7 @@ class RunAction:
             status = Status.CANCELLED
         result = RunResult(
             project=plan.project,
-            action=plan.action,
+            job=plan.job,
             variant=plan.variant,
             run_id=plan.run_id,
             status=status,
@@ -568,7 +564,7 @@ class RunAction:
             params=plan.params,
             param_sources=plan.param_sources,
             steps=results,
-            log_file=str(prepared.layout.run_log(plan.variant, plan.action)),
+            log_file=str(prepared.layout.run_log(plan.variant, plan.job)),
         )
         self._emit("run_finished", result)
         return result
@@ -712,10 +708,10 @@ class RunAction:
         plan = prepared.plan
         layout = prepared.layout
         result = StepResult(step.path, step.name, step.kind)
-        result.log_file = str(layout.step_log(plan.variant, plan.action, step.path))
+        result.log_file = str(layout.step_log(plan.variant, plan.job, step.path))
         for folder in (
-            layout.build_dir(plan.variant, plan.action, step.path),
-            layout.reports_dir(plan.variant, plan.action, step.path),
+            layout.build_dir(plan.variant, plan.job, step.path),
+            layout.reports_dir(plan.variant, plan.job, step.path),
         ):
             Path(folder).mkdir(parents=True, exist_ok=True)
 
@@ -752,7 +748,7 @@ class RunAction:
                 command = self._command(prepared, step, runtime)
                 if self._environment_check:
                     observed = self._environment_check(
-                        plan.action, command.env, command.cwd
+                        plan.job, command.env, command.cwd
                     )
                     for status in observed or []:
                         record = self._mask_context(dataclasses.asdict(status))
@@ -820,10 +816,10 @@ class RunAction:
             else None,
             root=prepared.project.root,
             build_dir=Path(
-                prepared.layout.build_dir(plan.variant, plan.action, step.path)
+                prepared.layout.build_dir(plan.variant, plan.job, step.path)
             ),
             reports_dir=Path(
-                prepared.layout.reports_dir(plan.variant, plan.action, step.path)
+                prepared.layout.reports_dir(plan.variant, plan.job, step.path)
             ),
         )
         try:
@@ -844,10 +840,10 @@ class RunAction:
             {
                 "PTK_STEP": step.label,
                 "PTK_BUILD_DIR": str(
-                    prepared.layout.build_dir(plan.variant, plan.action, step.path)
+                    prepared.layout.build_dir(plan.variant, plan.job, step.path)
                 ),
                 "PTK_STEP_REPORTS_DIR": str(
-                    prepared.layout.reports_dir(plan.variant, plan.action, step.path)
+                    prepared.layout.reports_dir(plan.variant, plan.job, step.path)
                 ),
             }
         )

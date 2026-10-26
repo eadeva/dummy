@@ -1,6 +1,6 @@
 ---
 name: ptk-docs-writing
-description: Document ptk features, configuration or project actions and maintain
+description: Document ptk features, configuration or project jobs and maintain
   tested examples.
 ---
 

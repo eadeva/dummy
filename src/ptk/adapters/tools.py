@@ -4,7 +4,7 @@
   Bootstrapping Chocolatey itself only happens on explicit request.
 * Downloads are verified (sha256) and unpacked into the user's tool folder:
   ``%LOCALAPPDATA%\\ptk\\tools\\<name>/<identity>`` or ``~/.local/share/ptk/tools/<name>/<identity>``
-  (``PTK_TOOLS_DIR`` overrides). Only the selected identities enter an action PATH.
+  (``PTK_TOOLS_DIR`` overrides). Only the selected identities enter a job PATH.
 * apt/dnf use ``sudo -n`` (no password prompt hidden behind a running command).
 """
 

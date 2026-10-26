@@ -240,7 +240,7 @@ def build_commands(root, entries):
     def list_reports(history):
         for alias, data in summaries(history):
             click.echo(
-                f"{alias} {data['action']} {data['variant']} {data['run_id']}: {data['status']}"
+                f"{alias} {data['job']} {data['variant']} {data['run_id']}: {data['status']}"
             )
 
     @report.command("summary")
@@ -249,7 +249,7 @@ def build_commands(root, entries):
         totals = {}
         for alias, data in summaries():
             totals[data["status"]] = totals.get(data["status"], 0) + 1
-            click.echo(f"{alias}/{data['action']}/{data['variant']}: {data['status']}")
+            click.echo(f"{alias}/{data['job']}/{data['variant']}: {data['status']}")
         click.echo("Totals: " + json.dumps(totals, sort_keys=True))
 
     @click.command("repos")

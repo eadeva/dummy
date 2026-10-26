@@ -2,12 +2,33 @@ import pytest
 from pydantic import ValidationError
 
 from ptk.domain.config.model import (
-    ActionSpec,
+    JobSpec,
     ParamSpec,
     PtkConfig,
     PythonSpec,
     StepSpec,
 )
+from ptk.domain.workflows import WorkflowSpec
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"actions": {}},
+        {"project": {"name": "demo", "default_action": "build"}},
+    ],
+)
+def test_old_job_configuration_names_are_not_accepted(fields):
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        PtkConfig.model_validate({"project": {"name": "demo"}, **fields})
+
+
+def test_workflow_requires_job_and_schema_uses_job_names():
+    with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
+        WorkflowSpec.model_validate({"steps": [{"check": {"action": "build"}}]})
+    schema = PtkConfig.model_json_schema()
+    assert "jobs" in schema["properties"] and "actions" not in schema["properties"]
+    assert "JobSpec" in schema["$defs"] and "ActionSpec" not in schema["$defs"]
 
 
 def test_step_short_forms():
@@ -58,13 +79,13 @@ def test_params_convert_and_validate():
     with pytest.raises(ValueError, match="one of"):
         ParamSpec(type="choice", choices=["a"]).convert("b")
     with pytest.raises(ValidationError, match="reserved"):
-        ActionSpec.model_validate({"params": {"from": {}}, "steps": [{"a": "x"}]})
+        JobSpec.model_validate({"params": {"from": {}}, "steps": [{"a": "x"}]})
 
 
-def test_reserved_action_names_and_defaults():
+def test_reserved_job_names_and_defaults():
     with pytest.raises(ValidationError, match="reserved"):
         PtkConfig.model_validate(
-            {"project": {"name": "x"}, "actions": {"config": {"steps": [{"a": "b"}]}}}
+            {"project": {"name": "x"}, "jobs": {"config": {"steps": [{"a": "b"}]}}}
         )
     cfg = PtkConfig.model_validate({"project": {"name": "x"}})
     assert cfg.layout.builds == "_builds" and cfg.logging.level == "info"

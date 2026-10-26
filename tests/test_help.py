@@ -44,12 +44,12 @@ def test_role_from_maintainers_file_and_override():
     assert resolve_role(None, Host()) == "user"
 
 
-def test_users_do_not_see_maintainer_actions():
+def test_users_do_not_see_maintainer_jobs():
     project = demo_project()
     user = BuildHelp("1.0").execute(project, [], "user")
-    assert [a.name for a in user.actions] == ["build"] and user.hidden_actions == 1
+    assert [a.name for a in user.jobs] == ["build"] and user.hidden_jobs == 1
     maint = BuildHelp("1.0").execute(project, [], "maintainer")
-    assert [a.name for a in maint.actions] == ["build", "deploy"]
+    assert [a.name for a in maint.jobs] == ["build", "deploy"]
 
 
 def test_rendered_page_shows_pipeline_and_escapes():

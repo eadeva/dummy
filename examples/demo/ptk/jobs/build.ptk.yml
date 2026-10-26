@@ -1,4 +1,4 @@
-actions:
+jobs:
   build:
     help: Configure and build the firmware
     params:

@@ -42,7 +42,7 @@ def load():
 
 MINIMAL = """
 project: {name: demo}
-actions:
+jobs:
   build:
     steps:
       - compile: "make all"

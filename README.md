@@ -1,6 +1,6 @@
 # ptk — project tool kit
 
-A configuration-driven project CLI: actions made of steps and step sets,
+A configuration-driven project CLI: jobs made of steps and step sets,
 built-in variant handling, credentials, tool setup, shared base configs,
 unified logging and reporting. See [`docs/PLAN.md`](docs/PLAN.md) for the full plan.
 
@@ -55,7 +55,7 @@ uv run sphinx-build -W --keep-going -b html docs docs/_build/html
 tools:
   cmake: {version: ">=3.28,<4", check: cmake --version,
           choco: {package: cmake, version: "3.30.2"}, uv_tool: "cmake==3.30.2"}
-actions:
+jobs:
   build: {requires_tools: [cmake], steps: [...]}
 ```
 
@@ -88,7 +88,7 @@ Commit them; `ptk setup configs check` in CI catches stale files.
 
 ## Reports
 
-After every run ptk writes `_reports/<variant>/<action>/report.*` (`reporting.formats`:
+After every run ptk writes `_reports/<variant>/<job>/report.*` (`reporting.formats`:
 json, junit, html, markdown, github). Steps contribute tool results by writing them to
 `$PTK_STEP_REPORTS_DIR` - JUnit, SARIF and Cobertura are picked up automatically - or
 with `uses: report.import`. The HTML report shows what failed and a timeline of all
@@ -119,24 +119,24 @@ All ptk files end in `.ptk.yml`:
 | File | Purpose |
 |------|---------|
 | `.main.ptk.yml` | repository-root entry: alias, configuration path and includes |
-| `*.ptk.yml` | fragments pulled in with `include:` (e.g. `ptk/actions/*.ptk.yml`) |
+| `*.ptk.yml` | fragments pulled in with `include:` (e.g. `ptk/jobs/*.ptk.yml`) |
 | `cx.ptk.yml` | applied automatically in CI |
 | `local.ptk.yml` | personal overrides (git-ignore it) |
-| `maintainers.ptk.yml` | who sees maintainer-only actions |
-| `workflow.ptk.yml` | local sequential/parallel groups of action calls |
+| `maintainers.ptk.yml` | who sees maintainer-only jobs |
+| `workflow.ptk.yml` | local sequential/parallel groups of job calls |
 
 ```yaml
 # .main.ptk.yml
 repository: {alias: demo, config_path: .}
 schema_version: 1
 # ptk_version: ">=0.1,<0.2"            # optional: choose your supported PTK releases
-project: {name: demo, default_action: build}
-include: [ptk/actions/*.ptk.yml]
+project: {name: demo, default_job: build}
+include: [ptk/jobs/*.ptk.yml]
 variants: ptk/variants.ptk.yml       # plain string = include this file here
 vars: {preset: "${vh.variant}"}
 ```
 
-Loading order: automatic `tools.ptk.yml`, `versioning.ptk.yml`, `workflow.ptk.yml` and `<action>.tools.ptk.yml` → `.main.ptk.yml` (+ includes) → `cx.ptk.yml` (in CI) →
+Loading order: automatic `tools.ptk.yml`, `versioning.ptk.yml`, `workflow.ptk.yml` and `<job>.tools.ptk.yml` → `.main.ptk.yml` (+ includes) → `cx.ptk.yml` (in CI) →
 `local.ptk.yml` → `--set PATH=VALUE`.
 
 * mappings merge deeply, lists are replaced; `!replace`, `!append` and
@@ -150,11 +150,11 @@ Loading order: automatic `tools.ptk.yml`, `versioning.ptk.yml`, `workflow.ptk.ym
 
 ```
 ptk [-c .main.ptk.yml] [--set PATH=VALUE]... [--ci/--no-ci] [-v|-vv]
-ptk                                  run the default action (project.default_action)
-ptk ACTION [--PARAM VALUE]... [-V VARIANT] [--from STEP] [--to STEP] [--params FILE]
+ptk                                  run the default job (project.default_job)
+ptk JOB [--PARAM VALUE]... [-V VARIANT] [--from STEP] [--to STEP] [--params FILE]
            [-q] [--args-for STEP="ARGS"]... [-- ARGS]
-ptk dry-run [ACTION [same options]] [--env]   what would run - nothing is executed
-ptk run [ACTION] [-p NAME=VALUE]... [same options]   generic form for scripts and CI
+ptk dry-run [JOB [same options]] [--env]   what would run - nothing is executed
+ptk run [JOB] [-p NAME=VALUE]... [same options]   generic form for scripts and CI
 ptk workflow list | show NAME | dry-run NAME | run NAME
 ptk setup config validate | show [PATH] [--sources] [--format yaml|json] | schema [-o FILE]
 ptk variant list [--names] | show [NAME] [--json] [--all] | explain NAME FEATURE | check [NAMES] [--strict]
@@ -163,22 +163,22 @@ ptk setup vscode                 # tasks plus offline project skills/docs
 ptk setup vscode skills [--check]
 ptk setup creds setup [--vault] | set NAME [FIELD] [--store S] | list | test NAME | remove NAME
 ptk setup configs sync [NAMES] [--diff] | check [NAMES]
-ptk setup [--action A]... [--dry-run] [--allow-system] | ptk setup doctor | ptk setup self [--tools]
-ptk report export [ACTION] [-V v] [--run ID] [-f FORMAT]... | open [ACTION] [--run ID]
+ptk setup [--job A]... [--dry-run] [--allow-system] | ptk setup doctor | ptk setup self [--tools]
+ptk report export [JOB] [-V v] [--run ID] [-f FORMAT]... | open [JOB] [--run ID]
 ptk help [--no-open] [-o FILE]       full help as an HTML page, opened in your browser
 ```
 
-Every action is a command with typed options for its parameters (`ptk build --help`
+Every job is a command with typed options for its parameters (`ptk build --help`
 lists them; `int`, `float`, `choice`, `bool` as `--x/--no-x`, `list` as `a,b`).
-Maintainer-only actions are hidden from users and refused if invoked.
+Maintainer-only jobs are hidden from users and refused if invoked.
 Shell completion comes from click: e.g. `eval "$(_PTK_COMPLETE=bash_source ptk)"`.
 
 Exit codes: 0 passed, 1 failed, 2 usage/configuration error, 130 cancelled (Ctrl+C).
 
-## Running actions
+## Running jobs
 
 ```yaml
-actions:
+jobs:
   build:
     params:
       jobs: {type: int, default: 8, env: PTK_JOBS}                 # typed default
@@ -198,23 +198,23 @@ actions:
 * `.bat/.cmd` → `cmd /c`, `.ps1` → `pwsh -File`, `.sh` → `bash`, `.py` → Python via uv
 * `python:` `uvx` (tool from PyPI), `venv` (cached in `.ptk/venvs/<hash>`), `project`
   (`uv run --project`), `interpreter: cli` (ptk's own) - nothing is ever activated
-* every command gets its own environment: `PTK_*`, `PTK_PARAM_*`, `VH_*`, action/step
+* every command gets its own environment: `PTK_*`, `PTK_PARAM_*`, `VH_*`, job/step
   `env`, then secrets; secrets are masked in console, logs and `ptk dry-run`
 * working directory: project root; per-step folders `${run.build_dir}`, `${run.reports_dir}`
-* `ptk dry-run ACTION` shows the expanded steps, conditions, final commands and where every
+* `ptk dry-run JOB` shows the expanded steps, conditions, final commands and where every
   parameter value comes from
 * parameter precedence: `-p` > `--params FILE` > `env:` variable > `default:`; defaults can
   be changed per layer (`local.ptk.yml`, `cx.ptk.yml`, `--set`) and may use `${env:..}`,
   `${vars.x}`, `${vh.*}` (per-variant defaults) or `${project.*}`
-* `project.default_action` is what plain `ptk` runs
+* `project.default_job` is what plain `ptk` runs
 
 ## Workspace layout
 
 ```
-_builds/<variant>/<action>/<set>/<step>/    build folder per step (${run.build_dir})
+_builds/<variant>/<job>/<set>/<step>/    build folder per step (${run.build_dir})
 _bin/<variant>/                             binaries per variant
-_logs/<variant>/<action>/run.log            + <set>/<step>.log, events.jsonl, run.json, _history/
-_reports/<variant>/<action>/report.{json,xml,html,md} + <set>/<step>/ (tool results)
+_logs/<variant>/<job>/run.log            + <set>/<step>.log, events.jsonl, run.json, _history/
+_reports/<variant>/<job>/report.{json,xml,html,md} + <set>/<step>/ (tool results)
 ```
 
 ## Architecture
@@ -225,7 +225,7 @@ src/ptk/
                  variants (model, rules, conventions), layout
   domain/execution  params, planning, per-command environment, command building
   application/   ports, use cases (LoadProject, ShowConfig, ExportSchema, VariantService,
-                 PrepareRun, RunAction, BuildHelp, role)
+                 PrepareRun, RunJob, BuildHelp, role)
   adapters/      YAML loader, file source, host environment, subprocess runner,
                  uv Python environments, env secrets, log files, HTML help
   drivers/cli/   rich_click CLI
@@ -246,24 +246,24 @@ lifecycle and the `ptk.variant_gui` editor plugin interface.
 
 ## Local workflows
 
-Put `workflow.ptk.yml` in the configuration folder to compose existing actions:
+Put `workflow.ptk.yml` in the configuration folder to compose existing jobs:
 
 ```yaml
 workflows:
   verify:
     max_workers: 2
     steps:
-      - build: {action: build}
+      - build: {job: build}
       - checks:
           parallel: true
           steps:
-            - tests: {action: test}
-            - lint: {action: lint}
+            - tests: {job: test}
+            - lint: {job: lint}
 ```
 
 Run `ptk workflow dry-run verify`, then `ptk verify` (or `ptk workflow run verify`). Each call keeps
 its repository's tools, environment, credentials and reports. Calls can select a
-`repo`, `variant` and action `params`. PTK preflights every call before execution
+`repo`, `variant` and job `params`. PTK preflights every call before execution
 and rejects conflicting parallel outputs or shared uv project environments.
 Generated VS Code tasks include workflows. These workflows run locally;
 execution on CX/CI is refused.
@@ -271,17 +271,17 @@ execution on CX/CI is refused.
 Workflow `open_report` defaults to `always`. Use `on-errors` to open the summary
 only for execution or imported report errors, or `null` to disable it.
 CX and dry runs never open workflow reports.
-When the workflow summary opens, child action reports stay closed. The summary
+When the workflow summary opens, child job reports stay closed. The summary
 links to HTML reports; JSON files remain available for automation.
 
-If an action and workflow share a name, local interactive calls ask which to run;
-CX selects the action. Use `ptk run NAME` or `ptk workflow run NAME` to select
-explicitly. Interactive VS Code terminals also print browser URLs for action and
+If a job and workflow share a name, local interactive calls ask which to run;
+CX selects the job. Use `ptk run NAME` or `ptk workflow run NAME` to select
+explicitly. Interactive VS Code terminals also print browser URLs for job and
 workflow reports; see [browser links](docs/editor.rst).
 
 See [workflows](docs/workflows.rst) and `examples/workflows` for nested groups,
 VMR ownership, failure handling and reports. The later `ptk setup init --workflows`
-generator will map action calls to GitHub jobs and their structure to `needs`;
+generator will map job calls to GitHub jobs and their structure to `needs`;
 GitHub template generation and the generic PTK GitHub Action are not implemented yet.
 
 ## VMR workspaces and isolated environments
@@ -296,8 +296,8 @@ still needs its own `.main.ptk.yml` with an alias and configuration path.
 
 In a `.repo` workspace, use `ptk repos`, shared `ptk setup creds list`,
 `ptk setup config validate`, `ptk setup doctor`, `ptk variant list/check`,
-and `ptk report list/summary`. Actions and installation stay repository-specific:
-`ptk firmware build` and `ptk firmware setup install --action build`.
+and `ptk report list/summary`. Jobs and installation stay repository-specific:
+`ptk firmware build` and `ptk firmware setup install --job build`.
 
 Commands receive a fresh isolated environment by default. Declare variables to
 keep explicitly; caller PATH is not inherited unless `environment.inherit_path`
@@ -319,11 +319,11 @@ skills and refuse to overwrite local edits. See [editor setup](docs/editor.rst).
 `ptk setup init` requires a configuration folder, supplied at the terminal prompt
 or with `--config-dir config/ptk`. The path is relative to the repository root;
 there is no implicit default. Scripts must supply `--config-dir`. It creates a minimal root entry and
-two runnable actions in `actions/hello.ptk.yml` and `actions/build.ptk.yml`.
+two runnable jobs in `jobs/hello.ptk.yml` and `jobs/build.ptk.yml`.
 Variants, tools, versioning, environment, credentials and shared settings have
 separate folders with commented configuration examples. `project.ptk.yml` includes
 them; the conventional CX and maintainer entry files remain at the config root.
-A local `workflow.ptk.yml` starter sequences the two generated actions.
+A local `workflow.ptk.yml` starter sequences the two generated jobs.
 Run `ptk hello` for messages and `ptk build` for generated version files. Existing files are protected; missing ignore rules are appended.
 
 In a VMR, `ptk setup init` initializes every checked-out member without a root
@@ -334,7 +334,7 @@ Use `ptk setup init DIRECTORY` to initialize just one project.
 
 Versions can come from Git tags, manifests/text files, environment variables,
 commands or explicit values. Components inherit unless given a source. Every
-configured action gets one ignored `.gen.version.ptk.yml` snapshot and qualified
+configured job gets one ignored `.gen.version.ptk.yml` snapshot and qualified
 variables such as `PTK_VERSION_ENGINE` and `PTK_VERSION_ENGINE_COMPONENT_SDK`.
 `version.generate` produces C headers, CMake, MSBuild, Python or JSON files without
 rewriting unchanged content. See [versioning](docs/versioning.rst) for variant
@@ -359,16 +359,16 @@ uv run ptk docs                          # _builds/default/docs/sphinx/html/inde
 uv run ptk workflow run verify           # check -> test -> package, alongside docs
 ```
 
-An installed `ptk` can run these directly. Actions use this checkout's Python
+An installed `ptk` can run these directly. Jobs use this checkout's Python
 project and its `dev`/`docs` dependency groups, rather than the global tool's
 Python environment. Package metadata uses the same Git-managed PTK versioning
-configuration as actions. Untagged/shallow checkouts use the development fallback
-in `versioning.ptk.yml`; source distributions retain their resolved version. The default action is `test`.
+configuration as jobs. Untagged/shallow checkouts use the development fallback
+in `versioning.ptk.yml`; source distributions retain their resolved version. The default job is `test`.
 
-Dedicated uv environments for `check`, `docs` and `package` under `.ptk/venvs/<action>`
+Dedicated uv environments for `check`, `docs` and `package` under `.ptk/venvs/<job>`
 let docs run alongside the sequential check/test/package branch. `test` uses the
 normal project environment. Packaging also builds a separate documentation archive.
 
 The `dev` group includes pinned CMake for generator integration tests. uv selects
-the project environment's CMake ahead of host PATH entries, so the test action
+the project environment's CMake ahead of host PATH entries, so the test job
 does not require a separate machine-wide CMake installation.

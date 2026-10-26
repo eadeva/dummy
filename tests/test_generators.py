@@ -93,7 +93,7 @@ def test_builtin_generation_copy_clean_and_configs(tmp_path):
                 "project": {"name": "builtins"},
                 "configs": {"ruff": {}},
                 "variants": {"variants": {"demo": {}}},
-                "actions": {
+                "jobs": {
                     "go": {
                         "steps": [
                             {"sync": {"uses": "configs.sync"}},

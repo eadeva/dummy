@@ -49,7 +49,7 @@ class CliState:
 
 def state_of(ctx: click.Context) -> CliState:
     """The CLI state; created from the root options if the root callback has not
-    run yet (click resolves sub-commands - our generated actions - before it)."""
+    run yet (click resolves sub-commands - our generated jobs - before it)."""
     current = ctx
     while current is not None:
         if isinstance(current.obj, CliState):

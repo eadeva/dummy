@@ -32,12 +32,12 @@ from ..variants.model import ProductLineSpec
 from ..versioning import VersionDependency, VersioningSpec
 from ..workflows import WorkflowFile, WorkflowSpec
 
-ACTION_RE = re.compile(r"^[a-z][a-z0-9-]*$")
+JOB_RE = re.compile(r"^[a-z][a-z0-9-]*$")
 PARAM_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 STEP_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 
-RESERVED_ACTIONS = {
+RESERVED_JOBS = {
     "workflow",
     "config",
     "variant",
@@ -108,7 +108,7 @@ class WorkspaceSpec(_Strict):
 class ProjectSpec(_Strict):
     name: str
     description: str = ""
-    default_action: str | None = None
+    default_job: str | None = None
 
 
 # --------------------------------------------------------------------------- params
@@ -118,11 +118,11 @@ ParamType = Literal["str", "int", "float", "bool", "choice", "path", "secret", "
 
 
 class ParamSpec(_Strict):
-    """An action parameter.
+    """A job parameter.
 
     ``default`` may use ``${env:...}``, ``${vars.x}``, ``${vh.*}`` and
     ``${project.*}`` - e.g. a per-variant default ``${vh.data.build_type}``;
-    such defaults are resolved and type-checked when the action runs.
+    such defaults are resolved and type-checked when the job runs.
     """
 
     type: ParamType = "str"
@@ -336,10 +336,10 @@ def _unique(names: list[str], where: str) -> None:
         seen.add(name)
 
 
-# --------------------------------------------------------------------------- actions
+# --------------------------------------------------------------------------- jobs
 
 
-class ActionSpec(_Strict):
+class JobSpec(_Strict):
     open_report: Literal["always", "on_errors"] | None = None
     version_dependencies: dict[str, VersionDependency] = Field(default_factory=dict)
     environment: EnvironmentSpec | None = None
@@ -372,8 +372,8 @@ class ActionSpec(_Strict):
         return v
 
     @model_validator(mode="after")
-    def _steps_unique(self) -> ActionSpec:
-        _unique([s.name for s in self.steps], "action")
+    def _steps_unique(self) -> JobSpec:
+        _unique([s.name for s in self.steps], "job")
         return self
 
     def walk_steps(self):
@@ -487,7 +487,7 @@ class SharedConfigSpec(_Strict):
 
 
 class LayoutSpec(_Strict):
-    """Workspace folders: <root>/_builds|_bin|_logs|_reports/<variant>/<action>/<step>."""
+    """Workspace folders: <root>/_builds|_bin|_logs|_reports/<variant>/<job>/<step>."""
 
     root: str = "."
     builds: str = "_builds"
@@ -505,7 +505,7 @@ class LayoutSpec(_Strict):
 
 class LoggingSpec(_Strict):
     level: Literal["trace", "debug", "info", "warning", "error"] = "info"
-    keep_history: int = Field(default=10, ge=0)  # previous runs kept per variant/action
+    keep_history: int = Field(default=10, ge=0)  # previous runs kept per variant/job
 
 
 class ReportingSpec(_Strict):
@@ -540,7 +540,7 @@ class PtkConfig(_Strict):
     credentials: dict[str, CredentialSpec] = Field(default_factory=dict)
     variants: ProductLineSpec | None = None
     versioning: VersioningSpec | None = None
-    actions: dict[str, ActionSpec] = Field(default_factory=dict)
+    jobs: dict[str, JobSpec] = Field(default_factory=dict)
     configs: dict[SharedConfigName, SharedConfigSpec] = Field(default_factory=dict)
     layout: LayoutSpec = Field(default_factory=LayoutSpec)
     logging: LoggingSpec = Field(default_factory=LoggingSpec)
@@ -583,16 +583,16 @@ class PtkConfig(_Strict):
                 raise ValueError(f"invalid shared parameter name {name!r}")
         return value
 
-    @field_validator("actions")
+    @field_validator("jobs")
     @classmethod
-    def _action_names(cls, v: dict[str, ActionSpec]) -> dict[str, ActionSpec]:
+    def _job_names(cls, v: dict[str, JobSpec]) -> dict[str, JobSpec]:
         for name in v:
-            if not ACTION_RE.match(name):
+            if not JOB_RE.match(name):
                 raise ValueError(
-                    f"action name {name!r} must be lower-case (letters, digits, '-')"
+                    f"job name {name!r} must be lower-case (letters, digits, '-')"
                 )
-            if name in RESERVED_ACTIONS:
-                raise ValueError(f"action name {name!r} is reserved by ptk")
+            if name in RESERVED_JOBS:
+                raise ValueError(f"job name {name!r} is reserved by ptk")
         return v
 
     @field_validator("tools", "credentials")

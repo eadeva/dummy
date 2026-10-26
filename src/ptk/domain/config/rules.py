@@ -15,7 +15,7 @@ from .. import expressions
 from ..suggest import did_you_mean
 from ..variants import rules as variant_rules
 from ..variants.model import ProductLineSpec
-from .model import ActionSpec, PtkConfig, StepSpec
+from .model import JobSpec, PtkConfig, StepSpec
 from .substitution import iter_references, split_reference
 from .tree import Path
 
@@ -24,7 +24,7 @@ PathProblem = tuple[Path, str]
 WHEN_FLAT_NAMES = {"variant", "os", "ci"}
 WHEN_NAMESPACES = {"params", "vars", "env", "vh"}
 PROJECT_KEYS = {"name", "root", "description"}
-RUN_KEYS = {"id", "action", "step", "build_dir", "bin_dir", "log_dir", "reports_dir"}
+RUN_KEYS = {"id", "job", "step", "build_dir", "bin_dir", "log_dir", "reports_dir"}
 VH_KEYS = {"variant", "aliases", "components", "component_list", "features", "data"}
 
 
@@ -54,14 +54,14 @@ def validate(config: PtkConfig) -> list[PathProblem]:
                 problems.append(
                     (("versioning", "variants", name), "unknown versioning variant")
                 )
-    for action_name, action in config.actions.items():
-        for step in action.walk_steps():
+    for job_name, job in config.jobs.items():
+        for step in job.walk_steps():
             if any(
                 k.upper().startswith("PTK_VERSION_") for k in (*step.env, *step.secrets)
             ):
                 problems.append(
                     (
-                        ("actions", action_name),
+                        ("jobs", job_name),
                         "PTK_VERSION_* variables are reserved for discovered versions",
                     )
                 )
@@ -69,16 +69,13 @@ def validate(config: PtkConfig) -> list[PathProblem]:
     if line is not None:
         problems += [(parse_path(p), m) for p, m in variant_rules.validate(line)]
 
-    if (
-        config.project.default_action
-        and config.project.default_action not in config.actions
-    ):
+    if config.project.default_job and config.project.default_job not in config.jobs:
         problems.append(
             (
-                ("project", "default_action"),
+                ("project", "default_job"),
                 (
-                    f"unknown action '{config.project.default_action}'"
-                    f"{did_you_mean(config.project.default_action, config.actions)}"
+                    f"unknown job '{config.project.default_job}'"
+                    f"{did_you_mean(config.project.default_job, config.jobs)}"
                 ),
             )
         )
@@ -92,13 +89,13 @@ def validate(config: PtkConfig) -> list[PathProblem]:
                 )
             )
 
-    default_action = config.actions.get(config.project.default_action or "")
-    if default_action is not None and default_action.audience == "maintainer":
+    default_job = config.jobs.get(config.project.default_job or "")
+    if default_job is not None and default_job.audience == "maintainer":
         problems.append(
             (
-                ("project", "default_action"),
+                ("project", "default_job"),
                 (
-                    "the default action must be available to everyone "
+                    "the default job must be available to everyone "
                     "(this one has audience: maintainer)"
                 ),
             )
@@ -115,9 +112,9 @@ def validate(config: PtkConfig) -> list[PathProblem]:
 
     problems += _check_values(config.vars, ("vars",), config, None, allow_secret=False)
 
-    for name, action in config.actions.items():
-        base: Path = ("actions", name)
-        for tool in action.requires_tools:
+    for name, job in config.jobs.items():
+        base: Path = ("jobs", name)
+        for tool in job.requires_tools:
             if tool not in config.tools:
                 problems.append(
                     (
@@ -126,10 +123,10 @@ def validate(config: PtkConfig) -> list[PathProblem]:
                     )
                 )
         problems += _check_values(
-            action.env, base + ("env",), config, action, allow_secret=False
+            job.env, base + ("env",), config, job, allow_secret=False
         )
-        for pname, param in action.params.items():
-            # defaults cannot depend on other parameters (action=None)
+        for pname, param in job.params.items():
+            # defaults cannot depend on other parameters (job=None)
             problems += _check_values(
                 param.default,
                 base + ("params", pname, "default"),
@@ -137,31 +134,29 @@ def validate(config: PtkConfig) -> list[PathProblem]:
                 None,
                 allow_secret=False,
             )
-        for i, step in enumerate(action.steps):
-            problems += _check_step(step, base + ("steps", i), config, action)
+        for i, step in enumerate(job.steps):
+            problems += _check_step(step, base + ("steps", i), config, job)
     return problems
 
 
 def _check_step(
-    step: StepSpec, path: Path, config: PtkConfig, action: ActionSpec
+    step: StepSpec, path: Path, config: PtkConfig, job: JobSpec
 ) -> list[PathProblem]:
     problems: list[PathProblem] = []
     if step.when:
-        problems += _check_condition(step.when, path + ("when",), config, action)
+        problems += _check_condition(step.when, path + ("when",), config, job)
     for key in ("run", "cwd", "uses"):
         problems += _check_values(
-            getattr(step, key), path + (key,), config, action, allow_secret=False
+            getattr(step, key), path + (key,), config, job, allow_secret=False
         )
     problems += _check_values(
-        step.with_, path + ("with",), config, action, allow_secret=False
+        step.with_, path + ("with",), config, job, allow_secret=False
     )
-    problems += _check_values(
-        step.env, path + ("env",), config, action, allow_secret=True
-    )
+    problems += _check_values(step.env, path + ("env",), config, job, allow_secret=True)
     for env_name, ref in step.secrets.items():
         problems += _check_secret(ref, path + ("secrets", env_name), config)
     for i, child in enumerate(step.steps or []):
-        problems += _check_step(child, path + ("steps", i), config, action)
+        problems += _check_step(child, path + ("steps", i), config, job)
     return problems
 
 
@@ -170,7 +165,7 @@ def _variant_symbols(line: ProductLineSpec | None) -> set[str]:
 
 
 def _check_condition(
-    expr: str, path: Path, config: PtkConfig, action: ActionSpec
+    expr: str, path: Path, config: PtkConfig, job: JobSpec
 ) -> list[PathProblem]:
     try:
         used = expressions.names(expr)
@@ -197,7 +192,7 @@ def _check_condition(
                 )
             )
             continue
-        message = _check_dotted(head, rest, config, action)
+        message = _check_dotted(head, rest, config, job)
         if message:
             problems.append((path, message))
     return problems
@@ -207,14 +202,14 @@ def _check_values(
     value: Any,
     path: Path,
     config: PtkConfig,
-    action: ActionSpec | None,
+    job: JobSpec | None,
     *,
     allow_secret: bool,
 ) -> list[PathProblem]:
     problems: list[PathProblem] = []
     for ref in iter_references(value):
-        if ref.startswith("params.") and action is not None:
-            param = action.params.get(ref.split(".")[1])
+        if ref.startswith("params.") and job is not None:
+            param = job.params.get(ref.split(".")[1])
             if param and param.type == "secret" and not allow_secret:
                 problems.append(
                     (path, "secret parameters may only be used in step env values")
@@ -237,7 +232,7 @@ def _check_values(
             continue
         if ns == "env":
             continue
-        message = _check_dotted(ns, rest, config, action, in_substitution=True)
+        message = _check_dotted(ns, rest, config, job, in_substitution=True)
         if message:
             problems.append((path, message))
     return problems
@@ -247,7 +242,7 @@ def _check_dotted(
     ns: str,
     rest: str,
     config: PtkConfig,
-    action: ActionSpec | None,
+    job: JobSpec | None,
     *,
     in_substitution: bool = False,
 ) -> str | None:
@@ -257,9 +252,9 @@ def _check_dotted(
         if first not in config.vars:
             return f"unknown variable '{ref}'{did_you_mean(first, config.vars)}"
     elif ns == "params":
-        params = action.params if action else {}
-        if action is None:
-            return f"'{ref}' can only be used inside an action"
+        params = job.params if job else {}
+        if job is None:
+            return f"'{ref}' can only be used inside a job"
         if first not in params:
             return f"unknown parameter '{ref}'{did_you_mean(first, params)}"
     elif ns == "vh":

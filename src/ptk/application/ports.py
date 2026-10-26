@@ -12,8 +12,8 @@ from ..domain.config.tree import Node
 from ..domain.credentials import SecretKey
 from ..domain.execution.commands import PythonRuntime
 from ..domain.execution.model import (
-    ActionPlan,
     CommandSpec,
+    JobPlan,
     PlannedStep,
     RunResult,
     StepResult,
@@ -107,7 +107,7 @@ class PythonEnvManager(Protocol):
 class RunObserver(Protocol):
     """Receives the progress of a run (console, log files, reports...)."""
 
-    def run_started(self, plan: ActionPlan) -> None: ...
+    def run_started(self, plan: JobPlan) -> None: ...
 
     def step_started(self, step: PlannedStep, command: str | None) -> None: ...
 

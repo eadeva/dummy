@@ -1,4 +1,4 @@
-"""VS Code tasks for the configured actions (pure).
+"""VS Code tasks for the configured jobs (pure).
 
 ptk owns the tasks whose label starts with ``ptk: `` and the input
 ``ptkVariant``; everything else in ``tasks.json`` belongs to the user and is
@@ -15,7 +15,7 @@ VARIANT_INPUT = "ptkVariant"
 
 
 @dataclass(frozen=True)
-class TaskAction:
+class TaskJob:
     name: str
     help: str
     is_default: bool
@@ -23,29 +23,29 @@ class TaskAction:
 
 
 def build_tasks(
-    actions: list[TaskAction],
+    jobs: list[TaskJob],
     *,
     command: str,
     variants: list[str],
     default_variant: str | None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     tasks: list[dict[str, Any]] = []
-    for action in actions:
-        args = [action.name]
+    for job in jobs:
+        args = ["run", job.name]
         if variants:
             args += ["-V", f"${{input:{VARIANT_INPUT}}}"]
         task: dict[str, Any] = {
-            "label": TASK_PREFIX + action.name,
+            "label": TASK_PREFIX + job.name,
             "type": "shell",
             "command": command,
             "args": args,
             "group": {"kind": "build", "isDefault": True}
-            if action.is_default
+            if job.is_default
             else "build",
             "problemMatcher": [],
         }
-        if action.help:
-            task["detail"] = action.help.splitlines()[0]
+        if job.help:
+            task["detail"] = job.help.splitlines()[0]
         tasks.append(task)
     inputs: list[dict[str, Any]] = []
     if variants:

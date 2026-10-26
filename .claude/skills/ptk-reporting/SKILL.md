@@ -13,9 +13,9 @@ description: Add ptk report formats, import tool results or troubleshoot report 
 
 4. Recognized inputs are JUnit XML, Cobertura XML and SARIF; select output formats under reporting.formats.
 
-5. Inspect `report.json`, then regenerate with `ptk report export ACTION -f html` or open with `ptk report open ACTION`.
+5. Inspect `report.json`, then regenerate with `ptk report export JOB -f html` or open with `ptk report open JOB`.
 
-6. Keep report problems separate from the action exit status and preserve skipped/allowed-failure semantics.
+6. Keep report problems separate from the job exit status and preserve skipped/allowed-failure semantics.
 
 7. Test malformed files, escaping, totals and relative log links when changing exporters/importers.
 
@@ -30,7 +30,7 @@ Historical input snapshots travel with run summaries. Reproduce with two runs pr
 
 Read [report summaries](../../../docs/configuration.rst) for recorded project/PTK versions, variant details and declared tool sources. Test cards count executed (excluding skipped), passed, skipped and failed (including errors); green/red/gray convey status and text retains the meaning. Per-column filters combine without changing recorded totals. `needs.json` is not a supported importer.
 
-Set an action's `open_report` to `always` or `on_errors` only when automatic local opening is wanted; omission disables it and CX/dry-run suppress it. Errors include failed steps/tests, error findings and report import problems. Browser availability must not alter the run's exit status.
+Set a job's `open_report` to `always` or `on_errors` only when automatic local opening is wanted; omission disables it and CX/dry-run suppress it. Errors include failed steps/tests, error findings and report import problems. Browser availability must not alter the run's exit status.
 
 For local orchestration, inspect the workflow summary and immutable child reports under the workflow run directory. Read [workflows](../../../docs/workflows.rst); do not merge test cases from unrelated repositories without preserving their context.
 

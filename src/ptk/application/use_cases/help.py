@@ -3,7 +3,7 @@
 The result is plain data; the HTML page is rendered by an adapter. Commands of
 the CLI framework are passed in by the driver (the use case does not know
 click); everything from the configuration is collected here. Maintainer-only
-actions are left out for users. Secrets are never part of the help - only
+jobs are left out for users. Secrets are never part of the help - only
 credential names, fields and the environment variables that can supply them.
 """
 
@@ -60,7 +60,7 @@ class HelpStep:
 
 
 @dataclass
-class HelpAction:
+class HelpJob:
     name: str
     help: str
     audience: str
@@ -109,11 +109,11 @@ class HelpDocument:
     project: str | None = None
     description: str = ""
     root: str = ""
-    default_action: str | None = None
+    default_job: str | None = None
     files: list[str] = field(default_factory=list)
     layers: list[str] = field(default_factory=list)
-    actions: list[HelpAction] = field(default_factory=list)
-    hidden_actions: int = 0
+    jobs: list[HelpJob] = field(default_factory=list)
+    hidden_jobs: int = 0
     variants: list[HelpVariant] = field(default_factory=list)
     credentials: list[HelpCredential] = field(default_factory=list)
     tools: list[HelpTool] = field(default_factory=list)
@@ -144,34 +144,32 @@ class BuildHelp:
         doc.project = config.project.name
         doc.description = config.project.description
         doc.root = str(project.root)
-        doc.default_action = config.project.default_action
+        doc.default_job = config.project.default_job
         doc.files = [_rel(project, f) for f in project.files]
         doc.layers = list(project.layers)
-        for name, action in config.actions.items():
-            if not visible(action.audience, role):
-                doc.hidden_actions += 1
+        for name, job in config.jobs.items():
+            if not visible(job.audience, role):
+                doc.hidden_jobs += 1
                 continue
-            doc.actions.append(
-                HelpAction(
+            doc.jobs.append(
+                HelpJob(
                     name=name,
-                    help=action.help,
-                    audience=action.audience,
-                    params=[_param(n, p) for n, p in action.params.items()],
-                    steps=[_step(s) for s in action.steps],
-                    requires_tools=action.required_tool_names,
-                    phases=[s.name for s in action.steps],
+                    help=job.help,
+                    audience=job.audience,
+                    params=[_param(n, p) for n, p in job.params.items()],
+                    steps=[_step(s) for s in job.steps],
+                    requires_tools=job.required_tool_names,
+                    phases=[s.name for s in job.steps],
                     passthrough=[
-                        "/".join(path)
-                        for path, s in _walk(action.steps)
-                        if s.passthrough
+                        "/".join(path) for path, s in _walk(job.steps) if s.passthrough
                     ],
                     usage=f"ptk {name} [OPTIONS]"
                     + (
                         " [-- ARGS]"
-                        if any(s.passthrough for _, s in _walk(action.steps))
+                        if any(s.passthrough for _, s in _walk(job.steps))
                         else ""
                     ),
-                    is_default=name == config.project.default_action,
+                    is_default=name == config.project.default_job,
                 )
             )
         if config.variants is not None:

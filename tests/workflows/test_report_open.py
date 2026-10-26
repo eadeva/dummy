@@ -37,7 +37,7 @@ def invoke(write):
                 "Path(os.environ['PTK_STEP_REPORTS_DIR'], 'tests.xml').write_text("
                 "'<testsuite><testcase name=\"bad\"><failure/></testcase></testsuite>')"
             )
-        call = {"action": "missing" if invalid else "check"}
+        call = {"job": "missing" if invalid else "check"}
         workflow = {
             "steps": [
                 {
@@ -55,7 +55,7 @@ def invoke(write):
                 ".main.ptk.yml": yaml.safe_dump(
                     {
                         "project": {"name": "report-open"},
-                        "actions": {
+                        "jobs": {
                             "check": {
                                 "open_report": child_policy,
                                 "steps": [
@@ -191,4 +191,4 @@ def test_workflow_opening_suppresses_child_openings(
     assert len(opened_reports) == 1
     assert opened_reports[0].name == expected
     if expected == "report.html":
-        assert "actions" in opened_reports[0].parts
+        assert "jobs" in opened_reports[0].parts

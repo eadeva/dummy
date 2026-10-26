@@ -31,7 +31,9 @@ Local workflows
 ---------------
 
 Workflow tasks call ``ptk workflow run NAME`` on the local machine; they do not
-invoke GitHub Actions. Repository task files include actions and local workflows.
+invoke GitHub Actions. Repository task files include jobs and local workflows.
+Generated tasks use explicit ``ptk run JOB`` and ``ptk workflow run WORKFLOW``
+commands, so a shared name never triggers an interactive choice in an editor task.
 At a VMR root, ``ptk setup vscode tasks`` includes workspace-owned workflows and
 qualified member workflows. ``ptk setup vscode`` also installs each member's
 skills/tasks. VMR tasks run from the workspace root. See :doc:`workflows` for
@@ -40,7 +42,7 @@ parallelism, repository selection and CX restrictions.
 Browser links in the terminal
 -----------------------------
 
-In an interactive local VS Code terminal, action and workflow reports print a
+In an interactive local VS Code terminal, job and workflow reports print a
 ``browser: http://127.0.0.1:...`` link alongside their file path. Ctrl+click
 (Cmd+click on macOS) opens the rendered report. ``ptk report open`` prints the
 same kind of link. Plain file paths and ``file://`` links normally open in VS

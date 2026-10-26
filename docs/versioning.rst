@@ -6,10 +6,10 @@ Put maintained rules in ``versioning.ptk.yml`` in ``repository.config_path``.
 This conventional file loads automatically before main/includes and overlays.
 A project without versioning configuration runs as before.
 
-Every configured action run resolves versions once after variant selection and
+Every configured job run resolves versions once after variant selection and
 before its steps. Execution atomically writes a unique snapshot to::
 
-   .ptk/versions/<variant>/<action>/<run-id>/.gen.version.ptk.yml
+   .ptk/versions/<variant>/<job>/<run-id>/.gen.version.ptk.yml
 
 ``PTK_VERSION_FILE`` points to that snapshot. Steps and generators share the same
 resolved values even if a step changes Git state or a source manifest. Subsequent
@@ -17,7 +17,7 @@ runs discover again. Snapshots are retained until the user removes them; they ar
 not included in log-history rotation. Add ``.gen.version.ptk.yml`` to ``.gitignore``
 (the initializer does this). Generated snapshots are excluded from include globs
 and refused as explicit configuration inputs. They never feed back into discovery.
-Dry runs discover versions but do not write snapshots or execute action steps.
+Dry runs discover versions but do not write snapshots or execute job steps.
 Custom discovery commands still execute in a dry run: they must be read-only.
 
 Sources
@@ -116,17 +116,17 @@ when the resolved value has SemVer structure; custom strings and calendar
 versions are preserved without invented numeric fields. Names normalize to
 uppercase with hyphens replaced by underscores. Collisions, including between
 names and field suffixes, fail explicitly. ``PTK_VERSION_*`` is reserved;
-action/step overrides must not redefine discovered values. Stale caller version
+job/step overrides must not redefine discovered values. Stale caller version
 variables are removed before the current snapshot's variables are injected.
 
 Only the current repository is resolved by default. Explicit VMR dependencies
-can be declared globally or on individual actions::
+can be declared globally or on individual jobs::
 
    versioning:
      project: {source: literal, version: "1.2.3"}
      dependencies:
        frontend: {variant: release}
-   actions:
+   jobs:
      package:
        version_dependencies:
          engine: {variant: debug}
@@ -139,10 +139,10 @@ can be declared globally or on individual actions::
 Dependency variants are mandatory when the dependency has variants; no implicit
 mapping from the caller's variant occurs. Dependencies resolve recursively;
 cycles and conflicting variant selections fail. Loading another repository's
-versions does not import its tools or action environment. Dependencies must be
+versions does not import its tools or job environment. Dependencies must be
 members of the same detected VMR and have versioning configured.
 
-Structured substitutions are available in action environments, parameters and
+Structured substitutions are available in job environments, parameters and
 steps, for example ``${version.projects.engine.value}``,
 ``${version.projects.engine.major}``, and
 ``${version.projects.engine.components.sdk.value}``.
@@ -181,7 +181,7 @@ Writes are atomic and unchanged contents preserve the existing file's timestamp.
 CMake consumers can ``include`` the generated file, MSBuild can ``Import`` the
 props file, and C/C++ can include the header. These generators do not mutate
 existing build scripts or package manifests. Choose distinct output paths for
-concurrent actions/variants; their automatic snapshots are already unique.
+concurrent jobs/variants; their automatic snapshots are already unique.
 
 CLI
 ---
@@ -191,10 +191,10 @@ CLI
    ptk version show -V debug
    ptk version check -V debug
    ptk version generate -V debug
-   ptk version show -V debug --action package
+   ptk version show -V debug --job package
    ptk engine version show -V debug       # in VMR mode
 
 ``show`` includes inheritance and provenance. ``check`` performs discovery without
 writing. ``generate`` writes a snapshot to a unique directory or ``--output``;
 the output filename must be ``.gen.version.ptk.yml``. There are no version mutation
-or release commands. Normal action execution generates its snapshot automatically.
+or release commands. Normal job execution generates its snapshot automatically.

@@ -1,4 +1,4 @@
-"""Automatic report opening follows action policy without changing run outcomes."""
+"""Automatic report opening follows job policy without changing run outcomes."""
 
 import sys
 
@@ -9,7 +9,7 @@ from pydantic import ValidationError
 
 from ptk.adapters import help_html
 from ptk.adapters.reporting.store import FileReportStore
-from ptk.domain.config.model import ActionSpec
+from ptk.domain.config.model import JobSpec
 from ptk.domain.reporting.model import Contribution, Finding, from_summary
 from ptk.drivers.cli.main import cli
 
@@ -43,13 +43,13 @@ def invoke(write, monkeypatch):
                 "Path(os.environ['PTK_STEP_REPORTS_DIR'], 'tests.xml').write_text("
                 "'<testsuite><testcase name=\"bad\"><failure/></testcase></testsuite>')"
             )
-        action = {"steps": [{"check": {"run": [sys.executable, "-c", code]}}]}
+        job = {"steps": [{"check": {"run": [sys.executable, "-c", code]}}]}
         if policy is not None:
-            action["open_report"] = policy
+            job["open_report"] = policy
         config = {
             "project": {"name": "report-open"},
             "reporting": {"formats": ["json"] if formats is None else formats},
-            "actions": {"check": action},
+            "jobs": {"check": job},
         }
         if all_variants:
             config["variants"] = {"default": "one", "variants": {"one": {}, "two": {}}}
@@ -171,6 +171,6 @@ def test_report_error_conditions(status, level, problem, step_status, expected):
 
 def test_invalid_open_report_is_rejected():
     with pytest.raises(ValidationError):
-        ActionSpec.model_validate(
+        JobSpec.model_validate(
             {"open_report": "sometimes", "steps": [{"hello": "echo hello"}]}
         )

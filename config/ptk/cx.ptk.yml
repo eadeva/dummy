@@ -1,5 +1,5 @@
 # GitHub Actions/workflows overlay, automatically loaded in CI.
-# CI uses the same test/check/docs actions as developer machines.
+# CI uses the same test/check/docs jobs as developer machines.
 environment:
   set:
     PTK_CI: "true"

@@ -1,6 +1,6 @@
-# Build and validate release artifacts locally. This action never uploads anything.
+# Build and validate release artifacts locally. This job never uploads anything.
 # The script consumes PTK_VERSION_PTK from this run's Git-managed version snapshot.
-actions:
+jobs:
   package:
     help: Prepare Python distributions and offline documentation for Artifactory
     env:

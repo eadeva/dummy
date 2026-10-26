@@ -8,9 +8,9 @@ from rich.console import Console
 from rich.markup import escape
 from rich.tree import Tree
 
-from ...application.use_cases.run import PreparedRun, RunAction
+from ...application.use_cases.run import PreparedRun, RunJob
 from ...domain.execution.model import (
-    ActionPlan,
+    JobPlan,
     PlannedStep,
     RunResult,
     Status,
@@ -54,7 +54,7 @@ class ConsoleObserver:
         self._quiet_sets: set[tuple[str, ...]] = set()
         self._lock = threading.Lock()
 
-    def run_started(self, plan: ActionPlan) -> None:
+    def run_started(self, plan: JobPlan) -> None:
         def mark(step: PlannedStep, inside: bool) -> None:
             if inside:
                 self._parallel.add(step.path)
@@ -65,7 +65,7 @@ class ConsoleObserver:
             mark(step, False)
         variant = f" [dim]variant[/] {escape(plan.variant)}" if plan.variant else ""
         self._print(
-            f"[bold]ptk {escape(plan.action)}[/]{variant} [dim]run {plan.run_id}[/]"
+            f"[bold]ptk {escape(plan.job)}[/]{variant} [dim]run {plan.run_id}[/]"
         )
 
     def step_started(self, step: PlannedStep, command: str | None) -> None:
@@ -122,7 +122,7 @@ class ConsoleObserver:
 
 def summary(console: Console, result: RunResult) -> None:
     tree = Tree(
-        f"[bold]{escape(result.action)}[/] [{STYLE[result.status]}]{result.status.value}[/] "
+        f"[bold]{escape(result.job)}[/] [{STYLE[result.status]}]{result.status.value}[/] "
         f"in {result.duration:.1f}s"
     )
 
@@ -160,12 +160,12 @@ def summary(console: Console, result: RunResult) -> None:
 def dry_run(
     console: Console,
     prepared: PreparedRun,
-    runner: RunAction,
+    runner: RunJob,
     *,
     show_env: bool = False,
 ) -> None:
     plan = prepared.plan
-    head = f"[bold]{escape(plan.action)}[/] [dim](dry run - nothing is executed)[/]"
+    head = f"[bold]{escape(plan.job)}[/] [dim](dry run - nothing is executed)[/]"
     if plan.variant:
         head += f"  variant [bold]{escape(plan.variant)}[/]"
     tree = Tree(head)

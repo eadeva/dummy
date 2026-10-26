@@ -1,4 +1,4 @@
-actions:
+jobs:
   build:
     params:
       jobs: {type: int}

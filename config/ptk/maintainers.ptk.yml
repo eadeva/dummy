@@ -1,8 +1,8 @@
 # Conventional entry point for maintainer identities; stays at config root.
 maintainers: []
-# Replace maintainers: [] with real identities before restricting actions:
+# Replace maintainers: [] with real identities before restricting jobs:
 # maintainers:
 #   - name: Project Maintainer
 #     email: maintainer@example.com  # Matches this repository's Git identity.
 #     user: maintainer              # Optional operating-system username.
-# Set audience: maintainer on an action to restrict it.
+# Set audience: maintainer on a job to restrict it.

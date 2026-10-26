@@ -13,7 +13,7 @@ from click.testing import CliRunner
 from ptk.adapters.credentials.vault import Vault
 from ptk.adapters.process import SubprocessRunner
 from ptk.application.use_cases.project import ExportSchema
-from ptk.application.use_cases.tools import tools_for_actions
+from ptk.application.use_cases.tools import tools_for_jobs
 from ptk.bootstrap import create_app
 from ptk.domain.execution.model import CommandSpec
 from ptk.drivers.cli.main import cli
@@ -84,7 +84,7 @@ def test_report_inputs_are_fresh_and_history_is_immutable(tmp_path):
                 "repository": {"alias": "demo", "config_path": "."},
                 "project": {"name": "demo"},
                 "reporting": {"formats": ["json"]},
-                "actions": {
+                "jobs": {
                     "go": {
                         "params": {"name": {"default": "first-test"}},
                         "steps": [
@@ -121,14 +121,14 @@ def test_report_inputs_are_fresh_and_history_is_immutable(tmp_path):
     assert "first-test" in report.read_text()
 
 
-def test_requirement_true_preserves_earlier_action_settings(write, load):
+def test_requirement_true_preserves_earlier_job_settings(write, load):
     root = write(
         {
-            ".main.ptk.yml": "project: {name: demo}\ntools: {ninja: {version: '>=1'}}\nactions: {go: {requires_tools: {ninja: {version: '>=2'}}, steps: [{ok: {uses: echo}}]}}",
-            "local.ptk.yml": "actions: {go: {requires_tools: [ninja]}}",
+            ".main.ptk.yml": "project: {name: demo}\ntools: {ninja: {version: '>=1'}}\njobs: {go: {requires_tools: {ninja: {version: '>=2'}}, steps: [{ok: {uses: echo}}]}}",
+            "local.ptk.yml": "jobs: {go: {requires_tools: [ninja]}}",
         }
     )
-    assert tools_for_actions(load(root), ["go"]).config.tools["ninja"].version == ">=2"
+    assert tools_for_jobs(load(root), ["go"]).config.tools["ninja"].version == ">=2"
 
 
 def test_schema_describes_authored_files():
@@ -141,7 +141,7 @@ def test_schema_describes_authored_files():
     assert {"type": "string"} in schema["properties"]["variants"]["anyOf"]
     assert any(
         s.get("type") == "array"
-        for s in schema["$defs"]["ActionSpec"]["properties"]["requires_tools"]["anyOf"]
+        for s in schema["$defs"]["JobSpec"]["properties"]["requires_tools"]["anyOf"]
     )
 
 
@@ -159,11 +159,11 @@ def test_repository_identity_ignores_callers_git_configuration(tmp_path, monkeyp
     assert SystemHost().user_identity(tmp_path / "b")[0] == "b@example.invalid"
 
 
-def test_isolated_action_environment_does_not_inherit_secrets(write, load, monkeypatch):
+def test_isolated_job_environment_does_not_inherit_secrets(write, load, monkeypatch):
     monkeypatch.setenv("UNRELATED_TOKEN", "must-not-inherit")
     root = write(
         {
-            ".main.ptk.yml": "project: {name: demo}\nenvironment: {keep: [KEPT]}\nactions: {go: {steps: [{ok: {uses: echo}}]}}"
+            ".main.ptk.yml": "project: {name: demo}\nenvironment: {keep: [KEPT]}\njobs: {go: {steps: [{ok: {uses: echo}}]}}"
         }
     )
     from ptk.application.use_cases.run import RunRequest
@@ -175,7 +175,7 @@ def test_isolated_action_environment_does_not_inherit_secrets(write, load, monke
             "PATH": "/other-repo/bin",
         }
     )
-    prepared = app.prepare_run(load(root)).execute(load(root), RunRequest(action="go"))
+    prepared = app.prepare_run(load(root)).execute(load(root), RunRequest(job="go"))
     assert "UNRELATED_TOKEN" not in prepared.plan.base_env
     assert prepared.plan.base_env["KEPT"] == "yes"
     assert "/other-repo/bin" not in prepared.plan.base_env["PATH"]

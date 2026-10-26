@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..execution.model import ActionPlan, RunResult, StepResult
+from ..execution.model import JobPlan, RunResult, StepResult
 from ..layout import NO_VARIANT
 
 SUMMARY_VERSION = 1
@@ -29,13 +29,13 @@ def step_dict(result: StepResult) -> dict[str, Any]:
     return data
 
 
-def header(plan: ActionPlan) -> dict[str, Any]:
+def header(plan: JobPlan) -> dict[str, Any]:
     return {
         "summary_version": SUMMARY_VERSION,
         "context": plan.report_context,
         "run_id": plan.run_id,
         "project": plan.project,
-        "action": plan.action,
+        "job": plan.job,
         "variant": plan.variant or NO_VARIANT,
         "params": plan.params,
         "param_sources": plan.param_sources,
@@ -44,7 +44,7 @@ def header(plan: ActionPlan) -> dict[str, Any]:
     }
 
 
-def run_summary(plan: ActionPlan, result: RunResult) -> dict[str, Any]:
+def run_summary(plan: JobPlan, result: RunResult) -> dict[str, Any]:
     hidden = [s.path for s in plan.walk() if not s.spec.report]
     return {
         **header(plan),

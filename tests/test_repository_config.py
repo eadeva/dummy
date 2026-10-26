@@ -15,18 +15,18 @@ from ptk.domain.execution.model import PlannedStep
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_repository_actions_and_single_component_free_variant():
+def test_repository_jobs_and_single_component_free_variant():
     app = create_app()
     project = app.load_project.execute(config_file=ROOT / ".main.ptk.yml", ci=False)
     assert project.config.repository.alias == "ptk"
-    assert set(project.config.actions) == {"test", "docs", "check", "package"}
-    assert project.config.project.default_action == "test"
+    assert set(project.config.jobs) == {"test", "docs", "check", "package"}
+    assert project.config.project.default_job == "test"
     assert list(project.config.variants.variants) == ["default"]
     assert not project.config.variants.components
     assert not project.config.versioning.components
-    for action in project.config.actions:
+    for job in project.config.jobs:
         prepared = app.prepare_run(project).execute(
-            project, RunRequest(action=action, dry_run=True)
+            project, RunRequest(job=job, dry_run=True)
         )
         assert prepared.plan.variant == "default"
         assert "PTK_VERSION_PTK" in prepared.plan.base_env

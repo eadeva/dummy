@@ -16,7 +16,7 @@ from pydantic import BaseModel, ValidationError
 from ...domain.config import rules as config_rules
 from ...domain.config import tree as t
 from ...domain.config.defaults import apply_defaults, normalize_requirements
-from ...domain.config.model import ACTION_RE, MaintainersSpec, PtkConfig, WorkspaceSpec
+from ...domain.config.model import JOB_RE, MaintainersSpec, PtkConfig, WorkspaceSpec
 from ...domain.config.schema_walk import unknown_keys
 from ...domain.errors import ConfigError, Location, Problem
 from ..ports import CX_FILE, LOCAL_FILE, MAINTAINERS_FILE, ConfigSource, HostEnvironment
@@ -180,9 +180,9 @@ class LoadProject:
                 layers.append(filename)
         names = set()
         for candidate in [tree, main_tree, *(node for _, node in overlays)]:
-            actions = t.get(candidate, ("actions",))
-            if actions is not None and actions.is_map:
-                names.update(n for n in actions.value if ACTION_RE.fullmatch(n))
+            jobs = t.get(candidate, ("jobs",))
+            if jobs is not None and jobs.is_map:
+                names.update(n for n in jobs.value if JOB_RE.fullmatch(n))
         for name in sorted(names):
             tool_file = config_root / f"{name}.tools.ptk.yml"
             if tool_file not in self._source.files[first_read:] and self._source.exists(
@@ -395,7 +395,7 @@ class ExportSchema:
             ]
         }
         schema["properties"]["variants"]["anyOf"].append({"type": "string"})
-        for definition in [schema, schema.get("$defs", {}).get("ActionSpec", {})]:
+        for definition in [schema, schema.get("$defs", {}).get("JobSpec", {})]:
             properties = definition.get("properties", {})
             if "requires_tools" in properties:
                 properties["requires_tools"] = {

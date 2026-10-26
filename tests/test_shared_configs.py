@@ -93,7 +93,7 @@ configs:
   ruff: {}
   clang-format: {overlay: ptk/cf.yaml}
   clang-tidy: {}
-actions: {noop: {steps: [{x: "true"}]}}
+jobs: {noop: {steps: [{x: "true"}]}}
 """
 
 

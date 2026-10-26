@@ -1,6 +1,6 @@
 # Read-only quality checks: ptk check
 # Formatting changes remain explicit: uv run ruff format.
-actions:
+jobs:
   check:
     help: Check PTK's lint rules and formatting
     env:

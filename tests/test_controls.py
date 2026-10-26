@@ -12,14 +12,14 @@ from ptk.domain.reporting.summary import run_summary
 from ptk.drivers.cli.main import cli
 
 
-def project(tmp_path, steps, **action):
+def project(tmp_path, steps, **job):
     file = tmp_path / ".main.ptk.yml"
     file.write_text(
         yaml.safe_dump(
             {
                 "repository": {"alias": "demo", "config_path": "."},
                 "project": {"name": "controls"},
-                "actions": {"go": {"steps": steps, **action}},
+                "jobs": {"go": {"steps": steps, **job}},
             }
         )
     )
@@ -76,8 +76,8 @@ def test_report_false_hides_descendants_but_retains_run_failure(tmp_path):
             }
         ],
     )
-    prepared = app.prepare_run(p).execute(p, RunRequest(action="go"))
-    result = app.run_action(p).execute(prepared)
+    prepared = app.prepare_run(p).execute(p, RunRequest(job="go"))
+    result = app.run_job(p).execute(prepared)
     summary = run_summary(prepared.plan, result)
     assert len(summary["steps"]) == 2  # audit logs retain every step
     report = app.reports.build(p, summary)
@@ -98,8 +98,8 @@ def test_group_deadline_does_not_cancel_parent(tmp_path):
             {"after": {"uses": "echo"}},
         ],
     )
-    prepared = app.prepare_run(p).execute(p, RunRequest(action="go"))
-    result = app.run_action(p).execute(prepared)
+    prepared = app.prepare_run(p).execute(p, RunRequest(job="go"))
+    result = app.run_job(p).execute(prepared)
     assert result.status is Status.PASSED
     assert result.steps[0].status is Status.FAILED
     assert result.steps[1].status is Status.PASSED
@@ -120,8 +120,8 @@ def test_builtin_timeout_and_retries(tmp_path):
             }
         ],
     )
-    prepared = app.prepare_run(p).execute(p, RunRequest(action="go"))
-    result = app.run_action(p).execute(prepared)
+    prepared = app.prepare_run(p).execute(p, RunRequest(job="go"))
+    result = app.run_job(p).execute(prepared)
     assert result.steps[0].attempts == 2
     assert "timed out" in result.steps[0].message
     assert result.duration < 2
@@ -149,8 +149,8 @@ def test_group_retries_repeat_children_and_report_attempts(tmp_path):
             }
         ],
     )
-    prepared = app.prepare_run(p).execute(p, RunRequest(action="go"))
-    result = app.run_action(p).execute(prepared)
+    prepared = app.prepare_run(p).execute(p, RunRequest(job="go"))
+    result = app.run_job(p).execute(prepared)
     assert result.status is Status.PASSED
     assert result.steps[0].attempts == 2
     assert result.steps[0].children[0].status is Status.PASSED

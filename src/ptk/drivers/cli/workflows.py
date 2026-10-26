@@ -26,7 +26,7 @@ from ...domain.execution.model import Status
 from ...domain.reporting.summary import run_summary
 from . import console as present
 from .access import AccessGroup
-from .actions import write_reports
+from .jobs import write_reports
 from .report_links import print_report
 from .state import CliState, console, err_console, guarded, state_of
 
@@ -98,7 +98,7 @@ def select(ctx, name):
 
 @click.group("workflow", cls=AccessGroup)
 def workflow_group():
-    """List, inspect and run sequential/parallel groups of repository actions."""
+    """List, inspect and run sequential/parallel groups of repository jobs."""
 
 
 @workflow_group.command("list")
@@ -146,7 +146,7 @@ def execute_workflow(ctx, name, *, dry_run=False):
     is_ci = parent.app.host.is_ci() if parent.ci is None else parent.ci
     if is_ci and not dry_run:
         raise PtkError(
-            "workflows run locally only; CX/CI execution uses individual actions (GitHub template generation is planned separately)"
+            "workflows run locally only; CX/CI execution uses individual jobs (GitHub template generation is planned separately)"
         )
     bindings = {}
 
@@ -166,16 +166,16 @@ def execute_workflow(ctx, name, *, dry_run=False):
             verbose=parent.verbose,
         )
         project = state.project()
-        action = project.config.actions.get(node.action)
-        if action is not None and any(
-            name in action.params and action.params[name].type == "secret"
+        job = project.config.jobs.get(node.job)
+        if job is not None and any(
+            name in job.params and job.params[name].type == "secret"
             for name in node.params
         ):
             raise PtkError(
-                "secret parameters must not be stored in workflow configuration; use action credentials"
+                "secret parameters must not be stored in workflow configuration; use job credentials"
             )
         request = RunRequest(
-            action=node.action,
+            job=node.job,
             variant=node.variant,
             params=node.params,
             dry_run=dry_run,
@@ -195,10 +195,10 @@ def execute_workflow(ctx, name, *, dry_run=False):
         else:
             p = node.prepared.plan
             click.echo(
-                f"{indent}{node.spec.name}: {node.repo}/{p.action} [{p.variant or 'default'}]"
+                f"{indent}{node.spec.name}: {node.repo}/{p.job} [{p.variant or 'default'}]"
             )
     if dry_run:
-        click.echo("workflow preview; no actions executed")
+        click.echo("workflow preview; no jobs executed")
         return
     run_id = datetime.now(UTC).strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8]
     report_root = root / "_reports"
@@ -223,13 +223,13 @@ def execute_workflow(ctx, name, *, dry_run=False):
             / ".ptk"
             / "locks"
             / (p.variant or "default")
-            / (p.action + ".lock")
+            / (p.job + ".lock")
         )
         with file_lock(lock):
             console.print(
-                f"[bold]{escape('/'.join(node.path))}: {escape(node.repo)}/{escape(p.action)}[/]"
+                f"[bold]{escape('/'.join(node.path))}: {escape(node.repo)}/{escape(p.job)}[/]"
             )
-            runner = state.app.run_action(prepared.project)
+            runner = state.app.run_job(prepared.project)
             result = runner.execute(
                 prepared,
                 [present.ConsoleObserver(console), *state.app.log_observers(prepared)],
@@ -241,7 +241,7 @@ def execute_workflow(ctx, name, *, dry_run=False):
             files = []
             report_errors = False
             try:
-                child_target = target / "actions" / Path(*node.path)
+                child_target = target / "jobs" / Path(*node.path)
                 summary = snapshot_logs(run_summary(p, result), child_target)
                 report, files = state.app.reports.write(
                     prepared.project, summary, ["json", "html"], child_target

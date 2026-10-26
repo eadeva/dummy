@@ -1,4 +1,4 @@
-"""Create or update VS Code tasks for the configured actions (use case)."""
+"""Create or update VS Code tasks for the configured jobs (use case)."""
 
 from __future__ import annotations
 
@@ -39,14 +39,14 @@ class VSCodeTasks:
     ) -> TasksResult:
         config = project.config
         audience: Role = "user" if users_only else role
-        actions = [
-            vscode.TaskAction(
+        jobs = [
+            vscode.TaskJob(
                 name=name,
                 help=spec.help,
-                is_default=name == config.project.default_action,
+                is_default=name == config.project.default_job,
                 passthrough=any(s.passthrough for s in spec.walk_steps()),
             )
-            for name, spec in config.actions.items()
+            for name, spec in config.jobs.items()
             if visible(spec.audience, audience)
         ]
         variants: list[str] = []
@@ -55,7 +55,7 @@ class VSCodeTasks:
             variants = list(config.variants.buildable())
             default_variant = vr.default_variant(config.variants)
         tasks, inputs = vscode.build_tasks(
-            actions, command=command, variants=variants, default_variant=default_variant
+            jobs, command=command, variants=variants, default_variant=default_variant
         )
         tasks.extend(
             vscode.workflow_tasks(

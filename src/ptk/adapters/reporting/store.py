@@ -37,7 +37,7 @@ class FileReportStore:
                 )
                 hint = f" (kept runs: {', '.join(runs)})" if runs else ""
                 raise PtkError(f"no run {run_id}{hint}")
-            raise PtkError(f"no run found in {log_dir} - run the action first")
+            raise PtkError(f"no run found in {log_dir} - run the job first")
         return json.loads(summary.read_text(encoding="utf-8"))
 
     def contributions(self, reports_dir: Path, labels: list[str]) -> list[Contribution]:

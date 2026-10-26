@@ -25,9 +25,9 @@ The implementation roadmap is maintained separately in ``docs/PLAN.md``.
 Current capability guide
 ------------------------
 
-* Configuration discovery, init, variants, action parameters, maintainers,
+* Configuration discovery, init, variants, job parameters, maintainers,
   environment isolation, tool sources and report behavior: :doc:`configuration`.
-* Local action orchestration, VMR call ownership and VS Code workflow tasks:
+* Local job orchestration, VMR call ownership and VS Code workflow tasks:
   :doc:`workflows`.
 * Project/component versions, VMR dependencies, environment variables and generated
   build files: :doc:`versioning`.

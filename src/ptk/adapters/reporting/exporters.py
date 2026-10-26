@@ -29,12 +29,12 @@ def to_json(report: Report) -> str:
 
 
 def to_junit(report: Report) -> str:
-    """Steps as one test suite (CI dashboards show the action), imported suites after it."""
-    root = ET.Element("testsuites", name=f"{report.project} {report.action}")
+    """Steps as one test suite (CI dashboards show the job), imported suites after it."""
+    root = ET.Element("testsuites", name=f"{report.project} {report.job}")
     suite = ET.SubElement(
         root,
         "testsuite",
-        name=f"ptk {report.action} [{report.variant}]",
+        name=f"ptk {report.job} [{report.variant}]",
         timestamp=report.started_at,
         time=f"{report.duration:.3f}",
     )
@@ -51,7 +51,7 @@ def to_junit(report: Report) -> str:
         if step.kind == "set":
             continue
         counts["tests"] += 1
-        parent = step.label.rsplit("/", 1)[0] if "/" in step.label else report.action
+        parent = step.label.rsplit("/", 1)[0] if "/" in step.label else report.job
         case = ET.SubElement(
             suite,
             "testcase",
@@ -111,7 +111,7 @@ def _cell(text: object) -> str:
 
 def to_markdown(report: Report) -> str:
     lines = [
-        f"## {ICON.get(report.status, '')} ptk {report.action} — {report.status}",
+        f"## Job - {report.job} {ICON.get(report.status, '')} — {report.status}",
         "",
         (
             f"Project **{_cell(report.project)}**, variant **{_cell(report.variant)}**, "

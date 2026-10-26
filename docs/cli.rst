@@ -2,7 +2,7 @@ CLI command groups
 ==================
 
 Use ``ptk setup`` to display the setup overview. Viewing this overview does not
-install tools or change configuration. Project actions remain top-level commands.
+install tools or change configuration. Project jobs remain top-level commands.
 
 .. list-table::
    :header-rows: 1
@@ -33,23 +33,23 @@ install tools or change configuration. Project actions remain top-level commands
    * - ``ptk report open|export``
      - View and regenerate reports
    * - ``ptk workflow list|show|dry-run|run``
-     - Inspect or execute local action workflows (execution is disabled on CX)
-   * - ``ptk ACTION`` / ``ptk run ACTION``
-     - Execute project actions
-   * - ``ptk dry-run ACTION``
+     - Inspect or execute local job workflows (execution is disabled on CX)
+   * - ``ptk JOB`` / ``ptk run JOB``
+     - Execute project jobs
+   * - ``ptk dry-run JOB``
      - Preview execution
 
 Put global options before the group, and installation options after ``install``::
 
    uv run ptk -c examples/quickstart/.main.ptk.yml setup config validate
-   uv run ptk -c examples/quickstart/.main.ptk.yml setup install --action build --dry-run
+   uv run ptk -c examples/quickstart/.main.ptk.yml setup install --job build --dry-run
    uv run ptk -c examples/quickstart/.main.ptk.yml setup creds list
 
 The ``ptk init`` alias also remains available.
 
 The former top-level ``config``, ``configs``, ``creds``, ``self-setup``, ``doctor``
 and ``vscode`` commands remain callable aliases, hidden from help and completion.
-Legacy ``ptk setup --action ACTION --dry-run`` also remains supported. Bare
+Legacy ``ptk setup --job JOB --dry-run`` also remains supported. Bare
 ``ptk setup`` now shows help; use ``ptk setup install`` to install all configured
 tools. Do not combine legacy installation options with a setup subcommand.
 
@@ -76,7 +76,7 @@ The same selection works with ``dry-run``.
 
 ``--feature SIZE=4`` (legacy ``-bo SIZE=4``) overrides a feature for this invocation.
 Global ``--set vh.SIZE=4`` is also supported. ``-mp jobs=4`` is the compatibility
-spelling for declared action parameters. Generated typed options take precedence
+spelling for declared job parameters. Generated typed options take precedence
 when both spellings supply a value. Persistent editing refuses global config overrides.
 
 Virtual monorepositories (VMR)
@@ -131,7 +131,7 @@ For git-repo members, the same grouping applies from a member's subdirectory.
 Manual VMR commands are invoked from the marked workspace; inside an ordinary
 member repository, ptk remains standalone. Each repository has
 isolated configuration, tools, plugins, permissions and output directories.
-``ptk firmware`` runs that repository's default action; bare ``ptk`` lists the
+``ptk firmware`` runs that repository's default job; bare ``ptk`` lists the
 repositories. There is no implicit run across all repositories. Global options
 precede the alias. ``ptk --config path/to/.main.ptk.yml build`` explicitly selects
 standalone mode. Generated VS Code tasks in VMR mode include the repository alias.
@@ -170,8 +170,8 @@ process produces a diagnostic; remove it only after confirming the owner exited.
 
 Report inputs are snapshotted with completed run summaries. Later runs start
 with fresh report input directories. Historical export reads its retained
-snapshot, not current inputs. Runs for the same action/variant are serialized
-by a local lock; different actions or repositories may run concurrently.
+snapshot, not current inputs. Runs for the same job/variant are serialized
+by a local lock; different jobs or repositories may run concurrently.
 
 Version commands
 ----------------
@@ -184,8 +184,8 @@ ignored snapshot. There are no bump/set/tag commands. In VMR mode use
 Enter it at the terminal prompt or pass ``--config-dir PATH``; there is no
 default. Scripts and ``--yes`` require the option. The path is relative to each
 repository root. Root metadata stays minimal; initial
-configuration fragments live in topic folders under PATH. ``actions/hello.ptk.yml``
-and ``actions/build.ptk.yml`` provide separate runnable examples. Optional fields
+configuration fragments live in topic folders under PATH. ``jobs/hello.ptk.yml``
+and ``jobs/build.ptk.yml`` provide separate runnable examples. Optional fields
 are documented in comments. Existing files are never overwritten.
 
 In VMR mode, omit DIRECTORY to initialize **all checked-out members without a

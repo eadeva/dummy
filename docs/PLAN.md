@@ -3,9 +3,9 @@
 > **ptk** (*project tool kit*): a generic, configuration-driven project CLI.
 > All configuration files end in `.ptk.yml`: entry point `.main.ptk.yml` (ptk version + main fields),
 > fragments `*.ptk.yml`, layers `cx.ptk.yml` and `local.ptk.yml`, and `maintainers.ptk.yml`.
-> Workspace folders: `_builds/`, `_bin/`, `_logs/`, `_reports/` (structured by variant / action / step).
+> Workspace folders: `_builds/`, `_bin/`, `_logs/`, `_reports/` (structured by variant / job / step).
 
-One CLI that every project can use: declarative actions made of steps and step
+One CLI that every project can use: declarative jobs made of steps and step
 sets, built-in variant handling, credentials, tool setup, shared base configs,
 unified logging and reporting.
 
@@ -32,7 +32,7 @@ No frozen executable.
 ```
 src/ptk/
 ├── domain/                     pure model + rules — no I/O, no frameworks except pydantic
-│   ├── config/                 meta-model: Project, Action, Step, StepSet, Param, Tool, ...
+│   ├── config/                 meta-model: Project, Job, Step, StepSet, Param, Tool, ...
 │   ├── variants/               components, features, variants, expressions, resolver
 │   ├── execution/              run model: RunPlan, StepResult, Status, Event
 │   ├── credentials/            SecretRef, CredentialSpec (never secret values)
@@ -42,7 +42,7 @@ src/ptk/
 │   ├── ports.py                ConfigSource, ProcessRunner, PythonEnvManager, SecretProvider,
 │   │                           ToolInstaller, LogSink, ReportExporter, ReportContributor,
 │   │                           FileSystem, Clock, Prompt
-│   └── use_cases/              LoadConfig, ValidateConfig, PlanAction, RunAction,
+│   └── use_cases/              LoadConfig, ValidateConfig, PlanJob, RunJob,
 │                               ResolveVariant, ExplainFeature, CheckVariants,
 │                               ResolveSecret, StoreSecret, TestCredential,
 │                               CheckTools, EnsureTools, SelfSetup,
@@ -79,14 +79,14 @@ src/ptk/
 
 | Element | Purpose |
 |---------|---------|
-| `project` | name, description, default action, default variant |
+| `project` | name, description, default job, default variant |
 | `include` | further files / globs merged into the configuration |
 | `vars` | reusable values (`${vars.build_dir}`) |
 | `environment` | isolation rules: variables and PATH entries kept, added, removed |
 | `tools` | tools with version range, check command, install sources per OS |
 | `credentials` | named credentials with provider chain |
 | `variants` | product line: components, features, variants (inline or file reference) |
-| `actions` | CLI commands: params, required tools, steps |
+| `jobs` | CLI commands: params, required tools, steps |
 | `configs` | shared base configs and project overlays (pre-commit, ruff, clang-*) |
 | `logging` | console style, run directory, retention |
 | `reporting` | formats, output dir, contributors |
@@ -108,7 +108,7 @@ src/ptk/
   Tags: `!replace` (replace whole mapping), `!append` (append to list),
   `!include file.yaml` (insert a file at this point).
 - **Provenance:** every value knows file and line → `ptk setup config show --sources`,
-  errors as `.main.ptk.yml:42: actions.build.params.jobs: expected int`.
+  errors as `.main.ptk.yml:42: jobs.build.params.jobs: expected int`.
 - **Substitution** (one syntax, unknown names are errors):
 
   ```
@@ -122,7 +122,7 @@ src/ptk/
 
 - Short forms: `run: "cmake --build ."` instead of a full mapping.
 - Defaults everywhere (working dir = project root, `continue_on_error: false`, ...).
-- `ptk setup init` (`ptk init` alias) scaffolds a project; `ptk dry-run <action>` shows the expanded step
+- `ptk setup init` (`ptk init` alias) scaffolds a project; `ptk dry-run <job>` shows the expanded step
   tree with evaluated conditions, final commands and parameter sources before
   running anything.
 - `ptk help` opens the full help as an offline HTML page in the default browser
@@ -134,8 +134,8 @@ src/ptk/
 
 ```yaml
 schema_version: 1
-project: {name: demo, default_action: build}
-include: [ptk/actions/*.yaml]
+project: {name: demo, default_job: build}
+include: [ptk/jobs/*.yaml]
 variants: ptk/variants.yaml
 
 vars:
@@ -155,7 +155,7 @@ credentials:
     env: {user: ARTIFACTORY_USER, token: ARTIFACTORY_TOKEN}
     gopass: {path: work/artifactory}
 
-actions:
+jobs:
   build:
     help: Build the firmware
     requires_tools: [cmake, ninja]
@@ -213,11 +213,11 @@ wins; the value is cached for the rest of the ptk run.
 | Provider | Where | Notes |
 |---
 
-## 5. Main point 4 — Actions, step sets, steps
+## 5. Main point 4 — Jobs, step sets, steps
 
 ### 5.1 Concepts
 
-- **Action** — a CLI command: `help`, `params`, `requires_tools`, `steps`.
+- **Job** — a CLI command: `help`, `params`, `requires_tools`, `steps`.
   Top-level steps are the phases for `--from` / `--to`.
 - **Step** — exactly one of:
   - `run:` a command or script
@@ -258,7 +258,7 @@ python: {interpreter: cli}                                      # ptk's own envi
 
 Built per command, later layers win: host environment (or only OS essentials +
 `keep` with `isolate: true`) → `environment.set/unset/path_*` → generated
-`PTK_*`, `PTK_PARAM_*`, `VH_*` → action `env` → step `env` (+ `PTK_STEP`,
+`PTK_*`, `PTK_PARAM_*`, `VH_*` → job `env` → step `env` (+ `PTK_STEP`,
 `PTK_BUILD_DIR`) → secrets of that step. ptk's own `os.environ` is never changed,
 so parallel step sets are safe.
 
@@ -268,7 +268,7 @@ and reports folder `${run.reports_dir}`.
 
 ### 5.5 Parameters
 
-- Declared per action → real rich_click options (shown in `--help`, typed, validated).
+- Declared per job → real rich_click options (shown in `--help`, typed, validated).
 - `--set key=value` for scripts; `--params file.yaml`; `-- ...` passed to steps with
   `passthrough: true` (if several in range: `--args-for <step>="..."`).
 - Precedence: CLI > params file > declared env var (`env:`) > `default:`.
@@ -277,13 +277,13 @@ and reports folder `${run.reports_dir}`.
   be changed per layer: `local.ptk.yml` (per developer), `cx.ptk.yml` (CI), `--set`.
 - A default may be a template using `${env:...}`, `${vars.x}`, `${vh.*}` or
   `${project.*}` - e.g. a **per-variant default** `default: "${vh.data.toolchain}"`.
-  Templates are resolved and type-checked when the action runs; a default cannot
+  Templates are resolved and type-checked when the job runs; a default cannot
   refer to other parameters.
 
-### 5.5a Default action
+### 5.5a Default job
 
-`project.default_action` names the action run by plain `ptk` (and by `ptk run` /
-`ptk dry-run` without an action). It must exist and must not be maintainer-only;
+`project.default_job` names the job run by plain `ptk` (and by `ptk run` /
+`ptk dry-run` without a job). It must exist and must not be maintainer-only;
 both are checked when the configuration loads. The HTML help marks it.
 
 ### 5.6 Built-in steps (`uses:`)
@@ -296,14 +296,14 @@ Cobertura, ...) · `files.copy` / `files.clean` · `wait` · `echo`.
 ## 5a. Workspace layout
 
 ```
-_builds/<variant>/<action>/<set>/<step>/    working directory per step  ${run.build_dir}
+_builds/<variant>/<job>/<set>/<step>/    working directory per step  ${run.build_dir}
 _bin/<variant>/                             binaries per variant        ${run.bin_dir}
-_logs/<variant>/<action>/run.log            whole run; <set>/<step>.log per step
-_reports/<variant>/<action>/<set>/<step>/   reports per step            ${run.reports_dir}
+_logs/<variant>/<job>/run.log            whole run; <set>/<step>.log per step
+_reports/<variant>/<job>/<set>/<step>/   reports per step            ${run.reports_dir}
 ```
 
 Without variants the variant level is `default`. Root and folder names are
-configurable (`layout:`). Previous runs are archived per variant/action
+configurable (`layout:`). Previous runs are archived per variant/job
 (`logging.keep_history`).
 
 ## 6. Main point 5 — Unified logging
@@ -312,14 +312,14 @@ configurable (`layout:`). Previous runs are archived per variant/action
   started/finished, command output, and ptk's own levelled messages. The console
   and the log files are two observers of the same stream; reports (M7) are another.
 - **Logs** follow the workspace layout (5a); the latest run is always directly
-  in the action folder:
-  - `_logs/<variant>/<action>/run.log` — everything, each line tagged with its step
-  - `_logs/<variant>/<action>/<set>/<step>.log` — one file per step (command line,
+  in the job folder:
+  - `_logs/<variant>/<job>/run.log` — everything, each line tagged with its step
+  - `_logs/<variant>/<job>/<set>/<step>.log` — one file per step (command line,
     debug details, output, result)
-  - `_logs/<variant>/<action>/events.jsonl` — one JSON object per event (timestamps,
+  - `_logs/<variant>/<job>/events.jsonl` — one JSON object per event (timestamps,
     step, status, exit code, attempts, messages) for tools and reports
-  - `_logs/<variant>/<action>/run.json` — summary: status, params with sources, step tree
-  - `_logs/<variant>/<action>/_history/<run id>/` — previous runs, pruned to
+  - `_logs/<variant>/<job>/run.json` — summary: status, params with sources, step tree
+  - `_logs/<variant>/<job>/_history/<run id>/` — previous runs, pruned to
     `logging.keep_history` (0 = keep only the latest)
 - **Levels** for ptk's messages: trace (full masked environment per step), debug
   (cwd, Python runtime, env and secret names), info, warning (retries, allowed
@@ -335,7 +335,7 @@ configurable (`layout:`). Previous runs are archived per variant/action
 - **Source:** the canonical run summary (`run.json`, written from the same event
   stream as the logs) plus the tool results the steps left in their reports
   folders - so any report can be regenerated later (`ptk report export --run ID`).
-- **Report model** (domain): action, variant, params with sources, step tree with
+- **Report model** (domain): job, variant, params with sources, step tree with
   status, start offset, duration, exit code, attempts, log links; imported test
   suites, findings and coverage.
 - **Contributions:** a step writes results into `$PTK_STEP_REPORTS_DIR`
@@ -349,10 +349,10 @@ configurable (`layout:`). Previous runs are archived per variant/action
   of all steps at their real start times so parallel sets and slow steps are
   visible, parameters, tests, findings, coverage; relative links to the logs) ·
   Markdown · GitHub step summary (appended to `$GITHUB_STEP_SUMMARY`).
-- Written to `_reports/<variant>/<action>/report.*` after every run
+- Written to `_reports/<variant>/<job>/report.*` after every run
   (`reporting.dir` moves them); a reporting problem never changes the run's result.
-- Commands: `ptk report export [ACTION] [-V v] [--run ID] [-f FORMAT]... [-o DIR]` ·
-  `ptk report open [ACTION] [-V v] [--run ID]`.
+- Commands: `ptk report export [JOB] [-V v] [--run ID] [-f FORMAT]... [-o DIR]` ·
+  `ptk report open [JOB] [-V v] [--run ID]`.
 
 ---
 
@@ -404,10 +404,10 @@ tools:
 
 ### 9.2 Behaviour
 
-- Actions declare `requires_tools`. Before a run ptk checks them (version from
+- Jobs declare `requires_tools`. Before a run ptk checks them (version from
   the `check` command against the range); missing or wrong tools stop the run
-  with what to do. `ptk <action> --setup` installs them first. Dry runs never block.
-- `ptk setup install [--action A]... [--dry-run] [--allow-system] [--bootstrap-choco]`.
+  with what to do. `ptk <job> --setup` installs them first. Dry runs never block.
+- `ptk setup install [--job A]... [--dry-run] [--allow-system] [--bootstrap-choco]`.
 - Install order: Windows `choco -> uv tool -> download`; Linux/macOS
   `uv tool -> download -> apt/dnf` (apt/dnf only with `--allow-system`, via
   `sudo -n`). After installing, the tool is checked again.
@@ -435,17 +435,17 @@ tools:
 ## 9a. VS Code tasks
 
 - `ptk setup vscode tasks` creates or updates `.vscode/tasks.json` with one task per
-  visible action (label `ptk: <action>`), a `pickString` input for the variant,
-  and the default action as default build task.
+  visible job (label `ptk: <job>`), a `pickString` input for the variant,
+  and the default job as default build task.
 - Existing user tasks are kept: ptk only manages entries whose label starts with
   `ptk: ` and its `ptkVariant` input, so re-running is safe; `--check` reports
   drift (CI). Parameters keep their defaults (no prompts per parameter).
-- Maintainer-only actions appear only for maintainers (see 9b); `--users-only`
+- Maintainer-only jobs appear only for maintainers (see 9b); `--users-only`
   for a committed file.
 
 ## 9b. Maintainer-only commands
 
-- Actions can be marked `audience: maintainer`; built-in groups use
+- Jobs can be marked `audience: maintainer`; built-in groups use
   `command_audience: {setup.creds: maintainer}`.
 - `maintainers.ptk.yml` (committed, next to `.main.ptk.yml`) lists maintainers by git
   e-mail and/or OS user name. ptk compares it with `git config user.email` and the
@@ -459,50 +459,50 @@ tools:
 
 ```
 ptk [--config FILE] [--set k=v]... [--ci/--no-ci] [-v|-vv]
-ptk <action> [--<param> VALUE]... [-V VARIANT] [--from STEP] [--to STEP]
+ptk <job> [--<param> VALUE]... [-V VARIANT] [--from STEP] [--to STEP]
              [--params FILE] [-q] [--args-for STEP="ARGS"] [--setup] [-- args]
-ptk                                     run project.default_action
+ptk                                     run project.default_job
 
-ptk dry-run [<action> [same options]]  what would run - nothing is executed
-ptk run [<action>] [...]                generic form (scripts, CI); -p NAME=VALUE
+ptk dry-run [<job> [same options]]  what would run - nothing is executed
+ptk run [<job>] [...]                generic form (scripts, CI); -p NAME=VALUE
 ptk help [--no-open] [-o FILE]          full help as HTML, opened in the browser
 ptk setup init [DIRECTORY] [--name NAME] [--dry-run]  scaffold a project
 ptk setup config  show [--sources] | validate | schema
 ptk variant list | show | explain | check | set | new | gui
 ptk setup creds   setup | set | list | test | remove
 ptk setup configs sync [--diff] | check
-ptk setup install [--action A] [--dry-run]
+ptk setup install [--job A] [--dry-run]
 ptk setup self | doctor
 ptk setup vscode  tasks [--check] [--command CMD] [--users-only]
 ptk report  open | export
 ```
 
-`ptk dry-run <action>` (no separate `plan` command, no `--dry-run` flag on
-actions) prints the step tree with conditions evaluated, the final command of
+`ptk dry-run <job>` (no separate `plan` command, no `--dry-run` flag on
+jobs) prints the step tree with conditions evaluated, the final command of
 every step, Python runtimes, step env (secrets masked), every parameter value
 with its source and, with `--env`, the generated `PTK_*`/`VH_*` variables.
-Without `<action>`, `ptk`, `ptk run` and `ptk dry-run` use `project.default_action`.
+Without `<job>`, `ptk`, `ptk run` and `ptk dry-run` use `project.default_job`.
 
-### Generated action commands
+### Generated job commands
 
-- Each action is a command; each parameter a typed option (`int`, `float`,
+- Each job is a command; each parameter a typed option (`int`, `float`,
   `choice`, `bool` → `--x/--no-x`, `list` → `a,b`). Only given options are passed
   on, so configured defaults (incl. per-variant templates) and their sources
-  stay authoritative. `ptk dry-run <action>` has exactly the same options.
-- `ptk --help` shows the actions in their own panel; unknown commands get
-  "did you mean"; shell completion covers actions and their options.
-- Maintainer-only actions are hidden (help, completion, VS Code tasks) and refused
+  stay authoritative. `ptk dry-run <job>` has exactly the same options.
+- `ptk --help` shows the jobs in their own panel; unknown commands get
+  "did you mean"; shell completion covers jobs and their options.
+- Maintainer-only jobs are hidden (help, completion, VS Code tasks) and refused
   for users - also through `ptk run`.
 
 ### VS Code tasks (`ptk setup vscode tasks`)
 
-- One task per visible action (`ptk: <action>`), a variant picker input
-  (`${input:ptkVariant}`) when the project has variants, and the default action
+- One task per visible job (`ptk: <job>`), a variant picker input
+  (`${input:ptkVariant}`) when the project has variants, and the default job
   as the default build task.
 - Merges into `.vscode/tasks.json` (JSON with comments accepted): ptk's tasks and
   input are replaced, the user's tasks and inputs are kept; comments cannot be kept
   and a note says so. `--check` exits 1 if the file is out of date (CI);
-  `--users-only` leaves out maintainer actions for a committed file;
+  `--users-only` leaves out maintainer jobs for a committed file;
   `--command "uv run ptk"` if ptk is not on PATH.
 
 ## 10a. Advanced help (`ptk help`)
@@ -510,16 +510,16 @@ Without `<action>`, `ptk`, `ptk run` and `ptk dry-run` use `project.default_acti
 - Writes one self-contained HTML page (`.ptk/help.html`, no external resources,
   works offline / behind a VPN) and opens it in the default browser; on machines
   without a desktop it prints the path.
-- Content: project overview and configuration layers; every action with usage,
+- Content: project overview and configuration layers; every job with usage,
   parameters (type, choices, default, env variable) and its **step pipeline**
   (sequential steps on a rail, parallel sets as lanes, `when` conditions, Python
   runtime, timeouts, retries, secrets by variable name); variants; credentials
   (names, fields and env variables - never values); tools; configuration files;
   every CLI command with its options.
 - Search box (`/`), copy buttons, light/dark theme, print-friendly.
-- Maintainer-only actions only appear for maintainers.
+- Maintainer-only jobs only appear for maintainers.
 
-Actions and their parameters are generated from the configuration (rich_click),
+Jobs and their parameters are generated from the configuration (rich_click),
 so `ptk build --help` documents the project's real options.
 
 ---
@@ -528,7 +528,7 @@ so `ptk build --help` documents the project's real options.
 
 | Current | ptk |
 |---------|------|
-| `ACTIONS.<a>.PHASES` / `SETS` / `steps` | `actions.<a>.steps` (top-level = phases) |
+| `JOBS.<a>.PHASES` / `SETS` / `steps` | `jobs.<a>.steps` (top-level = phases) |
 | `parallel: true` | `parallel: true` |
 | `execute_if` | Dropped from required legacy migration scope by user decision |
 | `only_variants` / `omit_variants` | `when: "variant in [...]"` / `not in` |
@@ -552,7 +552,7 @@ Legacy conversion is not supported; configurations must use the current schema.
 | Skill | Use when | Content |
 |-------|----------|---------|
 | `ptk-config-authoring` | creating or changing `*.ptk.yml`, includes, overlays, vars | meta-model, merge rules and tags, substitution, `config validate/show --sources`, common mistakes |
-| `ptk-action-authoring` | adding/changing actions, steps, step sets, params | step kinds, controls, parallel rules, params + defaults + precedence, `ptk dry-run` before running, `--from/--to`, `audience: maintainer`, regenerating VS Code tasks |
+| `ptk-job-authoring` | adding/changing jobs, steps, step sets, params | step kinds, controls, parallel rules, params + defaults + precedence, `ptk dry-run` before running, `--from/--to`, `audience: maintainer`, regenerating VS Code tasks |
 | `ptk-python-steps` | running Python tools/scripts | uvx vs venv vs project vs cli interpreter, pinning versions, cache, Windows/Linux differences |
 | `ptk-variant-model` | adding features, variants, conditions | variant model, `when:`, explain/check, renaming features across configs |
 | `ptk-credentials` | adding a credential or fixing auth | provider chain, gopass+age setup, vault, CI env vars, masking rules, never on command lines |
@@ -561,7 +561,7 @@ Legacy conversion is not supported; configurations must use the current schema.
 | `ptk-reporting` | adding report output or importing tool results | run model, exporters, contributors (JUnit/SARIF/Cobertura), writing a contributor plugin |
 | `ptk-troubleshooting` | any failing ptk run or config | error categories → fixes, reading `run.log`/`events.jsonl`, `doctor`, `ptk dry-run`, variant `explain` |
 | `ptk-development` | changing ptk itself or writing plugins | architecture rules, where changes go, plugin entry points, definition of done (tests, docs, skills) |
-| `ptk-docs-writing` | documenting ptk features or project actions (docs-as-code) | doc structure, reference tables generated from the schema, examples tested in CI |
+| `ptk-docs-writing` | documenting ptk features or project jobs (docs-as-code) | doc structure, reference tables generated from the schema, examples tested in CI |
 
 Each skill contains: exact commands, rules, a verification checklist and the
 most common pitfalls — kept in sync with the implementation (definition of done).
@@ -591,9 +591,9 @@ formatted with `ruff format`. CI runs `ruff check` and `ruff format --check`.
 |---|-------------|-----------|
 | M1 ✅ | Meta-model, loader (include, overlays, tags, provenance), substitution, validation, JSON Schema | invalid configs fail with `file:line` + suggestion; `config show --sources` works |
 | M2 ✅ | Variant core integrated | `when:`, `${vh.*}`, `variant` commands, explain/check |
-| M3 ✅ | Execution engine: steps, sets, parallel, script types, uv Python modes, env per command; `ptk run`, `ptk dry-run`, default action, parameter defaults (incl. per variant); `ptk help` (HTML) with maintainer visibility | demo action runs on Linux; parallel set without shared state |
+| M3 ✅ | Execution engine: steps, sets, parallel, script types, uv Python modes, env per command; `ptk run`, `ptk dry-run`, default job, parameter defaults (incl. per variant); `ptk help` (HTML) with maintainer visibility | demo job runs on Linux; parallel set without shared state |
 | M4 ✅ | Unified logging | `run.log`, step logs, `events.jsonl`, `run.json`, history; levels; masking |
-| M5 ✅ | CLI: generated actions/params, `--from/--to`, `config`, `variant`, maintainer visibility (`maintainers.ptk.yml`), `vscode tasks` | `ptk build --help` shows declared params; maintainer actions hidden for others; tasks.json merge keeps user tasks |
+| M5 ✅ | CLI: generated jobs/params, `--from/--to`, `config`, `variant`, maintainer visibility (`maintainers.ptk.yml`), `vscode tasks` | `ptk build --help` shows declared params; maintainer jobs hidden for others; tasks.json merge keeps user tasks |
 | M6 ✅ | Credential handler: env, keyring, gopass, vault, prompt | `creds` commands; secrets only via step env; masking tested |
 | M7 ✅ | Unified reporting | JSON, JUnit, HTML, Markdown, GitHub summary; contributors API |
 | M8 ✅ | Shared configs: pre-commit, ruff, clang-format, clang-tidy, clangd | `configs sync/check/--diff` |
@@ -628,7 +628,7 @@ Former top-level commands remain hidden compatibility aliases.
 
 - Implemented `ptk setup init [DIRECTORY] [--name NAME] [--dry-run]` and the hidden
   `ptk init` alias, closing the scaffold feature described in section 2.3.
-- Generates a portable `hello` action and a new `.gitignore` when absent.
+- Generates a portable `hello` job and a new `.gitignore` when absent.
 - Refuses existing configuration, preserves existing ignore rules, and previews
   without writing files. Does not install tools or access credentials.
 - M11 is implemented with documented limits: finite scoped
@@ -680,21 +680,21 @@ Former top-level commands remain hidden compatibility aliases.
   create further legacy obligations. The legacy converter and both CLI spellings have been removed.
 - Drop `variant_matrix` as a separate deliverable. Named variants, inheritance,
   feature overrides and multi-variant execution cover the accepted requirement.
-- Shared `param_defaults` applies only to explicitly declared action parameters.
-  Explicit action defaults override shared values; required parameters remain
+- Shared `param_defaults` applies only to explicitly declared job parameters.
+  Explicit job defaults override shared values; required parameters remain
   required. Inherited defaults retain provenance and undergo normal type checks.
-- Automatically load configuration-directory `tools.ptk.yml` and `<action>.tools.ptk.yml`.
+- Automatically load configuration-directory `tools.ptk.yml` and `<job>.tools.ptk.yml`.
   Explicit includes are not applied a second time. Main/includes override auto
   files; CX, local and CLI layers follow. See `docs/configuration.rst` for ordering.
 - **Tool requirements override per tool.** Unmentioned global requirements stay;
-  action maps can add a tool, override its settings, or disable a named tool with
-  `false`. An empty list does not disable global requirements. Per-action tool
-  settings do not mutate the global definition or other actions.
-- `setup install --action NAME` and execution checks use effective per-action
+  job maps can add a tool, override its settings, or disable a named tool with
+  `false`. An empty list does not disable global requirements. Per-job tool
+  settings do not mutate the global definition or other jobs.
+- `setup install --job NAME` and execution checks use effective per-job
   settings; incompatible settings across a combined install selection are errors.
-- Explicit action/step `only_variants` and `omit_variants` fields discussed earlier
+- Explicit job/step `only_variants` and `omit_variants` fields discussed earlier
   remain a separate follow-up; current runtime filtering uses `when` on steps.
-  Maintainer action visibility uses `audience: maintainer`.
+  Maintainer job visibility uses `audience: maintainer`.
 
 ## Repository discovery and VMR (implemented)
 
@@ -718,7 +718,7 @@ Former top-level commands remain hidden compatibility aliases.
   remain unloaded. Manual members receive workspace context through root routing;
   direct invocation inside an ordinary manual member is standalone.
 - Every participating member needs its own root entry file and unique alias.
-  CLI: `ptk <alias> <original command>`, including setup, variants and actions.
+  CLI: `ptk <alias> <original command>`, including setup, variants and jobs.
   Global options precede the alias; bare VMR invocation lists repositories.
 - Regression coverage checks path separation, includes/overlays, root boundaries,
   aliases, member containment, Git indirection, manual markers, explicit opt-out,
@@ -730,7 +730,7 @@ Former top-level commands remain hidden compatibility aliases.
   and credential tests, stale/historical report inputs and cross-layer true tool
   requirements. Editor schema and generated reference describe authored inputs.
 - Isolated child environments default on, with explicit host-variable/PATH opt-ins.
-  Managed tool versions coexist by definition identity; actions select paths and
+  Managed tool versions coexist by definition identity; jobs select paths and
   verify tools in their actual subprocess environment. System/custom installers
   remain shared host operations, not isolated package managers.
 - VMR shares credential coordination, config views/validation, host/per-repo
@@ -764,19 +764,19 @@ Former top-level commands remain hidden compatibility aliases.
 
 ## Init starter organization
 
-- Separate hello/build action files under actions/, discovered by a glob.
+- Separate hello/build job files under jobs/, discovered by a glob.
 - Topic folders for variants (model plus debug/release files), tools, versioning,
   environment, credentials and shared formatter/linter settings.
-- Commented optional field examples; starter actions remain runnable offline.
+- Commented optional field examples; starter jobs remain runnable offline.
 - Conventional CX/maintainer entries remain at config root; other files use includes.
 
 ## PTK self-hosted development commands
 
-- Replaced repository starter actions with test/check/docs/package, one default variant,
+- Replaced repository starter jobs with test/check/docs/package, one default variant,
   and no components; preserved topic-based configuration under config/ptk.
 - Python project runtimes accept explicit dependency groups, using pyproject.toml
   as the source for pytest/Ruff/Sphinx dependencies.
-- CI exercises the same PTK actions, with JUnit results and strict Sphinx builds.
+- CI exercises the same PTK jobs, with JUnit results and strict Sphinx builds.
 - Fixed the repository Git tag match and added a configured development fallback for
   untagged, shallow and source-only checkouts.
 
@@ -799,20 +799,36 @@ Former top-level commands remain hidden compatibility aliases.
 
 ## Local workflows and current authoring coverage
 
-Implemented local `workflow.ptk.yml` composition of existing actions, including
-VMR repository-qualified calls, nested sequential/parallel groups, bounded action
-concurrency, preflight, cancellation, per-action isolation and retained child reports.
+Implemented local `workflow.ptk.yml` composition of existing jobs, including
+VMR repository-qualified calls, nested sequential/parallel groups, bounded job
+concurrency, preflight, cancellation, per-job isolation and retained child reports.
 The CLI exposes `workflow list/show/dry-run/run`; execution is rejected on CX/CI.
 VS Code tasks include workflows, and regular setup init scaffolds a local starter.
 
 Current project-facing skills now include `ptk-workflow-authoring`, `ptk-versioning`
-and `ptk-package-preparation`; existing tools/reporting/action/VMR skills cover the
+and `ptk-package-preparation`; existing tools/reporting/job/VMR skills cover the
 new installers, default Docker install policy, report cards, filtering and opening.
 The offline authoring bundle contains fourteen project-facing skills; two additional
 skills remain checkout-only. See docs/workflows.rst and docs/skills.rst.
 
 Deferred explicitly: `ptk setup init --workflows` will generate GitHub templates.
-Action calls become jobs invoking a generic PTK run-action GitHub Action. Sequential
+Job calls become jobs invoking a generic PTK run-job GitHub Action. Sequential
 and nested parallel structure determines job `needs`: each branch inherits incoming
 needs, and its terminal jobs join before subsequent steps. Template generation,
 checkout/artifact policy and the reusable GitHub Action are not implemented yet.
+
+## Job terminology and report navigation
+
+PTK executable units are now jobs throughout configuration, CLI options, Python
+interfaces, runtime variables, JSON reports, examples and bundled skills. This is a
+breaking rename without legacy field aliases; docs/configuration.rst lists the
+required updates. Setup init scaffolds jobs/ and editor setup installs the renamed
+ptk-job-authoring skill. GitHub Actions terminology retains its platform meaning.
+
+Local workflow shortcuts appear beside jobs in CLI help. Name collisions prompt
+locally, select the job on CX, and require explicit commands for non-interactive
+callers. Editor tasks always select jobs/workflows explicitly. Report titles use
+Job - or Workflow -. Workflow tables link only HTML child reports, retaining JSON
+artifacts. A selected workflow summary suppresses child auto-opening; otherwise
+child policies apply after completion. Interactive VS Code terminals print scoped
+loopback HTTP links, with default-browser settings documented in docs/editor.rst.

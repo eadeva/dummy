@@ -85,24 +85,24 @@ class InitProject:
         }
         configs = {
             "workflow.ptk.yml": "# Local orchestration; run `ptk workflow run verify`. Not executed on CX.\n"
-            "# Nest steps under parallel: true for independent action calls.\n"
+            "# Nest steps under parallel: true for independent job calls.\n"
             "# open_report: always (default), on-errors, or null to disable opening.\n"
             + dump(
                 {
                     "workflows": {
                         "verify": {
-                            "help": "Run the starter actions locally",
+                            "help": "Run the starter jobs locally",
                             "open_report": "always",
                             "steps": [
-                                {"hello": {"action": "hello"}},
-                                {"build": {"action": "build"}},
+                                {"hello": {"job": "hello"}},
+                                {"build": {"job": "build"}},
                             ],
                         }
                     }
                 }
             ),
             "project.ptk.yml": "# Composition root: includes are relative to this file.\n"
-            "# Add actions as separate files under actions/; the glob loads them.\n"
+            "# Add jobs as separate files under jobs/; the glob loads them.\n"
             + dump(
                 {
                     "schema_version": 1,
@@ -112,9 +112,9 @@ class InitProject:
                         "environment/environment.ptk.yml",
                         "credentials/credentials.ptk.yml",
                         "configs/configs.ptk.yml",
-                        "actions/*.ptk.yml",
+                        "jobs/*.ptk.yml",
                     ],
-                    "project": {"name": name, "default_action": "hello"},
+                    "project": {"name": name, "default_job": "hello"},
                     "variants": "variants/variants.ptk.yml",
                 }
             )
@@ -122,10 +122,10 @@ class InitProject:
             "# param_defaults: {jobs: 4}\n"
             "# logging: {level: info, keep_history: 10}\n"
             "# reporting: {formats: [json, html]}\n",
-            "actions/hello.ptk.yml": '# First action: try `ptk hello --message "Hello" -V debug`.\n'
+            "jobs/hello.ptk.yml": '# First job: try `ptk hello --message "Hello" -V debug`.\n'
             + dump(
                 {
-                    "actions": {
+                    "jobs": {
                         "hello": {
                             "help": "Print a message and the selected project version",
                             "params": {
@@ -156,15 +156,15 @@ class InitProject:
                     }
                 }
             )
-            + "# Action options (place alongside help/params/steps):\n"
-            "#     audience: maintainer  # Restrict this action to listed maintainers.\n"
+            + "# Job options (place alongside help/params/steps):\n"
+            "#     audience: maintainer  # Restrict this job to listed maintainers.\n"
             "#     open_report: on_errors  # always | on_errors; disabled on CX.\n"
-            "#     env: {GREETING_STYLE: friendly}  # Applies only to this action.\n",
-            "actions/build.ptk.yml": "# Second action: a portable build starter; no compiler installation needed.\n"
+            "#     env: {GREETING_STYLE: friendly}  # Applies only to this job.\n",
+            "jobs/build.ptk.yml": "# Second job: a portable build starter; no compiler installation needed.\n"
             "# Run `ptk build -V release`; replace/extend these steps for your build.\n"
             + dump(
                 {
-                    "actions": {
+                    "jobs": {
                         "build": {
                             "help": "Generate version files for C/C++ and CMake",
                             "steps": [
@@ -240,7 +240,7 @@ class InitProject:
                 }
             ),
             "tools/tools.ptk.yml": """# Tool definitions and global requirements. Nothing is installed by this starter.
-# Uncomment the tool, then enable it in an action's requires_tools.
+# Uncomment the tool, then enable it in a job's requires_tools.
 tools: {}
 requires_tools: {}
 # Replace tools: {} with, for example:
@@ -254,7 +254,7 @@ requires_tools: {}
 #       url: https://example.com/tool.zip  # Replace with the real download URL.
 #       sha256: REPLACE_WITH_SHA256       # Verify the downloaded archive.
 #       bin: bin                         # Executable directory inside the archive.
-# requires_tools: {cmake: true}     # Require globally instead of per action.
+# requires_tools: {cmake: true}     # Require globally instead of per job.
 """,
             "versioning/versioning.ptk.yml": "# Literal version works before you create any Git tags.\n"
             + dump(
@@ -279,7 +279,7 @@ requires_tools: {}
             )
             + "# Under environment, customize only what commands need:\n"
             "#   keep: [HTTP_PROXY, HTTPS_PROXY]  # Copy named variables from the caller.\n"
-            "#   set: {BUILD_MODE: reproducible} # Set values for all actions.\n"
+            "#   set: {BUILD_MODE: reproducible} # Set values for all jobs.\n"
             "#   unset: [UNWANTED_VARIABLE]      # Remove inherited variables.\n"
             "#   path_prepend: [/opt/sdk/bin]    # Explicit extra executable paths.\n"
             "#   path_append: []\n",
@@ -309,19 +309,19 @@ configs: {}
 environment:
   set:
     PTK_CI: "true"
-# Optional action override; place at the top level:
-# actions:
+# Optional job override; place at the top level:
+# jobs:
 #   build:
 #     env: {BUILD_MODE: ci}
 """,
             "maintainers.ptk.yml": """# Conventional entry point for maintainer identities; stays at config root.
 maintainers: []
-# Replace maintainers: [] with real identities before restricting actions:
+# Replace maintainers: [] with real identities before restricting jobs:
 # maintainers:
 #   - name: Project Maintainer
 #     email: maintainer@example.com  # Matches this repository's Git identity.
 #     user: maintainer              # Optional operating-system username.
-# Set audience: maintainer on an action to restrict it.
+# Set audience: maintainer on a job to restrict it.
 """,
         }
         files.update(

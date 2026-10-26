@@ -3,8 +3,8 @@ repository:
   config_path: config
 project:
   name: Authoring example
-  default_action: build
-include: [actions.ptk.yml]
+  default_job: build
+include: [jobs.ptk.yml]
 variants: variants.ptk.yml
 param_defaults:
   jobs: 4

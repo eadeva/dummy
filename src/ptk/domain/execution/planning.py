@@ -1,4 +1,4 @@
-"""Build the plan of an action (pure).
+"""Build the plan of a job (pure).
 
 * ``--from`` / ``--to`` select a range of top-level steps (phases)
 * ``when:`` conditions are evaluated with variant symbols, ``variant``, ``os``,
@@ -48,7 +48,7 @@ def select_range(steps: list[StepSpec], start: str | None, end: str | None) -> s
     return set(names[first : last + 1])
 
 
-def plan_action(
+def plan_job(
     steps: list[StepSpec],
     ctx: PlanContext,
     *,

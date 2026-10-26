@@ -1,8 +1,8 @@
 """ptk command line (driver).
 
 Thin layer: parse options, call use cases, present results. The configured
-actions are generated commands (see :mod:`.actions`); ``ptk run ACTION`` is
-the generic form and ``ptk dry-run ACTION`` previews either.
+jobs are generated commands (see :mod:`.jobs`); ``ptk run JOB`` is
+the generic form and ``ptk dry-run JOB`` previews either.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from ...application.use_cases.help import HelpCommand, HelpOption
 from ...application.use_cases.init import InitResult
 from ...domain.errors import ConfigError, PtkError
 from .access import AccessGroup
-from .actions import (
+from .jobs import (
     ProjectGroup,
     build_request,
     common_options,
@@ -60,7 +60,7 @@ click.rich_click.SHOW_ARGUMENTS = True
     "-c",
     "--config",
     type=click.Path(path_type=Path, dir_okay=False, exists=True),
-    is_eager=True,  # known before --help lists the project's actions
+    is_eager=True,  # known before --help lists the project's jobs
     help="Path to .main.ptk.yml (default: search upwards from the current directory).",
 )
 @click.option(
@@ -70,7 +70,7 @@ click.rich_click.SHOW_ARGUMENTS = True
     multiple=True,
     is_eager=True,
     metavar="PATH=VALUE",
-    help="Override a configuration value, e.g. --set actions.build.params.jobs.default=4",
+    help="Override a configuration value, e.g. --set jobs.build.params.jobs.default=4",
 )
 @click.option(
     "--ci/--no-ci",
@@ -95,8 +95,8 @@ def cli(
 ) -> None:
     """[bold]ptk[/] - project tool kit.
 
-    The project's actions are commands too ([bold]ptk build --help[/]). Without a
-    command, ptk runs the default action ([italic]project.default_action[/]).
+    The project's jobs are commands too ([bold]ptk build --help[/]). Without a
+    command, ptk runs the default job ([italic]project.default_job[/]).
     """
     state = state_of(ctx)
     if ctx.invoked_subcommand is not None:
@@ -108,13 +108,13 @@ def cli(
         click.echo(ctx.get_help())
         return
     project = state.try_project()  # outside a project / broken config: show the help
-    default = project.config.project.default_action if project else None
+    default = project.config.project.default_job if project else None
     if default is None:
         click.echo(ctx.get_help())
         return
     err_console.print(
-        f"[dim]running the default action '{escape(default)}' "
-        "(project.default_action) - 'ptk --help' lists all commands[/]",
+        f"[dim]running the default job '{escape(default)}' "
+        "(project.default_job) - 'ptk --help' lists all commands[/]",
         highlight=False,
     )
     guarded(execute)(ctx, guarded(build_request)(ctx, None))
@@ -158,7 +158,7 @@ def config_validate(ctx: click.Context) -> None:
 @click.pass_context
 @guarded
 def config_show(ctx: click.Context, path: str | None, sources: bool, fmt: str) -> None:
-    """Show the merged configuration (or the value at PATH, e.g. actions.build)."""
+    """Show the merged configuration (or the value at PATH, e.g. jobs.build)."""
     state = _state(ctx)
     result = state.app.show_config.execute(state.project(), path)
     if sources:
@@ -411,24 +411,24 @@ def variant_check(ctx: click.Context, names: tuple[str, ...], strict: bool) -> N
 
 
 @cli.command("run")
-@click.argument("action", required=False)
+@click.argument("job", required=False)
 @click.option(
     "-p",
     "--param",
     "params",
     multiple=True,
     metavar="NAME=VALUE",
-    help="Set an action parameter (unset ones use their configured default).",
+    help="Set a job parameter (unset ones use their configured default).",
 )
 @click.pass_context
 @guarded
 def run_command(
-    ctx: click.Context, action: str | None, params: tuple[str, ...], **options: Any
+    ctx: click.Context, job: str | None, params: tuple[str, ...], **options: Any
 ) -> None:
-    """Run ACTION by name - the generic form for scripts and CI.
+    """Run JOB by name - the generic form for scripts and CI.
 
-    Same as [bold]ptk ACTION[/], but parameters are given as [bold]-p NAME=VALUE[/].
-    ACTION defaults to [italic]project.default_action[/]. Arguments after [bold]--[/] go
+    Same as [bold]ptk JOB[/], but parameters are given as [bold]-p NAME=VALUE[/].
+    JOB defaults to [italic]project.default_job[/]. Arguments after [bold]--[/] go
     to the step with [italic]passthrough: true[/].
 
     Exit code: 0 passed, 1 failed, 2 usage/configuration error, 130 cancelled.
@@ -436,16 +436,16 @@ def run_command(
     quiet = options.pop("quiet", False)
     setup = options.pop("setup", False)
     extra = options.pop("extra", ())
-    if action is not None and action.startswith("-"):
-        # "ptk run -- -k x": click put the first pass-through word into ACTION
-        extra, action = (action, *extra), None
+    if job is not None and job.startswith("-"):
+        # "ptk run -- -k x": click put the first pass-through word into JOB
+        extra, job = (job, *extra), None
     request = build_request(
-        ctx, action, params=pairs(params, "--param"), extra=extra, **options
+        ctx, job, params=pairs(params, "--param"), extra=extra, **options
     )
     execute(ctx, request, quiet=quiet, setup=setup)
 
 
-# the same options as the generated action commands (incl. the trailing [-- ARGS])
+# the same options as the generated job commands (incl. the trailing [-- ARGS])
 run_command.params.extend(common_options(dry_run=False))
 
 
@@ -453,12 +453,12 @@ run_command.params.extend(common_options(dry_run=False))
 @click.pass_context
 @guarded
 def dry_run_group(ctx: click.Context, **options: Any) -> None:
-    """Show what an action would do, without running anything.
+    """Show what a job would do, without running anything.
 
-    [bold]ptk dry-run ACTION [OPTIONS][/] takes exactly the options of
-    [bold]ptk ACTION[/] and prints the steps with conditions evaluated, the final
+    [bold]ptk dry-run JOB [OPTIONS][/] takes exactly the options of
+    [bold]ptk JOB[/] and prints the steps with conditions evaluated, the final
     command of every step, Python runtimes, the step environment (secrets masked)
-    and where every parameter value comes from. Without ACTION: the default action.
+    and where every parameter value comes from. Without JOB: the default job.
     """
     if ctx.invoked_subcommand is None:
         show_env = options.pop("show_env", False)
@@ -468,7 +468,7 @@ def dry_run_group(ctx: click.Context, **options: Any) -> None:
         )
 
 
-# without ACTION, "ptk dry-run -V x" previews the default action with these options
+# without JOB, "ptk dry-run -V x" previews the default job with these options
 dry_run_group.params.extend(
     p for p in common_options(dry_run=True) if p.name not in ("extra", "args_for")
 )
@@ -611,11 +611,11 @@ def creds_setup(ctx: click.Context, create_vault: bool) -> None:
 @click.command("install")
 @click.option(
     "-a",
-    "--action",
-    "actions",
+    "--job",
+    "jobs",
     multiple=True,
-    metavar="ACTION",
-    help="Only the tools of these actions (default: all configured tools).",
+    metavar="JOB",
+    help="Only the tools of these jobs (default: all configured tools).",
 )
 @click.option(
     "--dry-run", "dry_run", is_flag=True, help="Only show what would be installed."
@@ -630,7 +630,7 @@ def creds_setup(ctx: click.Context, create_vault: bool) -> None:
 @guarded
 def setup_command(
     ctx: click.Context,
-    actions: tuple[str, ...],
+    jobs: tuple[str, ...],
     dry_run: bool,
     allow_system: bool,
     bootstrap_choco: bool,
@@ -645,7 +645,7 @@ def setup_command(
     ok = install_tools(
         state,
         project,
-        list(actions) or None,
+        list(jobs) or None,
         dry_run=dry_run,
         allow_system=allow_system,
     )
@@ -780,18 +780,18 @@ def report_group() -> None:
     """Reports of past runs: export them again or open them in the browser."""
 
 
-def _report_target(ctx: click.Context, action: str | None) -> tuple[Any, str]:
+def _report_target(ctx: click.Context, job: str | None) -> tuple[Any, str]:
     project = _state(ctx).project()
-    name = action or project.config.project.default_action
+    name = job or project.config.project.default_job
     if not name:
-        raise PtkError("which action? (no ACTION given and no project.default_action)")
-    if name not in project.config.actions:
-        raise PtkError(f"unknown action '{name}'")
+        raise PtkError("which job? (no JOB given and no project.default_job)")
+    if name not in project.config.jobs:
+        raise PtkError(f"unknown job '{name}'")
     return project, name
 
 
 @report_group.command("export")
-@click.argument("action", required=False)
+@click.argument("job", required=False)
 @click.option(
     "-V", "--variant", help="Variant (default: the configured default variant)."
 )
@@ -810,20 +810,20 @@ def _report_target(ctx: click.Context, action: str | None) -> tuple[Any, str]:
     "-o",
     "--output",
     type=click.Path(path_type=Path, file_okay=False),
-    help="Target folder (default: _reports/<variant>/<action>).",
+    help="Target folder (default: _reports/<variant>/<job>).",
 )
 @click.pass_context
 @guarded
 def report_export(
     ctx: click.Context,
-    action: str | None,
+    job: str | None,
     variant: str | None,
     run_id: str | None,
     formats: tuple[str, ...],
     output: Path | None,
 ) -> None:
-    """Write the report of the latest (or a given) run of ACTION again."""
-    project, name = _report_target(ctx, action)
+    """Write the report of the latest (or a given) run of JOB again."""
+    project, name = _report_target(ctx, job)
     service = _state(ctx).app.reports
     summary = service.latest(project, name, variant, run_id)
     report, files = service.write(project, summary, list(formats) or None, output)
@@ -834,7 +834,7 @@ def report_export(
 
 
 @report_group.command("open")
-@click.argument("action", required=False)
+@click.argument("job", required=False)
 @click.option(
     "-V", "--variant", help="Variant (default: the configured default variant)."
 )
@@ -844,10 +844,10 @@ def report_export(
 @click.pass_context
 @guarded
 def report_open(
-    ctx: click.Context, action: str | None, variant: str | None, run_id: str | None
+    ctx: click.Context, job: str | None, variant: str | None, run_id: str | None
 ) -> None:
-    """Open the HTML report of the latest (or a given) run of ACTION in the browser."""
-    project, name = _report_target(ctx, action)
+    """Open the HTML report of the latest (or a given) run of JOB in the browser."""
+    project, name = _report_target(ctx, job)
     service = _state(ctx).app.reports
     summary = service.latest(project, name, variant, run_id)
     target = None
@@ -927,7 +927,7 @@ def vscode_skills(ctx: click.Context, check: bool) -> None:
 @click.option(
     "--users-only",
     is_flag=True,
-    help="Leave out maintainer-only actions (for a tasks.json that is committed).",
+    help="Leave out maintainer-only jobs (for a tasks.json that is committed).",
 )
 @click.option(
     "-o",
@@ -940,10 +940,10 @@ def vscode_skills(ctx: click.Context, check: bool) -> None:
 def vscode_tasks(
     ctx: click.Context, check: bool, command: str, users_only: bool, output: Path | None
 ) -> None:
-    """Add a task for every action to .vscode/tasks.json.
+    """Add a task for every job to .vscode/tasks.json.
 
     Tasks labelled [bold]ptk: ...[/] and the variant picker input are managed by ptk;
-    all other tasks and inputs in the file are kept. The default action becomes the
+    all other tasks and inputs in the file are kept. The default job becomes the
     default build task (Ctrl+Shift+B).
     """
     state = _state(ctx)
@@ -978,7 +978,7 @@ def vscode_tasks(
     if result.written:
         console.print(
             f"updated [bold]{escape(str(result.path))}[/]: "
-            f"{', '.join(result.labels) or 'no actions'}",
+            f"{', '.join(result.labels) or 'no jobs'}",
             highlight=False,
         )
         if result.lost_comments:
@@ -1046,9 +1046,9 @@ def _collect_commands(
         if isinstance(command, click.Group):
             for child_name in command.list_commands(sub):
                 child = command.get_command(sub, child_name)
-                # generated action commands have their own section in the help page
-                is_action = hasattr(child, "ptk_action")
-                if child is not None and not child.hidden and not is_action:
+                # generated job commands have their own section in the help page
+                is_job = hasattr(child, "ptk_job")
+                if child is not None and not child.hidden and not is_job:
                     visit(child, sub, [*path, child_name])
 
     # Collect only the selected repository, even when the real root is a VMR.
@@ -1071,7 +1071,7 @@ def _collect_commands(
 )
 @click.pass_context
 def help_command(ctx: click.Context, output: Path | None, no_open: bool) -> None:
-    """Open the full help as a web page: every action with its parameters and steps, variants, credentials,
+    """Open the full help as a web page: every job with its parameters and steps, variants, credentials,
     tools and all commands. Works offline."""
     import tempfile
 
@@ -1091,7 +1091,7 @@ def help_command(ctx: click.Context, output: Path | None, no_open: bool) -> None
     while parent is not None:
         if getattr(parent.command, "repository_boundary", False):
             prefix = f"ptk {parent.info_name}"
-            for item in [*doc.commands, *doc.actions]:
+            for item in [*doc.commands, *doc.jobs]:
                 if item.usage == "ptk" or item.usage.startswith("ptk "):
                     item.usage = prefix + item.usage[3:]
             break
@@ -1235,7 +1235,7 @@ def _setup_dispatch(ctx: click.Context, **options: Any) -> None:
             )
         return
     if supplied:
-        # Compatibility: ptk setup --action A --dry-run.
+        # Compatibility: ptk setup --job A --dry-run.
         ctx.invoke(setup_command, **options)
     else:
         click.echo(ctx.get_help())
@@ -1249,7 +1249,7 @@ def _group_setup_commands() -> None:
         invoke_without_command=True,
         params=list(setup_command.params),
         epilog="Use 'ptk setup install' for tool installation. "
-        "Legacy 'ptk setup --action A' remains supported.",
+        "Legacy 'ptk setup --job A' remains supported.",
     )
     setup.add_command(setup_command, "install")
     setup.add_command(init_command, "init")

@@ -11,10 +11,10 @@ ptk-config-authoring
 .. literalinclude:: ../.claude/skills/ptk-config-authoring/SKILL.md
    :language: markdown
 
-ptk-action-authoring
+ptk-job-authoring
 --------------------
 
-.. literalinclude:: ../.claude/skills/ptk-action-authoring/SKILL.md
+.. literalinclude:: ../.claude/skills/ptk-job-authoring/SKILL.md
    :language: markdown
 
 ptk-python-steps

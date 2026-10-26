@@ -6,7 +6,7 @@ import pytest
 
 from ptk.adapters.host import SystemHost
 from ptk.application.ports import ProcessOutcome
-from ptk.application.use_cases.tools import ToolService, tools_for_actions
+from ptk.application.use_cases.tools import ToolService, tools_for_jobs
 from ptk.domain.config.model import ToolSpec
 from ptk.domain.tools import tool_identity
 
@@ -53,7 +53,7 @@ tools:
     check: compiler --version
     uv_tool: compiler==12.0
 requires_tools: [compiler]
-actions:
+jobs:
   build:
     requires_tools: [compiler]
     steps:
@@ -82,13 +82,13 @@ def test_docker_checks_and_paths_remain_but_install_never_runs(project, output):
     assert preview.ok == result.ok
 
 
-def test_host_install_and_action_override(project):
+def test_host_install_and_job_override(project):
     runner, installer = Runner(), Installer()
     service = ToolService(SystemHost({"PTK_DOCKER": "0"}), runner, installer)
     service.setup(project, ["compiler"])
     assert installer.installed == ["compiler"]
-    project.config.actions["build"].requires_tools = {"compiler": ToolSpec(docker=True)}
-    selected = tools_for_actions(project, ["build"])
+    project.config.jobs["build"].requires_tools = {"compiler": ToolSpec(docker=True)}
+    selected = tools_for_jobs(project, ["build"])
     service = ToolService(SystemHost({"PTK_DOCKER": "1"}), runner, installer)
     service.setup(selected, ["compiler"])
     assert installer.installed == ["compiler", "compiler"]

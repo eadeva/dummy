@@ -4,16 +4,16 @@ from __future__ import annotations
 
 import pytest
 
-from ptk.domain.config.model import ActionSpec, ParamSpec
+from ptk.domain.config.model import JobSpec, ParamSpec
 from ptk.domain.config.substitution import Scope
 from ptk.domain.execution import environment as envs
 from ptk.domain.execution.commands import PythonRuntime, build_command
 from ptk.domain.execution.params import ParamError, resolve_params
-from ptk.domain.execution.planning import PlanContext, PlanError, plan_action
+from ptk.domain.execution.planning import PlanContext, PlanError, plan_job
 
 
-def action(steps: list) -> ActionSpec:
-    return ActionSpec.model_validate({"steps": steps})
+def job(steps: list) -> JobSpec:
+    return JobSpec.model_validate({"steps": steps})
 
 
 def ctx(**kwargs) -> PlanContext:
@@ -81,9 +81,7 @@ STEPS = [
 
 
 def test_plan_substitutes_and_evaluates_conditions():
-    steps = plan_action(
-        action(STEPS).steps, ctx(symbols={"LINT": False}, params={"jobs": 4})
-    )
+    steps = plan_job(job(STEPS).steps, ctx(symbols={"LINT": False}, params={"jobs": 4}))
     build = steps[1]
     assert build.run == ["make", "-j", "4"]
     lint, test = steps[2].children
@@ -92,32 +90,32 @@ def test_plan_substitutes_and_evaluates_conditions():
 
 
 def test_from_to_range():
-    steps = plan_action(
-        action(STEPS).steps, ctx(params={"jobs": 1}), start="build", end="checks"
+    steps = plan_job(
+        job(STEPS).steps, ctx(params={"jobs": 1}), start="build", end="checks"
     )
     assert [s.skip_reason is None for s in steps] == [False, True, True, False]
     assert steps[2].children[1].skip_reason is None
     with pytest.raises(PlanError, match="did you mean 'build'"):
-        plan_action(action(STEPS).steps, ctx(), start="biuld")
+        plan_job(job(STEPS).steps, ctx(), start="biuld")
     with pytest.raises(PlanError, match="comes after"):
-        plan_action(
-            action(STEPS).steps, ctx(params={"jobs": 1}), start="package", end="build"
+        plan_job(
+            job(STEPS).steps, ctx(params={"jobs": 1}), start="package", end="build"
         )
 
 
 def test_skipped_set_skips_children():
-    steps = plan_action(action(STEPS).steps, ctx(params={"jobs": 1}), end="build")
+    steps = plan_job(job(STEPS).steps, ctx(params={"jobs": 1}), end="build")
     assert all(child.skip_reason for child in steps[2].children)
 
 
 def test_passthrough():
-    steps = plan_action(
-        action(STEPS).steps, ctx(params={"jobs": 1}, passthrough=["-k", "a b"])
+    steps = plan_job(
+        job(STEPS).steps, ctx(params={"jobs": 1}, passthrough=["-k", "a b"])
     )
     assert steps[2].children[1].run == ["pytest", "-k", "a b"]
     with pytest.raises(PlanError, match="no selected step"):
-        plan_action(
-            action(STEPS).steps, ctx(params={"jobs": 1}, passthrough=["x"]), end="build"
+        plan_job(
+            job(STEPS).steps, ctx(params={"jobs": 1}, passthrough=["x"]), end="build"
         )
 
 
@@ -127,18 +125,16 @@ def test_passthrough_ambiguous_needs_args_for():
         {"b": {"run": "y", "passthrough": True}},
     ]
     with pytest.raises(PlanError, match="ambiguous"):
-        plan_action(action(steps).steps, ctx(passthrough=["1"]))
-    planned = plan_action(action(steps).steps, ctx(args_for={"b": ["--fast", "it's"]}))
+        plan_job(job(steps).steps, ctx(passthrough=["1"]))
+    planned = plan_job(job(steps).steps, ctx(args_for={"b": ["--fast", "it's"]}))
     assert planned[1].run == "y --fast 'it'\"'\"'s'"
     with pytest.raises(PlanError, match="does not accept"):
-        plan_action(action([{"a": "x"}]).steps, ctx(args_for={"a": ["1"]}))
+        plan_job(job([{"a": "x"}]).steps, ctx(args_for={"a": ["1"]}))
 
 
 def test_unknown_reference_is_reported_with_step():
     with pytest.raises(PlanError, match="step 'build'.*did you mean"):
-        plan_action(
-            action([{"build": "make ${params.jbos}"}]).steps, ctx(params={"jobs": 1})
-        )
+        plan_job(job([{"build": "make ${params.jbos}"}]).steps, ctx(params={"jobs": 1}))
 
 
 # --------------------------------------------------------------------------- environment
@@ -177,7 +173,7 @@ def test_windows_path_is_case_insensitive():
 
 
 def one(run, **spec):
-    return plan_action(action([{"s": {"run": run, **spec}}]).steps, ctx())[0]
+    return plan_job(job([{"s": {"run": run, **spec}}]).steps, ctx())[0]
 
 
 def test_list_runs_directly_and_string_through_shell():

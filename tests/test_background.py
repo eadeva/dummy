@@ -20,14 +20,14 @@ def execute(tmp_path, steps, cancel=None):
             {
                 "repository": {"alias": "demo", "config_path": "."},
                 "project": {"name": "background"},
-                "actions": {"go": {"steps": steps}},
+                "jobs": {"go": {"steps": steps}},
             }
         )
     )
     app = create_app(environ=dict(os.environ))
     project = app.load_project.execute(tmp_path)
-    prepared = app.prepare_run(project).execute(project, RunRequest(action="go"))
-    return app.run_action(project).execute(prepared, cancel=cancel)
+    prepared = app.prepare_run(project).execute(project, RunRequest(job="go"))
+    return app.run_job(project).execute(prepared, cancel=cancel)
 
 
 def command(code, **kwargs):

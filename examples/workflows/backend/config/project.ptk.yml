@@ -5,7 +5,7 @@ variants:
   variants:
     debug: {}
     release: {}
-actions:
+jobs:
   test:
     params:
       suite: {type: choice, default: unit, choices: [unit, smoke]}

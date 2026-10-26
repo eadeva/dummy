@@ -1,4 +1,4 @@
-"""Check and install the tools actions need (use case ``ToolService``)."""
+"""Check and install the tools jobs need (use case ``ToolService``)."""
 
 from __future__ import annotations
 
@@ -37,14 +37,14 @@ class SetupResult:
         return status.ok or self.outcome.startswith("would install")
 
 
-def tools_for_actions(project: Project, actions: list[str] | None = None) -> Project:
-    """Apply per-tool settings without modifying other actions or the source project."""
+def tools_for_jobs(project: Project, jobs: list[str] | None = None) -> Project:
+    """Apply per-tool settings without modifying other jobs or the source project."""
     config = project.config.model_copy(deep=True)
-    selections = [config.requires_tools] if actions is None else []
-    for name in actions or []:
-        if name not in config.actions:
-            raise PtkError(f"unknown action '{name}'")
-        selections.append(config.actions[name].requires_tools)
+    selections = [config.requires_tools] if jobs is None else []
+    for name in jobs or []:
+        if name not in config.jobs:
+            raise PtkError(f"unknown job '{name}'")
+        selections.append(config.jobs[name].requires_tools)
     overrides = {}
     for selection in selections:
         for name, spec in selection.items():
@@ -60,22 +60,20 @@ def tools_for_actions(project: Project, actions: list[str] | None = None) -> Pro
             )
             if name in overrides and overrides[name] != effective:
                 raise PtkError(
-                    f"selected actions require different settings for tool '{name}'; install per action"
+                    f"selected jobs require different settings for tool '{name}'; install per job"
                 )
             overrides[name] = effective
     config.tools.update(overrides)
     selected = None
-    if actions:
+    if jobs:
         selected = list(
             dict.fromkeys(
-                n
-                for action in actions
-                for n in config.actions[action].required_tool_names
+                n for job in jobs for n in config.jobs[job].required_tool_names
             )
         )
-        for action in actions:
-            spec = config.actions[action]
-            if len(actions) == 1 and spec.environment is not None:
+        for job in jobs:
+            spec = config.jobs[job]
+            if len(jobs) == 1 and spec.environment is not None:
                 config.environment = config.environment.model_copy(
                     update=spec.environment.model_dump(exclude_unset=True)
                 )
@@ -137,21 +135,17 @@ class ToolService:
             env = prepend_path(env, folder, os_name=self._host.os_name())
         return env
 
-    def required(self, project: Project, actions: list[str] | None = None) -> list[str]:
+    def required(self, project: Project, jobs: list[str] | None = None) -> list[str]:
         config = project.config
-        if not actions:
+        if not jobs:
             if "requires_tools" in config.model_fields_set:
                 return [n for n, v in config.requires_tools.items() if v is not False]
             return list(config.tools)
         names: list[str] = []
-        for action in actions:
-            if action not in config.actions:
-                raise PtkError(
-                    f"unknown action '{action}'{did_you_mean(action, config.actions)}"
-                )
-            names += [
-                t for t in config.actions[action].required_tool_names if t not in names
-            ]
+        for job in jobs:
+            if job not in config.jobs:
+                raise PtkError(f"unknown job '{job}'{did_you_mean(job, config.jobs)}")
+            names += [t for t in config.jobs[job].required_tool_names if t not in names]
         return names
 
     def status(
@@ -181,9 +175,9 @@ class ToolService:
             result.append(replace(check_version(name, spec, output), source=source))
         return result
 
-    def problems(self, project: Project, action: str) -> list[ToolStatus]:
-        project = tools_for_actions(project, [action])
-        names = project.config.actions[action].required_tool_names
+    def problems(self, project: Project, job: str) -> list[ToolStatus]:
+        project = tools_for_jobs(project, [job])
+        names = project.config.jobs[job].required_tool_names
         return (
             [s for s in self.status(project, list(names)) if not s.ok] if names else []
         )

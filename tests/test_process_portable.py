@@ -99,7 +99,7 @@ def test_windows_script(tmp_path, suffix):
     assert "native-script-ok" in lines
 
 
-def test_cli_redirected_legacy_encoding_does_not_abort_action(tmp_path):
+def test_cli_redirected_legacy_encoding_does_not_abort_job(tmp_path):
     """Exercise the real entry point, not Click's UTF-8 in-memory test streams."""
     import subprocess
 
@@ -107,7 +107,7 @@ def test_cli_redirected_legacy_encoding_does_not_abort_action(tmp_path):
     config.write_text(
         "repository: {alias: demo, config_path: .}\n"
         "project: {name: demo}\n"
-        "actions:\n  hello:\n    steps:\n"
+        "jobs:\n  hello:\n    steps:\n"
         "      - greet: {uses: echo, with: {message: 'caf\u00e9 \U0001f9ea'}}\n",
         encoding="utf-8",
     )

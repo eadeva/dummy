@@ -124,7 +124,7 @@ def make_tool_archive(folder: Path) -> tuple[str, str]:
 
 
 PROJECT = """
-project: {{name: tools, default_action: build}}
+project: {{name: tools, default_job: build}}
 tools:
   mytool:
     version: ">=1.2,<2"
@@ -134,7 +134,7 @@ tools:
     version: ">=99"
     check: sh -c "echo ancient 1.0"
     apt: ancient-pkg
-actions:
+jobs:
   build:
     requires_tools: [mytool]
     steps: [{{use: "mytool --version"}}]
@@ -176,16 +176,16 @@ def test_missing_tool_blocks_run(project):
     assert result.exit_code == 2
     assert (
         "mytool: not found" in result.output
-        and "ptk setup install --action build" in result.output
+        and "ptk setup install --job build" in result.output
     )
     assert project("dry-run", "build").exit_code == 0  # dry runs never block
 
 
 @posix_only
 def test_setup_installs_download_and_puts_it_on_path(project):
-    preview = project("setup", "--action", "build", "--dry-run")
+    preview = project("setup", "--job", "build", "--dry-run")
     assert "would install via download" in preview.output and not project.tools.exists()
-    result = project("setup", "--action", "build")
+    result = project("setup", "--job", "build")
     assert result.exit_code == 0, result.output
     assert "mytool 1.2.3" in result.output and "installed via download" in result.output
     assert len(list((project.tools / "mytool").glob("*/bin/mytool"))) == 1
@@ -203,13 +203,13 @@ def test_run_with_setup_flag(project):
 @posix_only
 def test_checksum_mismatch(project):
     project.write_sha("0" * 64)
-    result = project("setup", "--action", "build")
+    result = project("setup", "--job", "build")
     assert result.exit_code == 1 and "sha256 mismatch" in result.output
 
 
 @posix_only
 def test_wrong_version_and_system_packages(project):
-    result = project("setup", "--action", "other")
+    result = project("setup", "--job", "other")
     assert result.exit_code == 1
     assert (
         "does not match >=99" in result.output or "no install method" in result.output
@@ -262,12 +262,12 @@ def test_per_os_download_is_validated(write, load):
 
 
 @posix_only
-def test_action_versions_coexist_and_path_contains_only_selected_tools(
+def test_job_versions_coexist_and_path_contains_only_selected_tools(
     tmp_path, write, load
 ):
     import yaml
 
-    from ptk.application.use_cases.tools import tools_for_actions
+    from ptk.application.use_cases.tools import tools_for_jobs
     from ptk.bootstrap import create_app
 
     definitions = {}
@@ -289,7 +289,7 @@ def test_action_versions_coexist_and_path_contains_only_selected_tools(
     data = {
         "project": {"name": "isolated"},
         "tools": {"selectedtool": {}},
-        "actions": {
+        "jobs": {
             name: {
                 "requires_tools": {"selectedtool": spec},
                 "steps": [{"version": {"run": ["selectedtool", "--version"]}}],
@@ -305,7 +305,7 @@ def test_action_versions_coexist_and_path_contains_only_selected_tools(
     }
     app = create_app(environ=env)
     project = load(root)
-    one, two = (tools_for_actions(project, [name]) for name in ("one", "two"))
+    one, two = (tools_for_jobs(project, [name]) for name in ("one", "two"))
     for scoped in (one, two):
         assert app.tools.setup(scoped, ["selectedtool"])[0].ok
     first_paths, second_paths = app.tools.paths(one), app.tools.paths(two)
@@ -313,16 +313,16 @@ def test_action_versions_coexist_and_path_contains_only_selected_tools(
     assert app.tools.status(one, ["selectedtool"])[0].version == "1.0.0"
     assert app.tools.status(two, ["selectedtool"])[0].version == "2.0.0"
     assert second_paths[0] not in app.tools.environment(one)["PATH"]
-    for action, version in [("one", "1.0.0"), ("two", "2.0.0"), ("one", "1.0.0")]:
+    for job, version in [("one", "1.0.0"), ("two", "2.0.0"), ("one", "1.0.0")]:
         result = CliRunner(env=env).invoke(
-            cli, ["-c", str(root / ".main.ptk.yml"), action]
+            cli, ["-c", str(root / ".main.ptk.yml"), job]
         )
         assert result.exit_code == 0 and f"selectedtool {version}" in result.output, (
             result.output
         )
 
     # A step cannot silently override PATH to the other version after preflight.
-    data["actions"]["one"]["steps"][0]["version"]["env"] = {
+    data["jobs"]["one"]["steps"][0]["version"]["env"] = {
         "PATH": second_paths[0] + ":/usr/bin:/bin"
     }
     write({".main.ptk.yml": yaml.safe_dump(data)})

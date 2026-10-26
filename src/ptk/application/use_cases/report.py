@@ -46,33 +46,31 @@ class ReportService:
         formats = list(
             formats if formats is not None else project.config.reporting.formats
         )
-        out = target or self.output_dir(project, report.variant, report.action)
+        out = target or self.output_dir(project, report.variant, report.job)
         return report, self._store.write(report, formats, out)
 
     def latest(
         self,
         project: Project,
-        action: str,
+        job: str,
         variant: str | None,
         run_id: str | None = None,
     ) -> dict[str, Any]:
         layout = layout_of(project)
         name = self._variant(project, variant)
-        return self._store.read_summary(
-            Path(layout.action_log_dir(name, action)), run_id
-        )
+        return self._store.read_summary(Path(layout.job_log_dir(name, job)), run_id)
 
-    def output_dir(self, project: Project, variant: str | None, action: str) -> Path:
+    def output_dir(self, project: Project, variant: str | None, job: str) -> Path:
         layout = layout_of(project)
         configured = project.config.reporting.dir
         name = None if variant in (None, "default") else variant
         if configured:
             return (project.root / configured).joinpath(
-                *Path(layout.reports_dir(name, action))
+                *Path(layout.reports_dir(name, job))
                 .relative_to(layout.root / layout.reports)
                 .parts
             )
-        return Path(layout.reports_dir(name, action))
+        return Path(layout.reports_dir(name, job))
 
     def _reports_dir(self, project: Project, summary: dict[str, Any]) -> Path:
         if summary.get("reports_dir"):
@@ -81,7 +79,7 @@ class ReportService:
         layout = layout_of(project)
         return Path(
             layout.reports_dir(
-                None if variant == "default" else variant, summary["action"]
+                None if variant == "default" else variant, summary["job"]
             )
         )
 

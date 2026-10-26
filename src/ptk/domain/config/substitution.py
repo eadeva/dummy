@@ -4,10 +4,10 @@ Syntax::
 
     ${env:NAME}  ${env:NAME:-default}       environment of the run
     ${vars.build_dir}                       configuration vars (may reference others)
-    ${params.jobs}                          action parameters
+    ${params.jobs}                          job parameters
     ${vh.variant} ${vh.features.X} ${vh.components.camera} ${vh.data.toolchain}
     ${project.root} ${project.name}
-    ${run.build_dir} ${run.bin_dir} ${run.log_dir} ${run.reports_dir} ${run.id} ${run.action} ${run.step}
+    ${run.build_dir} ${run.bin_dir} ${run.log_dir} ${run.reports_dir} ${run.id} ${run.job} ${run.step}
     ${secret:artifactory.token}             only in step env values
     $${literal}                             escapes -> ${literal}
 

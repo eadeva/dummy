@@ -1,9 +1,9 @@
-# Workspace workflows use explicit repository aliases on every action call.
+# Workspace workflows use explicit repository aliases on every job call.
 workflows:
   all:
     help: Run both repositories locally
     parallel: true
     max_workers: 2
     steps:
-      - frontend: {repo: frontend, action: test, variant: debug}
-      - backend: {repo: backend, action: test, variant: debug}
+      - frontend: {repo: frontend, job: test, variant: debug}
+      - backend: {repo: backend, job: test, variant: debug}

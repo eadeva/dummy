@@ -1,4 +1,4 @@
-"""Preflight and schedule action calls while preserving repository boundaries."""
+"""Preflight and schedule job calls while preserving repository boundaries."""
 
 from __future__ import annotations
 
@@ -34,10 +34,10 @@ class PlannedCall:
         p = self.prepared
         resources = {
             (
-                "action",
+                "job",
                 str(p.project.root.resolve()),
                 p.plan.variant or "default",
-                p.plan.action,
+                p.plan.job,
             )
         }
         for step in p.plan.walk():
@@ -124,7 +124,7 @@ class WorkflowStepResult:
     path: str
     status: Status
     repo: str = ""
-    action: str = ""
+    job: str = ""
     variant: str | None = None
     start: float = 0
     duration: float = 0
@@ -188,7 +188,7 @@ class RunWorkflow:
                 path="/".join(node.path),
                 status=status,
                 repo=node.repo,
-                action=prepared.plan.action if prepared else "",
+                job=prepared.plan.job if prepared else "",
                 variant=prepared.plan.variant if prepared else None,
                 start=time.monotonic() - started,
                 message=message,

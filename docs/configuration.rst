@@ -12,7 +12,7 @@ configuration directory, for example::
      config_path: tooling/ptk
    project:
      name: Firmware
-   include: [actions.ptk.yml]
+   include: [jobs.ptk.yml]
 
 The alias uses lowercase letters, digits and hyphens, starting with a letter.
 ``config_path`` is a relative, existing directory inside the repository; ``.``
@@ -20,7 +20,7 @@ keeps configuration alongside the entry file. Entry-file includes (including
 ``!include`` and ``variants:``) resolve from this directory. Includes inside
 fragments remain relative to the fragment itself.
 
-Automatic ``workflow.ptk.yml``, ``versioning.ptk.yml``, ``tools.ptk.yml``, ``<action>.tools.ptk.yml``, ``cx.ptk.yml``,
+Automatic ``workflow.ptk.yml``, ``versioning.ptk.yml``, ``tools.ptk.yml``, ``<job>.tools.ptk.yml``, ``cx.ptk.yml``,
 ``local.ptk.yml`` and ``maintainers.ptk.yml`` are discovered in that directory.
 The loader applies shared tool files, main/includes, CX when enabled, local,
 and finally CLI ``--set`` overrides. Repository metadata cannot be overridden.
@@ -56,12 +56,53 @@ A ``variants`` string names a separate variant file. Other schema fields use
 the types in :doc:`reference`. ``ptk_version`` is a version requirement; this
 repository's development version needs a range such as ``>=0.1.0.dev0,<0.2``.
 
-Actions and parameters
+Jobs and parameters
 ----------------------
 
-Action names use lowercase letters, digits and hyphens, starting with a letter.
+PTK calls executable units **jobs**. Use ``jobs:`` for definitions,
+``project.default_job`` for the default, and ``job:`` for a workflow call.
+For example::
+
+   project: {name: demo, default_job: check}
+   jobs:
+     check:
+       steps:
+         - greeting: {uses: echo, with: {message: "Running ${run.job}"}}
+   workflows:
+     verify:
+       steps:
+         - checks: {job: check}
+
+Upgrading an existing configuration
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This is a breaking terminology change; old names are not aliases:
+
+* Replace ``actions:`` with ``jobs:`` and ``default_action`` with ``default_job``.
+* Replace workflow leaf ``action:`` with ``job:``.
+* Replace ``${run.action}`` with ``${run.job}`` and ``PTK_ACTION`` with ``PTK_JOB``.
+* Replace CLI ``--action`` selectors with ``--job`` (tool setup and version commands).
+* Update scripts consuming report/event JSON from the ``action`` key to ``job``.
+  Retained workflow child reports now live under ``jobs/``.
+* Update Python integrations to ``JobSpec``, ``JobPlan``, ``RunJob``,
+  ``RunRequest.job`` and ``App.run_job``.
+* New scaffolds use a ``jobs/`` folder. Existing fragment filenames are arbitrary;
+  if you rename them, update their ``include`` paths too.
+* Regenerate editor resources with ``ptk setup vscode``. This updates managed
+  tasks and replaces the unmodified ``ptk-action-authoring`` skill with
+  ``ptk-job-authoring``, preserving locally edited resources.
+
+``ptk build``, ``ptk run build`` and ``ptk dry-run build`` retain their syntax.
+GitHub Actions names and environment variables such as ``GITHUB_ACTIONS`` retain
+their GitHub meaning. Historical reports can be viewed as HTML; previous JSON
+schemas are not adapted by the renamed API.
+
+Job declarations
+~~~~~~~~~~~~~~~~
+
+Job names use lowercase letters, digits and hyphens, starting with a letter.
 Parameters use lowercase letters, digits and underscores. Built-in command and
-option names are reserved. An action needs at least one step. The default action
+option names are reserved. A job needs at least one step. The default job
 must exist and be available to ordinary users.
 
 Parameters become CLI options: ``build_type`` becomes ``--build-type``;
@@ -76,7 +117,7 @@ Steps and execution
 
 Steps are an ordered list of single-key mappings, for example::
 
-   actions:
+   jobs:
      build:
        steps:
          - check:
@@ -136,7 +177,7 @@ credentials in examples, fixtures or documentation.
 Tools, configs and outputs
 --------------------------
 
-Declare tool version checks under ``tools`` and reference them in an action's
+Declare tool version checks under ``tools`` and reference them in a job's
 ``requires_tools``. Missing tools block real execution. Preview installation
 with ``setup --dry-run``. System package managers require ``--allow-system``;
 Chocolatey bootstrap is explicit. Prefer checksummed downloads.
@@ -176,9 +217,9 @@ for skipped, blue for general information and amber for warning findings. Error
 findings use red. Colors adapt to light/dark mode; text labels always identify
 the meaning independently of color.
 
-Actions can open their HTML report automatically after a local run::
+Jobs can open their HTML report automatically after a local run::
 
-   actions:
+   jobs:
      test:
        open_report: on_errors  # always | on_errors; omit to disable
        steps:
@@ -186,18 +227,18 @@ Actions can open their HTML report automatically after a local run::
              python: {project: .}
              run: [python, -m, pytest]
 
-``always`` opens after every executed run. ``on_errors`` opens for failed actions
+``always`` opens after every executed run. ``on_errors`` opens for failed jobs
 or steps (including tolerated failures), failed/error test cases, error-level
 findings, or report import problems. Warnings, skipped results and cancellation
-alone do not trigger ``on_errors``. This does not change the action's exit code.
+alone do not trigger ``on_errors``. This does not change the job's exit code.
 When enabled locally, HTML is added to the configured report formats, even when
 ``reporting.formats`` is empty. A missing browser prints a hint and keeps the
 report available on disk. Failed report generation never opens an old report.
 
 Automatic opening is disabled in CX/CI mode (including ``--ci``), and dry runs
 neither generate nor open reports. Multi-variant runs apply the policy separately
-to each variant. VMR actions use the owning repository's configuration. Manual
-``ptk report open`` remains available regardless of the action policy.
+to each variant. VMR jobs use the owning repository's configuration. Manual
+``ptk report open`` remains available regardless of the job policy.
 
 Every HTML table has a case-insensitive substring filter for each column. Filters
 combine across columns, operate locally/offline, and show the remaining row count.
@@ -206,7 +247,7 @@ Clear a filter to restore rows. Filtering does not change recorded totals or car
 Maintainer visibility and current limits
 ----------------------------------------
 
-``maintainers.ptk.yml`` lists git email and/or OS username. An action with
+``maintainers.ptk.yml`` lists git email and/or OS username. A job with
 ``audience: maintainer`` is hidden from other users, including generated help
 and VS Code tasks. This is a convenience feature, not a security boundary.
 
@@ -235,30 +276,30 @@ be forcibly terminated. ``wait`` cooperates with deadlines and Ctrl+C.
 Shared defaults and tool files
 ------------------------------
 
-``tools.ptk.yml`` and ``<action>.tools.ptk.yml`` in the configuration directory are loaded
-automatically when present. Action filenames are discovered for actions declared
+``tools.ptk.yml`` and ``<job>.tools.ptk.yml`` in the configuration directory are loaded
+automatically when present. Job filenames are discovered for jobs declared
 in the main configuration, its includes, global tools file or enabled overlays.
 Files already included explicitly are not applied again automatically.
 
-Precedence, from lowest to highest: automatic ``tools.ptk.yml`` and ``versioning.ptk.yml``, automatic action
+Precedence, from lowest to highest: automatic ``tools.ptk.yml`` and ``versioning.ptk.yml``, automatic job
 tool files (alphabetical), main configuration/includes, ``cx.ptk.yml`` in CI,
 ``local.ptk.yml``, then command-line overrides. Explicit includes retain their
-normal position. Additional tool definitions in action files are shared definitions;
-put action-specific changes under that action's ``requires_tools``.
+normal position. Additional tool definitions in job files are shared definitions;
+put job-specific changes under that job's ``requires_tools``.
 
 ``cx.ptk.yml`` is the automatic workflow overlay filename. GitHub Actions is
 recognized automatically; ``--ci`` / ``--no-ci`` can force the mode. The old
 ``ci.ptk.yml`` filename is not automatically loaded.
 
-Global ``param_defaults`` supplies defaults only to parameters that an action
-explicitly declares. Action-specific ``default`` values take precedence. An
+Global ``param_defaults`` supplies defaults only to parameters that a job
+explicitly declares. Job-specific ``default`` values take precedence. An
 explicit ``default: null`` opts out; ``required: true`` parameters remain required.
 Inherited values are validated against each parameter's type/choices, and
 ``config show --sources`` retains the global value's source location::
 
    param_defaults:
      jobs: 8
-   actions:
+   jobs:
      build:
        params:
          jobs: {type: int}
@@ -275,29 +316,29 @@ Tool requirements merge **per tool**, not by replacing the entire list::
    requires_tools: [git, cmake]
 
    # build.tools.ptk.yml
-   actions:
+   jobs:
      build:
        requires_tools:
          cmake: {version: ">=3.30"}
          ninja: true
 
 ``build`` requires git, cmake and ninja, with its own CMake version constraint.
-Other actions retain the global requirements and CMake definition. Use
-``git: false`` to disable only git for one action. ``requires_tools: []`` or ``{}``
-changes nothing; an action's unmentioned global requirements remain inherited.
+Other jobs retain the global requirements and CMake definition. Use
+``git: false`` to disable only git for one job. ``requires_tools: []`` or ``{}``
+changes nothing; a job's unmentioned global requirements remain inherited.
 List shorthand enables/adds named tools; mappings can enable, disable or override
 a named tool's settings. All referenced names must be declared under ``tools``.
 
-``setup install --action build`` uses that action's effective tool settings.
-Selecting actions that require conflicting settings for the same tool fails
-before installation; install for those actions separately. Without ``--action``,
+``setup install --job build`` uses that job's effective tool settings.
+Selecting jobs that require conflicting settings for the same tool fails
+before installation; install for those jobs separately. Without ``--job``,
 ``setup install`` uses global requirements when supplied, otherwise all declared
-tools. Declaring a tool alone does not make it a requirement of every action.
+tools. Declaring a tool alone does not make it a requirement of every job.
 
-Isolated action environments
+Isolated job environments
 ----------------------------
 
-``environment.isolate`` defaults to true. Each action receives a new environment
+``environment.isolate`` defaults to true. Each job receives a new environment
 containing OS essentials, explicitly kept variables, configured values and its
 selected managed tools. ``inherit_path`` defaults to false: PATH starts with
 standard OS directories, not the caller's potentially repository-specific PATH.
@@ -308,23 +349,23 @@ This is environment isolation, not a filesystem or process sandbox::
      inherit_path: false
      keep: [HTTP_PROXY, HTTPS_PROXY]
      set: {BUILD_MODE: reproducible}
-   actions:
+   jobs:
      build:
        environment:
          keep: [HTTP_PROXY, HTTPS_PROXY, COMPANY_SDK]
        steps:
          - compile: {run: [compiler, source.c]}
 
-An action's explicitly set environment fields override the global fields.
-Lists replace, so include all desired ``keep`` entries in an action override.
+A job's explicitly set environment fields override the global fields.
+Lists replace, so include all desired ``keep`` entries in a job override.
 ``isolate: false`` deliberately inherits ordinary host variables;
 ``inherit_path: true`` separately opts into caller PATH. Step ``env`` and secrets
-are applied to that command only. Neither the host process nor another action's
+are applied to that command only. Neither the host process nor another job's
 environment is mutated. Tool versions are rechecked in the final subprocess
 environment, including Python-runtime and step overrides.
 
 Managed downloads and Python tools are stored by tool name and effective
-version/source identity. Only installations selected by the action's effective
+version/source identity. Only installations selected by the job's effective
 requirements (or its explicit ``tools.ensure`` selections) enter its PATH.
 A later ``tool: true`` keeps earlier settings; ``tool: false`` disables that
 requirement. System binaries on the OS path are version-checked. Chocolatey,
@@ -342,7 +383,7 @@ Toolbase and Artifactory sources
 ========================================
 
 These sources participate in ``ptk setup install``, ``--setup`` and
-``tools.ensure``. Action-level ``requires_tools`` overrides and VMR repository
+``tools.ensure``. Job-level ``requires_tools`` overrides and VMR repository
 selection work as for other tools. Source order is custom installers, Toolbase
 (Windows), Artifactory, Chocolatey (Windows), uv, download, then opt-in apt/dnf.
 
@@ -366,7 +407,7 @@ PTK enables the exact ``package/version`` and runs ``TBUpdate -e`` only if that
 version's directory is missing. Nonzero exits fail installation. Enable/update
 is serialized across PTK processes sharing the tools directory. ``bin`` lists
 relative executable directories (default ``[.]``); for Python, configure
-``[., Scripts]`` explicitly. Only those directories enter the selected action's
+``[., Scripts]`` explicitly. Only those directories enter the selected job's
 PATH. Inherited paths below ``TB_HOMEDIR`` are removed before activation. PTK
 writes neither global PATH nor ``GITHUB_ENV`` nor a shared ``.env`` file.
 Toolbase itself controls its installation location and update side effects.
@@ -420,8 +461,8 @@ ZIP and tar archives use PTK's existing extraction support. Standalone files use
 Downloads are checksum-verified before entering the managed tools directory;
 failed downloads do not create an installation marker. Downloads are cached by
 the effective tool definition, so ``latest`` is resolved only on installation,
-not refreshed on every action. Pin properties/path/checksum for reproducibility.
-Changing a source or version creates a distinct installation, and each action
+not refreshed on every job. Pin properties/path/checksum for reproducibility.
+Changing a source or version creates a distinct installation, and each job
 activates only its selected tool definitions. No corporate hostnames, legacy
 runtime filters or repository-specific download layout rules are built in.
 
@@ -445,9 +486,9 @@ any existing managed installation. Only installation is blocked, including
 tool remains an error; PTK explains that installation is disabled in Docker.
 Prepare the required tool in the image or mount an existing managed cache.
 If using an image tool outside the default OS PATH, add its directory to the
-action's environment configuration. No Docker daemon or Docker CLI is needed.
+job's environment configuration. No Docker daemon or Docker CLI is needed.
 
-Action-level ``requires_tools`` can override ``docker`` like other tool settings.
+Job-level ``requires_tools`` can override ``docker`` like other tool settings.
 Changing this policy does not change the managed installation identity.
 Detection checks ``/.dockerenv``, Docker cgroup markers and ``container=docker``.
 These signals are best-effort, especially for Windows containers or unusual
@@ -458,8 +499,8 @@ host does not count as running inside Docker.
 Local orchestration
 ===================
 
-Use ``workflow.ptk.yml`` to compose existing actions into local sequential and
-parallel groups, including actions from configured VMR members. Workflows load
+Use ``workflow.ptk.yml`` to compose existing jobs into local sequential and
+parallel groups, including jobs from configured VMR members. Workflows load
 from the repository configuration directory; VMR roots can also own a workflow
 file. See :doc:`workflows` for complete syntax, command examples, preflight,
 reports, VS Code tasks and the explicit local-only execution boundary.

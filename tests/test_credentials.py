@@ -258,13 +258,13 @@ def test_gopass_provider_uses_stdin_and_paths(tmp_path, monkeypatch):
 # --------------------------------------------------------------------------- CLI + run
 
 PROJECT = """
-project: {name: c, default_action: go}
+project: {name: c, default_job: go}
 credentials:
   art:
     fields: [token]
     providers: [env, vault]
     test: 'test "$PTK_CRED_ART_TOKEN" = "vault-secret-1" && echo token is $PTK_CRED_ART_TOKEN'
-actions:
+jobs:
   go:
     steps:
       - use: {run: "echo got $T", secrets: {T: art.token}}

@@ -1,12 +1,12 @@
 """RunObserver writing the logs of the workspace layout (unified logging).
 
-    _logs/<variant>/<action>/run.log            the whole run, each line tagged with its step
-    _logs/<variant>/<action>/<set>/<step>.log   output of one step
-    _logs/<variant>/<action>/events.jsonl       machine-readable events (one JSON per line)
-    _logs/<variant>/<action>/run.json           summary of the run (status, steps, params)
-    _logs/<variant>/<action>/_history/<run id>/ previous runs (``logging.keep_history``)
+    _logs/<variant>/<job>/run.log            the whole run, each line tagged with its step
+    _logs/<variant>/<job>/<set>/<step>.log   output of one step
+    _logs/<variant>/<job>/events.jsonl       machine-readable events (one JSON per line)
+    _logs/<variant>/<job>/run.json           summary of the run (status, steps, params)
+    _logs/<variant>/<job>/_history/<run id>/ previous runs (``logging.keep_history``)
 
-The latest run is always directly in the action folder. Everything arrives
+The latest run is always directly in the job folder. Everything arrives
 already masked (secrets never reach this writer).
 """
 
@@ -22,7 +22,7 @@ from typing import Any, TextIO
 
 from ...domain import layout as lay
 from ...domain.execution.model import (
-    ActionPlan,
+    JobPlan,
     PlannedStep,
     RunResult,
     Status,
@@ -109,14 +109,14 @@ class FileLogObserver:
         self._run: TextIO | None = None
         self._events: TextIO | None = None
         self._steps: dict[tuple[str, ...], TextIO] = {}
-        self._plan: ActionPlan | None = None
+        self._plan: JobPlan | None = None
         self._folder: Path | None = None
 
     # -- RunObserver -------------------------------------------------------------------
 
-    def run_started(self, plan: ActionPlan) -> None:
+    def run_started(self, plan: JobPlan) -> None:
         self._plan = plan
-        folder = Path(self._layout.action_log_dir(plan.variant, plan.action))
+        folder = Path(self._layout.job_log_dir(plan.variant, plan.job))
         folder.mkdir(parents=True, exist_ok=True)
         rotate(folder, self._keep)
         self._folder = folder
@@ -126,7 +126,7 @@ class FileLogObserver:
             {**header(plan), "status": "running", "started_at": _timestamp()}
         )
         self._line(
-            f"ptk run {plan.run_id}: project {plan.project}, action {plan.action}, "
+            f"ptk run {plan.run_id}: project {plan.project}, job {plan.job}, "
             f"variant {plan.variant or lay.NO_VARIANT}"
         )
         for name, value in plan.params.items():
@@ -141,7 +141,7 @@ class FileLogObserver:
             return
         assert self._plan is not None
         path = Path(
-            self._layout.step_log(self._plan.variant, self._plan.action, step.path)
+            self._layout.step_log(self._plan.variant, self._plan.job, step.path)
         )
         path.parent.mkdir(parents=True, exist_ok=True)
         with self._lock:

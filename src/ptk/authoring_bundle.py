@@ -6,7 +6,7 @@ Keep this module stdlib-only: Hatch loads it before runtime dependencies exist.
 from pathlib import Path
 
 SKILLS = (
-    "ptk-action-authoring",
+    "ptk-job-authoring",
     "ptk-config-authoring",
     "ptk-credentials",
     "ptk-plugin-development",

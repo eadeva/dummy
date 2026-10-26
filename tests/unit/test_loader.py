@@ -121,7 +121,7 @@ def test_locate_and_display_path_for_steps(write):
     root = write(
         {
             "fragment.ptk.yml": """
-        actions:
+        jobs:
           build:
             steps:
               - first: {run: a}
@@ -132,6 +132,6 @@ def test_locate_and_display_path_for_steps(write):
         }
     )
     node, _ = read(root)
-    path = ("actions", "build", "steps", 1, "steps", 0, "run")
+    path = ("jobs", "build", "steps", 1, "steps", 0, "run")
     assert t.locate(node, path).line == 7
-    assert t.display_path(node, path) == "actions.build.steps.group.steps.inner.run"
+    assert t.display_path(node, path) == "jobs.build.steps.group.steps.inner.run"

@@ -1,7 +1,7 @@
 # Build HTML: ptk docs
-# Open _builds/default/docs/sphinx/html/index.html afterwards. Warnings fail the action.
+# Open _builds/default/docs/sphinx/html/index.html afterwards. Warnings fail the job.
 # The docs dependency group is installed automatically by uv when needed.
-actions:
+jobs:
   docs:
     help: Build PTK's Sphinx documentation with warnings treated as errors
     env:

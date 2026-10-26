@@ -2,7 +2,7 @@
 
 Recognised by content, not name: JUnit XML (``<testsuite>``/``<testsuites>``),
 Cobertura XML (``<coverage>``) and SARIF JSON (``*.sarif``, ``*.sarif.json``).
-Files directly in the action's reports folder are ptk's own output and ignored.
+Files directly in the job's reports folder are ptk's own output and ignored.
 """
 
 from __future__ import annotations

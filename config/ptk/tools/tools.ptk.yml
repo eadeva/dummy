@@ -1,5 +1,5 @@
 # PTK's developer tools are Python dependencies in pyproject.toml:
-# dev = pytest + ruff + cmake; docs = sphinx. Actions select those uv project groups.
+# dev = pytest + ruff + cmake; docs = sphinx. Jobs select those uv project groups.
 # uv is bootstrapped by install/install.sh or install/install.ps1.
 # No additional managed tools or machine-wide packages are required here.
 tools: {}

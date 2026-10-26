@@ -12,7 +12,7 @@ def setup(tmp_path):
         yaml.safe_dump(
             {
                 "repository": {"alias": "demo", "config_path": "."},
-                "project": {"name": "matrix", "default_action": "go"},
+                "project": {"name": "matrix", "default_job": "go"},
                 "variants": {
                     "default": "small",
                     "components": {
@@ -26,7 +26,7 @@ def setup(tmp_path):
                         "large": {"extends": "base", "features": {"SIZE": 8}},
                     },
                 },
-                "actions": {
+                "jobs": {
                     "go": {
                         "params": {"who": {"default": "world"}},
                         "steps": [
@@ -112,7 +112,7 @@ def test_matrix_failure_preserves_later_runs(tmp_path):
 
     file = setup(tmp_path)
     config = yaml.safe_load(file.read_text())
-    config["actions"]["go"]["steps"].append(
+    config["jobs"]["go"]["steps"].append(
         {
             "fail_small": {
                 "run": [sys.executable, "-c", "raise SystemExit(3)"],

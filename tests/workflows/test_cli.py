@@ -1,4 +1,4 @@
-"""Workflow execution with real portable actions and bounded VMR discovery."""
+"""Workflow execution with real portable jobs and bounded VMR discovery."""
 
 import json
 import sys
@@ -15,7 +15,7 @@ def command(code):
     return {"steps": [{"run": {"run": [sys.executable, "-c", code]}}]}
 
 
-def repository(root, alias="app", *, actions=None, workflows=None, extra=None):
+def repository(root, alias="app", *, jobs=None, workflows=None, extra=None):
     folder = root / "config"
     folder.mkdir(parents=True)
     (root / ".main.ptk.yml").write_text(
@@ -29,7 +29,7 @@ def repository(root, alias="app", *, actions=None, workflows=None, extra=None):
     )
     config = {
         "project": {"name": alias},
-        "actions": actions or {"build": command("print('hello')")},
+        "jobs": jobs or {"build": command("print('hello')")},
     }
     config.update(extra or {})
     (folder / "project.ptk.yml").write_text(yaml.safe_dump(config), encoding="utf-8")
@@ -52,19 +52,19 @@ def summaries(root):
 
 
 def test_discovery_preview_then_sequential_calls_and_immutable_reports(tmp_path):
-    action = command(
-        "from pathlib import Path; import sys; p=Path('order.txt'); p.write_text((p.read_text() if p.exists() else '') + sys.argv[1]); print(sys.argv[1])"
+    job = command(
+        "from pathlib import Path; import os, sys; assert os.environ['PTK_JOB'] == sys.argv[2] == 'build'; assert 'PTK_ACTION' not in os.environ; p=Path('order.txt'); p.write_text((p.read_text() if p.exists() else '') + sys.argv[1]); print(sys.argv[1])"
     )
-    action["params"] = {"word": {"default": "x"}}
-    action["steps"][0]["run"]["run"].append("${params.word}")
+    job["params"] = {"word": {"default": "x"}}
+    job["steps"][0]["run"]["run"].extend(["${params.word}", "${run.job}"])
     root = repository(
         tmp_path,
-        actions={"build": action},
+        jobs={"build": job},
         workflows={
             "verify": {
                 "steps": [
-                    {"one": {"action": "build", "params": {"word": "A"}}},
-                    {"two": {"action": "build", "params": {"word": "B"}}},
+                    {"one": {"job": "build", "params": {"word": "A"}}},
+                    {"two": {"job": "build", "params": {"word": "B"}}},
                 ]
             }
         },
@@ -84,17 +84,23 @@ def test_discovery_preview_then_sequential_calls_and_immutable_reports(tmp_path)
         encoding="utf-8"
     )
     assert "report.html</a>" in html and "report.json</a>" not in html
+    assert "<title>Workflow - verify</title>" in html
+    assert "<h1>Workflow - verify</h1>" in html
     assert [s["status"] for s in summary["steps"]] == ["passed", "passed"]
-    reports = list(root.glob("_reports/workflows/verify/*/actions/*/report.json"))
+    reports = list(root.glob("_reports/workflows/verify/*/jobs/*/report.json"))
     assert len(reports) == 2
     for report in reports:
         data = json.loads(report.read_text())
+        assert data["job"] == "build"
+        assert "action" not in data
+        child_html = report.with_suffix(".html").read_text(encoding="utf-8")
+        assert "<h1>Job - build</h1>" in child_html
         log = Path(data["steps"][0]["log_file"])
         assert log.is_relative_to(report.parent)
         assert data["params"]["word"] in log.read_text()
 
 
-def test_parallel_actions_actually_overlap(tmp_path):
+def test_parallel_jobs_actually_overlap(tmp_path):
     def barrier(own, other):
         return command(
             f"from pathlib import Path; import time; Path('{own}').touch(); deadline=time.monotonic()+5\nwhile not Path('{other}').exists() and time.monotonic()<deadline: time.sleep(.02)\nassert Path('{other}').exists()"
@@ -102,7 +108,7 @@ def test_parallel_actions_actually_overlap(tmp_path):
 
     root = repository(
         tmp_path,
-        actions={"a": barrier("a", "b"), "b": barrier("b", "a")},
+        jobs={"a": barrier("a", "b"), "b": barrier("b", "a")},
         workflows={
             "verify": {
                 "steps": [
@@ -110,8 +116,8 @@ def test_parallel_actions_actually_overlap(tmp_path):
                         "checks": {
                             "parallel": True,
                             "steps": [
-                                {"a": {"action": "a"}},
-                                {"b": {"action": "b"}},
+                                {"a": {"job": "a"}},
+                                {"b": {"job": "b"}},
                             ],
                         }
                     }
@@ -127,15 +133,15 @@ def test_parallel_actions_actually_overlap(tmp_path):
 def test_failure_controls_sequential_continuation(tmp_path, continued):
     root = repository(
         tmp_path,
-        actions={
+        jobs={
             "fail": command("raise SystemExit(1)"),
             "after": command("from pathlib import Path; Path('after').touch()"),
         },
         workflows={
             "verify": {
                 "steps": [
-                    {"broken": {"action": "fail", "continue_on_error": continued}},
-                    {"next": {"action": "after"}},
+                    {"broken": {"job": "fail", "continue_on_error": continued}},
+                    {"next": {"job": "after"}},
                 ]
             }
         },
@@ -150,23 +156,21 @@ def test_failure_controls_sequential_continuation(tmp_path, continued):
 @pytest.mark.parametrize(
     "call,error",
     [
-        ({"action": "missing"}, "unknown action"),
-        ({"repo": "missing", "action": "build"}, "not a configured member"),
-        ({"action": "build", "params": {"unknown": 1}}, "unknown parameter"),
-        ({"action": "restricted"}, "maintainer-only"),
+        ({"job": "missing"}, "unknown job"),
+        ({"repo": "missing", "job": "build"}, "not a configured member"),
+        ({"job": "build", "params": {"unknown": 1}}, "unknown parameter"),
+        ({"job": "restricted"}, "maintainer-only"),
     ],
 )
 def test_all_calls_are_preflighted_before_running(tmp_path, call, error):
-    actions = {
+    jobs = {
         "build": command("from pathlib import Path; Path('ran').touch()"),
         "restricted": {**command("print('secret')"), "audience": "maintainer"},
     }
     root = repository(
         tmp_path,
-        actions=actions,
-        workflows={
-            "verify": {"steps": [{"first": {"action": "build"}}, {"bad": call}]}
-        },
+        jobs=jobs,
+        workflows={"verify": {"steps": [{"first": {"job": "build"}}, {"bad": call}]}},
     )
     result = invoke(root, "workflow", "run", "verify")
     assert result.exit_code != 0 and error in result.output, result.output
@@ -186,7 +190,7 @@ def test_reject_parallel_output_and_uv_environment_collisions(tmp_path):
     a = command("pass")
     a["steps"][0]["run"]["python"] = {"project": "."}
     (root / "config/project.ptk.yml").write_text(
-        yaml.safe_dump({"project": {"name": "app"}, "actions": {"a": a, "b": a}})
+        yaml.safe_dump({"project": {"name": "app"}, "jobs": {"a": a, "b": a}})
     )
     (root / "config/workflow.ptk.yml").write_text(
         yaml.safe_dump(
@@ -207,13 +211,13 @@ def test_vmr_targets_keep_environment_and_reports_and_have_editor_tasks(
     root = tmp_path
     (root / ".main.ptk.yml").write_text("virtual_monorepo: true\nmembers: [a, b]\n")
     for alias in ("a", "b"):
-        action = command(
+        job = command(
             "import os; from pathlib import Path; Path('selected').write_text(os.environ['IDENTITY'])"
         )
         repository(
             root / alias,
             alias,
-            actions={"build": action},
+            jobs={"build": job},
             workflows={"local": {"steps": [{"build": "build"}]}},
             extra={"environment": {"set": {"IDENTITY": alias}}},
         )
@@ -224,8 +228,8 @@ def test_vmr_targets_keep_environment_and_reports_and_have_editor_tasks(
                     "all": {
                         "parallel": True,
                         "steps": [
-                            {"a": {"repo": "a", "action": "build"}},
-                            {"b": {"repo": "b", "action": "build"}},
+                            {"a": {"repo": "a", "job": "build"}},
+                            {"b": {"repo": "b", "job": "build"}},
                         ],
                     }
                 }
@@ -258,35 +262,34 @@ def test_vmr_targets_keep_environment_and_reports_and_have_editor_tasks(
     # Windows can canonicalize ancestor capitalization (for example pytest-of-USER).
     assert Path(workflow["options"]["cwd"]).samefile(root)
     assert (
-        len(list((root / "_reports/workflows/all").glob("*/actions/*/report.html")))
-        == 2
+        len(list((root / "_reports/workflows/all").glob("*/jobs/*/report.html"))) == 2
     )
 
 
-@pytest.mark.parametrize("level", ["action", "step"])
+@pytest.mark.parametrize("level", ["job", "step"])
 def test_parallel_python_calls_use_their_resolved_venv_paths(tmp_path, level):
-    actions = {}
+    jobs = {}
     for name in ("a", "b"):
-        action = command("pass")
-        step = action["steps"][0]["run"]
+        job = command("pass")
+        step = job["steps"][0]["run"]
         step["python"] = {"project": "."}
-        action["env"] = {"UV_PROJECT_ENVIRONMENT": "${project.root}/shared"}
-        target = action if level == "action" else step
+        job["env"] = {"UV_PROJECT_ENVIRONMENT": "${project.root}/shared"}
+        target = job if level == "job" else step
         target["env"] = {
             "UV_PROJECT_ENVIRONMENT": f"${{project.root}}/.ptk/venvs/{name}"
         }
-        actions[name] = action
+        jobs[name] = job
     root = repository(
         tmp_path,
-        actions=actions,
+        jobs=jobs,
         workflows={"verify": {"parallel": True, "steps": [{"a": "a"}, {"b": "b"}]}},
     )
     preview = invoke(root, "workflow", "dry-run", "verify")
     assert preview.exit_code == 0, preview.output
-    target = actions["b"] if level == "action" else actions["b"]["steps"][0]["run"]
+    target = jobs["b"] if level == "job" else jobs["b"]["steps"][0]["run"]
     target["env"]["UV_PROJECT_ENVIRONMENT"] = "${project.root}/.ptk/venvs/b/../a"
     (root / "config/project.ptk.yml").write_text(
-        yaml.safe_dump({"project": {"name": "app"}, "actions": actions}),
+        yaml.safe_dump({"project": {"name": "app"}, "jobs": jobs}),
         encoding="utf-8",
     )
     collision = invoke(root, "workflow", "dry-run", "verify")
@@ -307,23 +310,23 @@ def test_source_locations_and_workflow_name_validation(tmp_path):
     assert result.exit_code != 0 and "invalid workflow name" in result.output
 
 
-@pytest.mark.parametrize("body", ["build", {"action": "build"}])
-def test_entry_named_name_is_a_normal_action_call(tmp_path, body):
+@pytest.mark.parametrize("body", ["build", {"job": "build"}])
+def test_entry_named_name_is_a_normal_job_call(tmp_path, body):
     root = repository(tmp_path, workflows={"verify": {"steps": [{"name": body}]}})
     result = invoke(root, "workflow", "dry-run", "verify")
     assert result.exit_code == 0 and "name: app/build" in result.output, result.output
 
 
 def test_secret_parameters_cannot_be_embedded_in_workflow_yaml(tmp_path):
-    action = command("from pathlib import Path; Path('ran').touch()")
-    action["params"] = {"token": {"type": "secret"}}
+    job = command("from pathlib import Path; Path('ran').touch()")
+    job["params"] = {"token": {"type": "secret"}}
     root = repository(
         tmp_path,
-        actions={"build": action},
+        jobs={"build": job},
         workflows={
             "verify": {
                 "steps": [
-                    {"build": {"action": "build", "params": {"token": "hidden-value"}}}
+                    {"build": {"job": "build", "params": {"token": "hidden-value"}}}
                 ]
             }
         },
@@ -414,7 +417,7 @@ def test_published_example_runs_locally_without_github(tmp_path, monkeypatch):
 def test_workflow_execution_is_local_only(tmp_path, ci_args, env, opened_reports):
     root = repository(
         tmp_path,
-        actions={"build": command("from pathlib import Path; Path('ran').touch()")},
+        jobs={"build": command("from pathlib import Path; Path('ran').touch()")},
         workflows={"verify": {"steps": [{"build": "build"}]}},
     )
     result = invoke(root, *ci_args, "workflow", "run", "verify", env=env)

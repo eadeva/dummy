@@ -1,4 +1,4 @@
-# Actions use separate uv environments so docs can run in parallel.
+# Jobs use separate uv environments so docs can run in parallel.
 workflows:
   verify:
     help: Run check, test and package in order, alongside documentation
@@ -8,7 +8,7 @@ workflows:
     steps:
       - quality:
           steps:
-            - check: {action: check}
-            - test: {action: test}
-            - package: {action: package}
-      - docs: {action: docs}
+            - check: {job: check}
+            - test: {job: test}
+            - package: {job: package}
+      - docs: {job: docs}

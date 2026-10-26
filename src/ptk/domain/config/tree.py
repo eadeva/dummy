@@ -59,7 +59,7 @@ def merge(base: Node | None, overlay: Node, _path: Path = ()) -> Node:
     if base is None or overlay.op == "replace":
         return _strip_ops(overlay)
     requirement = (len(_path) == 2 and _path[0] == "requires_tools") or (
-        len(_path) == 4 and _path[0] == "actions" and _path[2] == "requires_tools"
+        len(_path) == 4 and _path[0] == "jobs" and _path[2] == "requires_tools"
     )
     if base.is_map and overlay.value is True and requirement:
         return _strip_ops(base)
@@ -131,7 +131,7 @@ def get(node: Node, path: Path) -> Node | None:
 
 
 def parse_dotted(dotted: str) -> Path:
-    """``actions.build.steps.0.run`` -> ('actions', 'build', 'steps', 0, 'run')."""
+    """``jobs.build.steps.0.run`` -> ('jobs', 'build', 'steps', 0, 'run')."""
     parts: list[str | int] = []
     for part in dotted.split("."):
         if not part:

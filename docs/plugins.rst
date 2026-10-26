@@ -89,7 +89,7 @@ Additional built-ins
 * ``configs.sync`` accepts optional ``with: {names: [ruff, clang-format]}`` and
   runs the same shared-config service as ``ptk setup configs sync``.
 * ``tools.ensure`` accepts ``with: {tools: [cmake], allow_system: false}``. All
-  names must be declared. Place it before dependent commands. Actions containing
+  names must be declared. Place it before dependent commands. Jobs containing
   this step defer the initial required-tool check to the step; subsequent commands
   refresh the installed-tools PATH. Skipped/conditional ensure steps do not install.
 * ``files.copy`` accepts ``files`` globs, ``to``, ``optional`` and ``overwrite``.
@@ -114,7 +114,7 @@ Supported keys are ``setup``, its immediate commands/groups (``config``, ``confi
 ``creds``, ``vscode``, ``install``, ``self``, ``doctor``, ``init``),
 ``variant`` and ``report``. Restrictions apply to descendants and compatibility
 aliases, normal/HTML help and completion. Roles use ``maintainers.ptk.yml`` as
-for actions. This is command visibility, not a security boundary.
+for jobs. This is command visibility, not a security boundary.
 
 Runnable extension starter
 ---------------------------
@@ -126,7 +126,7 @@ Python environment that contains PTK, for example from a development checkout::
 
 Select ``plugins: [ptk-example-extension]`` and a step with
 ``uses: example.check``. The skill tests load the declared entry point and run
-a real configured action. See the ``ptk-plugin-development`` authoring skill.
+a real configured job. See the ``ptk-plugin-development`` authoring skill.
 
 Credential-provider keys include ``storage_ref`` as well as logical ``ref``.
 Persist by ``storage_ref`` to honor VMR namespaces. Provider availability checks

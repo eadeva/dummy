@@ -30,7 +30,7 @@ def session():
                     },
                     "default": "small",
                 },
-                "actions": {"hello": {"steps": [{"say": {"uses": "echo"}}]}},
+                "jobs": {"hello": {"steps": [{"say": {"uses": "echo"}}]}},
             }
         )
     )
@@ -49,7 +49,7 @@ def test_editor_validates_and_exports_standalone_project(session, tmp_path):
     assert result.exit_code == 0, result.output
     assert session.config.variants.variants["small"].features == {}
     data = yaml.safe_load(target.read_text())
-    assert data["actions"]["hello"]["steps"]
+    assert data["jobs"]["hello"]["steps"]
     assert data["variants"]["variants"]["small"]["features"]["SIZE"] == 3
     with pytest.raises(PtkError, match="cannot export"):
         save_edit(session, edited(session, 4), target)
@@ -106,8 +106,8 @@ def test_desktop_error_is_actionable(session, tmp_path, monkeypatch):
         open_editor(session, tmp_path / "out.yml")
 
 
-def test_editor_checks_action_references(session):
-    session.config.actions["hello"].steps[0].when = "SIZE > 0"
+def test_editor_checks_job_references(session):
+    session.config.jobs["hello"].steps[0].when = "SIZE > 0"
     data = yaml.safe_load(session.initial_text())
     data["components"]["core"]["features"] = {}
     with pytest.raises(PtkError, match="unknown name"):

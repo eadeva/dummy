@@ -15,8 +15,8 @@ description: Choose and diagnose Python runtimes for ptk scripts and Python tool
 
 5. Do not activate environments or mutate the parent process environment.
 
-6. Use `ptk dry-run ACTION` to inspect runtime and command resolution before installation or execution.
+6. Use `ptk dry-run JOB` to inspect runtime and command resolution before installation or execution.
 
-7. Verify with the relevant action and inspect its debug log; test paths containing spaces on Windows and Linux.
+7. Verify with the relevant job and inspect its debug log; test paths containing spaces on Windows and Linux.
 
 8. Inspect debug logs to verify which cached environment is selected. Account for uv availability and downloads when choosing a runtime.

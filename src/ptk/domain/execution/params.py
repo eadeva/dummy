@@ -33,7 +33,7 @@ def resolve_params(
             if name not in specs:
                 raise ParamError(
                     f"unknown parameter '{name}' ({source_name}){did_you_mean(name, specs)}"
-                    + ("" if specs else " - this action declares no parameters")
+                    + ("" if specs else " - this job declares no parameters")
                 )
     values: dict[str, Any] = {}
     sources: dict[str, str] = {}

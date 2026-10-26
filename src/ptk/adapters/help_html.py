@@ -10,7 +10,7 @@ import webbrowser
 from html import escape
 from pathlib import Path
 
-from ..application.use_cases.help import HelpAction, HelpCommand, HelpDocument, HelpStep
+from ..application.use_cases.help import HelpCommand, HelpDocument, HelpJob, HelpStep
 
 CSS = """
 :root{--bg:#f3f5f8;--paper:#ffffff;--ink:#18212f;--muted:#5b6778;--line:#dce2ea;--rail:#0f7b8a;
@@ -161,52 +161,52 @@ def _rail(steps: list[HelpStep]) -> str:
     return '<ol class="rail">' + "".join(_node(s) for s in steps) + "</ol>"
 
 
-def _action(action: HelpAction) -> str:
+def _job(job: HelpJob) -> str:
     badge = (
         ' <span class="tag maint">maintainer only</span>'
-        if action.audience == "maintainer"
+        if job.audience == "maintainer"
         else ""
     )
-    if action.is_default:
-        badge += ' <span class="tag def">default action</span>'
+    if job.is_default:
+        badge += ' <span class="tag def">default job</span>'
     parts = [
-        f'<section class="block" id="{_anchor("action", action.name)}"><h2>{_e(action.name)}{badge}</h2>',
-        f'<p class="lead">{_e(action.help)}</p>'
-        if action.help
+        f'<section class="block" id="{_anchor("job", job.name)}"><h2>{_e(job.name)}{badge}</h2>',
+        f'<p class="lead">{_e(job.help)}</p>'
+        if job.help
         else '<p class="lead empty">No description.</p>',
-        _cmd(action.usage),
+        _cmd(job.usage),
     ]
-    if action.params:
+    if job.params:
         rows = "".join(
             f"<tr><td><code>{_e(p.option)}</code>{' <span class="tag req">required</span>' if p.required else ''}</td>"
             f"<td>{_e(p.type)}{('<br>' + _tags(p.choices)) if p.choices else ''}</td>"
             f"<td>{('<code>' + _e(p.default) + '</code>') if p.default else '–'}</td>"
             f"<td>{('<code>' + _e(p.env) + '</code>') if p.env else '–'}</td><td>{_e(p.help)}</td></tr>"
-            for p in action.params
+            for p in job.params
         )
         parts.append(
             '<h3>Parameters</h3><div class="table-wrap"><table><tr><th>Option</th><th>Type</th>'
             f"<th>Default</th><th>From env</th><th>Description</th></tr>{rows}</table></div>"
         )
-    parts.append(f"<h3>Steps</h3>{_rail(action.steps)}")
+    parts.append(f"<h3>Steps</h3>{_rail(job.steps)}")
     notes = [
         "Start or stop at a top-level step with <code>--from</code> / <code>--to</code>: "
-        + ", ".join(f"<code>{_e(p)}</code>" for p in action.phases)
+        + ", ".join(f"<code>{_e(p)}</code>" for p in job.phases)
     ]
-    if action.passthrough:
+    if job.passthrough:
         notes.append(
             "Arguments after <code>--</code> go to "
-            + ", ".join(f"<code>{_e(p)}</code>" for p in action.passthrough)
+            + ", ".join(f"<code>{_e(p)}</code>" for p in job.passthrough)
         )
-    if action.requires_tools:
+    if job.requires_tools:
         notes.append(
             "Needs the tools "
-            + ", ".join(f"<code>{_e(t)}</code>" for t in action.requires_tools)
+            + ", ".join(f"<code>{_e(t)}</code>" for t in job.requires_tools)
         )
-    notes.append(f"Preview without running: <code>ptk dry-run {_e(action.name)}</code>")
-    if action.is_default:
+    notes.append(f"Preview without running: <code>ptk dry-run {_e(job.name)}</code>")
+    if job.is_default:
         notes.append(
-            "This is the default action: plain <code>ptk</code> or "
+            "This is the default job: plain <code>ptk</code> or "
             "<code>ptk run</code> runs it"
         )
     parts.append(
@@ -256,7 +256,7 @@ def render(doc: HelpDocument) -> str:
     hero.append(
         f'<p class="lead">{_e(doc.description)}</p>'
         if doc.description
-        else '<p class="lead">Everything this project can do with ptk: actions, their parameters and steps, '
+        else '<p class="lead">Everything this project can do with ptk: jobs, their parameters and steps, '
         "variants and commands.</p>"
     )
     if doc.error:
@@ -267,7 +267,7 @@ def render(doc: HelpDocument) -> str:
     if doc.project:
         facts = [
             ("Project folder", doc.root),
-            ("Default action", doc.default_action or "none"),
+            ("Default job", doc.default_job or "none"),
             ("Configuration", " → ".join(doc.layers)),
         ]
         hero.append(
@@ -277,28 +277,26 @@ def render(doc: HelpDocument) -> str:
         )
     hero.append(
         _cmd(
-            "ptk                               # run the default action\n"
-            "ptk dry-run ACTION                # see what would run\n"
-            "ptk ACTION --NAME VALUE           # run it with a parameter\n"
-            "ptk ACTION --from STEP -- ARGS\n"
+            "ptk                               # run the default job\n"
+            "ptk dry-run JOB                # see what would run\n"
+            "ptk JOB --NAME VALUE           # run it with a parameter\n"
+            "ptk JOB --from STEP -- ARGS\n"
             "ptk variant list"
         )
     )
-    if doc.hidden_actions:
+    if doc.hidden_jobs:
         hero.append(
-            f'<p class="meta">{doc.hidden_actions} maintainer-only action(s) are not listed.</p>'
+            f'<p class="meta">{doc.hidden_jobs} maintainer-only job(s) are not listed.</p>'
         )
     hero.append("</header>")
     body.append("".join(hero))
 
-    if doc.actions:
-        nav.append("<h2>Actions</h2>")
-        for action in doc.actions:
-            cls = ' class="maint"' if action.audience == "maintainer" else ""
-            nav.append(
-                f'<a href="#{_anchor("action", action.name)}"{cls}>{_e(action.name)}</a>'
-            )
-            body.append(_action(action))
+    if doc.jobs:
+        nav.append("<h2>Jobs</h2>")
+        for job in doc.jobs:
+            cls = ' class="maint"' if job.audience == "maintainer" else ""
+            nav.append(f'<a href="#{_anchor("job", job.name)}"{cls}>{_e(job.name)}</a>')
+            body.append(_job(job))
 
     project_links = []
     if doc.variants:

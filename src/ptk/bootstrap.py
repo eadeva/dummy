@@ -61,7 +61,7 @@ from .application.use_cases.run import (
     BUILTINS,
     PreparedRun,
     PrepareRun,
-    RunAction,
+    RunJob,
     layout_of,
 )
 from .application.use_cases.setup import Doctor, Environment, SelfSetup
@@ -219,7 +219,7 @@ class App:
             ptk_version=__version__,
         )
 
-    def run_action(self, project: Project) -> RunAction:
+    def run_job(self, project: Project) -> RunJob:
         plugins = self.configure_project(project)
         layout = layout_of(project)
 
@@ -266,8 +266,8 @@ class App:
             **plugins["steps"],
         }
 
-        def verify_tools(action, env, cwd):
-            names = project.config.actions[action].required_tool_names
+        def verify_tools(job, env, cwd):
+            names = project.config.jobs[job].required_tool_names
             statuses = self.tools.status(project, names, env=env, cwd=cwd)
             problems = [s for s in statuses if not s.ok]
             if problems:
@@ -278,7 +278,7 @@ class App:
 
             return statuses
 
-        return RunAction(
+        return RunJob(
             self.host,
             self.runner,
             self.python_envs,

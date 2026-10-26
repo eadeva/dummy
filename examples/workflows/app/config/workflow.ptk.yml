@@ -4,13 +4,13 @@ workflows:
     help: Build the frontend, then run independent checks locally
     max_workers: 2
     steps:
-      - build: {action: build, variant: debug}
+      - build: {job: build, variant: debug}
       - checks:
           parallel: true
           steps:
-            - unit: {action: test, variant: debug}
+            - unit: {job: test, variant: debug}
             - backend:
                 repo: backend
-                action: test
+                job: test
                 variant: release
                 params: {suite: smoke}

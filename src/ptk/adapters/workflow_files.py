@@ -32,7 +32,7 @@ def write_workflow_report(result, target: Path) -> Path:
     counts = {"Passed": 0, "Failed": 0, "Skipped": 0, "Cancelled": 0}
 
     def visit(step):
-        if step.action:
+        if step.job:
             label = step.status.value.capitalize()
             if label in counts:
                 counts[label] += 1
@@ -47,7 +47,7 @@ def write_workflow_report(result, target: Path) -> Path:
         cells = [
             step.path,
             step.repo,
-            step.action,
+            step.job,
             step.variant or "default",
             step.status.value + (" (allowed)" if step.allowed_failure else ""),
             f"{step.duration:.2f}s",
@@ -71,7 +71,7 @@ def write_workflow_report(result, target: Path) -> Path:
     titles = (
         "Step",
         "Repository",
-        "Action",
+        "Job",
         "Variant",
         "Result",
         "Duration",
@@ -79,7 +79,7 @@ def write_workflow_report(result, target: Path) -> Path:
         "Reports",
     )
     status = result.status.value
-    title = escape(f"Workflow {result.name}")
+    title = escape(f"Workflow - {result.name}")
     page = (
         '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
         f"<title>{title}</title><style>{CSS}</style></head><body><main>"
@@ -93,7 +93,7 @@ def write_workflow_report(result, target: Path) -> Path:
                 "Cancelled": "warning",
             },
         )
-        + f'<p class="meta">Action calls only; duration {result.duration:.2f}s. Open a child report for project, tool and test details.</p>'
+        + f'<p class="meta">Job calls only; duration {result.duration:.2f}s. Open a child report for project, tool and test details.</p>'
         + '<div class="table-wrap"><table><tr>'
         + "".join(f"<th>{t}</th>" for t in titles)
         + "</tr>"
@@ -108,7 +108,7 @@ def write_workflow_report(result, target: Path) -> Path:
 
 
 def snapshot_logs(summary: dict, target: Path) -> dict:
-    """Keep child report links valid when the same action is called again."""
+    """Keep child report links valid when the same job is called again."""
     summary = {**summary, "steps": [dict(step) for step in summary.get("steps", [])]}
     for index, step in enumerate(summary["steps"]):
         source = Path(step.get("log_file") or "")

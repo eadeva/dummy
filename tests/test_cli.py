@@ -18,7 +18,7 @@ def test_config_validate_and_show():
     result = run("config", "validate")
     assert result.exit_code == 0, result.output
     assert "configuration is valid" in result.output
-    show = run("config", "show", "actions.build.params.jobs", "--format", "json")
+    show = run("config", "show", "jobs.build.params.jobs", "--format", "json")
     assert json.loads(show.output) == {
         "type": "int",
         "default": 8,
@@ -32,10 +32,10 @@ def test_config_validate_and_show():
 def test_set_override():
     result = run(
         "--set",
-        "actions.build.params.jobs.default=3",
+        "jobs.build.params.jobs.default=3",
         "config",
         "show",
-        "actions.build.params.jobs.default",
+        "jobs.build.params.jobs.default",
     )
     assert result.output.strip().startswith("3")
 
@@ -118,7 +118,7 @@ def test_run_executes_and_returns_exit_code(write):
         {
             ".main.ptk.yml": """
         project: {name: t}
-        actions:
+        jobs:
           ok: {steps: [{hi: "echo hi-there"}]}
           bad: {steps: [{fail: "exit 4"}]}
         """

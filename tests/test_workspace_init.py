@@ -47,7 +47,7 @@ def test_init_initializes_all_unconfigured_git_repo_members(tmp_path, monkeypatc
     for name, alias in (("nested/engine", "engine"), ("frontend", "frontend")):
         entry = yaml.safe_load((tmp_path / name / ".main.ptk.yml").read_text())
         assert entry["repository"] == {"alias": alias, "config_path": "config/ptk"}
-        assert (tmp_path / name / "config/ptk/actions/hello.ptk.yml").is_file()
+        assert (tmp_path / name / "config/ptk/jobs/hello.ptk.yml").is_file()
         for args in ([alias, "setup", "config", "validate"], [alias, "hello"]):
             result = runner.invoke(cli, args)
             assert result.exit_code == 0, result.output
@@ -61,7 +61,7 @@ def test_init_initializes_all_unconfigured_git_repo_members(tmp_path, monkeypatc
 def test_init_skips_existing_config_without_loading_its_includes(tmp_path, monkeypatch):
     checkout(tmp_path, "existing", "new", "broken")
     main = repository(tmp_path / "existing", "existing", config_path="custom")
-    (main.parent / "custom/actions.ptk.yml").unlink()
+    (main.parent / "custom/jobs.ptk.yml").unlink()
     # Existing config is protected even when it cannot be parsed.
     (tmp_path / "broken/.main.ptk.yml").write_text("invalid: [")
     before = {name: snapshot(tmp_path / name) for name in ("existing", "broken")}

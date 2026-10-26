@@ -3,7 +3,7 @@ from pathlib import PurePosixPath
 from ptk.domain.layout import Layout, safe
 
 
-def test_folder_structure_follows_variant_action_step():
+def test_folder_structure_follows_variant_job_step():
     layout = Layout(PurePosixPath("/p"))
     assert (
         str(layout.build_dir("b_us", "build", ("checks", "lint")))

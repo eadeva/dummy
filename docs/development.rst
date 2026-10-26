@@ -21,8 +21,8 @@ Run from the repository root; the project uses its own PTK configuration in
    uv run ptk docs
    uv run ptk package
 
-An installed ``ptk`` can run the same actions without the ``uv run`` prefix.
-The action's Python runtime always selects this checkout's uv project.
+An installed ``ptk`` can run the same jobs without the ``uv run`` prefix.
+The job's Python runtime always selects this checkout's uv project.
 ``test`` and ``check`` select its ``dev`` dependency group; ``docs`` selects
 ``docs``, installing missing dependencies as needed. Groups remain defined in
 ``pyproject.toml`` rather than duplicated in PTK tool definitions.
@@ -35,15 +35,15 @@ installed inside the project environment; no machine-wide installation is needed
 ``ptk test -- tests/test_init.py -q`` selects tests and forwards pytest options.
 JUnit results go to ``_reports/default/test/pytest/pytest.xml`` and are included
 in PTK's report, even when pytest fails. HTML docs go to
-``_builds/default/docs/sphinx/html/index.html``. The default action is ``test``; the dummy hello
-and header-generation actions are not part of this repository configuration.
+``_builds/default/docs/sphinx/html/index.html``. The default job is ``test``; the dummy hello
+and header-generation jobs are not part of this repository configuration.
 
 ``check`` runs Ruff lint and format checks without modifying files. To apply
-formatting intentionally, use ``uv run ruff format``. The test action explicitly
+formatting intentionally, use ``uv run ruff format``. The test job explicitly
 inherits caller PATH to exercise installed host tools; ordinary environment
 variables remain filtered. DISPLAY/XAUTHORITY are kept for optional GUI tests.
 
-Package builds and action runs use the same Git-managed PTK version configuration.
+Package builds and job runs use the same Git-managed PTK version configuration.
 Reachable ``v*`` tags take precedence; untagged/shallow checkouts use the explicit
 development fallback in ``versioning.ptk.yml``. Source distributions freeze their
 resolved version in metadata, so rebuilding them does not require Git.
@@ -51,7 +51,7 @@ Neither tests nor documentation builds require a release tag.
 uv's editable-build cache tracks Git commits/tags and version configuration.
 The installed CLI reports its installation version; reinstall after other local
 edits when needed with ``uv sync --reinstall-package ptk``. Package preparation
-always uses the newly resolved action snapshot.
+always uses the newly resolved job snapshot.
 
 The documentation build treats warnings as errors. The quickstart configuration
 and script are included from their original files; the tests run that same example
@@ -88,7 +88,7 @@ member subdirectories, manual member lists, missing checkouts, alias collisions,
 single-directory targeting, required config-folder input and one-time prompting.
 Filesystem snapshots verify
 that previews, repeated initialization and preflight failures preserve existing
-configuration, while generated member actions run through the real CLI.
+configuration, while generated member jobs run through the real CLI.
 
 Documentation and skills
 ------------------------
@@ -103,7 +103,7 @@ Consumer skill instructions must not depend on PTK's ``src`` or ``tests`` folder
 
 ``ptk package`` selects the release/docs groups, builds the wheel from an sdist,
 checks metadata, and smoke-tests an installed wheel in a separate project before
-staging artifacts. Linux and Windows packaging jobs run this same action. The
+staging artifacts. Linux and Windows packaging jobs run this same job. The
 wheel smoke test reuses installed runtime dependencies, with no dependency fetch
 or upload. See :doc:`packaging` for artifact layout and :doc:`editor` for offline
 resources and protected upgrades.

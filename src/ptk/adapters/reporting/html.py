@@ -249,7 +249,7 @@ def render(report: Report, *, link_root: Path | None = None) -> str:
     parts = [
         (
             '<header class="status">'
-            f"<h1>{_e(report.action)}</h1>"
+            f"<h1>Job - {_e(report.job)}</h1>"
             f'<span class="verdict {_e(report.status)}">{_e(report.status)}</span>'
             f'<span class="meta">{_e(report.project)}, variant {_e(report.variant)}, '
             f"run {_e(report.run_id)}, {report.duration:.1f}s</span></header>"
@@ -383,7 +383,7 @@ def render(report: Report, *, link_root: Path | None = None) -> str:
         f"<footer>ptk {_e(report.ptk_version)} report, started {_e(report.started_at)}. "
         "Regenerate with <code>ptk report export</code>.</footer>"
     )
-    title = f"{report.action} {report.status} - {report.project}"
+    title = f"Job - {report.job} {report.status} - {report.project}"
     return (
         '<!doctype html><html lang="en"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'

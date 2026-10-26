@@ -34,7 +34,7 @@ def test_unknown_keys_with_suggestions_and_lines(write, load):
         {
             ".main.ptk.yml": """
         project: {name: demo}
-        actions:
+        jobs:
           build:
             stpes: []
     """
@@ -44,7 +44,7 @@ def test_unknown_keys_with_suggestions_and_lines(write, load):
         load(root)
     text = str(exc.value)
     assert (
-        ".main.ptk.yml:4: actions.build.stpes: unknown key 'stpes' (did you mean 'steps'?)"
+        ".main.ptk.yml:4: jobs.build.stpes: unknown key 'stpes' (did you mean 'steps'?)"
         in text
     )
 
@@ -53,9 +53,9 @@ def test_semantic_errors(write, load):
     root = write(
         {
             ".main.ptk.yml": """
-        project: {name: demo, default_action: biuld}
+        project: {name: demo, default_job: biuld}
         vars: {x: "${vars.y}"}
-        actions:
+        jobs:
           build:
             requires_tools: [cmak]
             params: {jobs: {type: int, default: 2}}
@@ -69,7 +69,7 @@ def test_semantic_errors(write, load):
         load(root)
     text = str(exc.value)
     for expected in [
-        "unknown action 'biuld' (did you mean 'build'?)",
+        "unknown job 'biuld' (did you mean 'build'?)",
         "unknown variable 'vars.y'",
         "unknown tool 'cmak'",
         "unknown parameter 'params.job' (did you mean 'jobs'?)",
@@ -77,7 +77,7 @@ def test_semantic_errors(write, load):
         "never on command lines",
     ]:
         assert expected in text, expected
-    assert "actions.build.steps.compile.when" in text
+    assert "jobs.build.steps.compile.when" in text
 
 
 def test_version_check(write, load):
@@ -106,6 +106,6 @@ def test_demo_project_is_valid(load):
     from tests.conftest import DEMO
 
     project = load(DEMO)
-    assert set(project.config.actions) == {"build", "deploy"}
-    assert project.config.actions["deploy"].audience == "maintainer"
+    assert set(project.config.jobs) == {"build", "deploy"}
+    assert project.config.jobs["deploy"].audience == "maintainer"
     assert project.maintainers is not None

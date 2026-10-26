@@ -5,8 +5,8 @@ description: Prepare and validate PTK or project Python package artifacts for a 
 
 # PTK package preparation
 
-1. Read [package preparation](../../../docs/packaging.rst) and the project's existing package action/backend. Distinguish PTK's own `package` action and helper script from an arbitrary consumer repository; do not assume those files exist there.
-2. Confirm where the version is discovered. For PTK, it comes from the action's Git-managed version snapshot. For another project, wire its own backend to its declared version source rather than copying a static version. Do not create tags or publish as part of preparation.
+1. Read [package preparation](../../../docs/packaging.rst) and the project's existing package job/backend. Distinguish PTK's own `package` job and helper script from an arbitrary consumer repository; do not assume those files exist there.
+2. Confirm where the version is discovered. For PTK, it comes from the job's Git-managed version snapshot. For another project, wire its own backend to its declared version source rather than copying a static version. Do not create tags or publish as part of preparation.
 3. Keep build dependencies in the project's Python dependency groups. Use PTK's existing Python-step support to invoke the build backend. Stage artifacts separately and preserve prior validated output if a new build fails.
 4. Validate sdist and wheel metadata and package contents; build the wheel from the sdist and smoke-test installation outside the source checkout. Check the reported version matches the prepared snapshot. Include hashes and a manifest when implementing an artifact handoff.
 5. Ship lightweight offline reference material and project-facing skills when required. Keep full rendered documentation a separate artifact and Sphinx out of runtime dependencies. Do not include local credentials, caches, generated version snapshots or test logs in distributions.

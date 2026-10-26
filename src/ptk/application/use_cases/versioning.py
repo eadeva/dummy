@@ -11,7 +11,7 @@ class VersionService:
     def __init__(self, io: VersionDiscovery, dependency_loader):
         self.io, self.dependency_loader = io, dependency_loader
 
-    def resolve(self, project, variant=None, action=None):
+    def resolve(self, project, variant=None, job=None):
         if project.config.versioning is None:
             return {}
         projects, selected, visiting = {}, {}, set()
@@ -85,9 +85,7 @@ class VersionService:
                 visit(other, dep_variant)
             visiting.remove(alias)
 
-        dependencies = (
-            project.config.actions[action].version_dependencies if action else {}
-        )
+        dependencies = project.config.jobs[job].version_dependencies if job else {}
         visit(project, variant, dependencies)
         snapshot = {"schema_version": 1, "projects": projects}
         variables(snapshot)  # also checks normalized-name collisions

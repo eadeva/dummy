@@ -76,7 +76,7 @@ tools:
     docker: false
     check: 'PYTHON --version' 
     version: '>=3.12'
-actions:
+jobs:
   build:
     requires_tools: [python]
     steps:
@@ -86,8 +86,8 @@ actions:
     )
     app = create_app(environ={"PTK_DOCKER": "1"})
     project = load(root)
-    prepared = app.prepare_run(project).execute(project, RunRequest(action="build"))
-    result = app.run_action(prepared.project).execute(prepared)
+    prepared = app.prepare_run(project).execute(project, RunRequest(job="build"))
+    result = app.run_job(prepared.project).execute(prepared)
     assert result.status.value == "passed"
     summary = json.loads(json.dumps(run_summary(prepared.plan, result)))
     assert summary["context"]["variant"]["description"] == "Debug build"

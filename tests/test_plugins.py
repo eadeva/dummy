@@ -81,7 +81,7 @@ def test_installed_plugin_distribution_end_to_end(tmp_path, monkeypatch):
                 "reporting": {"formats": ["text"]},
                 "variants": {"variants": {"one": {}}},
                 "credentials": {"remote": {"providers": ["custom"]}},
-                "actions": {
+                "jobs": {
                     "go": {
                         "steps": [
                             {

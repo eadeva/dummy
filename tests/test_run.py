@@ -38,12 +38,12 @@ project: {name: e2e}
 vars: {greeting: "hello ${project.name}"}
 credentials:
   repo: {fields: [token], env: {token: REPO_TOKEN}}
-actions:
+jobs:
   go:
     params:
       who: {default: world}
       fail: {type: bool, default: false}
-    env: {ACTION_LEVEL: "a"}
+    env: {JOB_LEVEL: "a"}
     steps:
       - hello: ["${sys}", "-c", "import os; print(os.environ['GREETING'], os.environ['PTK_PARAM_WHO'])"]
       - prepare:
@@ -93,7 +93,7 @@ def run(root: Path, environ: dict[str, str] | None = None, **request):
     app = create_app(environ=env)
     project = app.load_project.execute(root)
     prepared = app.prepare_run(project).execute(
-        project, RunRequest(action="go", **request)
+        project, RunRequest(job="go", **request)
     )
     lines: list[tuple[str, str]] = []
 
@@ -113,7 +113,7 @@ def run(root: Path, environ: dict[str, str] | None = None, **request):
         def run_finished(self, result):
             pass
 
-    result = app.run_action(project).execute(
+    result = app.run_job(project).execute(
         prepared, [Collect(), *app.log_observers(prepared)]
     )
     return result, lines, prepared
@@ -196,7 +196,7 @@ def test_timeout_and_retries(write):
         {
             ".main.ptk.yml": """
         project: {name: t}
-        actions:
+        jobs:
           go:
             steps:
               - slow: {run: "sleep 5", timeout: 0.3}
@@ -215,7 +215,7 @@ def test_timeout_and_retries(write):
         {
             ".main.ptk.yml": """
         project: {name: t}
-        actions:
+        jobs:
           go:
             steps:
               - flaky: {run: "test -f once || (touch once; exit 1)", retries: 2}
@@ -232,7 +232,7 @@ def test_cancel_kills_process_tree(write):
         {
             ".main.ptk.yml": """
         project: {name: t}
-        actions:
+        jobs:
           go:
             steps:
               - long: {run: "sleep 30 & sleep 30; wait"}
@@ -242,11 +242,11 @@ def test_cancel_kills_process_tree(write):
     )
     app = create_app(environ=HOST)
     project = app.load_project.execute(root)
-    prepared = app.prepare_run(project).execute(project, RunRequest(action="go"))
+    prepared = app.prepare_run(project).execute(project, RunRequest(job="go"))
     cancel = Cancelled()
     threading.Timer(0.5, cancel.set).start()
     start = time.monotonic()
-    result = app.run_action(project).execute(prepared, [], cancel)
+    result = app.run_job(project).execute(prepared, [], cancel)
     assert time.monotonic() - start < 8
     assert result.status is Status.CANCELLED
     assert by_label(result)["next"].status is Status.CANCELLED
@@ -257,7 +257,7 @@ def test_program_not_found(write):
         {
             ".main.ptk.yml": """
         project: {name: t}
-        actions:
+        jobs:
           go:
             steps:
               - missing: [definitely-not-a-program-xyz]
@@ -273,7 +273,7 @@ def test_builtin_steps(write):
         {
             ".main.ptk.yml": """
         project: {name: t}
-        actions:
+        jobs:
           go:
             params: {msg: {default: hi}}
             steps:
@@ -293,7 +293,7 @@ def test_python_venv_and_plain_script(write):
         {
             ".main.ptk.yml": """
             project: {name: t}
-            actions:
+            jobs:
               go:
                 steps:
                   - plain: tools/where.py
@@ -324,10 +324,8 @@ def test_python_venv_and_plain_script(write):
 def test_dry_run_masks_secrets_and_does_not_execute(project):
     app = create_app(environ={**HOST, "REPO_TOKEN": "s3cr3t-value"})
     proj = app.load_project.execute(project)
-    prepared = app.prepare_run(proj).execute(
-        proj, RunRequest(action="go", dry_run=True)
-    )
-    runner = app.run_action(proj)
+    prepared = app.prepare_run(proj).execute(proj, RunRequest(job="go", dry_run=True))
+    runner = app.run_job(proj)
     secret_step = next(s for s in prepared.plan.walk() if s.name == "secret")
     command, _ = runner.describe(prepared, secret_step)
     assert "s3cr3t" not in command

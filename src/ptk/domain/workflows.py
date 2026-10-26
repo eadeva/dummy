@@ -1,4 +1,4 @@
-"""Declarative action orchestration; workflow groups never merge repository settings."""
+"""Declarative job orchestration; workflow groups never merge repository settings."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ NAME = r"^[a-z][a-z0-9-]*$"
 class WorkflowNode(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
-    action: str | None = Field(default=None, pattern=NAME)
+    job: str | None = Field(default=None, pattern=NAME)
     repo: str | None = Field(default=None, pattern=NAME)
     variant: str | None = None
     params: dict[str, Any] = Field(default_factory=dict)
@@ -27,12 +27,12 @@ class WorkflowNode(BaseModel):
 
     @model_validator(mode="after")
     def _shape(self):
-        if (self.action is None) == (self.steps is None):
-            raise ValueError("choose exactly one of action or steps")
-        if self.action is not None and self.parallel:
+        if (self.job is None) == (self.steps is None):
+            raise ValueError("choose exactly one of job or steps")
+        if self.job is not None and self.parallel:
             raise ValueError("parallel belongs on a group with steps")
         if self.steps is not None and (self.repo or self.variant or self.params):
-            raise ValueError("repo, variant and params belong on action calls")
+            raise ValueError("repo, variant and params belong on job calls")
         return self
 
 
@@ -47,9 +47,9 @@ def entries(value):
         elif isinstance(entry, dict) and len(entry) == 1:
             name, body = next(iter(entry.items()))
             if isinstance(body, str):
-                body = {"action": body}
+                body = {"job": body}
             if not isinstance(body, dict):
-                raise ValueError("workflow entries need an action or a group")  # noqa: TRY004 - Pydantic validation
+                raise ValueError("workflow entries need a job or a group")  # noqa: TRY004 - Pydantic validation
             body = {**body, "name": name}
         elif isinstance(entry, dict) and "name" in entry:
             name, body = entry["name"], entry

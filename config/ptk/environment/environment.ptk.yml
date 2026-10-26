@@ -1,5 +1,5 @@
 # Keep commands isolated while allowing package access and the optional GUI tests.
-# The test action alone inherits PATH because it exercises host-installed tools.
+# The test job alone inherits PATH because it exercises host-installed tools.
 environment:
   isolate: true
   inherit_path: false

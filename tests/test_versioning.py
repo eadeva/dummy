@@ -35,7 +35,7 @@ def test_run_snapshot_env_and_generators_are_consistent(write, load):
                     "sdk": {"source": "literal", "version": "7.2.1"},
                 },
             },
-            "actions": {
+            "jobs": {
                 "build": {
                     "steps": [
                         {
@@ -90,9 +90,9 @@ def test_run_snapshot_env_and_generators_are_consistent(write, load):
     (root / "VERSION").write_text("1.2.3")
     app = create_app()
     p = load(root)
-    prepared = app.prepare_run(p).execute(p, RunRequest(action="build"))
+    prepared = app.prepare_run(p).execute(p, RunRequest(job="build"))
     assert not Path(prepared.version_file).exists()
-    result = app.run_action(prepared.project).execute(prepared)
+    result = app.run_job(prepared.project).execute(prepared)
     assert str(result.status) == "passed"
     env = json.loads((root / "env.json").read_text())
     assert env["PTK_VERSION_DEMO"] == "1.2.3"
@@ -110,7 +110,7 @@ def test_run_snapshot_env_and_generators_are_consistent(write, load):
     _, content = generate(snapshot, "header")
     assert not write_generated(header, content)
     assert header.stat().st_mtime_ns == before
-    next_run = app.prepare_run(p).execute(p, RunRequest(action="build"))
+    next_run = app.prepare_run(p).execute(p, RunRequest(job="build"))
     assert next_run.versions["projects"]["demo"]["value"] == "9.0.0"
     assert next_run.version_file != prepared.version_file
 
@@ -120,7 +120,7 @@ def test_dry_run_discovers_without_writing(write, load):
         write,
         {
             "versioning": {"project": {"source": "literal", "version": "2.0.0"}},
-            "actions": {"go": {"steps": [{"echo": {"uses": "echo"}}]}},
+            "jobs": {"go": {"steps": [{"echo": {"uses": "echo"}}]}},
         },
     )
     result = CliRunner().invoke(

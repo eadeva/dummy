@@ -4,7 +4,7 @@ schema_version: 1
 project:
   name: quickstart
   description: Offline example using only the Python interpreter running ptk
-  default_action: build
+  default_job: build
 variants:
   default: debug
   components:
@@ -19,7 +19,7 @@ variants:
       features: {CHECKS: false}
 reporting:
   formats: [json, html, junit, markdown]
-actions:
+jobs:
   build:
     help: Write a demo artifact and run independent checks
     params:

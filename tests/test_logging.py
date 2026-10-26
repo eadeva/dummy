@@ -28,11 +28,11 @@ pytestmark = pytest.mark.skipif(sys.platform.startswith("win"), reason="POSIX sh
 HOST = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": "/tmp"}
 
 PROJECT = """
-project: {name: logs, default_action: go}
+project: {name: logs, default_job: go}
 logging: {level: LEVEL, keep_history: KEEP}
 credentials:
   repo: {fields: [token]}
-actions:
+jobs:
   go:
     params: {who: {default: me}}
     steps:
@@ -56,7 +56,7 @@ def run(root: Path, token: str = "t0ps3cret"):
     app = create_app(environ={**HOST, "PTK_CRED_REPO_TOKEN": token})
     proj = app.load_project.execute(root)
     prepared = app.prepare_run(proj).execute(proj, RunRequest())
-    return app.run_action(proj).execute(prepared, app.log_observers(prepared))
+    return app.run_job(proj).execute(prepared, app.log_observers(prepared))
 
 
 LOGS = Path("_logs/default/go")

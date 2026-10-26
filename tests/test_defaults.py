@@ -1,4 +1,4 @@
-"""Default action and parameter defaults (static, per variant, per layer)."""
+"""Default job and parameter defaults (static, per variant, per layer)."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from tests.conftest import DEMO
 HOST = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": "/tmp"}
 
 PROJECT = """
-project: {name: t, default_action: hello}
+project: {name: t, default_job: hello}
 vars: {flavour: vanilla}
 variants:
   components:
@@ -26,7 +26,7 @@ variants:
   variants:
     slow: {components: [core], data: {mode: careful}}
     fast: {components: [core], features: {SPEED: 9}, data: {mode: quick}}
-actions:
+jobs:
   hello:
     params:
       who: {default: world}
@@ -46,11 +46,11 @@ def prepare(root, environ=None, **request):
     return app.prepare_run(project).execute(project, RunRequest(**request)).plan
 
 
-def test_default_action_is_used_when_no_action_given(write):
+def test_default_job_is_used_when_no_job_given(write):
     root = write({".main.ptk.yml": PROJECT})
     plan = prepare(root, variant="slow")
-    assert plan.action == "hello"
-    assert prepare(root, action="other", variant="slow").action == "other"
+    assert plan.job == "hello"
+    assert prepare(root, job="other", variant="slow").job == "other"
 
 
 def test_parameter_defaults_per_variant_vars_and_env(write):
@@ -85,7 +85,7 @@ def test_defaults_can_be_overridden_per_layer(write):
     root = write(
         {
             ".main.ptk.yml": PROJECT,
-            "local.ptk.yml": "actions: {hello: {params: {who: {default: me}}}}\n",
+            "local.ptk.yml": "jobs: {hello: {params: {who: {default: me}}}}\n",
         }
     )
     assert prepare(root, variant="slow").params["who"] == "me"
@@ -104,13 +104,9 @@ def test_invalid_default_references_are_config_errors(write, snippet, message):
         create_app(environ={}).load_project.execute(root)
 
 
-def test_default_action_must_exist_and_be_public(write):
+def test_default_job_must_exist_and_be_public(write):
     root = write(
-        {
-            ".main.ptk.yml": PROJECT.replace(
-                "default_action: hello", "default_action: helo"
-            )
-        }
+        {".main.ptk.yml": PROJECT.replace("default_job: hello", "default_job: helo")}
     )
     with pytest.raises(ConfigError, match="did you mean 'hello'"):
         create_app(environ={}).load_project.execute(root)
@@ -118,20 +114,20 @@ def test_default_action_must_exist_and_be_public(write):
         {
             ".main.ptk.yml": PROJECT.replace(
                 "  other:\n    steps", "  other:\n    audience: maintainer\n    steps"
-            ).replace("default_action: hello", "default_action: other")
+            ).replace("default_job: hello", "default_job: other")
         }
     )
     with pytest.raises(ConfigError, match="available to everyone"):
         create_app(environ={}).load_project.execute(root)
 
 
-def test_no_action_and_no_default(write):
-    root = write({".main.ptk.yml": PROJECT.replace(", default_action: hello", "")})
-    with pytest.raises(PtkError, match="no project.default_action"):
+def test_no_job_and_no_default(write):
+    root = write({".main.ptk.yml": PROJECT.replace(", default_job: hello", "")})
+    with pytest.raises(PtkError, match="no project.default_job"):
         prepare(root, variant="slow")
 
 
-def test_plain_ptk_runs_default_action(write):
+def test_plain_ptk_runs_default_job(write):
     root = write({".main.ptk.yml": PROJECT})
     args = ["--config", str(root / ".main.ptk.yml"), "--no-ci"]
     result = CliRunner(env=HOST).invoke(cli, args, catch_exceptions=False)

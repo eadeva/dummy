@@ -152,7 +152,7 @@ def test_discovery_metadata_is_strict_and_does_not_load_includes(
         workspace_root(tmp_path)
 
 
-@pytest.mark.parametrize("layer", ["config/actions.ptk.yml", "config/local.ptk.yml"])
+@pytest.mark.parametrize("layer", ["config/jobs.ptk.yml", "config/local.ptk.yml"])
 def test_discovery_flag_cannot_come_from_includes_or_overlays(tmp_path, layer):
     repository(tmp_path, "demo")
     (tmp_path / layer).write_text("virtual_monorepo: false\n")

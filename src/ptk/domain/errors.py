@@ -48,4 +48,4 @@ class ConfigError(PtkError):
 
 
 class UnknownNameError(PtkError):
-    """An unknown action, variant, feature, ... (message contains suggestions)."""
+    """An unknown job, variant, feature, ... (message contains suggestions)."""

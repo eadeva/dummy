@@ -43,7 +43,7 @@ class CommandSpec:
 
 @dataclass
 class PlannedStep:
-    path: tuple[str, ...]  # names from the action down to this step
+    path: tuple[str, ...]  # names from the job down to this step
     spec: StepSpec
     children: list[PlannedStep] = field(default_factory=list)
     skip_reason: str | None = None  # condition false, outside --from/--to, ...
@@ -80,9 +80,9 @@ class PlannedStep:
 
 
 @dataclass
-class ActionPlan:
+class JobPlan:
     project: str
-    action: str
+    job: str
     variant: str | None
     run_id: str
     params: dict[str, Any]
@@ -90,8 +90,8 @@ class ActionPlan:
     steps: list[PlannedStep]
     base_env: dict[
         str, str
-    ]  # host/isolated env + config env + generated PTK_/VH_ vars + action env
-    dirs: dict[str, str]  # bin_dir, log_dir, reports_dir (action level)
+    ]  # host/isolated env + config env + generated PTK_/VH_ vars + job env
+    dirs: dict[str, str]  # bin_dir, log_dir, reports_dir (job level)
 
     report_context: dict[str, Any] = field(default_factory=dict)
 
@@ -136,7 +136,7 @@ class StepResult:
 @dataclass
 class RunResult:
     project: str
-    action: str
+    job: str
     variant: str | None
     run_id: str
     status: Status

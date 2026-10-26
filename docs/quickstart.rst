@@ -25,8 +25,8 @@ repositories. The root
 ``.main.ptk.yml`` contains only repository metadata and the project include.
 The chosen directory contains ``project.ptk.yml`` as its include index, plus:
 
-* ``actions/hello.ptk.yml`` and ``actions/build.ptk.yml``: two independent actions.
-  ``actions/*.ptk.yml`` loads additional action files automatically.
+* ``jobs/hello.ptk.yml`` and ``jobs/build.ptk.yml``: two independent jobs.
+  ``jobs/*.ptk.yml`` loads additional job files automatically.
 * ``variants/variants.ptk.yml``: component/feature model and default selection;
   includes ``debug.ptk.yml`` and ``release.ptk.yml`` from the same folder.
 * ``tools/tools.ptk.yml`` and ``versioning/versioning.ptk.yml``.
@@ -36,7 +36,7 @@ The chosen directory contains ``project.ptk.yml`` as its include index, plus:
 ``cx.ptk.yml`` and ``maintainers.ptk.yml`` stay at the configuration root because
 they are conventional discovery entry points. Other nested files are loaded by
 explicit includes. Optional settings contain commented field examples and usage
-notes, including managed tools, credential providers, Git versions and action
+notes, including managed tools, credential providers, Git versions and job
 requirements; no secret values or tool installations are needed.
 
 The starter has debug/release variants and a literal ``0.1.0`` version, so it

@@ -1,4 +1,4 @@
-"""Generated action commands, maintainer visibility, VS Code tasks."""
+"""Generated job commands, maintainer visibility, VS Code tasks."""
 
 from __future__ import annotations
 
@@ -21,8 +21,8 @@ HOST = {
 }
 
 PROJECT = """
-project: {name: t, default_action: build}
-actions:
+project: {name: t, default_job: build}
+jobs:
   build:
     help: Build it
     params:
@@ -53,7 +53,7 @@ def invoke(write):
     return _invoke
 
 
-def test_action_help_has_typed_options(invoke):
+def test_job_help_has_typed_options(invoke):
     out = Text.from_ansi(invoke("build", "--help").output).plain
     for text in (
         "--jobs",
@@ -107,7 +107,7 @@ def test_unknown_command_suggests(invoke):
     assert result.exit_code == 2 and "did you mean 'build'" in result.output
 
 
-def test_maintainer_actions_hidden_and_refused_for_users(invoke):
+def test_maintainer_jobs_hidden_and_refused_for_users(invoke):
     user_help = invoke("--help").output
     assert "build" in user_help and "publish" not in user_help
     assert "publish" in invoke("--help", role="maintainer").output
@@ -119,9 +119,7 @@ def test_maintainer_actions_hidden_and_refused_for_users(invoke):
 
 
 def test_broken_config_still_shows_help(write):
-    root = write(
-        {".main.ptk.yml": "project: {name: t}\nactions: {build: {stepz: []}}\n"}
-    )
+    root = write({".main.ptk.yml": "project: {name: t}\njobs: {build: {stepz: []}}\n"})
     base = ["--config", str(root / ".main.ptk.yml")]
     help_out = CliRunner(env=HOST).invoke(
         cli, [*base, "--help"], catch_exceptions=False
@@ -141,7 +139,7 @@ def test_jsonc():
 
 def test_merge_keeps_user_tasks_and_inputs():
     tasks, inputs = vscode.build_tasks(
-        [vscode.TaskAction("build", "Build", True, False)],
+        [vscode.TaskJob("build", "Build", True, False)],
         command="ptk",
         variants=["a", "b"],
         default_variant="a",
@@ -154,7 +152,7 @@ def test_merge_keeps_user_tasks_and_inputs():
     merged = vscode.merge(existing, tasks, inputs)
     assert [t["label"] for t in merged["tasks"]] == ["mine", "ptk: build"]
     assert [i["id"] for i in merged["inputs"]] == ["other", "ptkVariant"]
-    assert merged["tasks"][1]["args"] == ["build", "-V", "${input:ptkVariant}"]
+    assert merged["tasks"][1]["args"] == ["run", "build", "-V", "${input:ptkVariant}"]
     assert merged["tasks"][1]["group"] == {"kind": "build", "isDefault": True}
     assert vscode.merge(merged, tasks, inputs) == merged  # idempotent
 
@@ -177,7 +175,7 @@ def test_vscode_tasks_command(invoke):
     assert (
         invoke("vscode", "tasks", "--check", "--command", "uv run ptk").exit_code == 0
     )
-    # maintainers get their actions too, unless --users-only
+    # maintainers get their jobs too, unless --users-only
     invoke("vscode", "tasks", role="maintainer")
     labels = [t["label"] for t in json.loads(tasks_file.read_text())["tasks"]]
     assert "ptk: publish" in labels
@@ -186,7 +184,7 @@ def test_vscode_tasks_command(invoke):
     assert "ptk: publish" not in labels
 
 
-def test_help_page_lists_actions_once(invoke, tmp_path):
+def test_help_page_lists_jobs_once(invoke, tmp_path):
     out = tmp_path / "h.html"
     invoke("help", "--no-open", "-o", str(out))
     html = out.read_text()

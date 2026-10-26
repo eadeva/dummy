@@ -28,7 +28,7 @@ def test_use_case_renders_valid_configuration(tmp_path):
     assert set(entry) == {"repository", "include"}
     config = yaml.safe_load(result.files["ptk/project.ptk.yml"])
     assert config["project"]["name"] == 'My "project": #1'
-    assert config["project"]["default_action"] == "hello"
+    assert config["project"]["default_job"] == "hello"
     assert files.dry_run
 
 
@@ -123,8 +123,8 @@ def test_custom_config_directory_and_outputs(tmp_path):
     folder = tmp_path / "config/ptk files"
     for name in (
         "project.ptk.yml",
-        "actions/hello.ptk.yml",
-        "actions/build.ptk.yml",
+        "jobs/hello.ptk.yml",
+        "jobs/build.ptk.yml",
         "variants/variants.ptk.yml",
         "variants/debug.ptk.yml",
         "variants/release.ptk.yml",
@@ -138,7 +138,7 @@ def test_custom_config_directory_and_outputs(tmp_path):
     ):
         assert (folder / name).is_file()
         assert "#" in (folder / name).read_text()
-    assert sorted(p.name for p in (folder / "actions").iterdir()) == [
+    assert sorted(p.name for p in (folder / "jobs").iterdir()) == [
         "build.ptk.yml",
         "hello.ptk.yml",
     ]
@@ -200,7 +200,7 @@ def test_scaffold_nested_includes_variants_and_ci(tmp_path):
         project = create_app().load_project.execute(
             config_file=tmp_path / ".main.ptk.yml", ci=ci
         )
-        assert set(project.config.actions) == {"hello", "build"}
+        assert set(project.config.jobs) == {"hello", "build"}
         assert project.config.versioning.project.version == "0.1.0"
         assert project.config.environment.set.get("PTK_CI") == ("true" if ci else None)
         variants = VariantService(project)
@@ -208,9 +208,9 @@ def test_scaffold_nested_includes_variants_and_ci(tmp_path):
         assert variants.resolve("release").values["DEBUG"] is False
         assert project.config.tools == {}
         assert project.config.credentials == {}
-    # New actions are discovered through the actions glob without editing the index.
-    (tmp_path / "ptk/actions/check.ptk.yml").write_text(
-        "actions:\n  check:\n    steps:\n      - check: {uses: echo, with: {message: discovered}}\n"
+    # New jobs are discovered through the jobs glob without editing the index.
+    (tmp_path / "ptk/jobs/check.ptk.yml").write_text(
+        "jobs:\n  check:\n    steps:\n      - check: {uses: echo, with: {message: discovered}}\n"
     )
     result = CliRunner().invoke(cli, ["-c", str(tmp_path / ".main.ptk.yml"), "check"])
     assert result.exit_code == 0, result.output
