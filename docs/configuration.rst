@@ -171,7 +171,10 @@ The Tests section and each test suite have summary cards for executed, passed,
 skipped and failed cases. Executed excludes skipped cases; failed includes both
 assertion failures and test errors (for example, fixture/setup errors). Detailed
 case rows retain the distinction between failures and errors. Step counts remain
-separate from test-case counts.
+separate from test-case counts. Cards use green for passed, red for failed, gray
+for skipped, blue for general information and amber for warning findings. Error
+findings use red. Colors adapt to light/dark mode; text labels always identify
+the meaning independently of color.
 
 Every HTML table has a case-insensitive substring filter for each column. Filters
 combine across columns, operate locally/offline, and show the remaining row count.

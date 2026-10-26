@@ -24,9 +24,15 @@ from ...domain.reporting.model import (
 
 CSS = """
 :root{--bg:#f3f5f8;--paper:#fff;--ink:#18212f;--muted:#5b6778;--line:#dce2ea;--accent:#0f7b8a;
---pass:#2b8a57;--fail:#c43d2f;--skip:#9aa5b4;--cancel:#b7791f;--code:#eef1f5}
+--pass:#2b8a57;--fail:#c43d2f;--skip:#9aa5b4;--cancel:#b7791f;--code:#eef1f5;
+--card-info:#eaf3ff;--card-info-ink:#245b91;--card-pass:#eaf7ee;--card-pass-ink:#216539;
+--card-fail:#fff0ee;--card-fail-ink:#a92e24;--card-skip:#edf0f3;--card-skip-ink:#526071;
+--card-warn:#fff6df;--card-warn-ink:#805600}
 @media (prefers-color-scheme:dark){:root{--bg:#0f141b;--paper:#161d27;--ink:#e6ebf2;--muted:#95a1b2;
---line:#273140;--accent:#4fc3cf;--pass:#52c08a;--fail:#f07462;--skip:#5d6b7e;--cancel:#e3b341;--code:#1d2531}}
+--line:#273140;--accent:#4fc3cf;--pass:#52c08a;--fail:#f07462;--skip:#5d6b7e;--cancel:#e3b341;--code:#1d2531;
+--card-info:#182a40;--card-info-ink:#91c4fa;--card-pass:#182f24;--card-pass-ink:#82d5a2;
+--card-fail:#392321;--card-fail-ink:#ffa397;--card-skip:#252c35;--card-skip-ink:#bdc6d2;
+--card-warn:#352d1a;--card-warn-ink:#f0cb78}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 h1,h2{font-family:Charter,"Bitstream Charter","Sitka Text",Cambria,Georgia,serif;letter-spacing:-.01em;line-height:1.2}
@@ -41,10 +47,14 @@ border-bottom:1px solid var(--line);margin-bottom:22px}
 .passed{color:var(--pass)}.failed,.error{color:var(--fail)}.skipped{color:var(--skip)}.cancelled{color:var(--cancel)}
 .meta{color:var(--muted)}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:12px 0 20px}
-.cards div{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:14px;overflow-wrap:anywhere}
-.cards dt{color:var(--muted);font-size:13px}.cards dd{margin:4px 0 0;font-size:22px;font-weight:650}
-.figures{display:flex;flex-wrap:wrap;gap:10px 36px;margin:0 0 26px}
-.figures div{min-width:120px}.figures dt{color:var(--muted);font-size:13px}.figures dd{margin:0;font-size:20px;font-weight:650}
+.cards div{--card-bg:var(--card-info);--card-ink:var(--card-info-ink);
+background:var(--card-bg);border:1px solid var(--line);border-left:4px solid var(--card-ink);
+border-radius:8px;padding:14px;overflow-wrap:anywhere}
+.cards .card-passed{--card-bg:var(--card-pass);--card-ink:var(--card-pass-ink)}
+.cards .card-failed{--card-bg:var(--card-fail);--card-ink:var(--card-fail-ink)}
+.cards .card-skipped{--card-bg:var(--card-skip);--card-ink:var(--card-skip-ink)}
+.cards .card-warning{--card-bg:var(--card-warn);--card-ink:var(--card-warn-ink)}
+.cards dt{color:var(--card-ink);font-size:13px}.cards dd{color:var(--card-ink);margin:4px 0 0;font-size:22px;font-weight:650}
 section{margin:0 0 34px}
 section>h2{font-size:24px;margin:0 0 10px}
 .timeline{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:10px 14px}
@@ -155,14 +165,19 @@ def _row(step: ReportStep, total: float) -> str:
     )
 
 
-def _cards(values) -> str:
+def _cards(values, *, tones=None) -> str:
+    tones = tones or {}
     return (
         '<dl class="cards">'
         + "".join(
-            f"<div><dt>{_e(k)}</dt><dd>{_e(v)}</dd></div>" for k, v in values.items()
+            f'<div class="card-{_e(tones.get(k, "info"))}"><dt>{_e(k)}</dt><dd>{_e(v)}</dd></div>'
+            for k, v in values.items()
         )
         + "</dl>"
     )
+
+
+TEST_CARD_TONES = {"Passed": "passed", "Failed": "failed", "Skipped": "skipped"}
 
 
 def _project_header(report: Report) -> str:
@@ -257,9 +272,17 @@ def render(report: Report, *, link_root: Path | None = None) -> str:
     for cov in report.coverage:
         figures.append((f"Coverage {cov.step}", f"{cov.percent:.1f}%"))
     parts.append(
-        '<dl class="figures">'
-        + "".join(f"<div><dt>{_e(k)}</dt><dd>{_e(v)}</dd></div>" for k, v in figures)
-        + "</dl>"
+        _cards(
+            dict(figures),
+            tones={
+                "Steps passed": "passed",
+                "Steps failed": "failed",
+                "Steps skipped": "skipped",
+                "Findings": "failed"
+                if any(f.level == "error" for f in report.findings)
+                else "warning",
+            },
+        )
     )
 
     problems = []
@@ -323,14 +346,17 @@ def render(report: Report, *, link_root: Path | None = None) -> str:
             open_attr = " open" if suite.count(FAILED) + suite.count(ERROR) else ""
             blocks.append(
                 f"<details{open_attr}><summary>{summary}</summary>"
-                + _cards(test_metrics(suite.cases))
+                + _cards(test_metrics(suite.cases), tones=TEST_CARD_TONES)
                 + "<div class=table-wrap><table>"
                 f"<tr><th>Class</th><th>Test</th><th>Result</th><th>Time</th></tr>{rows}"
                 "</table></div></details>"
             )
         parts.append(
             "<section><h2>Tests</h2>"
-            + _cards(test_metrics(c for suite in report.suites for c in suite.cases))
+            + _cards(
+                test_metrics(c for suite in report.suites for c in suite.cases),
+                tones=TEST_CARD_TONES,
+            )
             + '<p class="meta">Executed excludes skipped tests. Failed includes errors.</p>'
             + "".join(blocks)
             + "</section>"
