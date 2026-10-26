@@ -204,6 +204,15 @@ class ToolService:
             if before.ok:
                 results.append(SetupResult(before.name, before, "ok"))
                 continue
+            if not tools[before.name].docker and self._host.is_docker():
+                results.append(
+                    SetupResult(
+                        before.name,
+                        before,
+                        "installation disabled inside Docker (docker: false)",
+                    )
+                )
+                continue
             methods = install_methods(
                 tools[before.name], self._host.os_name(), allow_system=allow_system
             )

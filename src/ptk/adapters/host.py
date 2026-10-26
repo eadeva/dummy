@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import getpass
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -38,6 +39,25 @@ class SystemHost:
             self._environ.get(name, "").lower() not in ("", "0", "false")
             for name in CI_VARIABLES
         )
+
+    def is_docker(self) -> bool:
+        override = self._environ.get("PTK_DOCKER", "").lower()
+        if override in {"1", "true", "yes"}:
+            return True
+        if override in {"0", "false", "no"}:
+            return False
+        if self._environ.get("container", "").lower() == "docker":
+            return True
+        if Path("/.dockerenv").is_file():
+            return True
+        for filename in ("/proc/self/cgroup", "/proc/1/cgroup"):
+            try:
+                content = Path(filename).read_text(encoding="utf-8")
+            except OSError:
+                continue
+            if re.search(r"(?:/docker/|/docker-[0-9a-f]+\.scope)", content):
+                return True
+        return False
 
     def os_name(self) -> str:
         if sys.platform.startswith("win"):

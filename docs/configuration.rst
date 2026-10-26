@@ -398,3 +398,33 @@ not refreshed on every action. Pin properties/path/checksum for reproducibility.
 Changing a source or version creates a distinct installation, and each action
 activates only its selected tool definitions. No corporate hostnames, legacy
 runtime filters or repository-specific download layout rules are built in.
+
+Disabling installation in Docker
+================================
+
+Set ``docker: false`` on a tool to disable its installation inside Docker::
+
+   tools:
+     compiler:
+       docker: false
+       version: ">=12"
+       check: compiler --version
+       apt: gcc
+
+The default is ``docker: false``: tools must normally be supplied by the image.
+Set ``docker: true`` on a tool to allow PTK to install it inside Docker. With ``false``,
+PTK still checks the tool and its version, includes it in reports, and activates
+any existing managed installation. Only installation is blocked, including
+``setup install``, ``--setup`` and ``tools.ensure``. A missing or incompatible
+tool remains an error; PTK explains that installation is disabled in Docker.
+Prepare the required tool in the image or mount an existing managed cache.
+If using an image tool outside the default OS PATH, add its directory to the
+action's environment configuration. No Docker daemon or Docker CLI is needed.
+
+Action-level ``requires_tools`` can override ``docker`` like other tool settings.
+Changing this policy does not change the managed installation identity.
+Detection checks ``/.dockerenv``, Docker cgroup markers and ``container=docker``.
+These signals are best-effort, especially for Windows containers or unusual
+container runtimes. Set ``PTK_DOCKER=1`` explicitly in those images; use
+``PTK_DOCKER=0`` to override automatic detection. Having Docker installed on the
+host does not count as running inside Docker.

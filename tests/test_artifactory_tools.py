@@ -145,7 +145,7 @@ def test_new_optional_sources_preserve_existing_tool_identity():
 
     spec = ToolSpec(uv_tool="cmake==3.30.2")
     data = spec.model_dump(
-        mode="json", exclude={"description", "toolbase", "artifactory"}
+        mode="json", exclude={"description", "toolbase", "artifactory", "docker"}
     )
     previous = hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()[
         :20

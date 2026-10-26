@@ -149,6 +149,7 @@ def project(write, tmp_path):
     url, sha = make_tool_archive(tmp_path)
     root = write({".main.ptk.yml": PROJECT.format(url=url, sha=sha)})
     env = {
+        "PTK_DOCKER": "0",  # Exercise host installation independently of the test runner.
         "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
         "HOME": str(tmp_path / "home"),
         "PTK_TOOLS_DIR": str(tmp_path / "tools"),
@@ -298,6 +299,7 @@ def test_action_versions_coexist_and_path_contains_only_selected_tools(
     }
     root = write({".main.ptk.yml": yaml.safe_dump(data)})
     env = {
+        "PTK_DOCKER": "0",  # Exercise host installation independently of the test runner.
         "PATH": os.environ.get("PATH", ""),
         "PTK_TOOLS_DIR": str(tmp_path / "installed"),
     }

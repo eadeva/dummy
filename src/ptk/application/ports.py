@@ -53,6 +53,8 @@ class HostEnvironment(Protocol):
 
     def is_ci(self) -> bool: ...
 
+    def is_docker(self) -> bool: ...
+
     def os_name(self) -> str:
         """'windows' or 'linux' (or 'macos')."""
 

@@ -149,6 +149,7 @@ def tool_identity(spec: ToolSpec) -> str:
     """Stable identity for an effective tool definition (versions and sources)."""
     data = spec.model_dump(mode="json", exclude={"description"})
     # Keep identities of existing configurations stable when adding optional sources.
+    data.pop("docker", None)  # installation policy does not change the payload
     for key in ("toolbase", "artifactory"):
         if data.get(key) is None:
             data.pop(key, None)

@@ -425,6 +425,7 @@ class ArtifactorySource(_Strict):
 
 class ToolSpec(_Strict):
     description: str = ""
+    docker: bool = False  # false: disable installation inside Docker, keep checks
     installers: dict[str, dict[str, Any]] = Field(default_factory=dict)
     version: str | None = None  # PEP 440 style range: ">=3.28,<4"
     check: str | None = None  # command printing the version
