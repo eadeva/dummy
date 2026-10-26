@@ -159,7 +159,11 @@ def execute_workflow(ctx, name, *, dry_run=False):
                 f"repository {alias!r} is not a configured member of this workspace"
             )
         state = CliState(
-            create_app(host=parent.app.host, workspace=parent.app.workspace),
+            create_app(
+                host=parent.app.host,
+                workspace=parent.app.workspace,
+                started_at=parent.app.started_at,
+            ),
             config=entries[alias],
             overrides=parent.overrides,
             ci=parent.ci,

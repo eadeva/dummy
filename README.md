@@ -372,3 +372,20 @@ normal project environment. Packaging also builds a separate documentation archi
 The `dev` group includes pinned CMake for generator integration tests. uv selects
 the project environment's CMake ahead of host PATH entries, so the test job
 does not require a separate machine-wide CMake installation.
+
+## Dates and upload destinations
+
+Runtime templates can use `${date.timestamp}` (for example `2026_10_26_1507`),
+`${date.utc.timestamp}`, or separate date/time components. One timestamp is shared
+across a CLI invocation, including parallel workflow children.
+
+`artifactory_structure.ptk.yaml` defines a global base path, GitHub event paths,
+and optional job suffixes. PTK resolves the destination; GitHub workflows choose
+files, authenticate and upload:
+
+```bash
+ptk artifacts destination --job package --format github
+```
+
+See [destination configuration and examples](docs/artifacts.rst) and
+[date substitutions](docs/configuration.rst#date-and-time-substitutions).

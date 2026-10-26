@@ -1,0 +1,19 @@
+project: {name: Artifact destination example}
+# A literal version makes this example independent of the enclosing Git checkout.
+# Production projects can select source: git, match: 'v*', strip_prefix: v.
+versioning:
+  project: {source: literal, version: '1.2.3'}
+variants:
+  default: default
+  variants:
+    default: {}
+jobs:
+  package:
+    steps:
+      - prepare: {uses: echo, with: {message: 'Prepared ${date.timestamp}'}}
+  test:
+    steps:
+      - check: {uses: echo, with: {message: 'Tests would run here'}}
+  docs:
+    steps:
+      - html: {uses: echo, with: {message: 'Documentation would build here'}}

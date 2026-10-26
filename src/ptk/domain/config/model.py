@@ -28,6 +28,7 @@ from pydantic import (
     model_validator,
 )
 
+from ..artifacts import ArtifactoryStructure
 from ..variants.model import ProductLineSpec
 from ..versioning import VersionDependency, VersioningSpec
 from ..workflows import WorkflowFile, WorkflowSpec
@@ -38,6 +39,7 @@ STEP_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 
 RESERVED_JOBS = {
+    "artifacts",
     "workflow",
     "config",
     "variant",
@@ -517,6 +519,7 @@ class ReportingSpec(_Strict):
 
 
 class PtkConfig(_Strict):
+    artifactory: ArtifactoryStructure | None = None
     workflows: dict[str, WorkflowSpec] = Field(default_factory=dict)
 
     @field_validator("workflows")
@@ -561,6 +564,7 @@ class PtkConfig(_Strict):
             "version",
             "report",
             "workflow",
+            "artifacts",
         ],
         Literal["all", "maintainer"],
     ] = Field(default_factory=dict)

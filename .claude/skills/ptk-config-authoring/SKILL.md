@@ -13,7 +13,7 @@ description: Create or change ptk YAML configuration, includes, layers and subst
 
 4. Remember that mappings merge deeply and lists replace; use `!append` or `!replace` intentionally.
 
-5. Use `${vars.name}`, `${params.name}`, `${env:NAME:-fallback}` and `${vh.*}`; escape literal references with `$${...}`.
+5. Use `${vars.name}`, `${params.name}`, `${env:NAME:-fallback}` and `${vh.*}`; escape literal references with `$${...}`. `${date.timestamp}` gives local invocation time as `YYYY_MM_DD_HHMM`; `${date.utc.timestamp}` uses UTC. Date components can be combined for custom formats. The instant is shared across steps, variants and local workflow children; discovery fields remain literal.
 
 6. Inspect origins with `ptk setup config show --sources` before changing an unexpected effective value.
 
@@ -35,3 +35,5 @@ For version discovery, read [docs/versioning.rst](../../../docs/versioning.rst).
 
 
 To combine existing jobs locally, use [workflow configuration](../../../docs/workflows.rst) and the `ptk-workflow-authoring` skill. Put `workflow.ptk.yml` in the configured folder; workspace-owned workflows belong at the VMR root. Workflows preserve each call's repository settings and never run wholesale on CX. GitHub job/template generation is deferred.
+
+For upload destinations, read [Artifactory destination rules](../../../docs/artifacts.rst) and start from [the destination example](../../../examples/artifacts/config/artifactory_structure.ptk.yaml). The exact filename `artifactory_structure.ptk.yaml` is discovered in the config folder. Configure global base, event route and optional PTK-job suffix; preserve branch slashes. PTK resolves paths only; workflows select files, authenticate and upload. Preview with `ptk artifacts destination --job NAME --event release`; use `--at ISO_TIMESTAMP` for a shared explicit date and `--format github` for step outputs. Never add file-selection or credential fields to this model.

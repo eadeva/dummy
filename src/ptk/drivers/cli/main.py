@@ -24,6 +24,7 @@ from ...application.use_cases.help import HelpCommand, HelpOption
 from ...application.use_cases.init import InitResult
 from ...domain.errors import ConfigError, PtkError
 from .access import AccessGroup
+from .artifacts import artifacts_group
 from .jobs import (
     ProjectGroup,
     build_request,
@@ -1275,6 +1276,7 @@ def _group_setup_commands() -> None:
 
 _group_setup_commands()
 cli.add_command(version_group)
+cli.add_command(artifacts_group)
 
 
 def main() -> None:

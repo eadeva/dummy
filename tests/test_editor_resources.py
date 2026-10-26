@@ -38,6 +38,11 @@ def test_vscode_setup_installs_tasks_skills_and_working_offline_links(
             assert resolved.exists(), (path, target)
     schema = json.loads((tmp_path / ".github/ptk/config-schema.json").read_text())
     assert "StepEntry" in schema["$defs"]
+    assert (
+        tmp_path
+        / ".github/ptk/examples/artifacts/config/artifactory_structure.ptk.yaml"
+    ).is_file()
+    assert (tmp_path / ".github/ptk/docs/artifacts.rst").is_file()
     before = {
         path: path.stat().st_mtime_ns
         for path in (tmp_path / ".github").rglob("*")

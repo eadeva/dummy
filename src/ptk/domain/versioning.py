@@ -97,6 +97,10 @@ def resolved(value: str, *, raw: str, source: str, **metadata) -> dict:
             prerelease=pre or "",
             build_metadata=build or "",
         )
+        if all(int(part) <= 9999 for part in (major, minor, patch)):
+            result["sort_key"] = "_".join(
+                f"{int(part):04d}" for part in (major, minor, patch)
+            )
     return result
 
 

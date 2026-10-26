@@ -149,6 +149,12 @@ steps, for example ``${version.projects.engine.value}``,
 The built-in/plugin context exposes the same mapping as ``ctx.versions``.
 Treat it as read-only.
 
+``${version.current.*}`` is a template shortcut for the current repository's
+entry. ``sort_key`` adds four-digit numeric components for destination folder
+ordering; ``1.2.3`` becomes ``0001_0002_0003``. See :doc:`artifacts` for its
+numeric limits and prerelease ordering boundary. The underlying version value
+and generated package version are unchanged.
+
 Build generators
 ----------------
 

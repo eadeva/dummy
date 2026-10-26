@@ -1,7 +1,7 @@
 # ptk — Implementation Plan
 
 > **ptk** (*project tool kit*): a generic, configuration-driven project CLI.
-> All configuration files end in `.ptk.yml`: entry point `.main.ptk.yml` (ptk version + main fields),
+> Configuration files use `.ptk.yml` (with `artifactory_structure.ptk.yaml` as a conventional exception): entry point `.main.ptk.yml` (ptk version + main fields),
 > fragments `*.ptk.yml`, layers `cx.ptk.yml` and `local.ptk.yml`, and `maintainers.ptk.yml`.
 > Workspace folders: `_builds/`, `_bin/`, `_logs/`, `_reports/` (structured by variant / job / step).
 
@@ -832,3 +832,19 @@ Job - or Workflow -. Workflow tables link only HTML child reports, retaining JSO
 artifacts. A selected workflow summary suppresses child auto-opening; otherwise
 child policies apply after completion. Interactive VS Code terminals print scoped
 loopback HTTP links, with default-browser settings documented in docs/editor.rst.
+
+## Date templates and destination-only Artifactory structure
+
+Implemented invocation-scoped local/UTC date templates with component fields,
+parameter/default/step/environment substitution, workflow/VMR propagation and
+report context metadata. Date resolution does not depend on per-step wall clocks.
+
+Implemented automatic artifactory_structure.ptk.yaml discovery, global/event/job
+path composition, push branch/tag routes, preserved branch slashes, repository
+overrides and read-only JSON/GitHub-output/URL resolution. PTK jobs/variants and
+repository versions retain their own context. CLI --at can reuse an explicit
+instant across destination commands. Added current-repository version shortcuts
+and four-digit numeric sort keys; arbitrary/prerelease semantic ordering and
+numeric components above 9999 are not provided by that key. Uploads, credentials,
+file selection and GitHub workflow generation remain outside this resolver.
+Docs and existing config/package skills include the portable destination example.

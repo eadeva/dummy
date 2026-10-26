@@ -12,9 +12,11 @@ import re
 from typing import Any
 
 from .. import expressions
+from ..artifacts import template_problems
 from ..suggest import did_you_mean
 from ..variants import rules as variant_rules
 from ..variants.model import ProductLineSpec
+from .dates import valid_date_field
 from .model import JobSpec, PtkConfig, StepSpec
 from .substitution import iter_references, split_reference
 from .tree import Path
@@ -23,8 +25,17 @@ PathProblem = tuple[Path, str]
 
 WHEN_FLAT_NAMES = {"variant", "os", "ci"}
 WHEN_NAMESPACES = {"params", "vars", "env", "vh"}
-PROJECT_KEYS = {"name", "root", "description"}
-RUN_KEYS = {"id", "job", "step", "build_dir", "bin_dir", "log_dir", "reports_dir"}
+PROJECT_KEYS = {"name", "root", "description", "alias"}
+RUN_KEYS = {
+    "id",
+    "job",
+    "variant",
+    "step",
+    "build_dir",
+    "bin_dir",
+    "log_dir",
+    "reports_dir",
+}
 VH_KEYS = {"variant", "aliases", "components", "component_list", "features", "data"}
 
 
@@ -39,6 +50,16 @@ def parse_path(text: str) -> Path:
 
 def validate(config: PtkConfig) -> list[PathProblem]:
     problems: list[PathProblem] = []
+    if config.artifactory is not None:
+        problems += [
+            (("artifactory", *path), message)
+            for path, message in template_problems(config.artifactory, config.vars)
+        ]
+        problems += [
+            (("artifactory", "jobs", name), f"unknown job {name!r}")
+            for name in config.artifactory.jobs
+            if name not in config.jobs
+        ]
     line = config.variants
     if config.versioning is not None:
         spec = config.versioning
@@ -272,8 +293,13 @@ def _check_dotted(
     elif in_substitution and ns == "version":
         if config.versioning is None:
             return f"{ref!r} needs versioning configuration"
-        if first != "projects":
-            return f"unknown version namespace {ref!r}; use version.projects.ALIAS"
+        if first not in {"projects", "current"}:
+            return f"unknown version namespace {ref!r}; use version.current or version.projects.ALIAS"
+    elif in_substitution and ns == "date":
+        if not valid_date_field(rest):
+            return (
+                f"unknown date field {ref!r}; use date.timestamp or date.utc.timestamp"
+            )
     elif in_substitution and ns == "project":
         if first not in PROJECT_KEYS:
             return f"unknown name '{ref}'{did_you_mean(first, PROJECT_KEYS)}"
@@ -281,7 +307,17 @@ def _check_dotted(
         if first not in RUN_KEYS:
             return f"unknown name '{ref}'{did_you_mean(first, RUN_KEYS)}"
     else:
-        known = ["env", "vars", "params", "vh", "project", "run", "secret", "version"]
+        known = [
+            "env",
+            "vars",
+            "params",
+            "vh",
+            "project",
+            "run",
+            "secret",
+            "version",
+            "date",
+        ]
         return f"unknown namespace '{ns}'{did_you_mean(ns, known)}"
     return None
 

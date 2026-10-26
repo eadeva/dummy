@@ -5,6 +5,8 @@ description: Prepare and validate PTK or project Python package artifacts for a 
 
 # PTK package preparation
 
+For the destination stage, read [Artifactory destinations](../../../docs/artifacts.rst). `ptk artifacts destination --job package --format github` emits URL/repository/path only. Keep file selection, authentication and uploads in GitHub workflows. Use `${version.current.sort_key}_v${version.current.value}` for numeric release folders and `${date.timestamp}` or `${date.utc.timestamp}` for dated paths. The numeric sort key does not order prerelease labels. Do not make `ptk package` publish implicitly.
+
 1. Read [package preparation](../../../docs/packaging.rst) and the project's existing package job/backend. Distinguish PTK's own `package` job and helper script from an arbitrary consumer repository; do not assume those files exist there.
 2. Confirm where the version is discovered. For PTK, it comes from the job's Git-managed version snapshot. For another project, wire its own backend to its declared version source rather than copying a static version. Do not create tags or publish as part of preparation.
 3. Keep build dependencies in the project's Python dependency groups. Use PTK's existing Python-step support to invoke the build backend. Stage artifacts separately and preserve prior validated output if a new build fails.

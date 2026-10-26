@@ -12,6 +12,7 @@ isolated command environments, logs and reports. Python 3.12 or newer is require
    configuration
    workflows
    versioning
+   artifacts
    m11
    plugins
    reference

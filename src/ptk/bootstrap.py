@@ -6,6 +6,7 @@ import hashlib
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 
 from . import __version__
@@ -23,6 +24,7 @@ from .adapters.credentials.gopass import GopassProvider
 from .adapters.credentials.keyring_provider import KeyringProvider
 from .adapters.credentials.prompt import ConsolePrompter, PromptProvider
 from .adapters.credentials.vault import Vault, VaultProvider, default_vault_file
+from .adapters.github_context import github_context
 from .adapters.host import SystemHost
 from .adapters.logging.files import FileLogObserver
 from .adapters.plugins import PluginInstaller, load_plugins
@@ -44,6 +46,7 @@ from .application.ports import (
     RunObserver,
     SecretProvider,
 )
+from .application.use_cases.artifacts import ResolveDestination
 from .application.use_cases.authoring import SetupAuthoring
 from .application.use_cases.configs import SharedConfigs
 from .application.use_cases.credentials import CredentialService
@@ -94,6 +97,7 @@ class App:
     installer: SystemToolInstaller
     prompter: Prompter
     secret_providers: dict[str, SecretProvider]
+    started_at: datetime = field(default_factory=lambda: datetime.now().astimezone())
     workspace: WorkspaceDiscovery = field(
         default_factory=WorkspaceDiscovery, repr=False
     )
@@ -214,9 +218,18 @@ class App:
         return PrepareRun(
             self.host,
             self.credentials(project),
+            clock=lambda: self.started_at,
             tools=self.tools,
             versions=self.versions(),
             ptk_version=__version__,
+        )
+
+    def artifacts(self) -> ResolveDestination:
+        return ResolveDestination(
+            self.versions(),
+            lambda: github_context(self.host.variables),
+            self.started_at,
+            self.host.variables,
         )
 
     def run_job(self, project: Project) -> RunJob:
@@ -324,6 +337,7 @@ def create_app(
     prompter: Prompter | None = None,
     secret_providers: dict[str, SecretProvider] | None = None,
     workspace: WorkspaceDiscovery | None = None,
+    started_at: datetime | None = None,
 ) -> App:
     host = host or SystemHost(environ)
     runner = runner or SubprocessRunner()
@@ -334,6 +348,9 @@ def create_app(
     configs = SharedConfigs(PackageConfigFiles())
     machine = Environment(host, runner, uv)
     return App(
+        started_at=started_at
+        if started_at is not None
+        else datetime.now().astimezone(),
         workspace=workspace if workspace is not None else WorkspaceDiscovery(),
         host=host,
         init_project=InitProject(FileProjectScaffold()),

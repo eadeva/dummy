@@ -7,6 +7,7 @@ Syntax::
     ${params.jobs}                          job parameters
     ${vh.variant} ${vh.features.X} ${vh.components.camera} ${vh.data.toolchain}
     ${project.root} ${project.name}
+    ${date.timestamp} ${date.utc.timestamp} ${date.year}-${date.month}-${date.day}
     ${run.build_dir} ${run.bin_dir} ${run.log_dir} ${run.reports_dir} ${run.id} ${run.job} ${run.step}
     ${secret:artifactory.token}             only in step env values
     $${literal}                             escapes -> ${literal}
@@ -26,7 +27,17 @@ from typing import Any
 from ..suggest import did_you_mean
 
 _TOKEN = re.compile(r"\$\$\{|\$\{([^{}]*)\}")
-NAMESPACES = ("env", "vars", "params", "vh", "project", "run", "secret", "version")
+NAMESPACES = (
+    "env",
+    "vars",
+    "params",
+    "vh",
+    "project",
+    "run",
+    "secret",
+    "version",
+    "date",
+)
 
 
 class SubstitutionError(ValueError):

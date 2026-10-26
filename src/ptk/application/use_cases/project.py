@@ -171,7 +171,12 @@ class LoadProject:
         # Files already included explicitly retain that placement and are not applied twice.
         tree = t.from_plain({})
         layers = []
-        for filename in ("tools.ptk.yml", "versioning.ptk.yml", "workflow.ptk.yml"):
+        for filename in (
+            "tools.ptk.yml",
+            "versioning.ptk.yml",
+            "workflow.ptk.yml",
+            "artifactory_structure.ptk.yaml",
+        ):
             conventional = config_root / filename
             if conventional not in self._source.files[
                 first_read:

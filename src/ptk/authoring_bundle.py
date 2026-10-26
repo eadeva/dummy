@@ -32,8 +32,9 @@ DOCS = (
     "versioning",
     "workflows",
     "packaging",
+    "artifacts",
 )
-EXAMPLES = ("authoring", "plugin", "quickstart", "workflows")
+EXAMPLES = ("authoring", "plugin", "quickstart", "workflows", "artifacts")
 
 
 def source_files(root: Path) -> dict[str, Path]:
@@ -49,7 +50,7 @@ def source_files(root: Path) -> dict[str, Path]:
             if any(part.startswith(("_", ".")) for part in relative.parts[:-1]):
                 continue
             if path.is_file() and (
-                path.name.endswith(".ptk.yml")
+                path.name.endswith((".ptk.yml", ".ptk.yaml"))
                 or path.suffix == ".py"
                 or path.name == "pyproject.toml"
             ):

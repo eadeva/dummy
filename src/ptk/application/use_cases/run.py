@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from ...domain import layout as lay
+from ...domain.config.dates import date_values
 from ...domain.config.model import JobSpec
 from ...domain.config.substitution import Scope, SubstitutionError, to_text
 from ...domain.errors import PtkError
@@ -117,6 +118,10 @@ class PrepareRun:
 
     def execute(self, project: Project, request: RunRequest) -> PreparedRun:
         config = project.config
+        instant = self._clock()
+        if instant.tzinfo is None:
+            instant = instant.astimezone()
+        dates = date_values(instant)
         if request.job is None:
             if config.project.default_job is None:
                 names = ", ".join(config.jobs) or "none configured"
@@ -182,6 +187,15 @@ class PrepareRun:
             "root": str(project.root),
             "name": config.project.name,
             "description": config.project.description,
+            "alias": config.repository.alias
+            if config.repository
+            else config.project.name,
+        }
+        version_scope = {
+            **version_snapshot,
+            "current": version_snapshot.get("projects", {}).get(
+                project_ns["alias"], {}
+            ),
         }
 
         def resolve_default(template: str) -> Any:
@@ -192,7 +206,8 @@ class PrepareRun:
                 namespaces={
                     "vh": vh_ns,
                     "project": project_ns,
-                    "version": version_snapshot,
+                    "version": version_scope,
+                    "date": dates,
                 },
             )(template)
 
@@ -205,7 +220,7 @@ class PrepareRun:
         )
 
         layout = layout_of(project)
-        run_id = self._clock().strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8]
+        run_id = instant.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8]
         version_file = (
             str(
                 project.root
@@ -268,7 +283,8 @@ class PrepareRun:
                     "vh": vh_ns,
                     "project": project_ns,
                     "run": run_ns,
-                    "version": version_snapshot,
+                    "version": version_scope,
+                    "date": dates,
                 },
             )
 
@@ -380,6 +396,7 @@ class PrepareRun:
             base_env=base,
             dirs=dirs,
             report_context={
+                "date": dates,
                 "ptk_version": self._ptk_version,
                 "repository_alias": config.repository.alias
                 if config.repository

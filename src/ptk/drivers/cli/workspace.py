@@ -20,7 +20,10 @@ class RepositoryGroup(ProjectGroup):
     def make_context(self, info_name, args, parent=None, **extra):
         parent_state = state_of(parent)
         extra["obj"] = CliState(
-            app=create_app(workspace=parent_state.app.workspace),
+            app=create_app(
+                workspace=parent_state.app.workspace,
+                started_at=parent_state.app.started_at,
+            ),
             config=self.entry_file,
             overrides=parent_state.overrides,
             ci=parent_state.ci,

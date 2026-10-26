@@ -20,7 +20,7 @@ keeps configuration alongside the entry file. Entry-file includes (including
 ``!include`` and ``variants:``) resolve from this directory. Includes inside
 fragments remain relative to the fragment itself.
 
-Automatic ``workflow.ptk.yml``, ``versioning.ptk.yml``, ``tools.ptk.yml``, ``<job>.tools.ptk.yml``, ``cx.ptk.yml``,
+Automatic ``artifactory_structure.ptk.yaml``, ``workflow.ptk.yml``, ``versioning.ptk.yml``, ``tools.ptk.yml``, ``<job>.tools.ptk.yml``, ``cx.ptk.yml``,
 ``local.ptk.yml`` and ``maintainers.ptk.yml`` are discovered in that directory.
 The loader applies shared tool files, main/includes, CX when enabled, local,
 and finally CLI ``--set`` overrides. Repository metadata cannot be overridden.
@@ -55,6 +55,38 @@ source files and lines.
 A ``variants`` string names a separate variant file. Other schema fields use
 the types in :doc:`reference`. ``ptk_version`` is a version requirement; this
 repository's development version needs a range such as ``>=0.1.0.dev0,<0.2``.
+
+Date and time substitutions
+---------------------------
+
+Use ``${date.timestamp}`` for a value such as ``2026_10_26_1507``. The timestamp
+is captured once at CLI invocation in the machine's local timezone. Every job,
+variant and child of a local workflow in that invocation shares the same instant.
+``${date.utc.timestamp}`` expresses that instant in UTC, including date rollover.
+This works in runtime template values: variables, parameter defaults, environment,
+step commands/options and :doc:`Artifactory destination paths <artifacts>`.
+Configuration discovery fields and other literal schema fields are not templates.
+
+Available fields are ``timestamp`` (minute precision), ``timestamp_seconds``,
+``iso`` (ISO timestamp with offset), ``year``, ``month``, ``day``, ``hour``,
+``minute``, ``second`` and ``offset``. Every field also has a ``date.utc`` form.
+Numeric date components are strings with leading zeros. Combine them for a
+custom format::
+
+   vars:
+     archive: "build_${date.timestamp}.zip"
+     day_folder: "${date.year}/${date.month}/${date.day}"
+     utc_stamp: "${date.utc.year}-${date.utc.month}-${date.utc.day}_${date.utc.hour}${date.utc.minute}"
+   jobs:
+     show-date:
+       steps:
+         - show: {uses: echo, with: {message: "${vars.archive}"}}
+
+The captured local and UTC values are recorded under ``context.date`` in run
+reports. A new invocation captures a new instant; a dry run previews its own
+instant. Minute-level timestamps are not unique run identifiers: include a run
+ID when distinct runs need distinct destinations. Local time depends on the
+machine; use ``date.utc`` for a common timezone across developer and CI machines.
 
 Jobs and parameters
 ----------------------
