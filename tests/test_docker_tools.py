@@ -102,7 +102,7 @@ def test_policy_does_not_change_installation_identity():
 
 
 def test_docker_detection(monkeypatch):
-    monkeypatch.setattr(Path, "is_file", lambda path: str(path) == "/.dockerenv")
+    monkeypatch.setattr(Path, "is_file", lambda path: path == Path("/.dockerenv"))
     assert SystemHost({}).is_docker()
     assert not SystemHost({"PTK_DOCKER": "0"}).is_docker()
     monkeypatch.setattr(Path, "is_file", lambda _: False)
