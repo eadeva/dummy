@@ -213,6 +213,14 @@ def execute_workflow(ctx, name, *, dry_run=False):
     if dry_run:
         click.echo("workflow preview; no jobs executed")
         return
+    # Install once per participating repository, before any parallel job starts.
+    checked_repositories = set()
+    for node in plan.walk():
+        if node.prepared is not None:
+            project = node.prepared.project
+            if project.root not in checked_repositories:
+                bindings[node.path].app.hooks.execute(project, click.echo)
+                checked_repositories.add(project.root)
     run_id = datetime.now(UTC).strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8]
     report_root = root / "_reports"
     if owner is not None:

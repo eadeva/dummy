@@ -5,13 +5,13 @@ from __future__ import annotations
 import platform
 from collections.abc import Callable
 from dataclasses import dataclass
-from pathlib import Path
 
 from ...domain.errors import PtkError
 from ...domain.execution.model import CommandSpec
 from ..ports import HostEnvironment, ProcessRunner
 from .configs import SharedConfigs
 from .credentials import CredentialService
+from .hooks import EnsureHooks
 from .project import Project
 from .role import Role
 from .tools import ToolService
@@ -49,12 +49,18 @@ class Environment:
 
 class Doctor:
     def __init__(
-        self, env: Environment, tools: ToolService, configs: SharedConfigs, version: str
+        self,
+        env: Environment,
+        tools: ToolService,
+        configs: SharedConfigs,
+        version: str,
+        hooks: EnsureHooks,
     ):
         self._env = env
         self._tools = tools
         self._configs = configs
         self._version = version
+        self._hooks = hooks
 
     def run(
         self,
@@ -153,21 +159,36 @@ class Doctor:
                 )
         except PtkError as exc:
             checks.append(Check("configs", FAIL, str(exc)))
-        if "pre-commit" in project.config.configs and (project.root / ".git").is_dir():
-            hook = project.root / ".git" / "hooks" / "pre-commit"
-            checks.append(
-                Check("pre-commit hook", OK, "installed")
-                if hook.is_file()
-                else Check("pre-commit hook", WARN, "not installed", "ptk setup self")
-            )
+        try:
+            hooks = self._hooks.status(project)
+            if hooks is not None:
+                checks.append(
+                    Check(
+                        "pre-commit hook",
+                        OK if hooks.installed else WARN,
+                        hooks.detail,
+                        ""
+                        if hooks.installed
+                        else "run a local PTK job to install the configured hooks",
+                    )
+                )
+        except PtkError as exc:
+            checks.append(Check("pre-commit hook", FAIL, str(exc)))
         return checks
 
 
 class SelfSetup:
-    def __init__(self, env: Environment, tools: ToolService, configs: SharedConfigs):
+    def __init__(
+        self,
+        env: Environment,
+        tools: ToolService,
+        configs: SharedConfigs,
+        hooks: EnsureHooks,
+    ):
         self._env = env
         self._tools = tools
         self._configs = configs
+        self._hooks = hooks
 
     def run(
         self,
@@ -199,8 +220,12 @@ class SelfSetup:
                     f"updated {', '.join(changed)}" if changed else "up to date",
                 )
             )
-        if "pre-commit" in project.config.configs:
-            checks.append(self._pre_commit(project.root, out))
+        if self._hooks.config(project) is not None and not project.ci:
+            try:
+                self._hooks.execute(project, out)
+                checks.append(Check("pre-commit hook", OK, "installed"))
+            except PtkError as exc:
+                checks.append(Check("pre-commit hook", FAIL, str(exc)))
         if install_tools and project.config.tools:
             for result in self._tools.setup(
                 project, list(project.config.tools), allow_system=allow_system, out=out
@@ -221,19 +246,3 @@ class SelfSetup:
                     )
                 )
         return checks
-
-    def _pre_commit(self, root: Path, out: Callable[[str], None]) -> Check:
-        if not (root / ".git").is_dir():
-            return Check("pre-commit hook", WARN, "not a git repository - skipped")
-        installed = self._env.output(
-            [self._env.uv, "tool", "run", "pre-commit", "install"], cwd=str(root)
-        )
-        if installed is None:
-            return Check(
-                "pre-commit hook",
-                FAIL,
-                "installation failed",
-                "uv tool run pre-commit install",
-            )
-        out(installed)
-        return Check("pre-commit hook", OK, "installed")

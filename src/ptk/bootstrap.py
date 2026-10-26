@@ -35,6 +35,7 @@ if TYPE_CHECKING:
     from .application.use_cases.configs import SharedConfigs
     from .application.use_cases.credentials import CredentialService
     from .application.use_cases.help import BuildHelp, HelpDocument
+    from .application.use_cases.hooks import EnsureHooks
     from .application.use_cases.init import InitProject
     from .application.use_cases.project import (
         ExportSchema,
@@ -142,16 +143,25 @@ class App:
         return Environment(self.host, self.runner, self._uv)
 
     @cached_property
+    def hooks(self) -> EnsureHooks:
+        from .adapters.hooks import GitHooks
+        from .application.use_cases.hooks import EnsureHooks
+
+        return EnsureHooks(GitHooks(self.runner, self.host.variables, uv=self._uv))
+
+    @cached_property
     def doctor(self) -> Doctor:
         from .application.use_cases.setup import Doctor
 
-        return Doctor(self._environment, self.tools, self.shared_configs, self.version)
+        return Doctor(
+            self._environment, self.tools, self.shared_configs, self.version, self.hooks
+        )
 
     @cached_property
     def self_setup(self) -> SelfSetup:
         from .application.use_cases.setup import SelfSetup
 
-        return SelfSetup(self._environment, self.tools, self.shared_configs)
+        return SelfSetup(self._environment, self.tools, self.shared_configs, self.hooks)
 
     @cached_property
     def build_help(self) -> BuildHelp:

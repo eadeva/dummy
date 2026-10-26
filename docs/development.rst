@@ -112,6 +112,13 @@ Native Windows tests cover batch files, PowerShell, timeouts and cancellation.
 Chocolatey command construction and administrator checks use a fake runner on
 both platforms; CI does not perform real machine-wide Chocolatey installations.
 
+``tests/hooks`` uses real temporary Git repositories and the dev group's
+pre-commit installation. A local hook demonstrates that a failing check blocks
+a real commit. Tests cover gitfiles, symlinks, linked worktrees, custom output
+paths, preserved hooks, broken runtimes, concurrent installation and VMR workflow
+preflight. Package acquisition is replaced in those tests; no remote hook repos
+are downloaded. Help and preview tests guard the absence of installation work.
+
 Acceptance boundaries
 ---------------------
 

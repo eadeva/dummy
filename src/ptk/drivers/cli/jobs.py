@@ -265,6 +265,8 @@ def execute(
         )
         for name in names
     ]
+    if not request.dry_run:
+        state.app.hooks.execute(project, click.echo)
     codes = []
     for item in prepared:
         code = _execute_one(ctx, request, prepared=item, quiet=quiet, show_env=show_env)

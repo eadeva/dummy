@@ -27,6 +27,7 @@ ptk = "ptk.drivers.cli.main:main"
 dev = [
   "pytest>=8",
   "ruff>=0.6",
+  "pre-commit>=4,<5",  # Real Git hook installation/execution regression tests.
   "cmake==3.30.9",  # Native integration tests use this project's executable.
 ]
 

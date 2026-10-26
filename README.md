@@ -86,6 +86,11 @@ configs:
 `.clang-format`, `.clang-tidy`, `.clangd` and `ruff-base.toml` (your `ruff.toml` extends it).
 Commit them; `ptk setup configs check` in CI catches stale files.
 
+When pre-commit is enabled, local jobs automatically install or repair its Git
+hooks for every developer. Workflows check each participating VMR repository
+before starting jobs. Help, dry runs and CI skip installation; missing generated
+configuration blocks execution. See [hook setup and conflicts](docs/configuration.rst#local-git-hooks).
+
 ## Reports
 
 After every run ptk writes `_reports/<variant>/<job>/report.*` (`reporting.formats`:

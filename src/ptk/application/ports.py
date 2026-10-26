@@ -192,6 +192,18 @@ class ReportStore(Protocol):
 # --------------------------------------------------------------------------- shared configs
 
 
+@dataclass(frozen=True)
+class HookStatus:
+    installed: bool
+    detail: str
+
+
+class RepositoryHooks(Protocol):
+    def status(self, root: Path, config: Path) -> HookStatus: ...
+
+    def ensure(self, root: Path, config: Path, out: Callable[[str], None]) -> None: ...
+
+
 class SharedConfigFiles(Protocol):
     """Base configs shipped with ptk and the project's config files."""
 

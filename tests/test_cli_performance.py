@@ -101,7 +101,7 @@ result = CliRunner(env={'PTK_ROLE': 'user'}).invoke(cli, sys.argv[1:])
 assert result.exit_code == 0, result.output
 unused = ['ptk.adapters.tools', 'ptk.adapters.python_env', 'ptk.adapters.reporting.store',
           'ptk.adapters.credentials.vault', 'ptk.application.use_cases.run',
-          'ptk.application.use_cases.workflow', 'cryptography']
+          'ptk.application.use_cases.workflow', 'ptk.adapters.hooks', 'cryptography']
 assert not set(unused).intersection(sys.modules), sorted(set(unused).intersection(sys.modules))
 """
     result = subprocess.run(

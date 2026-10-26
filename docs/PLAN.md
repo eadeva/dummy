@@ -425,10 +425,20 @@ tools:
   `uv tool install ptk` (`PTK_SOURCE` for a git URL or another name, `PTK_EXTRAS`
   e.g. `keyring`; package indexes via the standard `UV_INDEX_URL`).
 - `ptk setup self [--tools] [--allow-system]`: checks uv and git, syncs shared
-  configs, installs the pre-commit hooks (`uv tool run pre-commit install`),
+  configs, installs enabled pre-commit hooks through a persistent uv environment,
   reports missing credentials, installs tools with `--tools`.
 - `ptk setup doctor`: ptk/Python, uv, git (+ user.email), configuration, role, tools,
   credentials (never prompting), shared configs, pre-commit hook; exit 1 on problems.
+- Local jobs and workflows automatically ensure enabled pre-commit hooks before
+  execution; every developer is allowed this installation. VMR workflows check
+  participating repositories once before parallel execution. Git queries support
+  symlinks, gitfiles and worktrees; usable hooks are kept and broken runtimes repaired.
+  The engine lives in `<git-common-dir>/ptk/pre-commit`; concurrent installers use
+  a shared Git-directory lock. Generated configs remain maintainer-owned and must
+  already exist. Help/dry runs/CI and disabled entries do not install hooks.
+  Ordinary existing hooks are preserved; custom hook paths/symlink hooks/backup
+  collisions stop with an actionable conflict. Local bypass remains possible;
+  CI required checks provide enforcement. See `docs/configuration.rst`.
 
 ---
 

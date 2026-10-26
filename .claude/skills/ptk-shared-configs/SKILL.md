@@ -24,6 +24,17 @@ description: Manage ptk shared pre-commit, Ruff and clang configuration with pro
 
 9. Review generated diffs after upgrading ptk rather than silently accepting new base rules.
 
+10. With `configs.pre-commit.enabled: true`, commit the generated configuration
+    before developers run jobs. Local jobs automatically install/repair the hooks;
+    workflows check each participating repository before starting jobs. This works
+    for normal users and does not synchronize configuration. Help, previews, CI,
+    and disabled entries do not install hooks. Diagnose with `setup doctor`.
+
+11. Preserve existing hooks and custom Git settings. Resolve `core.hooksPath`,
+    hook-file symlink or `.legacy` backup conflicts with the maintainer; do not
+    blindly remove them. Use the same relative config path across linked worktrees.
+    Enforce checks in CI because local hook installation cannot prevent bypass.
+
 `setup configs sync` (including `--diff`) and `setup self` require a login ID
 listed in the configuration folder's `maintainers.ptk.yml`. `setup configs check`
 is available to normal users. Verify identity with `setup doctor`; do not suggest

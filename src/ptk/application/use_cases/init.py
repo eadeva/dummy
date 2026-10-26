@@ -301,6 +301,7 @@ credentials: {}
 configs: {}
 # Replace configs: {} with, for example:
 # configs:
+#   pre-commit: {enabled: true}     # Auto-install local hooks before jobs/workflows.
 #   ruff: {enabled: true}           # Python lint/format configuration.
 #   clang-format: {enabled: true}   # C/C++ formatting configuration.
 # Run `ptk setup configs sync` to generate the enabled configuration files.

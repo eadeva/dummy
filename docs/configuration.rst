@@ -218,6 +218,66 @@ Only entries under ``configs`` are managed. Preview ``configs sync --diff``;
 commit generated files and enforce ``configs check`` in CI. Ruff uses a generated
 ``ruff-base.toml`` and a project-owned ``ruff.toml`` extending it.
 
+Local Git hooks
+~~~~~~~~~~~~~~~
+
+Enable automatic pre-commit installation in a fragment inside your configuration
+folder, for example ``config/ptk/configs/configs.ptk.yml``::
+
+   configs:
+     pre-commit:
+       enabled: true
+       # Optional, relative to the repository root:
+       # overlay: config/ptk/configs/pre-commit.overlay.yaml
+
+A maintainer runs ``ptk setup configs sync pre-commit`` and commits the generated
+``.pre-commit-config.yaml``. An optional ``output`` changes its location. Ordinary
+job execution never generates or rewrites this configuration. If it is missing,
+startup fails with instructions to ask a maintainer to synchronize it.
+
+Before a local job runs, PTK checks the configured hooks and installs or repairs
+them when necessary. This is available to every developer, including
+non-maintainers. A local workflow checks each participating repository once,
+before starting any sequential or parallel jobs. Unrelated VMR repositories are
+not inspected. Missing/disabled ``configs.pre-commit`` entries, help, dry runs and
+CX/CI job execution do not install hooks. ``setup self`` uses the same installer;
+``setup doctor`` reports hook status without installing anything.
+
+Detection uses Git's repository/common-directory queries, supporting ordinary
+checkouts, ``.git`` symlinks, ``gitdir:`` pointer files and linked worktrees. PTK
+checks the generated hook, its configured file and its executable Python runtime,
+including whether that interpreter can actually import pre-commit. A usable
+existing installation is kept without package installation. Hook changes are
+serialized across PTK processes sharing a Git directory.
+
+When installation is needed, uv creates a dedicated environment at
+``<git-common-dir>/ptk/pre-commit`` using PTK's Python interpreter and installs
+``pre-commit>=4,<5`` through the configured uv package indexes. The environment is
+reused, independent of job environments and uv's disposable tool cache. Hook
+tool versions still come from the generated configuration's ``rev`` fields.
+All ``default_install_hook_types`` are installed (default: ``pre-commit``).
+The first Git commit may download the individual hook environments; PTK startup
+installs hook scripts but does not run linting or download every hook's tools.
+
+Existing ordinary hooks are preserved by pre-commit's migration mode as
+``<hook>.legacy`` and still run. PTK refuses a collision with an existing backup,
+hook-file symlinks, and a configured ``core.hooksPath``; it does not overwrite or
+unset these configurations. Resolve such conflicts with the repository's
+maintainer. Installation, validation or verification failures stop the job or
+workflow before its first step. Linked worktrees share hooks and should use the
+same relative pre-commit configuration path and installed hook types.
+
+Automatic installation prevents forgotten setup. It cannot prevent deliberate
+local bypass such as ``git commit --no-verify``. Run
+``uv tool run pre-commit run --all-files`` in CI (add ``--config PATH`` for a custom
+output), and require that check through GitHub branch protection/rulesets.
+``ptk setup configs check`` verifies generated configuration freshness; it does
+not execute the hooks. Installation does not make ``setup self`` or
+``setup configs sync`` available to non-maintainers.
+
+Build and report outputs
+~~~~~~~~~~~~~~~~~~~~~~~~
+
 The layout defaults to ``_builds``, ``_bin``, ``_logs`` and ``_reports``.
 Write test results into ``PTK_STEP_REPORTS_DIR``. JUnit, SARIF and Cobertura
 are imported into configured JSON, HTML, JUnit, Markdown or GitHub reports.
