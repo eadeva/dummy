@@ -261,7 +261,8 @@ def test_vmr_targets_keep_environment_and_reports_and_have_editor_tasks(
     }
     member_tasks = json.loads((root / "a/.vscode/tasks.json").read_text())["tasks"]
     workflow = next(t for t in member_tasks if t["label"] == "ptk: workflow local")
-    assert workflow["command"] == "ptk a"
+    assert workflow["command"] == "ptk"
+    assert workflow["args"] == ["a", "workflow", "run", "local"]
     # Windows can canonicalize ancestor capitalization (for example pytest-of-USER).
     assert Path(workflow["options"]["cwd"]).samefile(root)
     assert (

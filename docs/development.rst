@@ -131,6 +131,13 @@ are downloaded. Help and preview tests guard the absence of installation work.
 Acceptance boundaries
 ---------------------
 
+The VS Code extension's ``npm run package`` runs JavaScript syntax checks and
+Node tests, then packages a VSIX. ``PTK_TEST_PYTHON`` enables integration tests
+which invoke the real CLI from Node for repository and VMR discovery, previews,
+parameter passing and execution. The extension CI job runs on Linux and Windows
+and uploads the VSIX. Controller tests use an injected VS Code API; graphical
+extension-host acceptance remains a manual check. See :doc:`editor`.
+
 Plugin contracts and generators are documented in :doc:`plugins`; variant inspection
 and matrix commands in :doc:`cli`; background process behavior in :doc:`m11`.
 Real machine-wide tool/credential setup still needs acceptance on target machines.

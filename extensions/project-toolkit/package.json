@@ -1,0 +1,236 @@
+{
+  "name": "project-toolkit",
+  "displayName": "Project Toolkit",
+  "description": "Run PTK jobs and local workflows, select variants, inspect configuration and open reports.",
+  "version": "0.1.0",
+  "publisher": "eadeva",
+  "license": "UNLICENSED",
+  "private": true,
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eadeva/dummy",
+    "directory": "extensions/project-toolkit"
+  },
+  "main": "./src/extension.js",
+  "extensionKind": [
+    "workspace"
+  ],
+  "activationEvents": [
+    "workspaceContains:.main.ptk.yml",
+    "workspaceContains:.repo/project.list"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "PTK loads project configuration and may load configured Python plugins."
+    },
+    "virtualWorkspaces": {
+      "supported": false,
+      "description": "PTK requires a filesystem and a local process on the extension host."
+    }
+  },
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "project-toolkit",
+          "title": "Project Toolkit",
+          "icon": "media/toolkit.svg"
+        }
+      ]
+    },
+    "views": {
+      "project-toolkit": [
+        {
+          "id": "project-toolkit.projects",
+          "name": "Projects"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "project-toolkit.projects",
+        "contents": "Open a PTK repository or VMR folder, then [refresh](command:project-toolkit.refresh).\nPTK must be installed on the machine running this workspace."
+      }
+    ],
+    "commands": [
+      {
+        "command": "project-toolkit.refresh",
+        "title": "Refresh Projects",
+        "category": "Project Toolkit",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "project-toolkit.run",
+        "title": "Run Job or Workflow",
+        "category": "Project Toolkit",
+        "icon": "$(play)"
+      },
+      {
+        "command": "project-toolkit.preview",
+        "title": "Preview Job or Workflow",
+        "category": "Project Toolkit",
+        "icon": "$(inspect)"
+      },
+      {
+        "command": "project-toolkit.runWithParameters",
+        "title": "Run Job with Parameters",
+        "category": "Project Toolkit"
+      },
+      {
+        "command": "project-toolkit.selectVariant",
+        "title": "Select Variant for Jobs",
+        "category": "Project Toolkit",
+        "icon": "$(list-selection)"
+      },
+      {
+        "command": "project-toolkit.showVariant",
+        "title": "Display Variant",
+        "category": "Project Toolkit",
+        "icon": "$(info)"
+      },
+      {
+        "command": "project-toolkit.openReport",
+        "title": "Open Latest Job Report",
+        "category": "Project Toolkit",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "project-toolkit.validate",
+        "title": "Validate Configuration",
+        "category": "Project Toolkit",
+        "icon": "$(check)"
+      },
+      {
+        "command": "project-toolkit.openConfig",
+        "title": "Open Configuration File",
+        "category": "Project Toolkit",
+        "icon": "$(go-to-file)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "project-toolkit.refresh",
+          "when": "view == project-toolkit.projects",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "project-toolkit.run",
+          "when": "view == project-toolkit.projects && viewItem =~ /^(job|workflow)/",
+          "group": "inline@1"
+        },
+        {
+          "command": "project-toolkit.preview",
+          "when": "view == project-toolkit.projects && viewItem =~ /^(job|workflow)/",
+          "group": "inline@2"
+        },
+        {
+          "command": "project-toolkit.runWithParameters",
+          "when": "view == project-toolkit.projects && viewItem =~ /^job/"
+        },
+        {
+          "command": "project-toolkit.openReport",
+          "when": "view == project-toolkit.projects && viewItem == job-report"
+        },
+        {
+          "command": "project-toolkit.selectVariant",
+          "when": "view == project-toolkit.projects && viewItem == project-variants",
+          "group": "inline@1"
+        },
+        {
+          "command": "project-toolkit.showVariant",
+          "when": "view == project-toolkit.projects && viewItem == variant",
+          "group": "inline@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Project Toolkit",
+      "properties": {
+        "projectToolkit.executable": {
+          "type": "string",
+          "default": "ptk",
+          "scope": "resource",
+          "description": "PTK executable or absolute path. For uv run ptk, set this to uv and arguments to [\"run\", \"ptk\"]. This is an executable, not a shell command."
+        },
+        "projectToolkit.arguments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "scope": "resource",
+          "description": "Arguments before PTK options, for example [\"run\", \"ptk\"] when the executable is uv."
+        },
+        "projectToolkit.discoveryTimeout": {
+          "type": "number",
+          "default": 30,
+          "minimum": 1,
+          "maximum": 300,
+          "scope": "resource",
+          "description": "Timeout in seconds for read-only project discovery; does not limit job execution."
+        }
+      }
+    },
+    "taskDefinitions": [
+      {
+        "type": "project-toolkit",
+        "required": [
+          "kind",
+          "name",
+          "root"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "job",
+              "workflow"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "root": {
+            "type": "string"
+          },
+          "variant": {
+            "type": "string",
+            "description": "Optional job variant; workflows retain their configured selections."
+          },
+          "preview": {
+            "type": "boolean",
+            "default": false,
+            "description": "Preview without executing the job or workflow."
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Non-secret job parameter overrides; required parameters must be supplied."
+          }
+        },
+        "when": "processExecutionSupported && isWorkspaceTrusted"
+      }
+    ]
+  },
+  "scripts": {
+    "check": "node --check src/core.js && node --check src/extension.js",
+    "test": "node --test test/core.test.js test/extension.test.js test/integration.test.js",
+    "package": "vsce package --no-dependencies --skip-license",
+    "vscode:prepublish": "npm run check && npm test"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "4.0.0"
+  }
+}

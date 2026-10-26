@@ -46,6 +46,35 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: uv run python scripts/report_preview.py .ptk/report-preview.html
       - run: node scripts/check_report_ui.cjs .ptk/report-preview.html
+  vscode-extension:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.13.4'
+          python-version: '3.12'
+      - run: uv sync
+      - name: Select Python for real CLI integration tests
+        run: uv run python -c "import os, sys; open(os.environ['GITHUB_ENV'], 'a', encoding='utf-8').write('PTK_TEST_PYTHON=' + sys.executable + '\n')"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: extensions/project-toolkit/package-lock.json
+      - run: npm ci
+        working-directory: extensions/project-toolkit
+      - run: npm run package
+        working-directory: extensions/project-toolkit
+      - uses: actions/upload-artifact@v4
+        with:
+          name: project-toolkit-vsix-${{ matrix.os }}
+          path: extensions/project-toolkit/*.vsix
+          if-no-files-found: error
   package:
     strategy:
       fail-fast: false

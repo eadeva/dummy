@@ -1,5 +1,46 @@
-VS Code setup and offline authoring
-=====================================
+VS Code extension and offline authoring
+===========================================
+
+Project Toolkit extension
+-----------------------------
+
+The ``project-toolkit`` extension in ``extensions/project-toolkit`` provides a
+sidebar for jobs, workflows, variants and configuration files. Install the VSIX
+using VS Code's **Extensions: Install from VSIX...**, then open a trusted PTK
+repository or VMR. PTK must be installed on the workspace host and support
+``ptk describe --json``. The extension requires VS Code 1.96 or newer.
+
+Use Run or Preview beside a job/workflow. **Run Job with Parameters** prompts for
+optional overrides; required non-secret parameters are prompted automatically.
+Provide secrets through their configured environment variables. Tasks execute
+PTK as a process and show output in the task terminal. Saved tasks preserve
+preview mode, parameters and variants.
+
+Selecting a variant stores the choice in VS Code's workspace state for that
+repository. **Use project default** clears it. Selection never rewrites PTK YAML.
+Workflows keep their authored per-job variant selections. Use **Display Variant**
+for resolved features and **Open Latest Job Report** for PTK's report links.
+
+Multiple folders, VMR members and workspace workflows are supported. Discovery
+uses PTK's role-filtered inventory; commands still enforce permissions in the CLI.
+Configuration changes trigger a refresh. Errors appear on project nodes and in
+the Project Toolkit output channel. Discovery can load project plugins, so the
+extension requires workspace trust.
+
+Set ``projectToolkit.executable`` to a program or absolute path and
+``projectToolkit.arguments`` to separate prefix arguments. For uv, use executable
+``uv`` and arguments ``["run", "ptk"]``. Use an installed PTK executable at VMR
+roots without a uv project. SSH/WSL/container sessions run PTK on their workspace
+host. Increase ``projectToolkit.discoveryTimeout`` for slow discovery.
+
+Build with ``npm ci`` and ``npm run package`` in the extension folder. Set
+``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
+integration tests. CI builds downloadable VSIX artifacts on Linux and Windows;
+Marketplace publication is separate. See the extension README for installation,
+settings and manual smoke-test instructions.
+
+Generated tasks and offline resources
+-----------------------------------------
 
 Run ``ptk setup vscode`` to generate VS Code tasks and install PTK's project-facing
 skills. In a VMR, qualify the repository: ``ptk ALIAS setup vscode``.
@@ -34,7 +75,7 @@ Checks and writes refuse symlinked managed paths. Commit the generated skills,
 reference files and manifest together if the team should share them.
 
 Local workflows
----------------
+-------------------
 
 Workflow tasks call ``ptk workflow run NAME`` on the local machine; they do not
 invoke GitHub Actions. Repository task files include jobs and local workflows.
@@ -51,7 +92,7 @@ membership in each target's list; combined setup checks every member before any
 write. Use ``ptk ALIAS setup vscode`` to update only a repository you maintain.
 
 Browser links in the terminal
------------------------------
+---------------------------------
 
 In an interactive local VS Code terminal, job and workflow reports print a
 ``browser: http://127.0.0.1:...`` link alongside their file path. Ctrl+click

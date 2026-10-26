@@ -901,3 +901,17 @@ See docs/performance.rst for measurements and remaining VMR scaling costs.
   unused overlay writer, desktop tests and GUI CI job. Retained list/show/explain/check.
 - `ptk describe --json` exposes a versioned, read-only editor inventory with role-aware
   jobs/workflows/capabilities and no resolved credentials, versions or tool installs.
+
+## Project Toolkit VS Code extension
+
+- Added `extensions/project-toolkit`, with sidebar discovery through the versioned
+  PTK inventory, explicit job/workflow process tasks, previews, non-secret parameter
+  prompts, variant selection in workspace state, config navigation and job reports.
+- Supports multi-root folders and VMRs; workspace trust and CLI permissions govern
+  execution. Saved task definitions retain preview mode, parameters and variants.
+- Node tests cover argument construction, controller dispatch, trust, stale commands,
+  task restoration and multi-root state. Real Python CLI integration tests exercise
+  repository/VMR discovery, read-only previews and parameterized job execution.
+- CI tests and packages VSIX artifacts on Linux and Windows. Installation instructions
+  are in the extension README and docs/editor.rst. Marketplace publication and a
+  graphical extension-host acceptance run remain separate from this implementation.
