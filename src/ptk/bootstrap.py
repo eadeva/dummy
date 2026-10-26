@@ -297,6 +297,11 @@ class App:
     def open_in_browser(self, path: Path) -> bool:
         return help_html.open_in_browser(path)
 
+    def report_url(self, path: Path, *, root: Path, logs=()) -> str:
+        from .adapters.reporting.viewer import report_url
+
+        return report_url(path, root, logs)
+
     def log_observers(self, prepared: PreparedRun) -> list[RunObserver]:
         logging = prepared.project.config.logging
         return [

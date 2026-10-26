@@ -57,6 +57,15 @@ class WorkspaceGroup(ProjectGroup):
 
     def list_commands(self, ctx):
         repos = self._repositories(ctx)
+        if repos is not None:
+            from .workflows import workspace_shortcuts
+
+            workflows = {
+                name
+                for name, command in workspace_shortcuts(ctx).items()
+                if not command.hidden
+            }
+            return sorted(set(repos) | RESERVED | workflows)
         return (
             sorted(set(repos) | RESERVED)
             if repos is not None
@@ -72,7 +81,9 @@ class WorkspaceGroup(ProjectGroup):
                 ctx.meta["vmr_commands"] = build_commands(ctx, repos)
             return ctx.meta["vmr_commands"].get(cmd_name)
         if cmd_name not in repos:
-            return None
+            from .workflows import workspace_shortcuts
+
+            return workspace_shortcuts(ctx).get(cmd_name)
 
         @functools.wraps(self.callback)
         def selected_callback():

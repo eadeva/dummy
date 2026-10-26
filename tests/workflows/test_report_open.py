@@ -17,7 +17,15 @@ from ptk.drivers.cli.main import cli
 
 @pytest.fixture
 def invoke(write):
-    def run(policy="default", *, outcome="passed", mode="run", ci=False, invalid=False):
+    def run(
+        policy="default",
+        *,
+        outcome="passed",
+        mode="run",
+        ci=False,
+        invalid=False,
+        child_policy=None,
+    ):
         code = (
             "raise SystemExit(1)"
             if outcome in {"failed", "tolerated"}
@@ -49,9 +57,10 @@ def invoke(write):
                         "project": {"name": "report-open"},
                         "actions": {
                             "check": {
+                                "open_report": child_policy,
                                 "steps": [
                                     {"run": {"run": [sys.executable, "-c", code]}}
-                                ]
+                                ],
                             }
                         },
                     }
@@ -163,3 +172,23 @@ def test_cancellation_alone_is_not_an_error(
 def test_invalid_workflow_report_policy_is_rejected():
     with pytest.raises(ValidationError):
         WorkflowSpec(open_report="sometimes", steps=[{"check": "check"}])
+
+
+@pytest.mark.parametrize(
+    "policy,outcome,expected",
+    [
+        ("always", "passed", "workflow.html"),
+        ("on-errors", "failed", "workflow.html"),
+        ("on-errors", "passed", "report.html"),
+        (None, "passed", "report.html"),
+    ],
+)
+def test_workflow_opening_suppresses_child_openings(
+    invoke, opened_reports, policy, outcome, expected
+):
+    result, _ = invoke(policy, outcome=outcome, child_policy="always")
+    assert result.exit_code == (1 if outcome == "failed" else 0), result.output
+    assert len(opened_reports) == 1
+    assert opened_reports[0].name == expected
+    if expected == "report.html":
+        assert "actions" in opened_reports[0].parts

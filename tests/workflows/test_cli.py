@@ -80,6 +80,10 @@ def test_discovery_preview_then_sequential_calls_and_immutable_reports(tmp_path)
     assert (root / "order.txt").read_text() == "AB"
     [summary] = summaries(root)
     assert summary["status"] == "passed"
+    html = next(root.glob("_reports/workflows/verify/*/workflow.html")).read_text(
+        encoding="utf-8"
+    )
+    assert "report.html</a>" in html and "report.json</a>" not in html
     assert [s["status"] for s in summary["steps"]] == ["passed", "passed"]
     reports = list(root.glob("_reports/workflows/verify/*/actions/*/report.json"))
     assert len(reports) == 2

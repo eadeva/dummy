@@ -36,3 +36,29 @@ At a VMR root, ``ptk setup vscode tasks`` includes workspace-owned workflows and
 qualified member workflows. ``ptk setup vscode`` also installs each member's
 skills/tasks. VMR tasks run from the workspace root. See :doc:`workflows` for
 parallelism, repository selection and CX restrictions.
+
+Browser links in the terminal
+-----------------------------
+
+In an interactive local VS Code terminal, action and workflow reports print a
+``browser: http://127.0.0.1:...`` link alongside their file path. Ctrl+click
+(Cmd+click on macOS) opens the rendered report. ``ptk report open`` prints the
+same kind of link. Plain file paths and ``file://`` links normally open in VS
+Code's editor instead.
+
+To use the operating system's default browser in current VS Code versions, add
+this to VS Code's settings::
+
+   "workbench.browser.openLocalhostLinks": false
+
+See the `VS Code browser documentation
+<https://code.visualstudio.com/docs/debugtest/integrated-browser#_use-an-external-browser>`_.
+PTK does not overwrite your editor settings.
+
+The link uses a reusable loopback-only helper for that repository, with a random
+URL token. It serves registered report folders and their log files, without
+directory listings. It survives the CLI command and exits after an hour without
+requests. After expiry, run the report command again for a fresh link. File
+reports remain available permanently. No helper starts on CX, for redirected
+output, or outside VS Code; automatic report opening remains a separate policy.
+Remote VS Code sessions require port forwarding to the machine running PTK.

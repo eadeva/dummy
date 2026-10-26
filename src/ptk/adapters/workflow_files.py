@@ -38,6 +38,8 @@ def write_workflow_report(result, target: Path) -> Path:
                 counts[label] += 1
         links = []
         for report in step.reports:
+            if Path(report).suffix.lower() != ".html":
+                continue
             relative = os.path.relpath(report, target).replace(os.sep, "/")
             links.append(
                 f'<a href="{escape(relative, quote=True)}">{escape(Path(report).name)}</a>'

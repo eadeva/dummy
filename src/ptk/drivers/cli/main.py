@@ -32,6 +32,7 @@ from .actions import (
     install_tools,
     pairs,
 )
+from .report_links import print_report
 from .state import console, err_console, guarded, state_of
 from .versioning import version_group
 from .workflows import workflow_group
@@ -856,8 +857,14 @@ def report_open(
             / "_history"
             / run_id
         )
-    _report, files = service.write(project, summary, ["html"], target)
-    console.print(f"report: {escape(str(files[0]))}", highlight=False, soft_wrap=True)
+    report, files = service.write(project, summary, ["html"], target)
+    print_report(
+        _state(ctx).app,
+        files[0],
+        root=project.root,
+        ci=project.ci,
+        logs=[step.log_file for step in report.steps],
+    )
     if not _state(ctx).app.open_in_browser(files[0]):
         console.print("[dim]no browser available here - open the file above[/]")
 

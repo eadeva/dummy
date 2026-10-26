@@ -25,9 +25,14 @@ Workflows and actions have separate namespaces::
    ptk workflow show verify
    ptk workflow dry-run verify
    ptk workflow run verify
+   ptk verify
 
-An action called ``verify`` remains ``ptk verify``. The built-in name ``workflow``
-is reserved and cannot be an action or VMR repository alias.
+Workflow shortcuts appear alongside actions in ``ptk --help``. If an action and
+workflow share a name, the local terminal prompts for ``action`` or ``workflow``.
+CX selects the action without prompting. Non-interactive local callers must use
+``ptk run verify`` or ``ptk workflow run verify`` explicitly. Help never prompts.
+Built-in commands and VMR repository aliases retain priority over shortcuts;
+such workflows remain accessible through ``workflow run``.
 
 A complete repository-owned workflow:
 
@@ -40,6 +45,8 @@ The example lives in a small manual VMR. From ``examples/workflows`` run::
    ptk workflow run all
    ptk workflow run frontend/verify
    ptk frontend workflow run verify
+   ptk frontend/verify
+   ptk frontend verify
 
 Copy the example to a temporary folder before trying it if you want to preserve
 the documentation tree. Its actions use portable built-ins, without compilers,
@@ -181,8 +188,12 @@ report. Set ``open_report: null`` to disable workflow report opening.
 Opening is disabled in CX/CI and dry runs; workflow execution itself remains
 local-only. Preflight failures have no report to open. A failed summary write
 does not open an older file, and a missing browser does not affect the exit code.
-The workflow opens only its aggregate report; child actions retain their own
-independent policies. Workflow ``on-errors`` uses a hyphen; action ``on_errors``
+Child report opening is deferred until the workflow finishes. When the workflow
+policy selects its successfully written summary, child reports are not opened.
+Otherwise child policies apply, using retained report snapshots. A summary-write
+failure also falls back to those child policies. Browser unavailability does not
+trigger a cascade of child tabs. The summary table links only child HTML reports;
+JSON files remain available for automation. Workflow ``on-errors`` uses a hyphen; action ``on_errors``
 retains its existing spelling.
 
 ``ptk setup vscode tasks`` adds ``ptk: workflow NAME`` tasks alongside action tasks.

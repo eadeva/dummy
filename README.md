@@ -261,7 +261,7 @@ workflows:
             - lint: {action: lint}
 ```
 
-Run `ptk workflow dry-run verify`, then `ptk workflow run verify`. Each call keeps
+Run `ptk workflow dry-run verify`, then `ptk verify` (or `ptk workflow run verify`). Each call keeps
 its repository's tools, environment, credentials and reports. Calls can select a
 `repo`, `variant` and action `params`. PTK preflights every call before execution
 and rejects conflicting parallel outputs or shared uv project environments.
@@ -271,6 +271,13 @@ execution on CX/CI is refused.
 Workflow `open_report` defaults to `always`. Use `on-errors` to open the summary
 only for execution or imported report errors, or `null` to disable it.
 CX and dry runs never open workflow reports.
+When the workflow summary opens, child action reports stay closed. The summary
+links to HTML reports; JSON files remain available for automation.
+
+If an action and workflow share a name, local interactive calls ask which to run;
+CX selects the action. Use `ptk run NAME` or `ptk workflow run NAME` to select
+explicitly. Interactive VS Code terminals also print browser URLs for action and
+workflow reports; see [browser links](docs/editor.rst).
 
 See [workflows](docs/workflows.rst) and `examples/workflows` for nested groups,
 VMR ownership, failure handling and reports. The later `ptk setup init --workflows`

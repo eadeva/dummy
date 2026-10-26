@@ -27,6 +27,7 @@ from ...domain.reporting.summary import run_summary
 from . import console as present
 from .access import AccessGroup
 from .actions import write_reports
+from .report_links import print_report
 from .state import CliState, console, err_console, guarded, state_of
 
 
@@ -212,6 +213,7 @@ def execute_workflow(ctx, name, *, dry_run=False):
             else layout.root / layout.reports
         )
     target = report_root / "workflows" / name.split("/")[-1] / run_id
+    child_openings = {}
 
     def run(node, cancel):
         state, prepared = bindings[node.path], node.prepared
@@ -233,7 +235,9 @@ def execute_workflow(ctx, name, *, dry_run=False):
                 [present.ConsoleObserver(console), *state.app.log_observers(prepared)],
                 cancel,
             )
-            write_reports(state, prepared.project, p, result)
+            opening = write_reports(
+                state, prepared.project, p, result, open_browser=False
+            )
             files = []
             report_errors = False
             try:
@@ -243,11 +247,17 @@ def execute_workflow(ctx, name, *, dry_run=False):
                     prepared.project, summary, ["json", "html"], child_target
                 )
                 report_errors = report.has_errors
+                if opening is not None:
+                    opening = next(
+                        (file for file in files if file.suffix == ".html"), opening
+                    )
             except (PtkError, OSError, ValueError) as exc:
                 report_errors = True
                 err_console.print(
                     f"[yellow]workflow child report not written: {escape(str(exc))}[/]"
                 )
+            if opening is not None:
+                child_openings[node.path] = (state.app, opening)
             return CallOutcome(
                 result.status, [str(f) for f in files], p.run_id, report_errors
             )
@@ -275,9 +285,10 @@ def execute_workflow(ctx, name, *, dry_run=False):
     console.print(
         f"Workflow {escape(name)}: {result.status.value} ({result.duration:.1f}s)"
     )
+    open_summary = False
     try:
         path = write_workflow_report(result, target)
-        console.print(f"report: {escape(str(path))}", highlight=False)
+        print_report(parent.app, path, root=root, ci=is_ci)
     except OSError as exc:
         err_console.print(f"[yellow]workflow report not written: {escape(str(exc))}[/]")
     else:
@@ -286,6 +297,7 @@ def execute_workflow(ctx, name, *, dry_run=False):
             or spec.open_report == "on-errors"
             and result.has_errors
         ):
+            open_summary = True
             try:
                 opened = parent.app.open_in_browser(path)
             except (OSError, ValueError):
@@ -294,6 +306,18 @@ def execute_workflow(ctx, name, *, dry_run=False):
                 console.print(
                     "[dim]no browser available here - open the workflow report file above[/]"
                 )
+    if not is_ci and not open_summary:
+        for node in plan.walk():
+            if node.path in child_openings:
+                app, child_report = child_openings[node.path]
+                try:
+                    opened = app.open_in_browser(child_report)
+                except (OSError, ValueError):
+                    opened = False
+                if not opened:
+                    console.print(
+                        "[dim]no browser available here - open the child report file above[/]"
+                    )
     raise click.exceptions.Exit(
         130
         if result.status == Status.CANCELLED
@@ -317,6 +341,38 @@ def run_workflow(ctx, name):
 @guarded
 def preview_workflow(ctx, name):
     execute_workflow(ctx, name, dry_run=True)
+
+
+def workflow_command(name, spec, *, hidden=False):
+    @click.pass_context
+    @guarded
+    def run(ctx):
+        execute_workflow(ctx, name)
+
+    command = click.RichCommand(
+        name,
+        callback=run,
+        help=f"{spec.help or f'Run workflow {name}.'} (local workflow)",
+        hidden=hidden,
+        context_settings={"help_option_names": ["-h", "--help"]},
+    )
+    command.ptk_workflow = name
+    return command
+
+
+def workspace_shortcuts(ctx):
+    if "workflow_shortcuts" not in ctx.meta:
+        try:
+            parent, _, owners, available = catalog(ctx)
+        except PtkError as exc:
+            raise click.ClickException(str(exc)) from None
+        ctx.meta["workflow_shortcuts"] = {
+            name: workflow_command(
+                name, spec, hidden=not can_view(parent, owners, owner, spec)
+            )
+            for name, (owner, spec, _) in available.items()
+        }
+    return ctx.meta["workflow_shortcuts"]
 
 
 def workspace_vscode_group(root_ctx, entries):

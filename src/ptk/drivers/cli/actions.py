@@ -33,6 +33,7 @@ from ...domain.reporting.summary import run_summary
 from ...domain.suggest import did_you_mean
 from . import console as present
 from .access import AccessGroup
+from .report_links import print_report
 from .state import console, err_console, guarded, report_error, state_of
 
 PARAM_PREFIX = "param__"  # keeps action parameters apart from the common options
@@ -379,7 +380,9 @@ def install_tools(
     return all(r.ok for r in results)
 
 
-def write_reports(state: Any, project: Any, plan: Any, result: Any) -> None:
+def write_reports(
+    state: Any, project: Any, plan: Any, result: Any, *, open_browser=True
+) -> Path | None:
     """Reports after every run; a reporting problem never changes the run's result."""
     policy = None if project.ci else project.config.actions[plan.action].open_report
     formats = list(project.config.reporting.formats)
@@ -397,14 +400,20 @@ def write_reports(state: Any, project: Any, plan: Any, result: Any) -> None:
     html = next((f for f in files if f.suffix == ".html"), None)
     shown = html or (files[0] if files else None)
     if shown is not None:
-        console.print(
-            f"[dim]report: {escape(str(shown))}[/]", highlight=False, soft_wrap=True
+        print_report(
+            state.app,
+            shown,
+            root=project.root,
+            ci=project.ci,
+            logs=[step.log_file for step in report.steps],
         )
     for problem in report.problems:
         err_console.print(f"[yellow]report: {escape(problem)}[/]")
     if html is not None and (
         policy == "always" or (policy == "on_errors" and report.has_errors)
     ):
+        if not open_browser:
+            return html
         try:
             opened = state.app.open_in_browser(html)
         except (OSError, ValueError):
@@ -413,6 +422,8 @@ def write_reports(state: Any, project: Any, plan: Any, result: Any) -> None:
             console.print(
                 "[dim]no browser available here - open the report file above[/]"
             )
+        return html
+    return None
 
 
 # --------------------------------------------------------------------------- commands
@@ -483,6 +494,23 @@ class ProjectGroup(AccessGroup):
         project = state_of(ctx).try_project()
         return dict(project.config.actions) if project else {}
 
+    def _workflows(self, ctx):
+        if self.dry_run:
+            return {}
+        state = state_of(ctx)
+        project = state.try_project()
+        if project is None:
+            return {}
+        return {
+            name: spec
+            for name, spec in project.config.workflows.items()
+            if state.role() == "maintainer"
+            or (
+                spec.audience == "all"
+                and project.config.command_audience.get("workflow") != "maintainer"
+            )
+        }
+
     def list_commands(self, ctx: click.Context) -> list[str]:
         builtins = super().list_commands(ctx)
         role = state_of(ctx).role()
@@ -491,7 +519,10 @@ class ProjectGroup(AccessGroup):
             for n, spec in self._actions(ctx).items()
             if spec.audience == "all" or role == "maintainer"
         ]
-        return [*builtins, *sorted(a for a in actions if a not in builtins)]
+        return [
+            *builtins,
+            *sorted((set(actions) | self._workflows(ctx).keys()) - set(self.commands)),
+        ]
 
     def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
         builtin = super().get_command(ctx, cmd_name)
@@ -503,10 +534,26 @@ class ProjectGroup(AccessGroup):
         except PtkError as exc:
             return _broken(cmd_name, exc)
         spec = project.config.actions.get(cmd_name)
+        workflow = self._workflows(ctx).get(cmd_name)
+        if workflow is not None and (
+            spec is None
+            or (
+                spec.audience == "maintainer"
+                and state.role() != "maintainer"
+                and not project.ci
+            )
+        ):
+            from .workflows import workflow_command
+
+            return workflow_command(cmd_name, workflow)
         if spec is None:
             return None
         hidden = spec.audience == "maintainer" and state.role() != "maintainer"
-        return action_command(cmd_name, spec, dry_run=self.dry_run, hidden=hidden)
+        command = action_command(cmd_name, spec, dry_run=self.dry_run, hidden=hidden)
+        if workflow is not None:
+            command.short_help = f"{spec.help or cmd_name} (action / workflow)"
+            command.help += f"\n\nAlso a local workflow. Choose explicitly with 'ptk run {cmd_name}' or 'ptk workflow run {cmd_name}'. CX always runs the action."
+        return command
 
     def format_help(self, ctx: click.Context, formatter: Any) -> None:
         """Project actions in their own panel, above ptk's built-in commands."""
@@ -517,7 +564,9 @@ class ProjectGroup(AccessGroup):
         if actions:
             groups.append(
                 {
-                    "name": "Actions (from the project configuration)",
+                    "name": "Actions and workflows (from the project configuration)"
+                    if self._workflows(ctx)
+                    else "Actions (from the project configuration)",
                     "commands": actions,
                 }
             )
@@ -530,6 +579,34 @@ class ProjectGroup(AccessGroup):
 
     def resolve_command(self, ctx: click.Context, args: list[str]) -> Any:
         name = args[0] if args else None
+        if (
+            name in self._workflows(ctx)
+            and name in self._actions(ctx)
+            and name not in self.commands
+        ):
+            state = state_of(ctx)
+            action = self._actions(ctx)[name]
+            if (
+                not state.project().ci
+                and (action.audience == "all" or state.role() == "maintainer")
+                and not any(arg in ("-h", "--help") for arg in args[1:])
+            ):
+                if not sys.stdin.isatty():
+                    ctx.fail(
+                        f"'{name}' names both an action and a workflow; use 'ptk run {name}' or 'ptk workflow run {name}' in non-interactive calls."
+                    )
+                choice = click.prompt(
+                    f"'{name}' is both an action and a workflow. Run which",
+                    type=click.Choice(["action", "workflow"], case_sensitive=False),
+                )
+                if choice == "workflow":
+                    from .workflows import workflow_command
+
+                    return (
+                        name,
+                        workflow_command(name, self._workflows(ctx)[name]),
+                        args[1:],
+                    )
         if name and not name.startswith("-") and self.get_command(ctx, name) is None:
             ctx.fail(
                 f"No such command '{name}'{did_you_mean(name, self.list_commands(ctx))}."
