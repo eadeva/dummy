@@ -1,8 +1,13 @@
-# PTK's own checks share one uv project environment, so keep them sequential.
+# Each action uses its own uv environment under .ptk/venvs.
 workflows:
   verify:
-    help: Check style, run tests and build the documentation
+    help: Run check, test and package in order, alongside documentation
+    parallel: true
+    max_workers: 2
     steps:
-      - style: {action: check}
-      - tests: {action: test}
-      - documentation: {action: docs}
+      - quality:
+          steps:
+            - check: {action: check}
+            - test: {action: test}
+            - package: {action: package}
+      - docs: {action: docs}

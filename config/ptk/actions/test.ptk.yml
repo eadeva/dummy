@@ -4,6 +4,8 @@
 actions:
   test:
     help: Run PTK's pytest suite and collect JUnit results
+    env:
+      UV_PROJECT_ENVIRONMENT: "${project.root}/.ptk/venvs/test"
     environment:
       # Integration tests intentionally probe host-installed Git, shells and uv.
       # Python, pytest and CMake come from this checkout's uv project, ahead of PATH.

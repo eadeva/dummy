@@ -7,6 +7,7 @@ import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from ...domain.errors import PtkError
 from ...domain.execution.model import Status
@@ -42,10 +43,17 @@ class PlannedCall:
         for step in p.plan.walk():
             python = step.spec.python
             if python is not None and python.project is not None:
+                project = (p.project.root / python.project).resolve()
+                environment = {**p.plan.base_env, **step.env}
+                venv = Path(environment.get("UV_PROJECT_ENVIRONMENT") or ".venv")
+                # Explicit absolute paths also support projects in uv workspaces.
+                # Resolve ordinary relative paths from the selected project.
+                if not venv.is_absolute():
+                    venv = project / venv
                 resources.add(
                     (
                         "uv project environment",
-                        str((p.project.root / python.project).resolve()),
+                        str(venv.resolve()),
                     )
                 )
         return resources

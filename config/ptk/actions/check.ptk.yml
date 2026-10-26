@@ -3,6 +3,8 @@
 actions:
   check:
     help: Check PTK's lint rules and formatting
+    env:
+      UV_PROJECT_ENVIRONMENT: "${project.root}/.ptk/venvs/check"
     steps:
       - lint:
           python: {project: ., groups: [dev]}

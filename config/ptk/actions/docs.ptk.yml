@@ -4,6 +4,8 @@
 actions:
   docs:
     help: Build PTK's Sphinx documentation with warnings treated as errors
+    env:
+      UV_PROJECT_ENVIRONMENT: "${project.root}/.ptk/venvs/docs"
     steps:
       - sphinx:
           python: {project: ., groups: [docs]}

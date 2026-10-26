@@ -345,7 +345,7 @@ uv run ptk test                          # pytest + JUnit/PTK reports
 uv run ptk test -- tests/test_init.py -q  # selected tests and pytest options
 uv run ptk check                         # Ruff lint and format checks
 uv run ptk docs                          # _builds/default/docs/sphinx/html/index.html
-uv run ptk workflow run verify           # check, test, then docs (local only)
+uv run ptk workflow run verify           # check -> test -> package, alongside docs
 ```
 
 An installed `ptk` can run these directly. Actions use this checkout's Python
@@ -353,6 +353,10 @@ project and its `dev`/`docs` dependency groups, rather than the global tool's
 Python environment. Package metadata uses the same Git-managed PTK versioning
 configuration as actions. Untagged/shallow checkouts use the development fallback
 in `versioning.ptk.yml`; source distributions retain their resolved version. The default action is `test`.
+
+The actions use separate uv environments under `.ptk/venvs/<action>`, so docs can
+run alongside the sequential check/test/package branch without changing its
+dependencies. Packaging also builds a separate documentation archive.
 
 The `dev` group includes pinned CMake for generator integration tests. uv selects
 the project environment's CMake ahead of host PATH entries, so the test action

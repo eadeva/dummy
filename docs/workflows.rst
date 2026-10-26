@@ -103,7 +103,13 @@ failure and 130 for cancellation. Preflight/configuration errors use exit code 2
 Parallel branches may not share the same repository/action/variant output folders.
 They also may not share a ``python.project`` environment, since uv can synchronize
 that project's shared virtual environment while another action is using it.
-Sequence these actions or use distinct projects/runtimes. Existing action locks
+For parallel actions in one project, set a distinct absolute
+``env.UV_PROJECT_ENVIRONMENT`` on each action, for example
+``${project.root}/.ptk/venvs/package``. PTK checks the resolved environment paths,
+including step-level overrides. Use absolute paths for uv workspace members so
+the environment location does not depend on uv's workspace-root discovery.
+PTK's own ``verify`` workflow runs ``check``, ``test`` and ``package`` sequentially,
+alongside ``docs``; these actions have separate environments. Existing action locks
 also protect against a separate PTK invocation using the same output folders.
 PTK cannot infer arbitrary paths or external resources used by scripts: authors
 must sequence actions that write the same files, hardware device or service.

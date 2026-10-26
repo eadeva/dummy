@@ -257,6 +257,36 @@ def test_vmr_targets_keep_environment_and_reports_and_have_editor_tasks(
     )
 
 
+@pytest.mark.parametrize("level", ["action", "step"])
+def test_parallel_python_calls_use_their_resolved_venv_paths(tmp_path, level):
+    actions = {}
+    for name in ("a", "b"):
+        action = command("pass")
+        step = action["steps"][0]["run"]
+        step["python"] = {"project": "."}
+        action["env"] = {"UV_PROJECT_ENVIRONMENT": "${project.root}/shared"}
+        target = action if level == "action" else step
+        target["env"] = {
+            "UV_PROJECT_ENVIRONMENT": f"${{project.root}}/.ptk/venvs/{name}"
+        }
+        actions[name] = action
+    root = repository(
+        tmp_path,
+        actions=actions,
+        workflows={"verify": {"parallel": True, "steps": [{"a": "a"}, {"b": "b"}]}},
+    )
+    preview = invoke(root, "workflow", "dry-run", "verify")
+    assert preview.exit_code == 0, preview.output
+    target = actions["b"] if level == "action" else actions["b"]["steps"][0]["run"]
+    target["env"]["UV_PROJECT_ENVIRONMENT"] = "${project.root}/.ptk/venvs/b/../a"
+    (root / "config/project.ptk.yml").write_text(
+        yaml.safe_dump({"project": {"name": "app"}, "actions": actions}),
+        encoding="utf-8",
+    )
+    collision = invoke(root, "workflow", "dry-run", "verify")
+    assert collision.exit_code == 2 and "uv project environment" in collision.output
+
+
 def test_source_locations_and_workflow_name_validation(tmp_path):
     root = repository(tmp_path)
     file = root / "config/workflow.ptk.yml"
