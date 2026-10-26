@@ -28,7 +28,10 @@ class RepositoryGroup(ProjectGroup):
             overrides=parent_state.overrides,
             ci=parent_state.ci,
             verbose=parent_state.verbose,
+            variant=parent_state.variant,
         )
+        if parent_state.ci is not None and extra["obj"].role() != "maintainer":
+            raise click.ClickException("--ci/--no-ci is a maintainer-only option")
         return super().make_context(info_name, args, parent=parent, **extra)
 
 
@@ -90,7 +93,9 @@ class WorkspaceGroup(ProjectGroup):
 
         @functools.wraps(self.callback)
         def selected_callback():
-            return self.callback(config=None, overrides=(), ci=None, verbose=0)
+            return self.callback(
+                config=None, overrides=(), ci=None, verbose=0, variant=None
+            )
 
         group = RepositoryGroup(
             cmd_name,
@@ -104,6 +109,10 @@ class WorkspaceGroup(ProjectGroup):
         return group
 
     def format_help(self, ctx, formatter):
+        from .access import can_switch_ci
+
+        if ctx.params.get("ci") is not None and not can_switch_ci(ctx):
+            raise click.ClickException("--ci/--no-ci is a maintainer-only option")
         if self._repositories(ctx) is None:
             return super().format_help(ctx, formatter)
         # ProjectGroup's panel builder assumes built-ins; VMR lists repositories.

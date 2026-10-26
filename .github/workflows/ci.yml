@@ -46,19 +46,6 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: uv run python scripts/report_preview.py .ptk/report-preview.html
       - run: node scripts/check_report_ui.cjs .ptk/report-preview.html
-  gui:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: astral-sh/setup-uv@v6
-        with:
-          version: '0.13.4'
-          python-version: '3.12'
-      - run: uv sync
-      - run: sudo apt-get update && sudo apt-get install -y xvfb xauth python3-tk
-      - run: xvfb-run --auto-servernum uv run ptk test -- -q tests/test_variant_editor_gui.py
   package:
     strategy:
       fail-fast: false

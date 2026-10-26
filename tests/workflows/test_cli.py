@@ -418,7 +418,6 @@ def test_published_example_runs_locally_without_github(tmp_path, monkeypatch):
 @pytest.mark.parametrize(
     "ci_args,env",
     [
-        (["--ci"], {}),
         ([], {"PTK_CI": "1"}),
         ([], {"PTK_CI": "", "GITHUB_ACTIONS": "true"}),
     ],

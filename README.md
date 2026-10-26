@@ -34,8 +34,8 @@ From the repository root:
 ```bash
 uv sync
 uv run ptk -c examples/quickstart/.main.ptk.yml dry-run build
-uv run ptk -c examples/quickstart/.main.ptk.yml build -V debug
-uv run ptk -c examples/quickstart/.main.ptk.yml build -V release
+uv run ptk -c examples/quickstart/.main.ptk.yml -V debug build
+uv run ptk -c examples/quickstart/.main.ptk.yml -V release build
 ```
 
 This example runs without compilers or credentials and writes logs and reports
@@ -154,9 +154,9 @@ Loading order: automatic `tools.ptk.yml`, `versioning.ptk.yml`, `workflow.ptk.ym
 ## Commands available now
 
 ```
-ptk [-c .main.ptk.yml] [--set PATH=VALUE]... [--ci/--no-ci] [-v|-vv]
+ptk [-c .main.ptk.yml] [--set PATH=VALUE]... [--ci/--no-ci] [-V VARIANT] [-v|-vv]
 ptk                                  run the default job (project.default_job)
-ptk JOB [--PARAM VALUE]... [-V VARIANT] [--from STEP] [--to STEP] [--params FILE]
+ptk JOB [--PARAM VALUE]... [--from STEP] [--to STEP] [--params FILE]
            [-q] [--args-for STEP="ARGS"]... [-- ARGS]
 ptk dry-run [JOB [same options]] [--env]   what would run - nothing is executed
 ptk run [JOB] [-p NAME=VALUE]... [same options]   generic form for scripts and CI
@@ -169,7 +169,7 @@ ptk setup vscode skills [--check]
 ptk setup creds setup [--vault] | set NAME [FIELD] [--store S] | list | test NAME | remove NAME
 ptk setup configs sync [NAMES] [--diff] | check [NAMES]
 ptk setup [--job A]... [--dry-run] [--allow-system] | ptk setup doctor | ptk setup self [--tools]
-ptk report export [JOB] [-V v] [--run ID] [-f FORMAT]... | open [JOB] [--run ID]
+ptk [-V v] report export [JOB] [--run ID] [-f FORMAT]... | open [JOB] [--run ID]
 ptk help [--no-open] [-o FILE]       full help as an HTML page, opened in your browser
 ```
 
@@ -239,15 +239,15 @@ src/ptk/
 
 Dependencies point inwards only; the domain has no I/O.
 
-### Background jobs and variant editing
+### Background jobs and variant inspection
 
 - `background: true` lets a finite `run` step overlap subsequent steps; PTK waits at
   the containing group's end and includes failures in the report.
-- `ptk variant gui` opens an optional Tk YAML editor with validation and export to
-  a new standalone project file. A graphical desktop and Python Tk support are needed.
+- `ptk variant list|show|explain|check` inspects variants without editing configuration.
+  Select a variant before the command: `ptk -V debug build`.
+- `--ci/--no-ci` is maintainer-only. Automatic CI detection remains the default.
 
-See [M11 features and limitations](docs/m11.rst) for process
-lifecycle and the `ptk.variant_gui` editor plugin interface.
+See [background process limitations](docs/m11.rst) and the [CLI reference](docs/cli.rst).
 
 ## Local workflows
 

@@ -2,7 +2,7 @@
 
 Every job becomes a command with real, typed options for its parameters::
 
-    ptk build --jobs 4 --build-type Debug -V b_us --from compile -- extra args
+    ptk -V b_us build --jobs 4 --build-type Debug --from compile -- extra args
     ptk dry-run build --jobs 4            # same options, nothing is executed
 
 Option values are only passed on when given; defaults are resolved by the
@@ -130,10 +130,6 @@ def common_options(*, dry_run: bool) -> list[click.Parameter]:
             help="Compatibility alias for declared job parameter values.",
         ),
         click.Option(
-            ["-V", "--variant"],
-            help="Variant (name or alias); default: the configured default variant.",
-        ),
-        click.Option(
             ["--from", "start"], metavar="STEP", help="Start at this top-level step."
         ),
         click.Option(
@@ -191,7 +187,6 @@ def build_request(
     *,
     params: dict[str, Any] | None = None,
     extra: tuple[str, ...] = (),
-    variant: str | None = None,
     all_variants: bool = False,
     features: tuple[str, ...] = (),
     legacy_params: tuple[str, ...] = (),
@@ -205,7 +200,7 @@ def build_request(
 
     return RunRequest(
         job=job,
-        variant=variant,
+        variant=state_of(ctx).variant,
         all_variants=all_variants,
         feature_overrides={
             **pairs(

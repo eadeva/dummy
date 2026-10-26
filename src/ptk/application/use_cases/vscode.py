@@ -36,6 +36,7 @@ class VSCodeTasks:
         check: bool = False,
         path: Path | None = None,
         cwd: Path | None = None,
+        repository_alias: str | None = None,
     ) -> TasksResult:
         config = project.config
         audience: Role = "user" if users_only else role
@@ -55,7 +56,11 @@ class VSCodeTasks:
             variants = list(config.variants.buildable())
             default_variant = vr.default_variant(config.variants)
         tasks, inputs = vscode.build_tasks(
-            jobs, command=command, variants=variants, default_variant=default_variant
+            jobs,
+            command=command,
+            variants=variants,
+            default_variant=default_variant,
+            repository_alias=repository_alias,
         )
         tasks.extend(
             vscode.workflow_tasks(
@@ -68,6 +73,7 @@ class VSCodeTasks:
                     )
                 ],
                 command=command,
+                repository_alias=repository_alias,
             )
         )
         if cwd is not None:

@@ -7,11 +7,13 @@ from click.testing import CliRunner
 from ptk.drivers.cli.main import cli
 from tests.conftest import DEMO
 
-CONFIG = ["--config", str(DEMO / ".main.ptk.yml"), "--no-ci"]
+CONFIG = ["--config", str(DEMO / ".main.ptk.yml")]
 
 
 def run(*args):
-    return CliRunner().invoke(cli, [*CONFIG, *args], catch_exceptions=False)
+    return CliRunner(env={"PTK_CI": "0"}).invoke(
+        cli, [*CONFIG, *args], catch_exceptions=False
+    )
 
 
 def test_config_validate_and_show():
@@ -56,7 +58,9 @@ def test_variant_commands():
 
 
 def test_errors_exit_2():
-    result = CliRunner().invoke(cli, [*CONFIG, "variant", "show", "nope"])
+    result = CliRunner(env={"PTK_CI": "0"}).invoke(
+        cli, [*CONFIG, "variant", "show", "nope"]
+    )
     assert result.exit_code == 2
     assert "unknown variant 'nope'" in result.output
 
@@ -81,16 +85,15 @@ def test_dry_run_of_demo_shows_plan_without_executing(tmp_path, existing_logs):
         }
 
     before = snapshot()
-    result = CliRunner().invoke(
+    result = CliRunner(env={"PTK_CI": "0"}).invoke(
         cli,
         [
             "--config",
             str(demo / ".main.ptk.yml"),
-            "--no-ci",
-            "dry-run",
-            "build",
             "-V",
             "b_us",
+            "dry-run",
+            "build",
             "--jobs",
             "3",
             "--env",
@@ -124,8 +127,12 @@ def test_run_executes_and_returns_exit_code(write):
         """
         }
     )
-    config = ["--config", str(root / ".main.ptk.yml"), "--no-ci"]
-    ok = CliRunner().invoke(cli, [*config, "run", "ok"], catch_exceptions=False)
+    config = ["--config", str(root / ".main.ptk.yml")]
+    ok = CliRunner(env={"PTK_CI": "0"}).invoke(
+        cli, [*config, "run", "ok"], catch_exceptions=False
+    )
     assert ok.exit_code == 0 and "hi-there" in ok.output
-    bad = CliRunner().invoke(cli, [*config, "run", "bad"], catch_exceptions=False)
+    bad = CliRunner(env={"PTK_CI": "0"}).invoke(
+        cli, [*config, "run", "bad"], catch_exceptions=False
+    )
     assert bad.exit_code == 1 and "exit code 4" in bad.output

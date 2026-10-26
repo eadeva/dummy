@@ -67,7 +67,7 @@ CLI and workflow outputs
 
 Resolve JSON, GitHub step-output lines or just the URL::
 
-   ptk artifacts destination --job package -V default
+   ptk -V default artifacts destination --job package
    ptk artifacts destination --job package --format github
    ptk artifacts destination --job package --format url
 

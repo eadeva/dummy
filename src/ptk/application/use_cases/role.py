@@ -20,9 +20,6 @@ MAINTAINER_COMMANDS = frozenset(
         "setup.configs.sync",
         "setup.self",
         "setup.vscode",
-        "variant.set",
-        "variant.new",
-        "variant.gui",
     }
 )
 

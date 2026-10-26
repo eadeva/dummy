@@ -14,3 +14,7 @@ local.ptk.yml
 docs/_build/
 
 .gen.version.ptk.yml
+
+# VS Code extension dependencies and build output
+extensions/project-toolkit/node_modules/
+*.vsix

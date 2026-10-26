@@ -35,7 +35,7 @@ Current capability guide
   build files: :doc:`versioning`.
 * Commands and credential/setup entry points: :doc:`cli`; built-ins and extension
   contracts: :doc:`plugins`.
-* Background steps and variant GUI boundaries: :doc:`m11`.
+* Background step boundaries: :doc:`m11`.
 * Package preparation without publishing: :doc:`packaging`.
 * Offline authoring resources, protected updates and editor tasks: :doc:`editor`;
   task-specific assistant instructions: :doc:`skills`.

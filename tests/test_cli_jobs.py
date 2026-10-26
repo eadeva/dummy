@@ -48,8 +48,10 @@ def invoke(write):
 
     def _invoke(*args: str, role: str = "user"):
         env = {**HOST, "PTK_ROLE": "user" if role == "user" else ""}
-        base = ["--config", str(root / ".main.ptk.yml"), "--no-ci"]
-        return CliRunner(env=env).invoke(cli, [*base, *args], catch_exceptions=False)
+        base = ["--config", str(root / ".main.ptk.yml")]
+        return CliRunner(env={"PTK_CI": "0", **env}).invoke(
+            cli, [*base, *args], catch_exceptions=False
+        )
 
     _invoke.root = root
     return _invoke
@@ -65,7 +67,6 @@ def test_job_help_has_typed_options(invoke):
         "--targets",
         "--build-type",
         "default: 2",
-        "-V",
         "--from",
     ):
         assert text in out, text
@@ -124,11 +125,13 @@ def test_maintainer_jobs_hidden_and_refused_for_users(invoke):
 def test_broken_config_still_shows_help(write):
     root = write({".main.ptk.yml": "project: {name: t}\njobs: {build: {stepz: []}}\n"})
     base = ["--config", str(root / ".main.ptk.yml")]
-    help_out = CliRunner(env=HOST).invoke(
+    help_out = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
         cli, [*base, "--help"], catch_exceptions=False
     )
     assert help_out.exit_code == 0 and "config" in help_out.output
-    run = CliRunner(env=HOST).invoke(cli, [*base, "build"], catch_exceptions=False)
+    run = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
+        cli, [*base, "build"], catch_exceptions=False
+    )
     assert run.exit_code == 2 and "stepz" in run.output
 
 
@@ -155,7 +158,7 @@ def test_merge_keeps_user_tasks_and_inputs():
     merged = vscode.merge(existing, tasks, inputs)
     assert [t["label"] for t in merged["tasks"]] == ["mine", "ptk: build"]
     assert [i["id"] for i in merged["inputs"]] == ["other", "ptkVariant"]
-    assert merged["tasks"][1]["args"] == ["run", "build", "-V", "${input:ptkVariant}"]
+    assert merged["tasks"][1]["args"] == ["-V", "${input:ptkVariant}", "run", "build"]
     assert merged["tasks"][1]["group"] == {"kind": "build", "isDefault": True}
     assert vscode.merge(merged, tasks, inputs) == merged  # idempotent
 

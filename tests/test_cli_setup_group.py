@@ -18,9 +18,9 @@ def invoke(write):
     grant_maintainer(root)
 
     def call(*args):
-        return CliRunner().invoke(
+        return CliRunner(env={"PTK_CI": "0"}).invoke(
             cli,
-            ["-c", str(root / ".main.ptk.yml"), "--no-ci", *args],
+            ["-c", str(root / ".main.ptk.yml"), *args],
             catch_exceptions=False,
         )
 

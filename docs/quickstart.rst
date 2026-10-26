@@ -15,7 +15,7 @@ From the installed CLI, preview and initialize a new directory::
    cd my-project
    ptk setup config validate
    ptk hello --message "It works"
-   ptk build -V release
+   ptk -V release build
 
 The configuration folder must be supplied by the user. Omit ``--config-dir`` on
 a terminal to enter it at the prompt; there is no default. Scripts, redirected
@@ -65,9 +65,9 @@ compiler, credentials, or network connection once ptk is installed. Commands
 below work from the repository root on Linux and Windows::
 
    uv run ptk -c examples/quickstart/.main.ptk.yml config validate
-   uv run ptk -c examples/quickstart/.main.ptk.yml dry-run build -V debug
-   uv run ptk -c examples/quickstart/.main.ptk.yml build -V debug --message "Hello from ptk"
-   uv run ptk -c examples/quickstart/.main.ptk.yml build -V release
+   uv run ptk -c examples/quickstart/.main.ptk.yml -V debug dry-run build
+   uv run ptk -c examples/quickstart/.main.ptk.yml -V debug build --message "Hello from ptk"
+   uv run ptk -c examples/quickstart/.main.ptk.yml -V release build
 
 ``dry-run`` displays the commands without executing the steps. ``build`` first
 writes ``examples/quickstart/_bin/<variant>/message.txt``, then runs a parallel
@@ -79,7 +79,7 @@ Inspect the results
 
 Open ``examples/quickstart/_reports/debug/build/report.html`` in a browser, or::
 
-   uv run ptk -c examples/quickstart/.main.ptk.yml report open build -V debug
+   uv run ptk -c examples/quickstart/.main.ptk.yml -V debug report open build
 
 JSON, JUnit XML and Markdown reports are written alongside the HTML. Logs are in
 ``examples/quickstart/_logs/debug/build``. Previous logs are retained according

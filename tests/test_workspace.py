@@ -235,7 +235,7 @@ def test_nested_include_bases_and_source_locations(tmp_path):
         )
 
 
-def test_vmr_help_tasks_and_variant_edits(tmp_path, monkeypatch):
+def test_vmr_help_tasks_and_read_only_variants(tmp_path, monkeypatch):
     import json
 
     a, _b = workspace(tmp_path)
@@ -251,10 +251,15 @@ def test_vmr_help_tasks_and_variant_edits(tmp_path, monkeypatch):
     result = runner.invoke(cli, ["firmware", "setup", "vscode", "tasks"])
     assert result.exit_code == 0, result.output
     tasks = json.loads((a.parent / ".vscode/tasks.json").read_text())
-    assert tasks["tasks"][0]["command"] == "ptk firmware"
-    result = runner.invoke(cli, ["firmware", "variant", "set", "debug"])
+    task = tasks["tasks"][0]
+    assert task["command"] == "ptk"
+    assert task["args"] == ["-V", "${input:ptkVariant}", "firmware", "run", "build"]
+    args = ["debug" if arg == "${input:ptkVariant}" else arg for arg in task["args"]]
+    result = runner.invoke(cli, args)
     assert result.exit_code == 0, result.output
-    assert (a.parent / "config/local.ptk.yml").is_file()
+    result = runner.invoke(cli, ["-V", "debug", "firmware", "variant", "show"])
+    assert result.exit_code == 0, result.output
+    assert not (a.parent / "config/local.ptk.yml").exists()
     assert not (a.parent / "local.ptk.yml").exists()
 
 

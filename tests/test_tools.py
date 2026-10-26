@@ -159,7 +159,7 @@ def project(write, tmp_path):
     }
 
     def invoke(*args, role="user"):
-        base = ["--config", str(root / ".main.ptk.yml"), "--no-ci"]
+        base = ["--config", str(root / ".main.ptk.yml")]
         return CliRunner(env={**env, "PTK_ROLE": role}).invoke(
             cli, [*base, *args], catch_exceptions=False
         )
@@ -318,7 +318,7 @@ def test_job_versions_coexist_and_path_contains_only_selected_tools(
     assert app.tools.status(two, ["selectedtool"])[0].version == "2.0.0"
     assert second_paths[0] not in app.tools.environment(one)["PATH"]
     for job, version in [("one", "1.0.0"), ("two", "2.0.0"), ("one", "1.0.0")]:
-        result = CliRunner(env=env).invoke(
+        result = CliRunner(env={"PTK_CI": "0", **env}).invoke(
             cli, ["-c", str(root / ".main.ptk.yml"), job]
         )
         assert result.exit_code == 0 and f"selectedtool {version}" in result.output, (
@@ -330,7 +330,9 @@ def test_job_versions_coexist_and_path_contains_only_selected_tools(
         "PATH": second_paths[0] + ":/usr/bin:/bin"
     }
     write({".main.ptk.yml": yaml.safe_dump(data)})
-    result = CliRunner(env=env).invoke(cli, ["-c", str(root / ".main.ptk.yml"), "one"])
+    result = CliRunner(env={"PTK_CI": "0", **env}).invoke(
+        cli, ["-c", str(root / ".main.ptk.yml"), "one"]
+    )
     assert result.exit_code == 1
     assert (
         "tool requirements are not satisfied in the command environment"

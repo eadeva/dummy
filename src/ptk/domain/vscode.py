@@ -28,12 +28,18 @@ def build_tasks(
     command: str,
     variants: list[str],
     default_variant: str | None,
+    repository_alias: str | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     tasks: list[dict[str, Any]] = []
     for job in jobs:
-        args = ["run", job.name]
-        if variants:
-            args += ["-V", f"${{input:{VARIANT_INPUT}}}"]
+        args = (
+            (["-V", f"${{input:{VARIANT_INPUT}}}"] if variants else [])
+            + ([repository_alias] if repository_alias else [])
+            + [
+                "run",
+                job.name,
+            ]
+        )
         task: dict[str, Any] = {
             "label": TASK_PREFIX + job.name,
             "type": "shell",
@@ -84,14 +90,18 @@ def merge(
 
 
 def workflow_tasks(
-    workflows: list[tuple[str, str]], *, command: str
+    workflows: list[tuple[str, str]],
+    *,
+    command: str,
+    repository_alias: str | None = None,
 ) -> list[dict[str, Any]]:
     return [
         {
             "label": TASK_PREFIX + "workflow " + name,
             "type": "shell",
             "command": command,
-            "args": ["workflow", "run", name],
+            "args": ([repository_alias] if repository_alias else [])
+            + ["workflow", "run", name],
             "group": "build",
             "problemMatcher": [],
             "detail": help_text.splitlines()[0]

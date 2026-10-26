@@ -58,25 +58,41 @@ Legacy ``ptk setup --job JOB --dry-run`` also remains supported. Bare
 ``ptk setup`` now shows help; use ``ptk setup install`` to install all configured
 tools. Do not combine legacy installation options with a setup subcommand.
 
-M11 commands
-------------
+Global options and variant inspection
+-------------------------------------
 
-``ptk variant gui [--plugin NAME] [--output FILE]`` opens the optional desktop
-variant editor. See :doc:`m11` for prerequisites and semantics.
+``-V NAME`` / ``--variant NAME`` is a global option, placed before the command
+and, in a VMR, before the repository alias::
 
-Variant editing and matrices
-----------------------------
+   ptk -V debug build
+   ptk -V debug run build
+   ptk -V debug dry-run build
+   ptk -V debug firmware build
+   ptk -V debug variant show
+   ptk -V debug report open build
 
-``ptk variant new NAME --extends BASE --feature SIZE=4`` creates a variant.
-``ptk variant set NAME SIZE=5`` selects the default and optionally changes features.
-Both validate first, write ``local.ptk.yml`` by default, and accept ``--dry-run``
-or ``--output FILE`` for an explicit overlay. Existing unrelated YAML keys are
-preserved; formatting/comments are not. Include explicit overlays yourself.
-Both commands and ``variant gui`` require a listed maintainer. Normal users can
-select an existing variant with ``-V`` on a job or dry run.
+It selects the variant for jobs, version discovery/generation, report commands,
+artifact destinations and ``variant show`` when NAME is omitted. An explicit
+NAME on ``variant show`` takes precedence. It is irrelevant to setup/config/help,
+variant list/check/explain (which have their own explicit selection), describe,
+and workflow commands. Workflows retain the variants declared on their job calls.
+The option is no longer accepted after a job or subcommand.
+
+``--ci`` / ``--no-ci`` is maintainer-only: hidden from user help and completion,
+and rejected on direct invocation. With neither flag, CI detection works for all
+users. In a VMR, a repository-qualified command checks that member's maintainer
+list; workspace commands check the root list. Member operations also enforce
+their own permissions. The default mode remains automatically detected.
+
+``variant list``, ``show``, ``explain`` and ``check`` are read-only. Edit the YAML
+configuration directly to change the product line or configured default.
+Persistent variant editing commands and the desktop editor have been removed.
+
+Variant matrices
+----------------
 
 ``ptk build --all-variants`` runs every concrete variant sequentially.
-``ptk build -V small,large`` selects a subset, deduplicating aliases. All selections
+``ptk -V small,large build`` selects a subset, deduplicating aliases. All selections
 are prepared before the first run; each receives its own logs and report. Failures
 produce an overall nonzero exit code; cancellation stops the remaining selection.
 The same selection works with ``dry-run``.
@@ -84,7 +100,7 @@ The same selection works with ``dry-run``.
 ``--feature SIZE=4`` (legacy ``-bo SIZE=4``) overrides a feature for this invocation.
 Global ``--set vh.SIZE=4`` is also supported. ``-mp jobs=4`` is the compatibility
 spelling for declared job parameters. Generated typed options take precedence
-when both spellings supply a value. Persistent editing refuses global config overrides.
+when both spellings supply a value. These overrides do not edit configuration files.
 
 Virtual monorepositories (VMR)
 ------------------------------

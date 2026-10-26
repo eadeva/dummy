@@ -10,7 +10,7 @@ description: Diagnose a failing ptk command, configuration, variant, tool or exe
 
 2. Run `ptk setup config validate` first; use `ptk setup config show --sources` for layering mistakes.
 
-3. Use `ptk dry-run JOB -V VARIANT` to inspect commands, conditions and parameter sources.
+3. Use `ptk -V VARIANT dry-run JOB` to inspect commands, conditions and parameter sources.
 
 4. Use `ptk variant explain NAME FEATURE` for unexpected conditions and `ptk setup doctor` for machine/tool problems.
 

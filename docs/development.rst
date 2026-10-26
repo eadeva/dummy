@@ -41,7 +41,7 @@ and header-generation jobs are not part of this repository configuration.
 ``check`` runs Ruff lint and format checks without modifying files. To apply
 formatting intentionally, use ``uv run ruff format``. The test job explicitly
 inherits caller PATH to exercise installed host tools; ordinary environment
-variables remain filtered. DISPLAY/XAUTHORITY are kept for optional GUI tests.
+variables remain filtered.
 
 This repository enables pre-commit through ``config/ptk/configs/configs.ptk.yml``.
 Local jobs/workflows automatically install or repair the hooks. The committed
@@ -131,11 +131,10 @@ are downloaded. Help and preview tests guard the absence of installation work.
 Acceptance boundaries
 ---------------------
 
-Plugin contracts and generators are documented in :doc:`plugins`; variant editing
-and matrix commands in :doc:`cli`; background process and GUI behavior in :doc:`m11`.
-The GUI CI job uses Xvfb and the real Tk event loop to test validation/export.
-Native desktop appearance and real machine-wide tool/credential setup still need
-acceptance on the target machines. Publishing and merging are separate decisions.
+Plugin contracts and generators are documented in :doc:`plugins`; variant inspection
+and matrix commands in :doc:`cli`; background process behavior in :doc:`m11`.
+Real machine-wide tool/credential setup still needs acceptance on target machines.
+Publishing and merging are separate decisions.
 
 Startup performance
 -------------------

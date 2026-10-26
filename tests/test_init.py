@@ -42,7 +42,7 @@ def test_invalid_name_has_no_side_effects(tmp_path, name):
 
 def test_new_project_runs(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    runner = CliRunner()
+    runner = CliRunner(env={"PTK_CI": "0"})
     target = tmp_path / "new project"
     result = runner.invoke(
         cli,
@@ -58,7 +58,7 @@ def test_new_project_runs(tmp_path, monkeypatch):
     initialized = app.load_project.execute(config_file=target / ".main.ptk.yml")
     assert initialized.maintainers.maintainers == [SystemHost().user_id()]
     assert app.role(initialized) == "maintainer"
-    base = ["-c", str(target / ".main.ptk.yml"), "--no-ci"]
+    base = ["-c", str(target / ".main.ptk.yml")]
     assert runner.invoke(cli, [*base, "setup", "config", "validate"]).exit_code == 0
     ran = runner.invoke(cli, [*base, "hello", "--message", "custom message"])
     assert ran.exit_code == 0, ran.output
@@ -69,7 +69,7 @@ def test_new_project_runs(tmp_path, monkeypatch):
 
 def test_dry_run_does_not_create_directory(tmp_path):
     target = tmp_path / "preview"
-    result = CliRunner().invoke(
+    result = CliRunner(env={"PTK_CI": "0"}).invoke(
         cli, ["setup", "init", str(target), "--config-dir", "ptk", "--dry-run"]
     )
     assert result.exit_code == 0, result.output
@@ -81,7 +81,7 @@ def test_existing_config_is_preserved(tmp_path):
     main = tmp_path / ".main.ptk.yml"
     main.write_text("unchanged")
     for args in ([], ["--dry-run"]):
-        result = CliRunner().invoke(
+        result = CliRunner(env={"PTK_CI": "0"}).invoke(
             cli, ["setup", "init", str(tmp_path), "--config-dir", "ptk", *args]
         )
         assert result.exit_code == 2
@@ -93,7 +93,9 @@ def test_existing_config_is_preserved(tmp_path):
 def test_existing_gitignore_is_preserved_and_alias_works(tmp_path):
     ignore = tmp_path / ".gitignore"
     ignore.write_text("my-own-rule\n")
-    result = CliRunner().invoke(cli, ["init", str(tmp_path), "--config-dir", "ptk"])
+    result = CliRunner(env={"PTK_CI": "0"}).invoke(
+        cli, ["init", str(tmp_path), "--config-dir", "ptk"]
+    )
     assert result.exit_code == 0, result.output
     assert "Kept existing .gitignore" in result.output
     assert ignore.read_text().startswith("my-own-rule\n")
@@ -105,7 +107,7 @@ def test_init_does_not_use_parent_project(tmp_path, monkeypatch):
     child = tmp_path / "child"
     child.mkdir()
     monkeypatch.chdir(child)
-    result = CliRunner().invoke(
+    result = CliRunner(env={"PTK_CI": "0"}).invoke(
         cli, ["setup", "init", "--config-dir", "ptk"], catch_exceptions=False
     )
     assert result.exit_code == 0, result.output
@@ -113,7 +115,7 @@ def test_init_does_not_use_parent_project(tmp_path, monkeypatch):
 
 
 def test_conflicting_global_options_rejected(tmp_path):
-    result = CliRunner().invoke(
+    result = CliRunner(env={"PTK_CI": "0"}).invoke(
         cli, ["--set", "project.name=other", "setup", "init", str(tmp_path)]
     )
     assert result.exit_code == 2
@@ -121,7 +123,7 @@ def test_conflicting_global_options_rejected(tmp_path):
 
 
 def test_custom_config_directory_and_outputs(tmp_path):
-    runner = CliRunner()
+    runner = CliRunner(env={"PTK_CI": "0"})
     result = runner.invoke(
         cli,
         ["setup", "init", str(tmp_path), "--config-dir", "config/ptk files", "--yes"],
@@ -151,9 +153,9 @@ def test_custom_config_directory_and_outputs(tmp_path):
     ]
     base = ["-c", str(tmp_path / ".main.ptk.yml")]
     for variant in ("debug", "release"):
-        result = runner.invoke(cli, [*base, "hello", "--variant", variant])
+        result = runner.invoke(cli, [*base, "--variant", variant, "hello"])
         assert result.exit_code == 0, result.output
-        result = runner.invoke(cli, [*base, "build", "--variant", variant])
+        result = runner.invoke(cli, [*base, "--variant", variant, "build"])
         assert result.exit_code == 0, result.output
         assert (tmp_path / f"_bin/{variant}/generated/version.h").is_file()
     assert len(list(tmp_path.rglob(".gen.version.ptk.yml"))) == 4
@@ -167,7 +169,7 @@ def test_init_prompts_for_directory(tmp_path, monkeypatch):
     from unittest.mock import patch
 
     with patch("click.testing._NamedTextIOWrapper.isatty", return_value=True):
-        result = CliRunner().invoke(
+        result = CliRunner(env={"PTK_CI": "0"}).invoke(
             cli, ["setup", "init", str(tmp_path)], input="config/toolkit\n"
         )
     assert result.exit_code == 0, result.output
@@ -176,7 +178,7 @@ def test_init_prompts_for_directory(tmp_path, monkeypatch):
 
 @pytest.mark.parametrize("directory", ["../outside", ".git/config", ".ptk/config"])
 def test_init_rejects_invalid_directory(tmp_path, directory):
-    result = CliRunner().invoke(
+    result = CliRunner(env={"PTK_CI": "0"}).invoke(
         cli, ["setup", "init", str(tmp_path), "--config-dir", directory]
     )
     assert result.exit_code == 2
@@ -187,7 +189,7 @@ def test_init_preflights_all_files(tmp_path):
     folder = tmp_path / "ptk/tools"
     folder.mkdir(parents=True)
     (folder / "tools.ptk.yml").write_text("keep me")
-    result = CliRunner().invoke(
+    result = CliRunner(env={"PTK_CI": "0"}).invoke(
         cli, ["setup", "init", str(tmp_path), "--config-dir", "ptk"]
     )
     assert result.exit_code == 2
@@ -199,7 +201,7 @@ def test_scaffold_nested_includes_variants_and_ci(tmp_path):
     from ptk.application.use_cases.variants import VariantService
     from ptk.bootstrap import create_app
 
-    result = CliRunner().invoke(
+    result = CliRunner(env={"PTK_CI": "0"}).invoke(
         cli, ["setup", "init", str(tmp_path), "--config-dir", "ptk", "--yes"]
     )
     assert result.exit_code == 0, result.output
@@ -219,6 +221,8 @@ def test_scaffold_nested_includes_variants_and_ci(tmp_path):
     (tmp_path / "ptk/jobs/check.ptk.yml").write_text(
         "jobs:\n  check:\n    steps:\n      - check: {uses: echo, with: {message: discovered}}\n"
     )
-    result = CliRunner().invoke(cli, ["-c", str(tmp_path / ".main.ptk.yml"), "check"])
+    result = CliRunner(env={"PTK_CI": "0"}).invoke(
+        cli, ["-c", str(tmp_path / ".main.ptk.yml"), "check"]
+    )
     assert result.exit_code == 0, result.output
     assert "discovered" in result.output

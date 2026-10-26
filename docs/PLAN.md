@@ -58,7 +58,6 @@ src/ptk/
 │   └── shared_configs/         renderers: pre-commit, ruff, clang-format, clang-tidy, clangd
 ├── drivers/
 │   ├── cli/                    rich_click; commands generated from the configuration
-│   └── gui/                    optional variant editor (plugin)
 ├── resources/                  base configs, JSON Schema, `ptk init` templates, installers
 └── bootstrap.py                composition root — the only place that wires adapters
 ```
@@ -196,7 +195,7 @@ Reuse the core of `variant_handler` (already built and tested), trimmed for the 
   - `when:` on steps (replaces `execute_if`, `only_variants`, `omit_variants`)
   - `${vh.*}` substitution; `VH_*` (and optionally legacy `BO_*`) env vars per command
   - `--variant <name|alias>[,...]`, `--all-variants`
-- **Commands:** `ptk variant list | show | explain | check | set | new | gui`.
+- **Commands:** `ptk variant list | show | explain | check`.
 - **Generators** (header, CMake, Bazel, Make, Yocto, Robot, Sphinx) bundled with an extension interface;
   step `uses: variant.generate` (seven bundled generators; external extensions use `ptk.generators`).
 
@@ -351,8 +350,8 @@ configurable (`layout:`). Previous runs are archived per variant/job
   Markdown · GitHub step summary (appended to `$GITHUB_STEP_SUMMARY`).
 - Written to `_reports/<variant>/<job>/report.*` after every run
   (`reporting.dir` moves them); a reporting problem never changes the run's result.
-- Commands: `ptk report export [JOB] [-V v] [--run ID] [-f FORMAT]... [-o DIR]` ·
-  `ptk report open [JOB] [-V v] [--run ID]`.
+- Commands: `ptk [-V v] report export [JOB] [--run ID] [-f FORMAT]... [-o DIR]` ·
+  `ptk [-V v] report open [JOB] [--run ID]`.
 
 ---
 
@@ -460,7 +459,7 @@ tools:
   Git author names/emails and `PTK_ROLE=maintainer` do not grant privileges.
   `PTK_ROLE=user` can reduce privileges for testing. Init seeds its creator's ID.
 - Default restricted built-ins: `setup configs sync`, `setup self`, `setup vscode`
-  and its children, `variant new/set/gui`. Additional `command_audience` policies
+  and its children; `--ci/--no-ci` is a maintainer-only root option. Additional `command_audience` policies
   may restrict commands but cannot relax this baseline.
 - Restricted commands are absent from normal/HTML help and completion; direct calls,
   aliases and legacy setup dispatch enforce permissions before writes.
@@ -476,8 +475,8 @@ tools:
 ## 10. CLI surface
 
 ```
-ptk [--config FILE] [--set k=v]... [--ci/--no-ci] [-v|-vv]
-ptk <job> [--<param> VALUE]... [-V VARIANT] [--from STEP] [--to STEP]
+ptk [--config FILE] [--set k=v]... [--ci/--no-ci] [-V VARIANT] [-v|-vv]
+ptk <job> [--<param> VALUE]... [--from STEP] [--to STEP]
              [--params FILE] [-q] [--args-for STEP="ARGS"] [--setup] [-- args]
 ptk                                     run project.default_job
 
@@ -486,7 +485,7 @@ ptk run [<job>] [...]                generic form (scripts, CI); -p NAME=VALUE
 ptk help [--no-open] [-o FILE]          full help as HTML, opened in the browser
 ptk setup init [DIRECTORY] [--name NAME] [--dry-run]  scaffold a project
 ptk setup config  show [--sources] | validate | schema
-ptk variant list | show | explain | check | set | new | gui
+ptk variant list | show | explain | check
 ptk setup creds   setup | set | list | test | remove
 ptk setup configs sync [--diff] | check
 ptk setup install [--job A] [--dry-run]
@@ -617,7 +616,7 @@ formatted with `ruff format`. CI runs `ruff check` and `ruff format --check`.
 | M8 ✅ | Shared configs: pre-commit, ruff, clang-format, clang-tidy, clangd | `configs sync/check/--diff` |
 | M9 ✅ | Tools: model, Chocolatey, uv-tool, download, `setup`, `self-setup`, `doctor`, installers | missing tools detected and installed (Windows run by user) |
 | M10 ✅ | Runnable quickstart, schema-generated reference, thirteen authoring skills, native process tests and CI matrix | Sphinx `-W`, lint and tests passed on Linux/Windows with Python 3.12/3.13 (run 40195082145) |
-| M11 ✅ | Scoped background steps, optional variant YAML GUI and plugin discovery | done |
+| M11 ✅ | Scoped background steps and plugin discovery | done |
 
 ---
 
@@ -649,17 +648,13 @@ Former top-level commands remain hidden compatibility aliases.
 - Generates a portable `hello` job and a new `.gitignore` when absent.
 - Refuses existing configuration, preserves existing ignore rules, and previews
   without writing files. Does not install tools or access credentials.
-- M11 is implemented with documented limits: finite scoped
-  background processes, and a desktop YAML variant editor with validated export.
+- M11 background processes are implemented with documented limits. The desktop
+  editor was subsequently removed; variants now have read-only CLI inspection.
 
 ## M11 implementation
 
 - Background `run` steps overlap subsequent work, join at their sequence boundary,
   preserve result ordering, and use existing timeout/retry/cancellation handling.
-- `variant gui` lazily opens the Tk editor or an explicitly selected installed
-  `ptk.variant_gui` entry point. Export is a validated standalone project snapshot;
-  existing source files are preserved. A real Tk event-loop test under Xvfb covers validation and export in CI;
-  native desktop appearance remains a manual acceptance check.
 - Regression coverage includes real process overlap/cancellation, failure reporting,
   variant constraints and plugin dispatch.
 
@@ -671,20 +666,19 @@ Former top-level commands remain hidden compatibility aliases.
   while audit logs and overall failure status remain intact.
 - Groups and built-ins support retries and deadlines. Built-in Python handlers
   cooperate with cancellation; they are not forcibly killed like subprocesses.
-- Added `variant set/new`, validated atomic local overlays, `--all-variants`, comma
-  selections, feature overrides and `-bo`/`-mp` compatibility spellings.
+- Added `--all-variants`, comma selections, feature overrides and `-bo`/`-mp`
+  compatibility spellings. Persistent variant editors were subsequently removed.
 - Implemented all six extension entry-point groups from section 1, selected by
   installed distribution names in `plugins`. Contracts are in `docs/plugins.rst`.
 - Added the remaining setup/file/generator built-ins and seven bundled generators.
 - Added configurable maintainer visibility for built-in command groups and aliases.
 - Native Linux/Windows behavior, extension integration and generator outputs are
-  covered in tests; the CI GUI job exercises the real Tk event loop under Xvfb.
+  covered in tests.
 
 ### Explicit release / acceptance boundaries
 
-- The GUI is a validated YAML editor with export, not a graphical feature-tree designer.
-  Native Windows/Linux appearance and real machine-wide Chocolatey/gopass setup remain
-  user-environment acceptance checks; CI does not claim those installations occurred.
+- Real machine-wide Chocolatey/gopass setup remains a user-environment acceptance
+  check; CI does not claim those installations occurred.
 - Generator format restrictions and cooperative Python timeouts are documented.
 - Package name/index availability and publishing a release remain delivery decisions.
   Code is delivered on `ChatGPT_version`; it has not been merged into the base branch.
@@ -692,7 +686,7 @@ Former top-level commands remain hidden compatibility aliases.
 ## Confirmed scope and shared defaults
 
 - CX means GitHub Actions/workflows. `cx.ptk.yml` is the automatic workflow
-  overlay; `--ci` / `--no-ci` can force mode. No legacy filename is required.
+  overlay; maintainers can force mode with `--ci` / `--no-ci`. No legacy filename is required.
 - Legacy migration is not a completion requirement. `execute_if`, legacy
   `ENV_ISOLATION`, `*_cx`, `variant_overrides` and `DEFAULT_PARAMETERS_CX` do not
   create further legacy obligations. The legacy converter and both CLI spellings have been removed.
@@ -893,3 +887,17 @@ source baseline/optimized samples are kept in docs/benchmarks. CI logs benchmark
 results on Linux/Windows Python 3.12 without flaky time thresholds. Deterministic
 regression tests bound repeated work and ensure help avoids runtime imports.
 See docs/performance.rst for measurements and remaining VMR scaling costs.
+
+
+## CLI simplification and editor inventory
+
+- CI mode switches are hidden and refused for non-maintainers; automatic detection
+  remains unchanged. VMR repository commands use member identity; workspace commands
+  use the root list, and member preflight retains member permissions.
+- `-V` / `--variant` is global and propagated to repository jobs, variant display,
+  version commands, report commands and artifact destinations. Workflows keep their
+  authored per-job selections. Setup and other read-only inventories ignore it.
+- Removed persistent variant mutation commands, the GUI and editor plugin interface,
+  unused overlay writer, desktop tests and GUI CI job. Retained list/show/explain/check.
+- `ptk describe --json` exposes a versioned, read-only editor inventory with role-aware
+  jobs/workflows/capabilities and no resolved credentials, versions or tool installs.

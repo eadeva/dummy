@@ -21,8 +21,9 @@ from rich.table import Table
 
 from ... import __version__
 from ...domain.errors import ConfigError, PtkError
-from .access import AccessGroup, require
+from .access import AccessGroup, MaintainerOption, can_switch_ci, require
 from .artifacts import artifacts_group
+from .editor import describe
 from .jobs import (
     ProjectGroup,
     build_request,
@@ -77,9 +78,10 @@ click.rich_click.SHOW_ARGUMENTS = True
 )
 @click.option(
     "--ci/--no-ci",
+    cls=MaintainerOption,
     default=None,
     is_eager=True,
-    help="Force CI mode on/off (default: detected).",
+    help="Maintainers only: force CI mode on/off (default: detected).",
 )
 @click.option(
     "-v",
@@ -87,14 +89,21 @@ click.rich_click.SHOW_ARGUMENTS = True
     count=True,
     help="More ptk messages: -v debug, -vv trace (default: logging.level).",
 )
+@click.option(
+    "-V",
+    "--variant",
+    help="Variant name/alias (comma-separated for jobs). Used by jobs, variant show, versions, reports and artifact destinations. Ignored by setup, config, help and workflows (which select variants per job).",
+)
 @click.version_option(__version__, prog_name="ptk")
 @click.pass_context
+@guarded
 def cli(
     ctx: click.Context,
     config: Path | None,
     overrides: tuple[str, ...],
     ci: bool | None,
     verbose: int,
+    variant: str | None,
 ) -> None:
     """[bold]ptk[/] - project tool kit.
 
@@ -102,6 +111,16 @@ def cli(
     command, ptk runs the default job ([italic]project.default_job[/]).
     """
     state = state_of(ctx)
+    entries = ctx.find_root().meta.get("vmr_repositories") or {}
+    if (
+        state.ci is not None
+        and (
+            getattr(ctx.command, "repository_boundary", False)
+            or ctx.invoked_subcommand not in entries
+        )
+        and not can_switch_ci(ctx)
+    ):
+        raise PtkError("--ci/--no-ci is a maintainer-only option")
     if ctx.invoked_subcommand is not None:
         return
     if (
@@ -124,6 +143,7 @@ def cli(
 
 
 cli.add_command(workflow_group)
+cli.add_command(describe)
 
 
 # --------------------------------------------------------------------------- config
@@ -217,88 +237,6 @@ def _value(value: Any) -> str:
     return "-" if value is None else str(value)
 
 
-def _write_variant_change(ctx, name, features, output, dry_run, **options):
-    from ...adapters.config.edits import write_overlay
-    from ...application.use_cases.variant_changes import variant_patch
-
-    state = _state(ctx)
-    if ctx.find_root().params.get("overrides"):
-        raise PtkError(
-            "Do not combine persistent variant edits with global --set overrides"
-        )
-    project = state.project()
-    patch = variant_patch(project, name, pairs(features, "--feature"), **options)
-    target = output or project.config_root / "local.ptk.yml"
-    text = write_overlay(target, patch, dry_run=dry_run)
-    click.echo(
-        text if dry_run else f"Updated {target}. YAML comments are not retained."
-    )
-    if output and not dry_run:
-        click.echo("Include this overlay in your project to activate it.")
-
-
-@variant_group.command("set")
-@click.argument("name")
-@click.argument("features", nargs=-1)
-@click.option("-o", "--output", type=click.Path(path_type=Path, dir_okay=False))
-@click.option("--dry-run", is_flag=True)
-@click.pass_context
-@guarded
-def variant_set(ctx, name, features, output, dry_run):
-    """Select the default variant and optionally set FEATURE=VALUE in local.ptk.yml."""
-    _write_variant_change(ctx, name, features, output, dry_run)
-
-
-@variant_group.command("new")
-@click.argument("name")
-@click.option("--extends", help="Base variant or alias.")
-@click.option("--feature", "features", multiple=True, metavar="FEATURE=VALUE")
-@click.option("--component", "components", multiple=True)
-@click.option("-o", "--output", type=click.Path(path_type=Path, dir_okay=False))
-@click.option("--dry-run", is_flag=True)
-@click.pass_context
-@guarded
-def variant_new(ctx, name, extends, features, components, output, dry_run):
-    """Create a validated variant in local.ptk.yml (or an explicit overlay)."""
-    _write_variant_change(
-        ctx,
-        name,
-        features,
-        output,
-        dry_run,
-        create=True,
-        extends=extends,
-        components=components,
-    )
-
-
-@variant_group.command("gui")
-@click.option(
-    "--plugin",
-    default="tkinter",
-    show_default=True,
-    help="Installed ptk.variant_gui plugin name.",
-)
-@click.option(
-    "-o",
-    "--output",
-    type=click.Path(path_type=Path, dir_okay=False),
-    default="main.variants-edited.ptk.yml",
-    show_default=True,
-)
-@click.pass_context
-@guarded
-def variant_gui(ctx: click.Context, plugin: str, output: Path) -> None:
-    """Edit variants in a desktop window and export a validated project copy."""
-    from ...adapters.variant_editor import launch_editor
-    from ...application.use_cases.variant_editor import VariantEditorSession
-
-    project = _state(ctx).project()
-    session = VariantEditorSession(project.config)
-    session.initial_text()  # report absent variants before loading any GUI
-    launch_editor(session, output.resolve(), plugin)
-
-
 @variant_group.command("list")
 @click.option(
     "--names",
@@ -345,7 +283,7 @@ def variant_show(
 ) -> None:
     """Show the resolved values of a variant (default variant if NAME is omitted)."""
     service = _state(ctx).app.variants(_state(ctx).project())
-    resolved = service.resolve(name)
+    resolved = service.resolve(name or _state(ctx).variant)
     if as_json:
         console.print_json(resolved.model_dump_json())
         sys.exit(0 if resolved.ok else 1)
@@ -471,7 +409,7 @@ def dry_run_group(ctx: click.Context, **options: Any) -> None:
         )
 
 
-# without JOB, "ptk dry-run -V x" previews the default job with these options
+# without JOB, "ptk -V x dry-run" previews the default job with these options
 dry_run_group.params.extend(
     p for p in common_options(dry_run=True) if p.name not in ("extra", "args_for")
 )
@@ -796,9 +734,6 @@ def _report_target(ctx: click.Context, job: str | None) -> tuple[Any, str]:
 @report_group.command("export")
 @click.argument("job", required=False)
 @click.option(
-    "-V", "--variant", help="Variant (default: the configured default variant)."
-)
-@click.option(
     "--run", "run_id", metavar="RUN_ID", help="An older run kept in the log history."
 )
 @click.option(
@@ -820,7 +755,6 @@ def _report_target(ctx: click.Context, job: str | None) -> tuple[Any, str]:
 def report_export(
     ctx: click.Context,
     job: str | None,
-    variant: str | None,
     run_id: str | None,
     formats: tuple[str, ...],
     output: Path | None,
@@ -828,7 +762,7 @@ def report_export(
     """Write the report of the latest (or a given) run of JOB again."""
     project, name = _report_target(ctx, job)
     service = _state(ctx).app.reports
-    summary = service.latest(project, name, variant, run_id)
+    summary = service.latest(project, name, _state(ctx).variant, run_id)
     report, files = service.write(project, summary, list(formats) or None, output)
     for file in files:
         console.print(f"written {escape(str(file))}", highlight=False, soft_wrap=True)
@@ -839,20 +773,15 @@ def report_export(
 @report_group.command("open")
 @click.argument("job", required=False)
 @click.option(
-    "-V", "--variant", help="Variant (default: the configured default variant)."
-)
-@click.option(
     "--run", "run_id", metavar="RUN_ID", help="An older run kept in the log history."
 )
 @click.pass_context
 @guarded
-def report_open(
-    ctx: click.Context, job: str | None, variant: str | None, run_id: str | None
-) -> None:
+def report_open(ctx: click.Context, job: str | None, run_id: str | None) -> None:
     """Open the HTML report of the latest (or a given) run of JOB in the browser."""
     project, name = _report_target(ctx, job)
     service = _state(ctx).app.reports
-    summary = service.latest(project, name, variant, run_id)
+    summary = service.latest(project, name, _state(ctx).variant, run_id)
     target = None
     if run_id:  # older runs get their own folder so the latest report stays
         target = (
@@ -951,10 +880,11 @@ def vscode_tasks(
     """
     state = _state(ctx)
     task_cwd = None
+    repository_alias = None
     parent = ctx
     while parent is not None:
         if getattr(parent.command, "repository_boundary", False):
-            command = f"{command} {parent.info_name}"
+            repository_alias = parent.info_name
             task_cwd = state.app.workspace.root(state.project().root)
             break
         parent = parent.parent
@@ -966,6 +896,7 @@ def vscode_tasks(
         check=check,
         path=output,
         cwd=task_cwd,
+        repository_alias=repository_alias,
     )
     if check:
         if result.up_to_date:

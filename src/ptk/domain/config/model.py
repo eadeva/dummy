@@ -40,6 +40,7 @@ STEP_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 
 RESERVED_JOBS = {
+    "describe",
     "artifacts",
     "workflow",
     "config",
@@ -566,9 +567,6 @@ class PtkConfig(_Strict):
             "setup.doctor",
             "setup.init",
             "variant",
-            "variant.set",
-            "variant.new",
-            "variant.gui",
             "version",
             "report",
             "workflow",

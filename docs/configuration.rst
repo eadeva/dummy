@@ -24,14 +24,14 @@ Automatic ``artifactory_structure.ptk.yaml``, ``workflow.ptk.yml``, ``versioning
 ``local.ptk.yml`` and ``maintainers.ptk.yml`` are discovered in that directory.
 The loader applies shared tool files, main/includes, CX when enabled, local,
 and finally CLI ``--set`` overrides. Repository metadata cannot be overridden.
-Keep local overrides out of git. ``variant set/new`` writes the local overlay
+Keep local overrides out of git. Edit the local overlay directly
 in this configuration directory. Commands, workspace outputs and shared tool
 configuration outputs still use the repository root.
 
 Automatic discovery searches upwards and stops at a Git repository boundary.
 The old ``main.ptk.yml`` filename is not discovered. ``--config`` explicitly
 selects an entry file, including standalone exported snapshots.
-Use global ``--no-ci`` to inspect local behavior independently of the host.
+Maintainers can use global ``--no-ci`` to inspect local behavior independently of the host.
 
 A manual VMR has a separate workspace-root ``.main.ptk.yml`` with
 ``virtual_monorepo: true`` and an optional ``members: [nested/repository, other]``
@@ -361,8 +361,10 @@ errors. ``PTK_ROLE=user`` can reduce a listed maintainer's visibility for testin
 The following built-ins are maintainer-only by default:
 
 * ``ptk setup configs sync`` and ``ptk setup self``;
-* ``ptk setup vscode``, including ``tasks`` and ``skills``;
-* ``ptk variant new``, ``ptk variant set`` and ``ptk variant gui``.
+* ``ptk setup vscode``, including ``tasks`` and ``skills``.
+
+The global ``--ci`` / ``--no-ci`` option is also maintainer-only. Automatic CI
+detection remains available to everyone without either switch.
 
 These commands are omitted from normal/HTML help and shell completion, and direct
 invocation is refused before writes. Aliases obey the same policy. A protected
@@ -373,7 +375,8 @@ the built-in restrictions. Invalid project configuration does not expose them.
 Tool installation (including machine-wide installation), personal credential
 management, diagnostics, configuration inspection/validation, generated versions,
 reports and ordinary jobs/workflows remain available. Developers select variants
-for a run with ``-V``; persistent variant editing requires a maintainer.
+for a run with global ``-V NAME`` before the command. The variant CLI only
+inspects configuration; modify YAML directly to change definitions.
 ``setup init`` remains available for unconfigured repositories, lists the creator
 as their initial maintainer, and refuses to overwrite existing configuration.
 In VMR initialization, configured repositories continue to be skipped.
@@ -390,9 +393,9 @@ These checks protect ordinary CLI use, not against someone editing their own
 checkout or process environment. Repository configuration and plugins remain
 trusted code; enforce release permissions and credentials in CI separately.
 
-Variant editing, matrix runs and legacy CLI aliases are described in :doc:`cli`.
+Variant inspection, matrix runs and legacy CLI aliases are described in :doc:`cli`.
 The installed plugin interfaces, generators and built-in command visibility are
-covered in :doc:`plugins`. Background process and desktop GUI limitations are in :doc:`m11`.
+covered in :doc:`plugins`. Background process limitations are in :doc:`m11`.
 
 
 Additional execution controls
@@ -427,7 +430,7 @@ normal position. Additional tool definitions in job files are shared definitions
 put job-specific changes under that job's ``requires_tools``.
 
 ``cx.ptk.yml`` is the automatic workflow overlay filename. GitHub Actions is
-recognized automatically; ``--ci`` / ``--no-ci`` can force the mode. The old
+recognized automatically; maintainers can force the mode with ``--ci`` / ``--no-ci``. The old
 ``ci.ptk.yml`` filename is not automatically loaded.
 
 Global ``param_defaults`` supplies defaults only to parameters that a job

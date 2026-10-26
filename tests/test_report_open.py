@@ -55,15 +55,13 @@ def invoke(write, monkeypatch):
             config["variants"] = {"default": "one", "variants": {"one": {}, "two": {}}}
         root = write({".main.ptk.yml": yaml.safe_dump(config)})
         args = ["--config", str(root / ".main.ptk.yml")]
-        if ci is True:
-            args.append("--ci")
         if dry:
             args.append("dry-run")
         args.append("check")
         if all_variants:
             args.append("--all-variants")
         env = {
-            "PTK_CI": "" if ci == "auto" else "0",
+            "PTK_CI": "" if ci == "auto" else "1" if ci else "0",
             "GITHUB_ACTIONS": "true" if ci == "auto" else "false",
         }
         result = CliRunner(env=env).invoke(cli, args, catch_exceptions=False)

@@ -198,8 +198,10 @@ def project(write, tmp_path):
     env = {**HOST, "JUNIT": JUNIT, "GITHUB_STEP_SUMMARY": str(summary)}
 
     def invoke(*args):
-        base = ["--config", str(root / ".main.ptk.yml"), "--no-ci"]
-        return CliRunner(env=env).invoke(cli, [*base, *args], catch_exceptions=False)
+        base = ["--config", str(root / ".main.ptk.yml")]
+        return CliRunner(env={"PTK_CI": "0", **env}).invoke(
+            cli, [*base, *args], catch_exceptions=False
+        )
 
     invoke.root = root
     invoke.summary = summary
@@ -238,7 +240,7 @@ def test_report_import_without_match_fails(write):
         """
         }
     )
-    result = CliRunner(env=HOST).invoke(
+    result = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
         cli, ["--config", str(root / ".main.ptk.yml"), "go"], catch_exceptions=False
     )
     assert result.exit_code == 1 and "no files matched" in result.output
@@ -277,7 +279,7 @@ def test_reporting_disabled(write):
         """
         }
     )
-    result = CliRunner(env=HOST).invoke(
+    result = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
         cli, ["--config", str(root / ".main.ptk.yml"), "go"], catch_exceptions=False
     )
     assert (

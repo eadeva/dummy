@@ -20,7 +20,7 @@ description: Add or modify ptk jobs, parameters, nested steps, conditions and ma
 
 7. Read the built-in contracts in [docs/plugins.rst](../../../docs/plugins.rst); including echo, wait, report.import, configs.sync, tools.ensure, files.copy, files.clean variant.generate and version.generate.
 
-8. Preview `ptk dry-run JOB -V VARIANT`; check `ptk JOB --help` and top-level `--from/--to` boundaries.
+8. Preview `ptk -V VARIANT dry-run JOB`; check `ptk JOB --help` and top-level `--from/--to` boundaries.
 
 9. After changes, run the affected job in a disposable example and inspect logs and reports.
 

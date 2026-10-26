@@ -13,7 +13,6 @@ Only selected distributions are imported. Missing packages/entry points,
 non-callable handlers and duplicate or reserved names are errors. Plugins run
 as trusted Python code with the user's permissions; the allow-list is not a
 sandbox. Ordinary projects with no ``plugins`` do not load these extensions.
-GUI selection uses its separate interface described in :doc:`m11`.
 
 Register callables in the extension's ``pyproject.toml``::
 
@@ -113,7 +112,7 @@ Use canonical dotted paths, for example::
 Supported keys are ``setup``, its immediate commands/groups (``config``, ``configs``,
 ``creds``, ``vscode``, ``install``, ``self``, ``doctor``, ``init``),
 ``setup.configs.sync|check``, ``setup.vscode.tasks|skills``,
-``variant``, ``variant.set|new|gui``, ``version``, ``report``, ``workflow`` and
+``variant``, ``version``, ``report``, ``workflow`` and
 ``artifacts``. Expand alternatives to individual dotted keys in YAML.
 Restrictions apply to descendants and compatibility aliases, normal/HTML help
 and completion. Configuration writers are restricted by default; ``all`` cannot

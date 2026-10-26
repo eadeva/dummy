@@ -70,7 +70,7 @@ def invoke(write):
         )
         env = {
             "PTK_ROLE": "user",
-            "PTK_CI": "" if ci == "auto" else "0",
+            "PTK_CI": "" if ci == "auto" else "1" if ci else "0",
             "GITHUB_ACTIONS": "true" if ci == "auto" else "false",
         }
         result = CliRunner(env=env).invoke(
@@ -78,7 +78,6 @@ def invoke(write):
             [
                 "-c",
                 str(root / ".main.ptk.yml"),
-                *(["--ci"] if ci is True else []),
                 "workflow",
                 mode,
                 "verify",

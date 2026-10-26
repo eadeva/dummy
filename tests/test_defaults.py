@@ -129,23 +129,27 @@ def test_no_job_and_no_default(write):
 
 def test_plain_ptk_runs_default_job(write):
     root = write({".main.ptk.yml": PROJECT})
-    args = ["--config", str(root / ".main.ptk.yml"), "--no-ci"]
-    result = CliRunner(env=HOST).invoke(cli, args, catch_exceptions=False)
+    args = ["--config", str(root / ".main.ptk.yml")]
+    result = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
+        cli, args, catch_exceptions=False
+    )
     assert result.exit_code == 0, result.output
     assert "hello world careful vanilla-plain 1" in result.output
-    dry = CliRunner().invoke(
-        cli, [*args, "dry-run", "-V", "fast"], catch_exceptions=False
+    dry = CliRunner(env={"PTK_CI": "0"}).invoke(
+        cli, [*args, "-V", "fast", "dry-run"], catch_exceptions=False
     )
     assert "say  echo hello world quick" in dry.output
 
 
 def test_plain_ptk_outside_a_project_shows_help(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    result = CliRunner().invoke(cli, [], catch_exceptions=False)
+    result = CliRunner(env={"PTK_CI": "0"}).invoke(cli, [], catch_exceptions=False)
     assert result.exit_code == 0 and "Commands" in result.output
 
 
 def test_demo_toolchain_follows_variant():
-    args = ["--config", str(DEMO / ".main.ptk.yml"), "--no-ci", "dry-run"]
-    us = CliRunner().invoke(cli, [*args, "-V", "b_us"], catch_exceptions=False)
+    args = ["--config", str(DEMO / ".main.ptk.yml")]
+    us = CliRunner(env={"PTK_CI": "0"}).invoke(
+        cli, [*args, "-V", "b_us", "dry-run"], catch_exceptions=False
+    )
     assert "-DTOOLCHAIN=arm-clang" in us.output and "build (dry run" in us.output

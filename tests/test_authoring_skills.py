@@ -39,7 +39,7 @@ def test_authoring_starter_runs_from_its_configuration_directory(tmp_path, monke
     runner = CliRunner()
     for args in (
         ["setup", "config", "validate"],
-        ["dry-run", "build", "-V", "debug"],
+        ["-V", "debug", "dry-run", "build"],
         ["build", "--all-variants"],
     ):
         result = runner.invoke(cli, args)

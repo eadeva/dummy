@@ -1,5 +1,5 @@
-Background steps and variant editor
-===================================
+Background process steps
+========================
 
 Background process steps
 ------------------------
@@ -32,42 +32,3 @@ These are finite jobs, not detached services. PTK does not provide readiness
 probes or automatically stop a server when foreground work ends. Use ``timeout``
 and explicit coordination for dependent work. Built-ins and step groups cannot
 be marked ``background``; use ``parallel`` for concurrent groups.
-
-Optional desktop variant editor
--------------------------------
-
-Launch from a graphical desktop with a Python installation that includes Tk::
-
-   ptk variant gui --output main.variants-edited.ptk.yml
-
-On Linux the operating system's ``python3-tk`` package may be required; the Python
-interpreter running PTK must have Tk support. No GUI dependency is imported by
-ordinary CLI commands. Headless hosts receive a clear error.
-
-The editor displays product-line YAML for components, features, constraints,
-variants and inheritance. **Validate / preview** shows resolved feature values
-and validation errors. **Export validated project** checks both the product line
-and the complete project's references before writing a new file. Existing files
-are never overwritten. Closing a modified editor asks before discarding edits.
-
-The export is a standalone snapshot of the effective project configuration;
-includes, overlays, command-line overrides and comments are flattened. Original
-files remain intact. Inspect and run the export explicitly::
-
-   ptk --config main.variants-edited.ptk.yml variant check
-   ptk --config main.variants-edited.ptk.yml dry-run build
-
-Integrate reviewed changes into source configuration separately. This is a YAML
-editor with validation, not a graphical feature-tree designer.
-
-Alternative editors can register a Python entry point::
-
-   [project.entry-points."ptk.variant_gui"]
-   my_editor = "my_package.editor:open_editor"
-
-Select one using ``ptk variant gui --plugin my_editor``. The callable receives
-``(session: VariantEditorSession, output: pathlib.Path)``. Use
-``session.initial_text()``, ``session.validate(text)`` and ``session.render(text)``;
-``ptk.adapters.variant_editor.save_edit`` performs validated exclusive export.
-GUI plugins are selected by ``--plugin``; the project ``plugins:`` allow-list
-loads other extension groups described in :doc:`plugins`. The bundled editor is selected by ``tkinter``.

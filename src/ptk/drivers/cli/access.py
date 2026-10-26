@@ -1,10 +1,47 @@
 """Per-project built-in command visibility without mutating shared Click objects."""
 
+import copy
+from pathlib import Path
+
 import rich_click as click
 
 from ...application.use_cases.role import command_allowed
 from ...domain.errors import PtkError
 from .state import guarded, state_of
+
+
+def can_switch_ci(ctx):
+    """Use the current repository's identity, or the VMR root's own list."""
+    state = state_of(ctx)
+    current = ctx
+    while current is not None:
+        if getattr(current.command, "repository_boundary", False):
+            return state.role() == "maintainer"
+        current = current.parent
+    try:
+        workspace = None if state.config else state.app.workspace.root(Path.cwd())
+        if workspace is not None:
+            return state.app.workspace_role(workspace) == "maintainer"
+    except PtkError:
+        return False
+    return state.role() == "maintainer"
+
+
+class MaintainerOption(click.Option):
+    """Context-local visibility, evaluated only for help/completion, never parsing."""
+
+    access_context = None
+
+    @property
+    def hidden(self):
+        return self._hidden or (
+            self.access_context is not None and not can_switch_ci(self.access_context)
+        )
+
+    @hidden.setter
+    def hidden(self, value):
+        self._hidden = value
+
 
 ALIASES = {
     "config": "setup.config",
@@ -71,6 +108,21 @@ def denied_command(name, kind="command"):
 
 
 class AccessGroup(click.RichGroup):
+    def get_params(self, ctx):
+        params = super().get_params(ctx)
+        if not hasattr(ctx, "_maintainer_options"):
+            ctx._maintainer_options = {}
+        result = []
+        for param in params:
+            if isinstance(param, MaintainerOption):
+                if param.name not in ctx._maintainer_options:
+                    local = copy.copy(param)
+                    local.access_context = ctx
+                    ctx._maintainer_options[param.name] = local
+                param = ctx._maintainer_options[param.name]
+            result.append(param)
+        return result
+
     def list_commands(self, ctx):
         return [n for n in super().list_commands(ctx) if allowed(ctx, n)]
 

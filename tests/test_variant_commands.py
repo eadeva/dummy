@@ -4,7 +4,6 @@ import yaml
 from click.testing import CliRunner
 
 from ptk.drivers.cli.main import cli
-from tests.conftest import grant_maintainer
 
 
 def setup(tmp_path):
@@ -48,39 +47,6 @@ def setup(tmp_path):
     return file
 
 
-def test_variant_edit_preview_and_persistence(tmp_path):
-    file = setup(tmp_path)
-    grant_maintainer(tmp_path)
-    runner = CliRunner()
-    prefix = ["-c", str(file), "variant"]
-    preview = runner.invoke(
-        cli,
-        [
-            *prefix,
-            "new",
-            "medium",
-            "--extends",
-            "small",
-            "--feature",
-            "SIZE=4",
-            "--dry-run",
-        ],
-    )
-    assert preview.exit_code == 0, preview.output
-    assert not (tmp_path / "local.ptk.yml").exists()
-    created = runner.invoke(
-        cli, [*prefix, "new", "medium", "--extends", "small", "--feature", "SIZE=4"]
-    )
-    assert created.exit_code == 0, created.output
-    selected = runner.invoke(cli, [*prefix, "set", "medium", "SIZE=5"])
-    assert selected.exit_code == 0, selected.output
-    result = runner.invoke(cli, ["-c", str(file), "go"])
-    assert result.exit_code == 0, result.output
-    assert "5 world" in result.output
-    duplicate = runner.invoke(cli, [*prefix, "new", "medium"])
-    assert duplicate.exit_code == 2
-
-
 def test_all_variants_and_override_aliases(tmp_path):
     file = setup(tmp_path)
     result = CliRunner().invoke(
@@ -99,11 +65,11 @@ def test_all_variants_and_override_aliases(tmp_path):
 def test_variant_selection_preflight_and_dry_run(tmp_path):
     file = setup(tmp_path)
     runner = CliRunner()
-    result = runner.invoke(cli, ["-c", str(file), "go", "-V", "small,missing"])
+    result = runner.invoke(cli, ["-c", str(file), "-V", "small,missing", "go"])
     assert result.exit_code == 2
     assert not (tmp_path / "_logs").exists()
     preview = runner.invoke(
-        cli, ["-c", str(file), "dry-run", "go", "-V", "small,large"]
+        cli, ["-c", str(file), "-V", "small,large", "dry-run", "go"]
     )
     assert preview.exit_code == 0, preview.output
     assert not (tmp_path / "_logs").exists()

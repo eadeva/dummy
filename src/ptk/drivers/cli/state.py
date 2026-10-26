@@ -12,7 +12,7 @@ import rich_click as click
 from rich.console import Console
 
 from ...application.use_cases.project import Project
-from ...application.use_cases.role import Role
+from ...application.use_cases.role import Role, resolve_role
 from ...bootstrap import App, create_app
 from ...domain.errors import ConfigError, PtkError
 
@@ -27,6 +27,7 @@ class CliState:
     overrides: tuple[str, ...] = ()
     ci: bool | None = None
     verbose: int = 0
+    variant: str | None = None
     _project: Project | None = field(default=None, repr=False)
     _project_error: PtkError | None = field(default=None, repr=False)
     _loaded: bool = field(default=False, repr=False)
@@ -38,6 +39,11 @@ class CliState:
                 project = self.app.load_project.execute(
                     config_file=self.config, overrides=self.overrides, ci=self.ci
                 )
+                if (
+                    self.ci is not None
+                    and resolve_role(project, self.app.host) != "maintainer"
+                ):
+                    raise PtkError("--ci/--no-ci is a maintainer-only option")
                 self.app.configure_project(project)
                 self._project = project
             except PtkError as exc:
@@ -79,6 +85,7 @@ def state_of(ctx: click.Context) -> CliState:
             ),
             ci=params.get("ci"),
             verbose=params.get("verbose") or 0,
+            variant=params.get("variant"),
         )
     return root.obj
 

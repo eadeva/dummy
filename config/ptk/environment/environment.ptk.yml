@@ -1,4 +1,4 @@
-# Keep commands isolated while allowing package access and the optional GUI tests.
+# Keep commands isolated while allowing package access.
 # The test job alone inherits PATH because it exercises host-installed tools.
 environment:
   isolate: true
@@ -14,5 +14,3 @@ environment:
     - NO_PROXY
     - SSL_CERT_FILE
     - REQUESTS_CA_BUNDLE
-    - DISPLAY
-    - XAUTHORITY

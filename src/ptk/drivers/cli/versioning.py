@@ -38,29 +38,26 @@ def discover(ctx, variant, job):
 
 
 @version_group.command("show")
-@click.option("--variant", "-V")
 @click.option("--job", help="Include the job's explicit version dependencies.")
 @click.pass_context
 @guarded
-def show(ctx, variant, job):
+def show(ctx, job):
     """Show effective versions, inheritance and provenance as YAML."""
-    *_, snapshot = discover(ctx, variant, job)
+    *_, snapshot = discover(ctx, state_of(ctx).variant, job)
     click.echo(yaml.safe_dump(snapshot, sort_keys=False))
 
 
 @version_group.command("check")
-@click.option("--variant", "-V")
 @click.option("--job")
 @click.pass_context
 @guarded
-def check(ctx, variant, job):
+def check(ctx, job):
     """Discover and validate versions without writing files."""
-    discover(ctx, variant, job)
+    discover(ctx, state_of(ctx).variant, job)
     click.echo("Version sources and resolved names are valid.")
 
 
 @version_group.command("generate")
-@click.option("--variant", "-V")
 @click.option("--job")
 @click.option(
     "--output",
@@ -69,9 +66,9 @@ def check(ctx, variant, job):
 )
 @click.pass_context
 @guarded
-def generate(ctx, variant, job, output):
+def generate(ctx, job, output):
     """Write a resolved .gen.version.ptk.yml snapshot."""
-    state, project, variant, snapshot = discover(ctx, variant, job)
+    state, project, variant, snapshot = discover(ctx, state_of(ctx).variant, job)
     output = (
         output
         or project.root

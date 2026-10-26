@@ -65,7 +65,7 @@ def make_project(root, alias="demo", extra=None):
     return root
 
 
-def invoke(root, *args, env=None):
+def invoke(root, *args, env=None, variant=None):
     return CliRunner(
         env={
             "PTK_ROLE": "user",
@@ -83,6 +83,7 @@ def invoke(root, *args, env=None):
         [
             "-c",
             str(root / ".main.ptk.yml"),
+            *(["-V", variant] if variant else []),
             "artifacts",
             "destination",
             "--job",
@@ -100,7 +101,7 @@ def test_discovery_branch_slashes_date_variant_and_no_side_effects(tmp_path):
     before = {
         p.relative_to(root): p.read_bytes() for p in root.rglob("*") if p.is_file()
     }
-    result = invoke(root, "-V", "release")
+    result = invoke(root, variant="release")
     assert result.exit_code == 0, result.output
     data = json.loads(result.output)
     assert (
@@ -168,7 +169,6 @@ def test_pr_payload_github_outputs_omitted_job_suffix_and_overlays(tmp_path):
         ([], {"GITHUB_REF_TYPE": "other"}, "ref type"),
         (["--job", "missing"], {}, "unknown job"),
         (["--at", "2026-10-26T15:07"], {}, "timezone offset"),
-        (["-V", "unknown"], {}, "unknown variant"),
     ],
 )
 def test_invalid_resolution_fails_without_uploading(tmp_path, args, env, message):
@@ -246,3 +246,8 @@ def test_published_example_is_packaged_and_resolves_without_github(tmp_path):
         ).config.artifactory
         is not None
     )
+
+
+def test_unknown_global_variant(tmp_path):
+    result = invoke(make_project(tmp_path), variant="unknown")
+    assert result.exit_code == 2 and "unknown variant" in result.output

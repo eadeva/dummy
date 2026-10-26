@@ -67,7 +67,9 @@ def test_collision_is_noninteractive_in_help_cx_and_explicit_commands(tmp_path):
     ambiguous = invoke(root, "verify")
     assert ambiguous.exit_code == 2 and "non-interactive" in ambiguous.output
     assert not (root / "job-ran").exists()
-    ci = invoke(root, "--ci", "verify")
+    ci = CliRunner(env={"PTK_CI": "1", "PTK_ROLE": "user"}).invoke(
+        cli, ["-c", str(root / ".main.ptk.yml"), "verify"]
+    )
     assert ci.exit_code == 0 and (root / "job-ran").is_file(), ci.output
     assert not (root / "workflow-ran").exists()
     assert invoke(root, "run", "verify").exit_code == 0

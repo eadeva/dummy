@@ -130,7 +130,8 @@ def test_vmr_editor_setup_uses_selected_repository(tmp_path, monkeypatch):
     assert (a.parent / ".github/skills/ptk-vmr/SKILL.md").exists()
     assert not (b.parent / ".github").exists()
     tasks = json.loads((a.parent / ".vscode/tasks.json").read_text())
-    assert tasks["tasks"][0]["command"] == "ptk firmware"
+    assert tasks["tasks"][0]["command"] == "ptk"
+    assert tasks["tasks"][0]["args"][:2] == ["firmware", "run"]
 
 
 def test_bundle_ignores_local_config_and_generated_examples(tmp_path):

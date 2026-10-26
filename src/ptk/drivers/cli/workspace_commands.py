@@ -8,7 +8,7 @@ from ...bootstrap import create_app
 from .access import AccessGroup
 from .state import CliState, guarded, state_of
 
-RESERVED = {"setup", "variant", "report", "help", "repos", "workflow"}
+RESERVED = {"setup", "variant", "report", "help", "repos", "workflow", "describe"}
 
 
 def invoke_repository(root, alias, args):
@@ -274,5 +274,6 @@ def build_commands(root, entries):
             list_repositories,
             workspace_help,
             workflow_group,
+            originals["describe"],
         )
     }

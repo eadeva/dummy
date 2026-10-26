@@ -20,9 +20,6 @@ MUTATIONS = [
     ["setup", "vscode"],
     ["vscode", "tasks"],
     ["setup", "vscode", "skills", "--check"],
-    ["variant", "new", "other"],
-    ["variant", "set", "default"],
-    ["variant", "gui"],
 ]
 
 
@@ -118,7 +115,6 @@ def test_missing_or_invalid_configuration_does_not_expose_mutations(
         for args in (
             ["setup", "self"],
             ["vscode", "--help"],
-            ["variant", "new", "other"],
         ):
             result = runner.invoke(cli, [*base, *args])
             assert result.exit_code != 0 and "maintainer-only" in result.output, (
@@ -140,7 +136,7 @@ def test_listed_user_can_edit_but_downgrade_cannot(tmp_path):
     assert (tmp_path / "ruff-base.toml").exists()
     before = snapshot(tmp_path)
     result = runner.invoke(
-        cli, [*base, "variant", "set", "default"], env={"PTK_ROLE": "user"}
+        cli, [*base, "setup", "configs", "sync"], env={"PTK_ROLE": "user"}
     )
     assert result.exit_code != 0 and "maintainer-only" in result.output
     assert snapshot(tmp_path) == before

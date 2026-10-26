@@ -194,11 +194,11 @@ CLI
 
 ::
 
-   ptk version show -V debug
-   ptk version check -V debug
-   ptk version generate -V debug
-   ptk version show -V debug --job package
-   ptk engine version show -V debug       # in VMR mode
+   ptk -V debug version show
+   ptk -V debug version check
+   ptk -V debug version generate
+   ptk -V debug version show --job package
+   ptk -V debug engine version show       # in VMR mode
 
 ``show`` includes inheritance and provenance. ``check`` performs discovery without
 writing. ``generate`` writes a snapshot to a unique directory or ``--output``;

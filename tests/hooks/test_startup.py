@@ -20,7 +20,7 @@ from .test_installation import hook_path
         ["build", "--help"],
         ["dry-run", "build"],
         ["workflow", "dry-run", "verify"],
-        ["--ci", "build"],
+        ["build"],
     ],
 )
 def test_help_preview_and_ci_do_not_install(tmp_path, monkeypatch, args):
@@ -41,7 +41,12 @@ def test_help_preview_and_ci_do_not_install(tmp_path, monkeypatch, args):
         pytest.fail("hook inspection/installation must not run")
 
     monkeypatch.setattr(GitHooks, "ensure", forbidden)
-    result = invoke(root, *args)
+    if args == ["build"]:
+        result = CliRunner(env={"PTK_CI": "1", "PTK_ROLE": "user"}).invoke(
+            cli, ["-c", str(root / ".main.ptk.yml"), *args]
+        )
+    else:
+        result = invoke(root, *args)
     assert result.exit_code == 0, result.output
     assert not hook_path(root).exists()
 

@@ -281,8 +281,8 @@ def cli_env(write, tmp_path):
     }
 
     def invoke(*args, input=None):
-        base = ["--config", str(root / ".main.ptk.yml"), "--no-ci"]
-        return CliRunner(env=env).invoke(
+        base = ["--config", str(root / ".main.ptk.yml")]
+        return CliRunner(env={"PTK_CI": "0", **env}).invoke(
             cli, [*base, *args], input=input, catch_exceptions=False
         )
 
