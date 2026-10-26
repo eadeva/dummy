@@ -20,13 +20,18 @@ import tempfile
 import urllib.request
 import zipfile
 from collections.abc import Callable, Mapping
+from dataclasses import replace
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 from ..application.ports import ProcessRunner
+from ..domain.config.model import ArtifactorySource, ToolbaseSource
 from ..domain.errors import PtkError
 from ..domain.execution.model import CommandSpec
 from ..domain.tools import InstallMethod, tool_identity
 from .locking import file_lock
+from .tool_sources import toolbase
+from .tool_sources.artifactory import CurlArtifactory
 
 WINDOWS = sys.platform.startswith("win")
 MARKER = ".ptk-tool.json"
@@ -86,6 +91,12 @@ class SystemToolInstaller:
     def bin_dirs(self, tools=None) -> list[str]:
         dirs = []
         for name, spec in (tools or {}).items():
+            if (
+                self._windows
+                and spec.toolbase is not None
+                and self._environ.get("TB_HOMEDIR")
+            ):
+                dirs.extend(toolbase.bin_dirs(spec.toolbase, self._environ))
             folder = self.tools_dir / name / tool_identity(spec)
             marker = folder / MARKER
             if marker.is_file():
@@ -98,6 +109,9 @@ class SystemToolInstaller:
 
     def clean_environment(self, env):
         result = dict(env)
+        roots = [self.tools_dir.resolve()]
+        if self._environ.get("TB_HOMEDIR"):
+            roots.append(toolbase.root(self._environ))
         for key in list(result):
             if key.upper() == "PATH":
                 sep = ";" if self._windows else ":"
@@ -105,7 +119,9 @@ class SystemToolInstaller:
                     p
                     for p in result[key].split(sep)
                     if p
-                    and not Path(p).resolve().is_relative_to(self.tools_dir.resolve())
+                    and not any(
+                        Path(p).resolve().is_relative_to(root) for root in roots
+                    )
                 )
         return result
 
@@ -115,13 +131,15 @@ class SystemToolInstaller:
         self, name: str, method: InstallMethod, out: Callable[[str], None]
     ) -> None:
         handler = {
+            "toolbase": self._toolbase,
+            "artifactory": self._artifactory,
             "choco": self._choco,
             "uv_tool": self._uv_tool,
             "download": self._download,
             "apt": self._system,
             "dnf": self._system,
         }[method.kind]
-        if method.kind in {"download", "uv_tool"}:
+        if method.kind in {"download", "uv_tool", "artifactory"}:
             target = self.tools_dir / name / method.identity
             with file_lock(target.with_suffix(".lock"), timeout=1800):
                 if (target / MARKER).is_file():
@@ -144,6 +162,26 @@ class SystemToolInstaller:
             raise PtkError(
                 f"{what} failed ({outcome.error or f'exit code {outcome.exit_code}'})"
             )
+
+    def _toolbase(self, name, method, out) -> None:
+        if not self._windows:
+            raise PtkError("Toolbase installation is only supported on Windows")
+        toolbase.install(
+            ToolbaseSource.model_validate(method.options),
+            self._environ,
+            self._run,
+            out,
+            self.tools_dir / ".toolbase.lock",
+        )
+
+    def _artifactory(self, name, method, out) -> None:
+        client = CurlArtifactory(
+            self._runner,
+            self._environ,
+            ArtifactorySource.model_validate(method.options),
+        )
+        source = client.resolve()
+        self._download(name, replace(method, download=source), out, fetch=client.fetch)
 
     def _choco(
         self, name: str, method: InstallMethod, out: Callable[[str], None]
@@ -227,23 +265,33 @@ class SystemToolInstaller:
             ) from None
 
     def _download(
-        self, name: str, method: InstallMethod, out: Callable[[str], None]
+        self,
+        name: str,
+        method: InstallMethod,
+        out: Callable[[str], None],
+        *,
+        fetch=None,
     ) -> None:
         source = method.download
         assert source is not None
         target = self.tools_dir / name / method.identity
         with tempfile.TemporaryDirectory(prefix="ptk-download-") as tmp:
-            file = Path(tmp) / (source.url.rsplit("/", 1)[-1] or "download")
+            filename = Path(unquote(urlsplit(source.url).path)).name or "download"
+            file = Path(tmp) / filename
             out(f"downloading {source.url}")
             try:
-                with (
-                    urllib.request.urlopen(source.url, timeout=120) as response,
-                    file.open("wb") as handle,
-                ):
-                    shutil.copyfileobj(response, handle)
+                if fetch is not None:
+                    fetch(source.url, file)
+                else:
+                    with (
+                        urllib.request.urlopen(source.url, timeout=120) as response,
+                        file.open("wb") as handle,
+                    ):
+                        shutil.copyfileobj(response, handle)
             except OSError as exc:
                 raise PtkError(f"download failed: {exc}") from None
-            digest = hashlib.sha256(file.read_bytes()).hexdigest()
+            with file.open("rb") as handle:
+                digest = hashlib.file_digest(handle, "sha256").hexdigest()
             if source.sha256:
                 if digest.lower() != source.sha256.lower():
                     raise PtkError(f"sha256 mismatch for {source.url}: got {digest}")
@@ -256,6 +304,10 @@ class SystemToolInstaller:
             elif source.extract and tarfile.is_tarfile(file):
                 with tarfile.open(file) as archive:
                     archive.extractall(staging, filter="data")
+            elif source.extract and file.suffix.lower() == ".7z":
+                raise PtkError(
+                    "7z tool archives are not supported; provide a ZIP or tar archive"
+                )
             else:
                 shutil.copy2(file, staging / file.name)
                 (staging / file.name).chmod(0o755)
@@ -267,6 +319,13 @@ class SystemToolInstaller:
                 and entries[0].is_dir()
             ):
                 root = entries[0]
+            binary = (root / (source.bin or "")).resolve()
+            if not binary.is_relative_to(root.resolve()) or not binary.is_dir():
+                raise PtkError(
+                    "Downloaded tool bin must be an existing directory inside the archive"
+                )
+            if not any(root.iterdir()):
+                raise PtkError("Downloaded tool archive is empty")
             if target.exists():
                 shutil.rmtree(target)
             target.parent.mkdir(parents=True, exist_ok=True)

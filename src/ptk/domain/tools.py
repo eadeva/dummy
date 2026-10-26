@@ -53,6 +53,8 @@ class InstallMethod:
     def describe(self) -> str:
         if self.kind.startswith("plugin:"):
             return f"{self.kind} ({self.package})"
+        if self.kind in {"toolbase", "artifactory"}:
+            return f"{self.kind} {self.package}"
         if self.kind == "choco":
             return f"choco install {self.package}" + (
                 f" --version {self.version}" if self.version else ""
@@ -99,6 +101,20 @@ def install_methods(
         InstallMethod(f"plugin:{name}", name, options=options)
         for name, options in spec.installers.items()
     ]
+    if spec.toolbase is not None and os_name == "windows":
+        source = spec.toolbase
+        methods.append(
+            InstallMethod(
+                "toolbase", source.package, source.version, options=source.model_dump()
+            )
+        )
+    artifact = spec.artifactory
+    if isinstance(artifact, dict):
+        artifact = artifact.get(os_name)
+    if artifact is not None:
+        methods.append(
+            InstallMethod("artifactory", artifact.name, options=artifact.model_dump())
+        )
     choco = spec.choco
     if os_name == "windows" and choco is not None:
         source = choco if isinstance(choco, ChocoSource) else ChocoSource(package=choco)
@@ -118,6 +134,13 @@ def install_methods(
     return [replace(method, identity=tool_identity(spec)) for method in methods]
 
 
+def tool_applies(spec: ToolSpec, os_name: str) -> bool:
+    """A Toolbase-only definition is inactive outside Windows."""
+    if os_name == "windows" or spec.toolbase is None:
+        return True
+    return bool(install_methods(spec, os_name, allow_system=True))
+
+
 def check_command(name: str, spec: ToolSpec) -> str:
     return spec.check or f"{name} --version"
 
@@ -125,4 +148,8 @@ def check_command(name: str, spec: ToolSpec) -> str:
 def tool_identity(spec: ToolSpec) -> str:
     """Stable identity for an effective tool definition (versions and sources)."""
     data = spec.model_dump(mode="json", exclude={"description"})
+    # Keep identities of existing configurations stable when adding optional sources.
+    for key in ("toolbase", "artifactory"):
+        if data.get(key) is None:
+            data.pop(key, None)
     return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()[:20]

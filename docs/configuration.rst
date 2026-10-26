@@ -311,3 +311,90 @@ The complete ``examples/authoring`` starter is exercised by the skill tests.
 
 Version discovery is documented in :doc:`versioning`. It uses a maintained
 ``versioning.ptk.yml`` and ignored per-run ``.gen.version.ptk.yml`` snapshots.
+
+Toolbase and Artifactory sources
+========================================
+
+These sources participate in ``ptk setup install``, ``--setup`` and
+``tools.ensure``. Action-level ``requires_tools`` overrides and VMR repository
+selection work as for other tools. Source order is custom installers, Toolbase
+(Windows), Artifactory, Chocolatey (Windows), uv, download, then opt-in apt/dnf.
+
+Toolbase-only tools are ignored on Linux: they do not trigger version checks or
+installation failures. If a tool also declares a Linux-compatible source, that
+source remains active.
+
+Toolbase must already be installed on Windows, with ``TB_HOMEDIR`` set and
+``tbexcmd`` / ``TBUpdate`` available on the caller's PATH::
+
+   tools:
+     ninja:
+       version: "==1.12.1"
+       toolbase:
+         package: ninja
+         version: "1.12.1"
+         environment: ptk
+         bin: [bin]
+
+PTK enables the exact ``package/version`` and runs ``TBUpdate -e`` only if that
+version's directory is missing. Nonzero exits fail installation. Enable/update
+is serialized across PTK processes sharing the tools directory. ``bin`` lists
+relative executable directories (default ``[.]``); for Python, configure
+``[., Scripts]`` explicitly. Only those directories enter the selected action's
+PATH. Inherited paths below ``TB_HOMEDIR`` are removed before activation. PTK
+writes neither global PATH nor ``GITHUB_ENV`` nor a shared ``.env`` file.
+Toolbase itself controls its installation location and update side effects.
+Validate this integration with your local Toolbase environment; it is not
+exercised by PTK's pytest suite.
+
+Artifactory uses an installed ``curl`` executable, HTTPS and a bearer token from
+an optional environment variable. No JFrog CLI or legacy downloader is required::
+
+   tools:
+     compiler:
+       version: "==12.3.0"
+       check: compiler --version
+       artifactory:
+         url: https://artifacts.example.org/artifactory
+         repository: tools-local
+         path: compilers/windows
+         name: compiler-12.3.0.zip
+         # Required for an exact URL; use the actual archive SHA-256:
+         sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+         token_env: ARTIFACTORY_TOKEN
+         bin: bin
+         # extract: false  # Keep a standalone executable instead of unpacking.
+
+``url`` is the Artifactory base URL, not the repository URL. ``path`` defaults
+to ``.`` (repository root). ``artifactory`` may also map ``windows`` and ``linux``
+to separate source definitions. No token values belong in YAML. The token must
+be available in PTK's caller environment when setup runs; setup does not prompt
+for or resolve credential-provider entries. curl receives it through a temporary
+configuration file, removed after the request, rather than command arguments.
+TLS certificate verification remains enabled; curl's normal CA/proxy environment
+settings apply. HTTP failures, timeouts and checksum mismatches fail installation.
+
+For property or wildcard selection, replace the exact selection with::
+
+   path: ZippedTools/compiler
+   name: compiler_12.3.0*.zip
+   properties:
+     rb_version: "12.3.0"
+   select: unique
+
+PTK queries Artifactory AQL. Property values match exactly; ``path`` and ``name``
+support AQL wildcard patterns. The default ``unique`` rejects multiple matches.
+``select: latest`` explicitly chooses the newest creation timestamp, with stable
+path/name tie-breaking. This is not semantic-version sorting. AQL's SHA-256 is
+used when ``sha256`` is not configured; without either, installation fails.
+Exact URL downloads require an explicit checksum.
+
+ZIP and tar archives use PTK's existing extraction support. Standalone files use
+``extract: false``. Convert legacy 7z bundles to ZIP/tar before using this source.
+Downloads are checksum-verified before entering the managed tools directory;
+failed downloads do not create an installation marker. Downloads are cached by
+the effective tool definition, so ``latest`` is resolved only on installation,
+not refreshed on every action. Pin properties/path/checksum for reproducibility.
+Changing a source or version creates a distinct installation, and each action
+activates only its selected tool definitions. No corporate hostnames, legacy
+runtime filters or repository-specific download layout rules are built in.

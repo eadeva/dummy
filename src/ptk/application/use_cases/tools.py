@@ -11,7 +11,13 @@ from ...domain.execution.commands import split_words
 from ...domain.execution.environment import base_environment, prepend_path
 from ...domain.execution.model import CommandSpec
 from ...domain.suggest import did_you_mean
-from ...domain.tools import ToolStatus, check_command, check_version, install_methods
+from ...domain.tools import (
+    ToolStatus,
+    check_command,
+    check_version,
+    install_methods,
+    tool_applies,
+)
 from ..ports import HostEnvironment, ProcessRunner, ToolInstaller
 from .project import Project
 
@@ -103,7 +109,13 @@ class ToolService:
             if project.selected_tools is not None
             else self.required(project)
         )
-        return self._installer.bin_dirs({n: project.config.tools[n] for n in names})
+        return self._installer.bin_dirs(
+            {
+                n: project.config.tools[n]
+                for n in names
+                if tool_applies(project.config.tools[n], self._host.os_name())
+            }
+        )
 
     def clean_environment(self, env):
         return self._installer.clean_environment(env)
@@ -150,6 +162,8 @@ class ToolService:
         result = []
         for name in names if names is not None else list(tools):
             spec = tools[name]
+            if not tool_applies(spec, self._host.os_name()):
+                continue
             argv = split_words(check_command(name, spec), self._host.os_name())
             lines: list[str] = []
             outcome = self._runner.run(

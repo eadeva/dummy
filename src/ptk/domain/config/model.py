@@ -403,6 +403,26 @@ class DownloadSource(_Strict):
     bin: str | None = None  # sub folder with the executables
 
 
+class ToolbaseSource(_Strict):
+    package: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
+    version: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
+    environment: str = Field(default="ptk", pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
+    bin: list[str] = Field(default_factory=lambda: ["."], min_length=1)
+
+
+class ArtifactorySource(_Strict):
+    url: str  # Artifactory base URL, including /artifactory when applicable
+    repository: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
+    path: str = "."  # directory, or AQL directory pattern
+    name: str  # file name or AQL pattern
+    properties: dict[str, str] = Field(default_factory=dict)
+    select: Literal["unique", "latest"] = "unique"
+    token_env: str | None = None  # bearer token; never store the value in YAML
+    sha256: str | None = Field(default=None, pattern=r"^[a-fA-F0-9]{64}$")
+    extract: bool = True
+    bin: str | None = None
+
+
 class ToolSpec(_Strict):
     description: str = ""
     installers: dict[str, dict[str, Any]] = Field(default_factory=dict)
@@ -410,6 +430,10 @@ class ToolSpec(_Strict):
     check: str | None = None  # command printing the version
     version_regex: str = r"(\d+\.\d+(?:\.\d+)?)"
     choco: str | ChocoSource | None = None  # Windows
+    toolbase: ToolbaseSource | None = None
+    artifactory: (
+        ArtifactorySource | dict[Literal["windows", "linux"], ArtifactorySource] | None
+    ) = None
     uv_tool: str | None = None  # Windows + Linux
     download: (
         DownloadSource | dict[Literal["windows", "linux"], DownloadSource] | None
