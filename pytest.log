@@ -1,85 +1,79 @@
-23:10:03 ptk: $ C:\tools\xc-ce-utils\6.7.7\xc-ce-utils\_internal\bin\uv.EXE run --project C:\git\XC-CE\dummy --group dev python -m pytest --junitxml=C:\git\XC-CE\dummy\_reports\default\test\pytest/pytest.xml
-23:10:03 ptk: debug: cwd C:\git\XC-CE\dummy
-23:10:03 ptk: debug: python: uv project . (groups: dev)
-23:10:03 ptk: debug: timeout 900s
+10:25:45 ptk: $ C:\tools\xc-ce-utils\6.7.7\xc-ce-utils\_internal\bin\uv.EXE run --project C:\git\XC-CE\dummy --group dev python -m pytest --junitxml=C:\git\XC-CE\dummy\_reports\default\test\pytest/pytest.xml
+10:25:45 ptk: debug: cwd C:\git\XC-CE\dummy
+10:25:45 ptk: debug: python: uv project . (groups: dev)
+10:25:45 ptk: debug: timeout 900s
+Uninstalled 1 package in 40ms
+Installed 1 package in 56ms
 ============================= test session starts =============================
 platform win32 -- Python 3.14.3, pytest-9.1.1, pluggy-1.7.0
 rootdir: C:\git\XC-CE\dummy
 configfile: pyproject.toml
 testpaths: tests
-collected 287 items
+collected 371 items / 1 skipped
 
-tests\test_authoring_skills.py ...                                       [  1%]
-tests\test_background.py .......                                         [  3%]
-tests\test_cli.py .........                                              [  6%]
+tests\test_artifactory_tools.py ..........                               [  2%]
+tests\test_authoring_skills.py ...                                       [  3%]
+tests\test_background.py .......                                         [  5%]
+tests\test_cli.py .........                                              [  7%]
 tests\test_cli_actions.py ..s........                                    [ 10%]
 tests\test_cli_setup_group.py ..........                                 [ 13%]
-tests\test_command_access.py .                                           [ 14%]
-tests\test_controls.py .....                                             [ 16%]
-tests\test_credentials.py ...........ss...                               [ 21%]
-tests\test_defaults.py ...........                                       [ 25%]
-tests\test_generators.py .F..                                            [ 26%]
+tests\test_command_access.py .                                           [ 13%]
+tests\test_controls.py .....                                             [ 15%]
+tests\test_credentials.py ...........ss...                               [ 19%]
+tests\test_defaults.py ...........                                       [ 22%]
+tests\test_docker_tools.py .....F                                        [ 23%]
+tests\test_editor_resources.py .......                                   [ 25%]
+tests\test_generators.py ....                                            [ 26%]
 tests\test_help.py .....                                                 [ 28%]
-tests\test_init.py .................                                     [ 34%]
-tests\test_install_scripts.py ....                                       [ 35%]
-tests\test_logging.py sssssssss                                          [ 39%]
+tests\test_init.py .................                                     [ 32%]
+tests\test_install_scripts.py ....                                       [ 33%]
+tests\test_logging.py sssssssss                                          [ 36%]
+tests\test_package_preparation.py .....                                  [ 37%]
+tests\test_package_version.py ....                                       [ 38%]
 tests\test_plugins.py ..                                                 [ 39%]
-tests\test_process_portable.py ......                                    [ 41%]
-tests\test_quickstart.py ..                                              [ 42%]
-tests\test_reporting.py ssssssss                                         [ 45%]
-tests\test_repository_config.py ....                                     [ 46%]
-tests\test_review_regressions.py .s......                                [ 49%]
-tests\test_run.py sssssssssss                                            [ 53%]
-tests\test_shared_action_defaults.py .......                             [ 55%]
-tests\test_shared_configs.py ........s                                   [ 58%]
-tests\test_tools.py ...sssssss.s                                         [ 63%]
-tests\test_variant_commands.py .....                                     [ 64%]
-tests\test_variant_editor.py .....                                       [ 66%]
-tests\test_variant_editor_gui.py s                                       [ 66%]
-tests\test_versioning.py .............                                   [ 71%]
-tests\test_workspace.py .............                                    [ 75%]
-tests\unit\test_execution.py ..................                          [ 82%]
-tests\unit\test_expressions.py .........                                 [ 85%]
-tests\unit\test_layout.py ..                                             [ 86%]
-tests\unit\test_loader.py ............                                   [ 90%]
-tests\unit\test_model.py ..........                                      [ 93%]
-tests\unit\test_project.py .......                                       [ 96%]
+tests\test_process_portable.py ......                                    [ 40%]
+tests\test_quickstart.py ..                                              [ 41%]
+tests\test_report_context.py ..                                          [ 42%]
+tests\test_reporting.py ssssssss                                         [ 44%]
+tests\test_repository_config.py ....                                     [ 45%]
+tests\test_review_regressions.py .s......                                [ 47%]
+tests\test_run.py sssssssssss                                            [ 50%]
+tests\test_shared_action_defaults.py .......                             [ 52%]
+tests\test_shared_configs.py ........s                                   [ 54%]
+tests\test_tools.py ...sssssss.s                                         [ 57%]
+tests\test_variant_commands.py .....                                     [ 59%]
+tests\test_variant_editor.py .....                                       [ 60%]
+tests\test_variant_editor_gui.py s                                       [ 60%]
+tests\test_versioning.py .............                                   [ 64%]
+tests\test_workspace.py .............                                    [ 67%]
+tests\test_workspace_discovery.py ...........................            [ 75%]
+tests\test_workspace_init.py .......................                     [ 81%]
+tests\unit\test_execution.py ..................                          [ 86%]
+tests\unit\test_expressions.py .........                                 [ 88%]
+tests\unit\test_layout.py ..                                             [ 89%]
+tests\unit\test_loader.py ............                                   [ 92%]
+tests\unit\test_model.py ..........                                      [ 95%]
+tests\unit\test_project.py .......                                       [ 97%]
 tests\unit\test_substitution.py ......                                   [ 98%]
 tests\unit\test_variants.py .....                                        [100%]
 
 ================================== FAILURES ===================================
-____________________ test_cmake_consumes_generated_values _____________________
+____________________________ test_docker_detection ____________________________
 
-tmp_path = WindowsPath('C:/Users/ade7pl/AppData/Local/Temp/pytest-of-ade7pl/pytest-428/test_cmake_consumes_generated_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x00000253D0F21550>
 
-    @pytest.mark.skipif(not shutil.which("cmake"), reason="cmake not installed")
-    def test_cmake_consumes_generated_values(tmp_path):
-        cmake = shutil.which("cmake")
-        version = subprocess.run(
-            [cmake, "--version"],
-            check=False,
-            capture_output=True,
-            text=True,
-            errors="replace",
-            timeout=30,
-        )
->       assert version.returncode == 0, (
-            f"CMake executable: {cmake}\n{version.stdout}{version.stderr}"
-        )
-E       AssertionError: CMake executable: C:\toolbase\python\3.12.5.0-3\Scripts\cmake.EXE
-E         Traceback (most recent call last):
-E           File "<frozen runpy>", line 198, in _run_module_as_main
-E           File "<frozen runpy>", line 88, in _run_code
-E           File "C:\toolbase\python\3.12.5.0-3\Scripts\cmake.EXE\__main__.py", line 4, in <module>
-E             from cmake import cmake
-E         ModuleNotFoundError: No module named 'cmake'
-E         
-E       assert 1 == 0
-E        +  where 1 = CompletedProcess(args=['C:\\toolbase\\python\\3.12.5.0-3\\Scripts\\cmake.EXE', '--version'], returncode=1, stdout='', ...EXE\\__main__.py", line 4, in <module>\n    from cmake import cmake\nModuleNotFoundError: No module named \'cmake\'\n').returncode
+    def test_docker_detection(monkeypatch):
+        monkeypatch.setattr(Path, "is_file", lambda path: str(path) == "/.dockerenv")
+>       assert SystemHost({}).is_docker()
+E       assert False
+E        +  where False = is_docker()
+E        +    where is_docker = <ptk.adapters.host.SystemHost object at 0x00000253D0D3ADA0>.is_docker
+E        +      where <ptk.adapters.host.SystemHost object at 0x00000253D0D3ADA0> = SystemHost({})
 
-tests\test_generators.py:62: AssertionError
+tests\test_docker_tools.py:106: AssertionError
 - generated xml file: C:\git\XC-CE\dummy\_reports\default\test\pytest\pytest.xml -
 =========================== short test summary info ===========================
+SKIPPED [1] tests\test_package_build.py:14: package integration needs the release dependency group
 SKIPPED [1] tests\test_cli_actions.py:92: POSIX shell
 SKIPPED [1] tests\test_credentials.py:240: shell stand-in
 SKIPPED [1] tests\test_credentials.py:294: POSIX shell
@@ -113,15 +107,15 @@ SKIPPED [1] tests\test_run.py:271: uses POSIX shell commands
 SKIPPED [1] tests\test_run.py:290: uses POSIX shell commands
 SKIPPED [1] tests\test_run.py:324: uses POSIX shell commands
 SKIPPED [1] tests\test_shared_configs.py:194: clang-format not installed
-SKIPPED [1] tests\test_tools.py:172: POSIX shell
-SKIPPED [1] tests\test_tools.py:183: POSIX shell
-SKIPPED [1] tests\test_tools.py:195: POSIX shell
-SKIPPED [1] tests\test_tools.py:202: POSIX shell
-SKIPPED [1] tests\test_tools.py:209: POSIX shell
-SKIPPED [1] tests\test_tools.py:219: POSIX shell
-SKIPPED [1] tests\test_tools.py:226: POSIX shell
-SKIPPED [1] tests\test_tools.py:263: POSIX shell
+SKIPPED [1] tests\test_tools.py:173: POSIX shell
+SKIPPED [1] tests\test_tools.py:184: POSIX shell
+SKIPPED [1] tests\test_tools.py:196: POSIX shell
+SKIPPED [1] tests\test_tools.py:203: POSIX shell
+SKIPPED [1] tests\test_tools.py:210: POSIX shell
+SKIPPED [1] tests\test_tools.py:220: POSIX shell
+SKIPPED [1] tests\test_tools.py:227: POSIX shell
+SKIPPED [1] tests\test_tools.py:264: POSIX shell
 SKIPPED [1] tests\test_variant_editor_gui.py:17: requires a display (xvfb-run)
-FAILED tests/test_generators.py::test_cmake_consumes_generated_values - Asser...
-============ 1 failed, 244 passed, 42 skipped in 81.94s (0:01:21) =============
-23:11:27 ptk: failed in 84.4s (exit code 1)
+FAILED tests/test_docker_tools.py::test_docker_detection - assert False
+============ 1 failed, 328 passed, 43 skipped in 109.16s (0:01:49) ============
+10:28:00 ptk: failed in 135.1s (exit code 1)
