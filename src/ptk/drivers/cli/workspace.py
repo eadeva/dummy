@@ -113,7 +113,25 @@ class WorkspaceGroup(ProjectGroup):
 
         if ctx.params.get("ci") is not None and not can_switch_ci(ctx):
             raise click.ClickException("--ci/--no-ci is a maintainer-only option")
-        if self._repositories(ctx) is None:
+        repos = self._repositories(ctx)
+        if repos is None:
             return super().format_help(ctx, formatter)
         # ProjectGroup's panel builder assumes built-ins; VMR lists repositories.
+        names = self.list_commands(ctx)
+        config = getattr(formatter, "config", None)
+        if config is not None:
+            config.command_groups = {
+                ctx.command_path: [
+                    {"name": title, "commands": commands}
+                    for title, commands in (
+                        ("Repositories", [n for n in names if n in repos]),
+                        (
+                            "Workflows",
+                            [n for n in names if n not in repos and n not in RESERVED],
+                        ),
+                        ("Commands", [n for n in names if n in RESERVED]),
+                    )
+                    if commands
+                ]
+            }
         return click.RichGroup.format_help(self, ctx, formatter)

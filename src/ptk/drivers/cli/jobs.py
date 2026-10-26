@@ -563,18 +563,35 @@ class ProjectGroup(AccessGroup):
         return command
 
     def format_help(self, ctx: click.Context, formatter: Any) -> None:
-        """Project jobs in their own panel, above ptk's built-in commands."""
+        """Show jobs, then workflows, above ptk's built-in commands."""
         all_builtins = super().list_commands(ctx)
         builtins = [n for n in all_builtins if not self.commands[n].hidden]
-        jobs = [n for n in self.list_commands(ctx) if n not in all_builtins]
+        shortcuts = [n for n in self.list_commands(ctx) if n not in self.commands]
+        role = state_of(ctx).role()
+        job_specs = self._jobs(ctx)
+        jobs = [
+            n
+            for n in shortcuts
+            if n in job_specs
+            and (job_specs[n].audience == "all" or role == "maintainer")
+        ]
+        workflow_specs = self._workflows(ctx)
+        workflows = [n for n in shortcuts if n in workflow_specs]
         groups = []
         if jobs:
             groups.append(
                 {
-                    "name": "Jobs and workflows (from the project configuration)"
-                    if self._workflows(ctx)
-                    else "Jobs (from the project configuration)",
+                    "name": "Jobs (from the project configuration)",
                     "commands": jobs,
+                }
+            )
+        if workflows:
+            groups.append(
+                {
+                    "name": "Workflows (from the project configuration)",
+                    "commands": workflows,
+                    # A job and workflow may share a name; show both categories.
+                    "deduplicate": False,
                 }
             )
         if builtins:

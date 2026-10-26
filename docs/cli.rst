@@ -7,6 +7,9 @@ Help and completion show only commands available to the current user. The table
 below includes maintainer commands for reference; see :doc:`configuration` for
 the login-ID list and default restrictions.
 
+Help shows separate boxes for Options, Jobs, Workflows and Commands, in that
+order, omitting empty groups. At a VMR root, Repositories replaces Jobs.
+
 .. list-table::
    :header-rows: 1
    :widths: 40 60
