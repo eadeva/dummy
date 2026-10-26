@@ -5,8 +5,8 @@ built-in variant handling, credentials, tool setup, shared base configs,
 unified logging and reporting. See [`docs/PLAN.md`](docs/PLAN.md) for the full plan.
 
 **Status:** Configuration, execution, variants, credentials, reporting, tool setup,
-plugins and VMR discovery are implemented. The current scope and acceptance
-boundaries are recorded in `docs/PLAN.md`. Thirteen repository-local skills
+plugins, VMR discovery and local workflows are implemented. The current scope and acceptance
+boundaries are recorded in `docs/PLAN.md`. Sixteen repository-local skills
 include tested authoring and plugin examples.
 
 ```bash
@@ -123,6 +123,7 @@ All ptk files end in `.ptk.yml`:
 | `cx.ptk.yml` | applied automatically in CI |
 | `local.ptk.yml` | personal overrides (git-ignore it) |
 | `maintainers.ptk.yml` | who sees maintainer-only actions |
+| `workflow.ptk.yml` | local sequential/parallel groups of action calls |
 
 ```yaml
 # .main.ptk.yml
@@ -135,7 +136,7 @@ variants: ptk/variants.ptk.yml       # plain string = include this file here
 vars: {preset: "${vh.variant}"}
 ```
 
-Loading order: automatic `tools.ptk.yml`, `versioning.ptk.yml` and `<action>.tools.ptk.yml` → `.main.ptk.yml` (+ includes) → `cx.ptk.yml` (in CI) →
+Loading order: automatic `tools.ptk.yml`, `versioning.ptk.yml`, `workflow.ptk.yml` and `<action>.tools.ptk.yml` → `.main.ptk.yml` (+ includes) → `cx.ptk.yml` (in CI) →
 `local.ptk.yml` → `--set PATH=VALUE`.
 
 * mappings merge deeply, lists are replaced; `!replace`, `!append` and
@@ -154,6 +155,7 @@ ptk ACTION [--PARAM VALUE]... [-V VARIANT] [--from STEP] [--to STEP] [--params F
            [-q] [--args-for STEP="ARGS"]... [-- ARGS]
 ptk dry-run [ACTION [same options]] [--env]   what would run - nothing is executed
 ptk run [ACTION] [-p NAME=VALUE]... [same options]   generic form for scripts and CI
+ptk workflow list | show NAME | dry-run NAME | run NAME
 ptk setup config validate | show [PATH] [--sources] [--format yaml|json] | schema [-o FILE]
 ptk variant list [--names] | show [NAME] [--json] [--all] | explain NAME FEATURE | check [NAMES] [--strict]
 ptk setup vscode tasks [--check] [--command "uv run ptk"] [--users-only]
@@ -242,6 +244,35 @@ Dependencies point inwards only; the domain has no I/O.
 See [M11 features and limitations](docs/m11.rst) for process
 lifecycle and the `ptk.variant_gui` editor plugin interface.
 
+## Local workflows
+
+Put `workflow.ptk.yml` in the configuration folder to compose existing actions:
+
+```yaml
+workflows:
+  verify:
+    max_workers: 2
+    steps:
+      - build: {action: build}
+      - checks:
+          parallel: true
+          steps:
+            - tests: {action: test}
+            - lint: {action: lint}
+```
+
+Run `ptk workflow dry-run verify`, then `ptk workflow run verify`. Each call keeps
+its repository's tools, environment, credentials and reports. Calls can select a
+`repo`, `variant` and action `params`. PTK preflights every call before execution
+and rejects conflicting parallel outputs or shared uv project environments.
+Generated VS Code tasks include workflows. These workflows run locally;
+execution on CX/CI is refused.
+
+See [workflows](docs/workflows.rst) and `examples/workflows` for nested groups,
+VMR ownership, failure handling and reports. The later `ptk setup init --workflows`
+generator will map action calls to GitHub jobs and their structure to `needs`;
+GitHub template generation and the generic PTK GitHub Action are not implemented yet.
+
 ## VMR workspaces and isolated environments
 
 VMR mode activates at a git-repo workspace root containing `.repo`, or inside a
@@ -265,7 +296,7 @@ shared host operations. See `docs/configuration.rst` and `docs/cli.rst`.
 
 For a complete tested starter, copy `examples/authoring`. For a plugin starter,
 use `examples/plugin`. The authoring skill catalog is in `docs/skills.rst`;
-the wheel bundles eleven project-facing skills and lightweight offline references.
+the wheel bundles fourteen project-facing skills and lightweight offline references.
 Run `ptk setup vscode` in a consuming repository to create tasks, copy skills to
 `.github/skills`, and install version-matched docs, examples and a configuration
 schema under `.github/ptk`. Relative links work without a PTK checkout or network
@@ -281,6 +312,7 @@ two runnable actions in `actions/hello.ptk.yml` and `actions/build.ptk.yml`.
 Variants, tools, versioning, environment, credentials and shared settings have
 separate folders with commented configuration examples. `project.ptk.yml` includes
 them; the conventional CX and maintainer entry files remain at the config root.
+A local `workflow.ptk.yml` starter sequences the two generated actions.
 Run `ptk hello` for messages and `ptk build` for generated version files. Existing files are protected; missing ignore rules are appended.
 
 In a VMR, `ptk setup init` initializes every checked-out member without a root
@@ -313,6 +345,7 @@ uv run ptk test                          # pytest + JUnit/PTK reports
 uv run ptk test -- tests/test_init.py -q  # selected tests and pytest options
 uv run ptk check                         # Ruff lint and format checks
 uv run ptk docs                          # _builds/default/docs/sphinx/html/index.html
+uv run ptk workflow run verify           # check, test, then docs (local only)
 ```
 
 An installed `ptk` can run these directly. Actions use this checkout's Python

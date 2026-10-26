@@ -785,7 +785,7 @@ Former top-level commands remain hidden compatibility aliases.
 - `ptk package` builds an sdist and a wheel from that sdist, validates metadata,
   smoke-tests the installed wheel in a consumer project and produces HTML docs,
   checksums and a manifest. Output stays local; no upload, tag or version bump.
-- The wheel ships eleven project-facing skills and allowlisted lightweight docs
+- The wheel ships fourteen project-facing skills and allowlisted lightweight docs
   and examples. Sphinx and release tooling remain development dependencies.
   Full rendered HTML is a separate artifact. Dynamic package metadata consumes the
   Git-managed PTK project version; sdists preserve it for rebuilds without Git.
