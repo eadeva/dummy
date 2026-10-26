@@ -338,6 +338,7 @@ def _unique(names: list[str], where: str) -> None:
 
 
 class ActionSpec(_Strict):
+    open_report: Literal["always", "on_errors"] | None = None
     version_dependencies: dict[str, VersionDependency] = Field(default_factory=dict)
     environment: EnvironmentSpec | None = None
     help: str = ""

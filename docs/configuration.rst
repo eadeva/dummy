@@ -176,6 +176,29 @@ for skipped, blue for general information and amber for warning findings. Error
 findings use red. Colors adapt to light/dark mode; text labels always identify
 the meaning independently of color.
 
+Actions can open their HTML report automatically after a local run::
+
+   actions:
+     test:
+       open_report: on_errors  # always | on_errors; omit to disable
+       steps:
+         - pytest:
+             python: {project: .}
+             run: [python, -m, pytest]
+
+``always`` opens after every executed run. ``on_errors`` opens for failed actions
+or steps (including tolerated failures), failed/error test cases, error-level
+findings, or report import problems. Warnings, skipped results and cancellation
+alone do not trigger ``on_errors``. This does not change the action's exit code.
+When enabled locally, HTML is added to the configured report formats, even when
+``reporting.formats`` is empty. A missing browser prints a hint and keeps the
+report available on disk. Failed report generation never opens an old report.
+
+Automatic opening is disabled in CX/CI mode (including ``--ci``), and dry runs
+neither generate nor open reports. Multi-variant runs apply the policy separately
+to each variant. VMR actions use the owning repository's configuration. Manual
+``ptk report open`` remains available regardless of the action policy.
+
 Every HTML table has a case-insensitive substring filter for each column. Filters
 combine across columns, operate locally/offline, and show the remaining row count.
 Clear a filter to restore rows. Filtering does not change recorded totals or cards.

@@ -381,10 +381,16 @@ def install_tools(
 
 def write_reports(state: Any, project: Any, plan: Any, result: Any) -> None:
     """Reports after every run; a reporting problem never changes the run's result."""
-    if not project.config.reporting.formats:
+    policy = None if project.ci else project.config.actions[plan.action].open_report
+    formats = list(project.config.reporting.formats)
+    if policy and "html" not in formats:
+        formats.append("html")
+    if not formats:
         return
     try:
-        report, files = state.app.reports.write(project, run_summary(plan, result))
+        report, files = state.app.reports.write(
+            project, run_summary(plan, result), formats
+        )
     except (PtkError, OSError, ValueError) as exc:
         err_console.print(f"[yellow]report not written: {escape(str(exc))}[/]")
         return
@@ -396,6 +402,17 @@ def write_reports(state: Any, project: Any, plan: Any, result: Any) -> None:
         )
     for problem in report.problems:
         err_console.print(f"[yellow]report: {escape(problem)}[/]")
+    if html is not None and (
+        policy == "always" or (policy == "on_errors" and report.has_errors)
+    ):
+        try:
+            opened = state.app.open_in_browser(html)
+        except (OSError, ValueError):
+            opened = False
+        if not opened:
+            console.print(
+                "[dim]no browser available here - open the report file above[/]"
+            )
 
 
 # --------------------------------------------------------------------------- commands

@@ -109,6 +109,21 @@ class Report:
     def ok(self) -> bool:
         return self.status in (PASSED, SKIPPED)
 
+    @property
+    def has_errors(self) -> bool:
+        """Errors worth inspecting, including tolerated failures and imported results."""
+        return (
+            self.status in (FAILED, ERROR)
+            or any(step.status in (FAILED, ERROR) for step in self.steps)
+            or any(
+                case.status in (FAILED, ERROR)
+                for suite in self.suites
+                for case in suite.cases
+            )
+            or any(finding.level == ERROR for finding in self.findings)
+            or bool(self.problems)
+        )
+
     def test_totals(self) -> Counter[str]:
         totals: Counter[str] = Counter()
         for suite in self.suites:
