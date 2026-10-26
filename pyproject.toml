@@ -44,6 +44,7 @@ path = "hatch_metadata.py"
 include = [
   "/src", "/tests", "/docs", "/examples", "/scripts", "/config/ptk",
   "/.claude/skills", "/.main.ptk.yml", "/README.md", "/pyproject.toml",
+  "/.pre-commit-config.yaml",
   "/hatch_build.py", "/hatch_metadata.py", "/install",
 ]
 exclude = ["**/__pycache__", "**/*.pyc", "**/.ptk", "**/.venv", "**/_build", "**/_builds", "**/_bin", "**/_logs", "**/_reports", "**/local.ptk.yml", "**/.gen.version.ptk.yml"]

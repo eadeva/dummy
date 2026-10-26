@@ -1,0 +1,6 @@
+# PTK has no C/C++ sources. Python hooks use the existing pyproject.toml settings.
+# Keep captured diagnostic logs verbatim.
+exclude: '\.log$'
+repos:
+  - repo: https://github.com/pre-commit/mirrors-clang-format
+    disable: true

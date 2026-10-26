@@ -35,6 +35,8 @@ jobs:
           version: '0.13.4'
           python-version: '3.12'
       - run: uv sync --group docs
+      - run: uv run ptk setup configs check
+      - run: uv run pre-commit run --all-files --show-diff-on-failure
       - run: uv run ptk check
       - run: uv run ptk docs
       - uses: actions/setup-node@v4

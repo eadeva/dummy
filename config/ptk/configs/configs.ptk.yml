@@ -1,8 +1,6 @@
-# Shared formatter/linter configuration. Enable entries you intend to use.
-configs: {}
-# Replace configs: {} with, for example:
-# configs:
-#   pre-commit: {enabled: true}     # Auto-install local hooks before jobs/workflows.
-#   ruff: {enabled: true}           # Python lint/format configuration.
-#   clang-format: {enabled: true}   # C/C++ formatting configuration.
-# Run `ptk setup configs sync` to generate the enabled configuration files.
+# Local jobs/workflows install these hooks automatically for every developer.
+# Maintainers regenerate the committed file with `ptk setup configs sync pre-commit`.
+configs:
+  pre-commit:
+    enabled: true
+    overlay: config/ptk/configs/pre-commit.overlay.yaml

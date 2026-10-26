@@ -43,6 +43,15 @@ formatting intentionally, use ``uv run ruff format``. The test job explicitly
 inherits caller PATH to exercise installed host tools; ordinary environment
 variables remain filtered. DISPLAY/XAUTHORITY are kept for optional GUI tests.
 
+This repository enables pre-commit through ``config/ptk/configs/configs.ptk.yml``.
+Local jobs/workflows automatically install or repair the hooks. The committed
+``.pre-commit-config.yaml`` combines PTK's base with its repository overlay;
+Ruff uses the existing ``pyproject.toml`` settings. Run
+``uv run pre-commit run --all-files`` to check the whole checkout. The CI quality
+job runs those hooks and checks that the generated configuration is current.
+After changing the overlay, a maintainer runs
+``ptk setup configs sync pre-commit`` and commits both files.
+
 Package builds and job runs use the same Git-managed PTK version configuration.
 Reachable ``v*`` tags take precedence; untagged/shallow checkouts use the explicit
 development fallback in ``versioning.ptk.yml``. Source distributions freeze their

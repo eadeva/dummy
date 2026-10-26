@@ -74,7 +74,7 @@ variants:
 tools:
   python:
     docker: false
-    check: 'PYTHON --version' 
+    check: 'PYTHON --version'
     version: '>=3.12'
 jobs:
   build:
