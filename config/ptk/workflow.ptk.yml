@@ -1,7 +1,8 @@
-# Each action uses its own uv environment under .ptk/venvs.
+# Actions use separate uv environments so docs can run in parallel.
 workflows:
   verify:
     help: Run check, test and package in order, alongside documentation
+    open_report: always  # default; use on-errors to open only when errors occur
     parallel: true
     max_workers: 2
     steps:

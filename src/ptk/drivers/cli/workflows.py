@@ -235,17 +235,22 @@ def execute_workflow(ctx, name, *, dry_run=False):
             )
             write_reports(state, prepared.project, p, result)
             files = []
+            report_errors = False
             try:
                 child_target = target / "actions" / Path(*node.path)
                 summary = snapshot_logs(run_summary(p, result), child_target)
-                _, files = state.app.reports.write(
+                report, files = state.app.reports.write(
                     prepared.project, summary, ["json", "html"], child_target
                 )
+                report_errors = report.has_errors
             except (PtkError, OSError, ValueError) as exc:
+                report_errors = True
                 err_console.print(
                     f"[yellow]workflow child report not written: {escape(str(exc))}[/]"
                 )
-            return CallOutcome(result.status, [str(f) for f in files], p.run_id)
+            return CallOutcome(
+                result.status, [str(f) for f in files], p.run_id, report_errors
+            )
 
     cancel = Cancelled()
     holder = {}
@@ -275,6 +280,20 @@ def execute_workflow(ctx, name, *, dry_run=False):
         console.print(f"report: {escape(str(path))}", highlight=False)
     except OSError as exc:
         err_console.print(f"[yellow]workflow report not written: {escape(str(exc))}[/]")
+    else:
+        if not is_ci and (
+            spec.open_report == "always"
+            or spec.open_report == "on-errors"
+            and result.has_errors
+        ):
+            try:
+                opened = parent.app.open_in_browser(path)
+            except (OSError, ValueError):
+                opened = False
+            if not opened:
+                console.print(
+                    "[dim]no browser available here - open the workflow report file above[/]"
+                )
     raise click.exceptions.Exit(
         130
         if result.status == Status.CANCELLED

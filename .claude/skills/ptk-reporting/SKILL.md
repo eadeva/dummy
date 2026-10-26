@@ -33,3 +33,5 @@ Read [report summaries](../../../docs/configuration.rst) for recorded project/PT
 Set an action's `open_report` to `always` or `on_errors` only when automatic local opening is wanted; omission disables it and CX/dry-run suppress it. Errors include failed steps/tests, error findings and report import problems. Browser availability must not alter the run's exit status.
 
 For local orchestration, inspect the workflow summary and immutable child reports under the workflow run directory. Read [workflows](../../../docs/workflows.rst); do not merge test cases from unrelated repositories without preserving their context.
+
+Workflow `open_report` defaults to `always`, independently of child actions. Use `on-errors` (hyphen) to include tolerated execution failures and imported report errors, or `null` to disable opening. CX/dry-run never open the summary; browser or summary-write failures must not change execution exit codes.

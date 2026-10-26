@@ -69,7 +69,7 @@ be unique. Workflow entries call actions, never other workflows or arbitrary she
 commands. Put shell commands, retries, step timeouts, skip filters and cleanup
 inside the target action, using the existing action/step model.
 
-The workflow itself accepts ``help``, ``audience: all|maintainer``, ``steps``,
+The workflow itself accepts ``help``, ``audience: all|maintainer``, ``open_report``, ``steps``,
 ``parallel`` (false by default), and ``max_workers`` (default 4, range 1–32).
 The worker limit applies to active **action calls** across nested groups, not to
 parallel steps inside those actions. No new global environment is merged across
@@ -161,6 +161,29 @@ own log copies so repeated sequential calls do not redirect earlier report links
 to newer logs. Workflow reports use colored status cards and per-column filters.
 Open a child report for its project versions, tool dependencies and test details.
 Workflow history is retained until explicitly removed; it has no automatic rotation.
+
+The workflow opens its summary HTML report automatically after a local run.
+Set the policy on the workflow, independently of each action's report policy::
+
+   workflows:
+     verify:
+       open_report: always  # default; on-errors opens only when errors are present
+       steps:
+         - check: {action: check}
+         - test: {action: test}
+
+``on-errors`` includes failed action calls, tolerated failures in nested groups,
+failed steps or tests, error findings and child report/import problems. It does
+not change the workflow exit status. Warnings, skips and cancellation alone do
+not count as errors. ``always`` also opens a successfully written cancellation
+report. Set ``open_report: null`` to disable workflow report opening.
+
+Opening is disabled in CX/CI and dry runs; workflow execution itself remains
+local-only. Preflight failures have no report to open. A failed summary write
+does not open an older file, and a missing browser does not affect the exit code.
+The workflow opens only its aggregate report; child actions retain their own
+independent policies. Workflow ``on-errors`` uses a hyphen; action ``on_errors``
+retains its existing spelling.
 
 ``ptk setup vscode tasks`` adds ``ptk: workflow NAME`` tasks alongside action tasks.
 Workflow tasks use their configured per-call variants and have no global variant

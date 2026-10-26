@@ -68,6 +68,7 @@ class WorkflowSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
     help: str = ""
     audience: Literal["all", "maintainer"] = "all"
+    open_report: Literal["always", "on-errors"] | None = "always"
     parallel: bool = False
     max_workers: int = Field(default=4, ge=1, le=32)
     steps: list[WorkflowNode] = Field(min_length=1)

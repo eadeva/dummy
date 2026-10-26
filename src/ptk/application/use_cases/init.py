@@ -86,11 +86,13 @@ class InitProject:
         configs = {
             "workflow.ptk.yml": "# Local orchestration; run `ptk workflow run verify`. Not executed on CX.\n"
             "# Nest steps under parallel: true for independent action calls.\n"
+            "# open_report: always (default), on-errors, or null to disable opening.\n"
             + dump(
                 {
                     "workflows": {
                         "verify": {
                             "help": "Run the starter actions locally",
+                            "open_report": "always",
                             "steps": [
                                 {"hello": {"action": "hello"}},
                                 {"build": {"action": "build"}},

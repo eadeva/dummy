@@ -116,6 +116,7 @@ class CallOutcome:
     status: Status
     reports: list[str] = field(default_factory=list)
     run_id: str = ""
+    report_errors: bool = False
 
 
 @dataclass
@@ -131,7 +132,16 @@ class WorkflowStepResult:
     message: str = ""
     reports: list[str] = field(default_factory=list)
     run_id: str = ""
+    report_errors: bool = False
     children: list[WorkflowStepResult] = field(default_factory=list)
+
+    @property
+    def has_errors(self) -> bool:
+        return (
+            self.status == Status.FAILED
+            or self.report_errors
+            or any(child.has_errors for child in self.children)
+        )
 
     @property
     def failed(self):
@@ -147,6 +157,12 @@ class WorkflowResult:
     status: Status
     duration: float
     steps: list[WorkflowStepResult]
+
+    @property
+    def has_errors(self) -> bool:
+        return self.status == Status.FAILED or any(
+            step.has_errors for step in self.steps
+        )
 
 
 def combine(results):
@@ -226,6 +242,7 @@ class RunWorkflow:
                         outcome.reports,
                         outcome.run_id,
                     )
+                    result.report_errors = outcome.report_errors
                 except (PtkError, OSError, ValueError) as exc:
                     result.status, result.message = Status.FAILED, str(exc)
                 finally:

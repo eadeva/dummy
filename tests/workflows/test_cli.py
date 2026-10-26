@@ -250,7 +250,9 @@ def test_vmr_targets_keep_environment_and_reports_and_have_editor_tasks(
     }
     member_tasks = json.loads((root / "a/.vscode/tasks.json").read_text())["tasks"]
     workflow = next(t for t in member_tasks if t["label"] == "ptk: workflow local")
-    assert workflow["command"] == "ptk a" and workflow["options"]["cwd"] == str(root)
+    assert workflow["command"] == "ptk a"
+    # Windows can canonicalize ancestor capitalization (for example pytest-of-USER).
+    assert Path(workflow["options"]["cwd"]).samefile(root)
     assert (
         len(list((root / "_reports/workflows/all").glob("*/actions/*/report.html")))
         == 2
@@ -405,7 +407,7 @@ def test_published_example_runs_locally_without_github(tmp_path, monkeypatch):
         ([], {"PTK_CI": "", "GITHUB_ACTIONS": "true"}),
     ],
 )
-def test_workflow_execution_is_local_only(tmp_path, ci_args, env):
+def test_workflow_execution_is_local_only(tmp_path, ci_args, env, opened_reports):
     root = repository(
         tmp_path,
         actions={"build": command("from pathlib import Path; Path('ran').touch()")},
@@ -416,3 +418,4 @@ def test_workflow_execution_is_local_only(tmp_path, ci_args, env):
     assert not (root / "ran").exists()
     preview = invoke(root, *ci_args, "workflow", "dry-run", "verify", env=env)
     assert preview.exit_code == 0, preview.output
+    assert opened_reports == []

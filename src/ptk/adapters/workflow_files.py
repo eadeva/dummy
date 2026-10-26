@@ -49,7 +49,12 @@ def write_workflow_report(result, target: Path) -> Path:
             step.variant or "default",
             step.status.value + (" (allowed)" if step.allowed_failure else ""),
             f"{step.duration:.2f}s",
-            step.message,
+            step.message
+            or (
+                "Child report contains errors or could not be written"
+                if step.report_errors
+                else ""
+            ),
         ]
         rows.append(
             "<tr>"
