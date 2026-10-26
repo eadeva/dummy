@@ -12,7 +12,7 @@ import json
 import sys
 from contextlib import suppress
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import rich_click as click
 import yaml
@@ -20,8 +20,6 @@ from rich.markup import escape
 from rich.table import Table
 
 from ... import __version__
-from ...application.use_cases.help import HelpCommand, HelpOption
-from ...application.use_cases.init import InitResult
 from ...domain.errors import ConfigError, PtkError
 from .access import AccessGroup, require
 from .artifacts import artifacts_group
@@ -39,6 +37,10 @@ from .versioning import version_group
 from .workflows import workflow_group
 from .workspace import WorkspaceGroup
 from .workspace_commands import RESERVED as WORKSPACE_COMMANDS
+
+if TYPE_CHECKING:
+    from ...application.use_cases.help import HelpCommand
+    from ...application.use_cases.init import InitResult
 
 _state = state_of
 
@@ -997,6 +999,8 @@ def _collect_commands(
     group: click.Group, ctx: click.Context, role: str
 ) -> list[HelpCommand]:
     """All commands of the click tree as plain data for the HTML help."""
+    from ...application.use_cases.help import HelpCommand, HelpOption
+
     result: list[HelpCommand] = []
 
     def visit(

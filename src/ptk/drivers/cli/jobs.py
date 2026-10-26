@@ -17,24 +17,21 @@ import shlex
 import sys
 import threading
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import rich_click as click
 import yaml
 from rich.markup import escape
 
-from ...application.use_cases.run import Cancelled, RunRequest
-from ...application.use_cases.tools import tools_for_jobs
 from ...domain.config.model import JobSpec, ParamSpec
 from ...domain.errors import PtkError
-from ...domain.execution.model import Status
-from ...domain.logging import console_level
-from ...domain.reporting.summary import run_summary
 from ...domain.suggest import did_you_mean
-from . import console as present
 from .access import AccessGroup, denied_command
 from .report_links import print_report
 from .state import console, err_console, guarded, report_error, state_of
+
+if TYPE_CHECKING:
+    from ...application.use_cases.run import RunRequest
 
 PARAM_PREFIX = "param__"  # keeps job parameters apart from the common options
 
@@ -204,6 +201,8 @@ def build_request(
     args_for: tuple[str, ...] = (),
     dry_run: bool = False,
 ) -> RunRequest:
+    from ...application.use_cases.run import RunRequest
+
     return RunRequest(
         job=job,
         variant=variant,
@@ -306,6 +305,11 @@ def _execute_one_unlocked(
     prepared=None,
 ) -> int:
     """Prepare the request; show it (dry run) or run it and exit with its status."""
+    from ...application.use_cases.run import Cancelled
+    from ...domain.execution.model import Status
+    from ...domain.logging import console_level
+    from . import console as present
+
     state = state_of(ctx)
     project = prepared.project
     runner = state.app.run_job(project)
@@ -355,6 +359,8 @@ def install_tools(
     allow_system: bool = False,
 ) -> bool:
     """Check and install tools; prints a line per tool. True when all are fine."""
+    from ...application.use_cases.tools import tools_for_jobs
+
     project = tools_for_jobs(project, jobs)
     service = state.app.tools
     names = service.required(project, jobs)
@@ -384,6 +390,8 @@ def write_reports(
     state: Any, project: Any, plan: Any, result: Any, *, open_browser=True
 ) -> Path | None:
     """Reports after every run; a reporting problem never changes the run's result."""
+    from ...domain.reporting.summary import run_summary
+
     policy = None if project.ci else project.config.jobs[plan.job].open_report
     formats = list(project.config.reporting.formats)
     if policy and "html" not in formats:

@@ -21,6 +21,9 @@ jobs:
       - run: uv sync
       - run: uv run cmake --version
       - run: uv run ptk test
+      - name: Benchmark CLI startup
+        if: matrix.python == '3.12'
+        run: uv run python scripts/benchmark_cli.py --rounds 5 --label ci --output .ptk/benchmark-cli.json
   quality:
     runs-on: ubuntu-latest
     steps:

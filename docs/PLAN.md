@@ -868,3 +868,18 @@ completion handling, and a guard on legacy setup installation dispatch. VMR root
 maintainer lists now govern workspace operations independently of member lists.
 Tests cover normal and maintainer paths, invalid/missing identity files, attempted
 role elevation, no-write denials, VMR isolation and combined-operation preflight.
+
+
+## Startup performance and reproducible benchmarks
+
+Profiled fresh-process help in the PTK checkout, missing/broken projects, and
+20/100-member VMR fixtures. Removed repeated YAML diagnostic path calculations,
+prefer the C safe parser with tested fallback, cache CLI project failures/successes
+and roles for one invocation, and defer runtime service imports/construction.
+No persistent config or permission cache was added; all workflow shortcuts remain.
+
+The reproducible scripts/benchmark_cli.py records wall-time samples and metadata;
+source baseline/optimized samples are kept in docs/benchmarks. CI logs benchmark
+results on Linux/Windows Python 3.12 without flaky time thresholds. Deterministic
+regression tests bound repeated work and ensure help avoids runtime imports.
+See docs/performance.rst for measurements and remaining VMR scaling costs.

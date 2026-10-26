@@ -25,3 +25,9 @@ description: Diagnose a failing ptk command, configuration, variant, tool or exe
 9. Check platform shell syntax, PATH case handling, quoting and Python runtime selection before changing a command.
 
 10. Avoid rerunning deployment or credential test jobs until their effects are understood.
+
+For slow startup/help, follow [performance profiling](../../../docs/performance.rst).
+Compare root and repository-qualified help, record repository/config sizes and
+plugins, and profile using the Python environment containing PTK. Separate
+installer/uv synchronization from PTK startup. Keep profiles local and preserve
+maintainer filtering; do not suggest stale disk caches or skipping validation.

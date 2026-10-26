@@ -7,96 +7,60 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
+from functools import cached_property
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from . import __version__
-from .adapters import help_html
-from .adapters.authoring import AuthoringFiles
-from .adapters.builtins import (
-    file_cleaner,
-    files_copy,
-    report_import,
-    variant_generator,
-)
 from .adapters.config.source import FileConfigSource
-from .adapters.credentials.env import EnvProvider
-from .adapters.credentials.gopass import GopassProvider
-from .adapters.credentials.keyring_provider import KeyringProvider
-from .adapters.credentials.prompt import ConsolePrompter, PromptProvider
-from .adapters.credentials.vault import Vault, VaultProvider, default_vault_file
-from .adapters.github_context import github_context
 from .adapters.host import SystemHost
-from .adapters.logging.files import FileLogObserver
-from .adapters.plugins import PluginInstaller, load_plugins
-from .adapters.process import SubprocessRunner
-from .adapters.python_env import UvPythonEnvManager, find_uv
-from .adapters.reporting.store import FileReportStore
-from .adapters.scaffold import FileProjectScaffold
-from .adapters.shared_configs import PackageConfigFiles
-from .adapters.tools import SystemToolInstaller
-from .adapters.versioning import VersionIO, version_generator
-from .adapters.vscode_file import TasksFile
 from .adapters.workspace import WorkspaceDiscovery
-from .application.ports import (
-    ConfigSource,
-    HostEnvironment,
-    ProcessRunner,
-    Prompter,
-    PythonEnvManager,
-    RunObserver,
-    SecretProvider,
-)
-from .application.use_cases.artifacts import ResolveDestination
-from .application.use_cases.authoring import SetupAuthoring
-from .application.use_cases.configs import SharedConfigs
-from .application.use_cases.credentials import CredentialService
-from .application.use_cases.help import BuildHelp, HelpDocument
-from .application.use_cases.init import InitProject
-from .application.use_cases.project import (
-    ExportSchema,
-    LoadProject,
-    Project,
-    ShowConfig,
-)
-from .application.use_cases.report import ReportService
-from .application.use_cases.role import Role, resolve_role, role_for_ids
-from .application.use_cases.run import (
-    BUILTINS,
-    PreparedRun,
-    PrepareRun,
-    RunJob,
-    layout_of,
-)
-from .application.use_cases.setup import Doctor, Environment, SelfSetup
-from .application.use_cases.tools import ToolService
-from .application.use_cases.variants import VariantService
-from .application.use_cases.versioning import VersionService
-from .application.use_cases.vscode import VSCodeTasks
+from .application.use_cases.project import LoadProject
+from .application.use_cases.role import resolve_role, role_for_ids
 from .domain.errors import PtkError
-from .domain.logging import file_level
-from .domain.variants.generators import GENERATORS
+
+if TYPE_CHECKING:
+    from .adapters.tools import SystemToolInstaller
+    from .application.ports import (
+        ConfigSource,
+        HostEnvironment,
+        ProcessRunner,
+        Prompter,
+        PythonEnvManager,
+        RunObserver,
+        SecretProvider,
+    )
+    from .application.use_cases.artifacts import ResolveDestination
+    from .application.use_cases.authoring import SetupAuthoring
+    from .application.use_cases.configs import SharedConfigs
+    from .application.use_cases.credentials import CredentialService
+    from .application.use_cases.help import BuildHelp, HelpDocument
+    from .application.use_cases.init import InitProject
+    from .application.use_cases.project import (
+        ExportSchema,
+        Project,
+        ShowConfig,
+    )
+    from .application.use_cases.report import ReportService
+    from .application.use_cases.role import Role
+    from .application.use_cases.run import (
+        PreparedRun,
+        PrepareRun,
+        RunJob,
+    )
+    from .application.use_cases.setup import Doctor, Environment, SelfSetup
+    from .application.use_cases.tools import ToolService
+    from .application.use_cases.variants import VariantService
+    from .application.use_cases.vscode import VSCodeTasks
+
+DEFAULT_SECRET_PROVIDERS = frozenset({"env", "keyring", "gopass", "vault", "prompt"})
 
 
 @dataclass
 class App:
     host: HostEnvironment
-    init_project: InitProject
     load_project: LoadProject
-    show_config: ShowConfig
-    export_schema: ExportSchema
-    runner: ProcessRunner
-    python_envs: PythonEnvManager
-    build_help: BuildHelp
-    vscode_tasks: VSCodeTasks
-    setup_authoring: SetupAuthoring
-    reports: ReportService
-    shared_configs: SharedConfigs
-    tools: ToolService
-    doctor: Doctor
-    self_setup: SelfSetup
-    installer: SystemToolInstaller
-    prompter: Prompter
-    secret_providers: dict[str, SecretProvider]
+    version: str = __version__
     started_at: datetime = field(default_factory=lambda: datetime.now().astimezone())
     workspace: WorkspaceDiscovery = field(
         default_factory=WorkspaceDiscovery, repr=False
@@ -107,12 +71,131 @@ class App:
     _credentials: dict[int, CredentialService] = field(default_factory=dict, repr=False)
     _workspace_roles: dict[Path, Role] = field(default_factory=dict, repr=False)
 
+    @cached_property
+    def init_project(self) -> InitProject:
+        from .adapters.scaffold import FileProjectScaffold
+        from .application.use_cases.init import InitProject
+
+        return InitProject(FileProjectScaffold(), self.host)
+
+    @cached_property
+    def show_config(self) -> ShowConfig:
+        from .application.use_cases.project import ShowConfig
+
+        return ShowConfig()
+
+    @cached_property
+    def export_schema(self) -> ExportSchema:
+        from .application.use_cases.project import ExportSchema
+
+        return ExportSchema()
+
+    @cached_property
+    def runner(self) -> ProcessRunner:
+        from .adapters.process import SubprocessRunner
+
+        return SubprocessRunner()
+
+    @cached_property
+    def prompter(self) -> Prompter:
+        from .adapters.credentials.prompt import ConsolePrompter
+
+        return ConsolePrompter(self.host.is_ci)
+
+    @cached_property
+    def _uv(self) -> str:
+        from .adapters.python_env import find_uv
+
+        return find_uv(dict(self.host.variables))
+
+    @cached_property
+    def python_envs(self) -> PythonEnvManager:
+        from .adapters.python_env import UvPythonEnvManager
+
+        return UvPythonEnvManager(
+            self.runner, uv=self._uv, environ=dict(self.host.variables)
+        )
+
+    @cached_property
+    def installer(self) -> SystemToolInstaller:
+        from .adapters.tools import SystemToolInstaller
+
+        return SystemToolInstaller(self.runner, self.host.variables, uv=self._uv)
+
+    @cached_property
+    def tools(self) -> ToolService:
+        from .application.use_cases.tools import ToolService
+
+        return ToolService(self.host, self.runner, self.installer)
+
+    @cached_property
+    def shared_configs(self) -> SharedConfigs:
+        from .adapters.shared_configs import PackageConfigFiles
+        from .application.use_cases.configs import SharedConfigs
+
+        return SharedConfigs(PackageConfigFiles())
+
+    @cached_property
+    def _environment(self) -> Environment:
+        from .application.use_cases.setup import Environment
+
+        return Environment(self.host, self.runner, self._uv)
+
+    @cached_property
+    def doctor(self) -> Doctor:
+        from .application.use_cases.setup import Doctor
+
+        return Doctor(self._environment, self.tools, self.shared_configs, self.version)
+
+    @cached_property
+    def self_setup(self) -> SelfSetup:
+        from .application.use_cases.setup import SelfSetup
+
+        return SelfSetup(self._environment, self.tools, self.shared_configs)
+
+    @cached_property
+    def build_help(self) -> BuildHelp:
+        from .application.use_cases.help import BuildHelp
+
+        return BuildHelp(self.version)
+
+    @cached_property
+    def vscode_tasks(self) -> VSCodeTasks:
+        from .adapters.vscode_file import TasksFile
+        from .application.use_cases.vscode import VSCodeTasks
+
+        return VSCodeTasks(TasksFile)
+
+    @cached_property
+    def setup_authoring(self) -> SetupAuthoring:
+        from .adapters.authoring import AuthoringFiles
+        from .application.use_cases.authoring import SetupAuthoring
+
+        return SetupAuthoring(AuthoringFiles(), self.version)
+
+    @cached_property
+    def reports(self) -> ReportService:
+        from .adapters.reporting.store import FileReportStore
+        from .application.use_cases.report import ReportService
+
+        return ReportService(FileReportStore(self.host.variables), self.version)
+
+    @cached_property
+    def secret_providers(self) -> dict[str, SecretProvider]:
+        return default_secret_providers(self.host.variables, self.prompter)
+
     def configure_project(self, project: Project):
+        from .adapters.plugins import load_plugins
+
         key = tuple(project.config.plugins)
         if key not in self._plugin_cache:
             self._plugin_cache[key] = load_plugins(list(key))
         plugins = self._plugin_cache[key]
-        if self._active_plugins != key:
+        if self._active_plugins != key and (key or self._active_plugins):
+            from .adapters.plugins import PluginInstaller
+            from .adapters.reporting.store import FileReportStore
+            from .application.use_cases.report import ReportService
+
             if self._base_providers is None:
                 self._base_providers = dict(self.secret_providers)
             providers = dict(self._base_providers)
@@ -146,7 +229,7 @@ class App:
                 ),
                 self.reports.version,
             )
-            self._active_plugins = key
+        self._active_plugins = key
         formats = {"json", "junit", "html", "markdown", "github"} | plugins[
             "reporters"
         ].keys()
@@ -155,7 +238,9 @@ class App:
                 raise PtkError(f"reporter '{name}' is not enabled")
         for credential in project.config.credentials.values():
             for name in credential.providers:
-                if name not in self.secret_providers:
+                if name not in self.__dict__.get(
+                    "secret_providers", DEFAULT_SECRET_PROVIDERS
+                ):
                     raise PtkError(f"secret provider '{name}' is not enabled")
         for tool in project.config.tools.values():
             for name in tool.installers:
@@ -164,10 +249,14 @@ class App:
         return plugins
 
     def variants(self, project: Project) -> VariantService:
+        from .application.use_cases.variants import VariantService
+
         return VariantService(project)
 
     def credentials(self, project: Project) -> CredentialService:
         """One service per project and ptk process (caches values, vault unlocked once)."""
+        from .application.use_cases.credentials import CredentialService
+
         self.configure_project(project)
         key = id(project)
         if key not in self._credentials:
@@ -201,6 +290,9 @@ class App:
         return self._credentials[key]
 
     def versions(self):
+        from .adapters.versioning import VersionIO
+        from .application.use_cases.versioning import VersionService
+
         def dependency(member, alias):
             root = self.workspace.root(member.root)
             entries = self.workspace.repositories(root) if root else {}
@@ -216,6 +308,8 @@ class App:
         return VersionService(VersionIO(self.runner, self.host), dependency)
 
     def prepare_run(self, project: Project) -> PrepareRun:
+        from .application.use_cases.run import PrepareRun
+
         return PrepareRun(
             self.host,
             self.credentials(project),
@@ -226,6 +320,9 @@ class App:
         )
 
     def artifacts(self) -> ResolveDestination:
+        from .adapters.github_context import github_context
+        from .application.use_cases.artifacts import ResolveDestination
+
         return ResolveDestination(
             self.versions(),
             lambda: github_context(self.host.variables),
@@ -234,6 +331,16 @@ class App:
         )
 
     def run_job(self, project: Project) -> RunJob:
+        from .adapters.builtins import (
+            file_cleaner,
+            files_copy,
+            report_import,
+            variant_generator,
+        )
+        from .adapters.versioning import version_generator
+        from .application.use_cases.run import BUILTINS, RunJob, layout_of
+        from .domain.variants.generators import GENERATORS
+
         plugins = self.configure_project(project)
         layout = layout_of(project)
 
@@ -313,9 +420,13 @@ class App:
         return self._workspace_roles[root]
 
     def write_help(self, doc: HelpDocument, target: Path) -> Path:
+        from .adapters import help_html
+
         return help_html.write_help(doc, target)
 
     def open_in_browser(self, path: Path) -> bool:
+        from .adapters import help_html
+
         return help_html.open_in_browser(path)
 
     def report_url(self, path: Path, *, root: Path, logs=()) -> str:
@@ -324,6 +435,9 @@ class App:
         return report_url(path, root, logs)
 
     def log_observers(self, prepared: PreparedRun) -> list[RunObserver]:
+        from .adapters.logging.files import FileLogObserver
+        from .domain.logging import file_level
+
         logging = prepared.project.config.logging
         return [
             FileLogObserver(
@@ -348,44 +462,36 @@ def create_app(
     started_at: datetime | None = None,
 ) -> App:
     host = host or SystemHost(environ)
-    runner = runner or SubprocessRunner()
-    prompter = prompter or ConsolePrompter(host.is_ci)
-    uv = find_uv(dict(host.variables))
-    installer = SystemToolInstaller(runner, host.variables, uv=uv)
-    tools = ToolService(host, runner, installer)
-    configs = SharedConfigs(PackageConfigFiles())
-    machine = Environment(host, runner, uv)
-    return App(
+    app = App(
+        host=host,
+        load_project=LoadProject(source or FileConfigSource(), host, version),
+        version=version,
+        workspace=workspace if workspace is not None else WorkspaceDiscovery(),
         started_at=started_at
         if started_at is not None
         else datetime.now().astimezone(),
-        workspace=workspace if workspace is not None else WorkspaceDiscovery(),
-        host=host,
-        init_project=InitProject(FileProjectScaffold(), host),
-        load_project=LoadProject(source or FileConfigSource(), host, version),
-        show_config=ShowConfig(),
-        export_schema=ExportSchema(),
-        runner=runner,
-        python_envs=python_envs
-        or UvPythonEnvManager(runner, environ=dict(host.variables)),
-        build_help=BuildHelp(version),
-        vscode_tasks=VSCodeTasks(TasksFile),
-        setup_authoring=SetupAuthoring(AuthoringFiles(), version),
-        reports=ReportService(FileReportStore(host.variables), version),
-        shared_configs=configs,
-        tools=tools,
-        doctor=Doctor(machine, tools, configs, version),
-        self_setup=SelfSetup(machine, tools, configs),
-        installer=installer,
-        prompter=prompter,
-        secret_providers=secret_providers
-        or default_secret_providers(host.variables, prompter),
     )
+    # cached_property allows explicit adapters without constructing unused defaults.
+    for name, adapter in (
+        ("runner", runner),
+        ("python_envs", python_envs),
+        ("prompter", prompter),
+        ("secret_providers", secret_providers),
+    ):
+        if adapter:
+            setattr(app, name, adapter)
+    return app
 
 
 def default_secret_providers(
     environ: Mapping[str, str], prompter: Prompter
 ) -> dict[str, SecretProvider]:
+    from .adapters.credentials.env import EnvProvider
+    from .adapters.credentials.gopass import GopassProvider
+    from .adapters.credentials.keyring_provider import KeyringProvider
+    from .adapters.credentials.prompt import PromptProvider
+    from .adapters.credentials.vault import Vault, VaultProvider, default_vault_file
+
     def vault_password(confirm: bool) -> str:
         if environ.get("PTK_VAULT_PASSWORD"):
             return environ["PTK_VAULT_PASSWORD"]

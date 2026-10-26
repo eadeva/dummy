@@ -30,7 +30,7 @@ INCLUDE_SUGAR_KEYS = (
 )  # top-level keys whose string value means "include this file"
 
 
-class _Loader(yaml.SafeLoader):
+class _Loader(getattr(yaml, "CSafeLoader", yaml.SafeLoader)):
     """SafeLoader that only composes nodes; we construct values ourselves."""
 
 
@@ -48,6 +48,7 @@ class YamlConfigReader:
         self.display_root = display_root
         self.entry_bases: dict[Path, Path] = {}
         self.files: list[Path] = []  # every file read, in order
+        self._display_paths: dict[Path, str] = {}
 
     # ------------------------------------------------------------------ public
 
@@ -220,7 +221,9 @@ class YamlConfigReader:
     # ------------------------------------------------------------------ construction
 
     def _loc(self, node: yaml.Node, path: Path) -> Location:
-        return Location(_display(path, self.display_root), node.start_mark.line + 1)
+        if path not in self._display_paths:
+            self._display_paths[path] = _display(path, self.display_root)
+        return Location(self._display_paths[path], node.start_mark.line + 1)
 
     def _literal_metadata(
         self, node: yaml.Node, path: Path, loader: _Loader, stack: tuple[Path, ...]

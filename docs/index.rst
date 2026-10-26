@@ -20,6 +20,7 @@ isolated command environments, logs and reports. Python 3.12 or newer is require
    editor
    packaging
    development
+   performance
 
 The implementation roadmap is maintained separately in ``docs/PLAN.md``.
 

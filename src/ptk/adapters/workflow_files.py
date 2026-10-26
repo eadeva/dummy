@@ -12,7 +12,6 @@ from ..domain.config.tree import to_plain
 from ..domain.errors import ConfigError
 from ..domain.workflows import WorkflowFile
 from .config.yaml_loader import YamlConfigReader
-from .reporting.html import CSS, FILTER_SCRIPT, _cards
 
 
 def read_workflows(path: Path) -> WorkflowFile:
@@ -24,6 +23,8 @@ def read_workflows(path: Path) -> WorkflowFile:
 
 
 def write_workflow_report(result, target: Path) -> Path:
+    from .reporting.html import CSS, FILTER_SCRIPT, _cards
+
     target.mkdir(parents=True, exist_ok=True)
     (target / "workflow.json").write_text(
         json.dumps(asdict(result), indent=2) + "\n", encoding="utf-8"

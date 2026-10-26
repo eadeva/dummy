@@ -24,3 +24,8 @@ description: Modify ptk core code, adapters, use cases or extension interfaces.
 9. Review CI results before marking a milestone complete; record explicit remaining limitations in PLAN.md.
 
 10. Extension contracts and explicit distribution loading are documented in `docs/plugins.rst`; test third-party entry points without importing unselected distributions.
+
+11. For startup changes, profile before editing and run `scripts/benchmark_cli.py`
+    before/after sequentially in the same Python environment. Preserve all command
+    visibility and live configuration semantics. Bound repeated work with tests;
+    do not add timing thresholds on shared CI runners. See `docs/performance.rst`.

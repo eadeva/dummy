@@ -6,7 +6,6 @@ from uuid import uuid4
 import rich_click as click
 import yaml
 
-from ...application.use_cases.variants import VariantService
 from ...domain.errors import PtkError
 from .access import AccessGroup
 from .state import guarded, state_of
@@ -18,6 +17,8 @@ def version_group():
 
 
 def discover(ctx, variant, job):
+    from ...application.use_cases.variants import VariantService
+
     state = state_of(ctx)
     project = state.project()
     variants = VariantService(project)

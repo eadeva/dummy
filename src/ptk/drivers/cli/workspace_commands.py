@@ -4,7 +4,6 @@ import json
 
 import rich_click as click
 
-from ...application.use_cases.run import layout_of
 from ...bootstrap import create_app
 from .access import AccessGroup
 from .state import CliState, guarded, state_of
@@ -221,6 +220,8 @@ def build_commands(root, entries):
     )
 
     def summaries(history=False):
+        from ...application.use_cases.run import layout_of
+
         for alias, state in states():
             project = state.project()
             if (

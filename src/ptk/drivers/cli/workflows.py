@@ -11,20 +11,14 @@ import rich_click as click
 import yaml
 from rich.markup import escape
 
-from ...adapters.locking import file_lock
 from ...adapters.workflow_files import (
     read_workflows,
     snapshot_logs,
     write_workflow_report,
 )
 from ...application.use_cases.role import command_allowed, visible
-from ...application.use_cases.run import Cancelled, RunRequest, layout_of
-from ...application.use_cases.workflow import CallOutcome, PrepareWorkflow, RunWorkflow
 from ...bootstrap import create_app
 from ...domain.errors import PtkError
-from ...domain.execution.model import Status
-from ...domain.reporting.summary import run_summary
-from . import console as present
 from .access import AccessGroup, denied_command
 from .jobs import write_reports
 from .report_links import print_report
@@ -146,6 +140,17 @@ def show_workflow(ctx, name):
 
 
 def execute_workflow(ctx, name, *, dry_run=False):
+    from ...adapters.locking import file_lock
+    from ...application.use_cases.run import Cancelled, RunRequest, layout_of
+    from ...application.use_cases.workflow import (
+        CallOutcome,
+        PrepareWorkflow,
+        RunWorkflow,
+    )
+    from ...domain.execution.model import Status
+    from ...domain.reporting.summary import run_summary
+    from . import console as present
+
     parent, entries, owner, spec, root = select(ctx, name)
     is_ci = parent.app.host.is_ci() if parent.ci is None else parent.ci
     if is_ci and not dry_run:

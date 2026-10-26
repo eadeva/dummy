@@ -33,6 +33,7 @@ DOCS = (
     "workflows",
     "packaging",
     "artifacts",
+    "performance",
 )
 EXAMPLES = ("authoring", "plugin", "quickstart", "workflows", "artifacts")
 

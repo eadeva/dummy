@@ -5,23 +5,24 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
-from ..domain.config.model import PythonSpec
-from ..domain.config.tree import Node
-from ..domain.credentials import SecretKey
-from ..domain.execution.commands import PythonRuntime
-from ..domain.execution.model import (
-    CommandSpec,
-    JobPlan,
-    PlannedStep,
-    RunResult,
-    StepResult,
-)
-from ..domain.logging import Level
-from ..domain.reporting.model import Contribution, Report
-from ..domain.tools import InstallMethod
-from ..domain.versioning import VersionSource
+if TYPE_CHECKING:
+    from ..domain.config.model import PythonSpec
+    from ..domain.config.tree import Node
+    from ..domain.credentials import SecretKey
+    from ..domain.execution.commands import PythonRuntime
+    from ..domain.execution.model import (
+        CommandSpec,
+        JobPlan,
+        PlannedStep,
+        RunResult,
+        StepResult,
+    )
+    from ..domain.logging import Level
+    from ..domain.reporting.model import Contribution, Report
+    from ..domain.tools import InstallMethod
+    from ..domain.versioning import VersionSource
 
 MAIN_FILE = ".main.ptk.yml"
 CX_FILE = "cx.ptk.yml"

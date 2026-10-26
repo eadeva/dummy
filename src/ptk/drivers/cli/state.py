@@ -28,13 +28,24 @@ class CliState:
     ci: bool | None = None
     verbose: int = 0
     _project: Project | None = field(default=None, repr=False)
+    _project_error: PtkError | None = field(default=None, repr=False)
+    _loaded: bool = field(default=False, repr=False)
+    _role: Role | None = field(default=None, repr=False)
 
     def project(self) -> Project:
-        if self._project is None:
-            self._project = self.app.load_project.execute(
-                config_file=self.config, overrides=self.overrides, ci=self.ci
-            )
-        self.app.configure_project(self._project)
+        if not self._loaded:
+            try:
+                project = self.app.load_project.execute(
+                    config_file=self.config, overrides=self.overrides, ci=self.ci
+                )
+                self.app.configure_project(project)
+                self._project = project
+            except PtkError as exc:
+                self._project_error = exc
+            self._loaded = True
+        if self._project_error is not None:
+            raise self._project_error
+        assert self._project is not None
         return self._project
 
     def try_project(self) -> Project | None:
@@ -44,7 +55,9 @@ class CliState:
             return None
 
     def role(self) -> Role:
-        return self.app.role(self.try_project())
+        if self._role is None:
+            self._role = self.app.role(self.try_project())
+        return self._role
 
 
 def state_of(ctx: click.Context) -> CliState:

@@ -1,10 +1,21 @@
 from pathlib import Path
 
 import pytest
+import yaml
 
+from ptk.adapters.config import yaml_loader
 from ptk.adapters.config.yaml_loader import YamlConfigReader
 from ptk.domain.config import tree as t
 from ptk.domain.errors import ConfigError
+
+
+@pytest.fixture(autouse=True, params=["SafeLoader", "CSafeLoader"])
+def parser_backend(request, monkeypatch):
+    """Includes, tags, anchors and diagnostics must work with either backend."""
+    parser = getattr(yaml, request.param, None)
+    if parser is None:
+        pytest.skip("PyYAML C extension unavailable")
+    monkeypatch.setattr(yaml_loader, "_Loader", parser)
 
 
 def read(root: Path, name: str = "fragment.ptk.yml"):

@@ -120,3 +120,18 @@ and matrix commands in :doc:`cli`; background process and GUI behavior in :doc:`
 The GUI CI job uses Xvfb and the real Tk event loop to test validation/export.
 Native desktop appearance and real machine-wide tool/credential setup still need
 acceptance on the target machines. Publishing and merging are separate decisions.
+
+Startup performance
+-------------------
+
+Run ``uv run python scripts/benchmark_cli.py --output .ptk/benchmark-cli.json``
+for repeated process-start measurements on this checkout and temporary VMR
+fixtures. See :doc:`performance` for methodology, measured results and profiling.
+The Python 3.12 Linux/Windows CI jobs also run this benchmark and print their
+results; timings are evidence, not pass/fail thresholds on shared runners.
+
+Keep application services lazy: ``App`` constructs execution, tools, credentials,
+editor resources and reports only on first use. Explicitly selected plugins still
+load for validation. CLI state caches both successful loads and expected errors
+for one invocation; do not turn these into process-global or disk caches. Tests
+bound load/identity/diagnostic-path work and check fresh subprocess imports.
