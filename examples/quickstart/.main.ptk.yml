@@ -1,5 +1,6 @@
 schema_version: 1
-ptk_version: ">=0.1.0.dev0,<0.2"
+# Optional: choose a range for the PTK releases your project supports.
+# ptk_version: ">=0.1,<0.2"
 project:
   name: quickstart
   description: Offline example using only the Python interpreter running ptk

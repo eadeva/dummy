@@ -128,7 +128,7 @@ All ptk files end in `.ptk.yml`:
 # .main.ptk.yml
 repository: {alias: demo, config_path: .}
 schema_version: 1
-ptk_version: ">=0.1.0.dev0,<0.2"          # ptk refuses to run with another version
+# ptk_version: ">=0.1,<0.2"            # optional: choose your supported PTK releases
 project: {name: demo, default_action: build}
 include: [ptk/actions/*.ptk.yml]
 variants: ptk/variants.ptk.yml       # plain string = include this file here
