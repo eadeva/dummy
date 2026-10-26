@@ -148,8 +148,9 @@ surface; automatic Git-pointer membership can still resolve its dependencies.
 An owner workflow's ``audience`` and ``command_audience.workflow`` policy are
 checked along with the target job's actual repository role. A public workflow
 cannot bypass a maintainer-only job. Workspace-owned maintainer workflows
-require ``PTK_ROLE=maintainer`` because a workspace marker has no maintainer file;
-member job roles still use their own repository settings. These role policies
+use the login-ID list in ``maintainers.ptk.yml`` at the VMR root;
+member job roles still use their own repository settings. Neither scope grants
+rights in the other. ``PTK_ROLE=maintainer`` does not elevate a user. These role policies
 remain a developer convenience, not an operating-system security boundary.
 
 Reports and editor tasks

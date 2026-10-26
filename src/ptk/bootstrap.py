@@ -59,7 +59,7 @@ from .application.use_cases.project import (
     ShowConfig,
 )
 from .application.use_cases.report import ReportService
-from .application.use_cases.role import Role, resolve_role
+from .application.use_cases.role import Role, resolve_role, role_for_ids
 from .application.use_cases.run import (
     BUILTINS,
     PreparedRun,
@@ -105,6 +105,7 @@ class App:
     _active_plugins: tuple | None = field(default=None, repr=False)
     _base_providers: dict | None = field(default=None, repr=False)
     _credentials: dict[int, CredentialService] = field(default_factory=dict, repr=False)
+    _workspace_roles: dict[Path, Role] = field(default_factory=dict, repr=False)
 
     def configure_project(self, project: Project):
         key = tuple(project.config.plugins)
@@ -304,6 +305,13 @@ class App:
     def role(self, project: Project | None) -> Role:
         return resolve_role(project, self.host)
 
+    def workspace_role(self, root: Path) -> Role:
+        if root not in self._workspace_roles:
+            self._workspace_roles[root] = role_for_ids(
+                self.load_project.maintainers(root), self.host
+            )
+        return self._workspace_roles[root]
+
     def write_help(self, doc: HelpDocument, target: Path) -> Path:
         return help_html.write_help(doc, target)
 
@@ -353,7 +361,7 @@ def create_app(
         else datetime.now().astimezone(),
         workspace=workspace if workspace is not None else WorkspaceDiscovery(),
         host=host,
-        init_project=InitProject(FileProjectScaffold()),
+        init_project=InitProject(FileProjectScaffold(), host),
         load_project=LoadProject(source or FileConfigSource(), host, version),
         show_config=ShowConfig(),
         export_schema=ExportSchema(),

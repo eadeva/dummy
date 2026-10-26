@@ -17,7 +17,7 @@ from ...adapters.workflow_files import (
     snapshot_logs,
     write_workflow_report,
 )
-from ...application.use_cases.role import visible
+from ...application.use_cases.role import command_allowed, visible
 from ...application.use_cases.run import Cancelled, RunRequest, layout_of
 from ...application.use_cases.workflow import CallOutcome, PrepareWorkflow, RunWorkflow
 from ...bootstrap import create_app
@@ -25,7 +25,7 @@ from ...domain.errors import PtkError
 from ...domain.execution.model import Status
 from ...domain.reporting.summary import run_summary
 from . import console as present
-from .access import AccessGroup
+from .access import AccessGroup, denied_command
 from .jobs import write_reports
 from .report_links import print_report
 from .state import CliState, console, err_console, guarded, state_of
@@ -76,7 +76,11 @@ def catalog(ctx):
 
 def can_view(parent, owners, owner, spec):
     state = owners[owner] if owner else parent
-    role = state.role() if owner else parent.app.role(None)
+    role = (
+        state.role()
+        if owner
+        else parent.app.workspace_role(parent.app.workspace.root(Path.cwd()))
+    )
     if (
         owner
         and state.project().config.command_audience.get("workflow") == "maintainer"
@@ -348,6 +352,9 @@ def preview_workflow(ctx, name):
 
 
 def workflow_command(name, spec, *, hidden=False):
+    if hidden:
+        return denied_command(name, "workflow")
+
     @click.pass_context
     @guarded
     def run(ctx):
@@ -382,12 +389,22 @@ def workspace_shortcuts(ctx):
 def workspace_vscode_group(root_ctx, entries):
     from .workspace_commands import visit
 
-    @click.group("vscode", invoke_without_command=True)
+    def preflight_members():
+        _, _, owners, _ = catalog(root_ctx)
+        for alias in sorted(entries):
+            owner = owners[alias]
+            if not command_allowed(
+                "setup.vscode", owner.role(), owner.project().config.command_audience
+            ):
+                raise PtkError(f"{alias}: 'setup vscode' is a maintainer-only command")
+
+    @click.group("vscode", cls=AccessGroup, invoke_without_command=True)
     @click.pass_context
     @guarded
     def group(ctx):
         """Install member tasks/skills and workspace workflow tasks."""
         if ctx.invoked_subcommand is None:
+            preflight_members()
             visit(root_ctx, [(alias, ["setup", "vscode"]) for alias in sorted(entries)])
             write_tasks(ctx, False, "ptk", False, None)
 
@@ -431,6 +448,7 @@ def workspace_vscode_group(root_ctx, entries):
     @guarded
     def skills(check):
         """Install offline authoring skills in each configured repository."""
+        preflight_members()
         args = ["setup", "vscode", "skills", *(["--check"] if check else [])]
         visit(root_ctx, [(alias, args) for alias in sorted(entries)])
 

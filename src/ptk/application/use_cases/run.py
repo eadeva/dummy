@@ -137,8 +137,7 @@ class PrepareRun:
         if not visible(job.audience, request.role):
             raise PtkError(
                 f"'{request.job}' is a maintainer-only job "
-                "(maintainers are listed in maintainers.ptk.yml; "
-                "PTK_ROLE=maintainer overrides the detection)"
+                "(login IDs are listed in maintainers.ptk.yml)"
             )
         host_env = self._host.variables
         os_name = self._host.os_name()

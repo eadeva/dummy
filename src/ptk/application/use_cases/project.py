@@ -261,6 +261,11 @@ class LoadProject:
             layers=layers,
             ci=is_ci,
         )
+        project.maintainers = self.maintainers(config_root)
+        return project
+
+    def maintainers(self, config_root: Path) -> MaintainersSpec | None:
+        """Load the independent identity list, also usable at a VMR root."""
         maintainers_file = config_root / MAINTAINERS_FILE
         if self._source.exists(maintainers_file):
             m_tree = self._source.read(maintainers_file)
@@ -270,8 +275,8 @@ class LoadProject:
             )
             if m_problems:
                 raise ConfigError(m_problems)
-            project.maintainers = MaintainersSpec.model_validate(t.to_plain(m_tree))
-        return project
+            return MaintainersSpec.model_validate(t.to_plain(m_tree))
+        return None
 
     def _check_version(self, config: PtkConfig, tree: t.Node) -> None:
         if not config.ptk_version:

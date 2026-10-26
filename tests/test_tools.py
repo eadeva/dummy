@@ -18,6 +18,7 @@ from ptk.domain.config.model import ToolSpec
 from ptk.domain.errors import PtkError
 from ptk.domain.tools import check_version, install_methods, parse_version, satisfies
 from ptk.drivers.cli.main import cli
+from tests.conftest import grant_maintainer
 
 posix_only = pytest.mark.skipif(sys.platform.startswith("win"), reason="POSIX shell")
 
@@ -157,9 +158,11 @@ def project(write, tmp_path):
         "PTK_VAULT_FILE": str(tmp_path / "vault.json"),
     }
 
-    def invoke(*args):
+    def invoke(*args, role="user"):
         base = ["--config", str(root / ".main.ptk.yml"), "--no-ci"]
-        return CliRunner(env=env).invoke(cli, [*base, *args], catch_exceptions=False)
+        return CliRunner(env={**env, "PTK_ROLE": role}).invoke(
+            cli, [*base, *args], catch_exceptions=False
+        )
 
     invoke.root = root
     invoke.tools = tmp_path / "tools"
@@ -229,7 +232,8 @@ def test_self_setup(project):
     (project.root / ".main.ptk.yml").write_text(
         (project.root / ".main.ptk.yml").read_text() + "configs: {clang-format: {}}\n"
     )
-    result = project("self-setup")
+    grant_maintainer(project.root)
+    result = project("self-setup", role="")
     assert (
         "shared configs" in result.output and (project.root / ".clang-format").is_file()
     )

@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 import yaml
 from click.testing import CliRunner
+from tests.conftest import grant_maintainer
 
 from ptk.drivers.cli.main import cli
 
@@ -237,7 +238,9 @@ def test_vmr_targets_keep_environment_and_reports_and_have_editor_tasks(
         )
     )
     monkeypatch.chdir(root)
-    runner = CliRunner(env={"PTK_ROLE": "user", "PTK_CI": "0"})
+    for target in (root, root / "a", root / "b"):
+        grant_maintainer(target)
+    runner = CliRunner(env={"PTK_ROLE": "", "PTK_CI": "0"})
     for args in (
         ["workflow", "list"],
         ["workflow", "run", "all"],
@@ -355,15 +358,15 @@ def test_maintainer_workflows_are_protected_and_hidden_from_user_tasks(
     )
     denied = invoke(root, "workflow", "run", "verify")
     assert denied.exit_code != 0 and "maintainer-only" in denied.output, denied.output
-    allowed = invoke(root, "workflow", "run", "verify", env={"PTK_ROLE": "maintainer"})
+    grant_maintainer(root)
+    allowed = invoke(root, "workflow", "run", "verify", env={"PTK_ROLE": ""})
     assert allowed.exit_code == 0, allowed.output
-    for role, options, visible in (
-        ("user", [], False),
-        ("maintainer", [], True),
-        ("maintainer", ["--users-only"], False),
+    for options, visible in (
+        ([], True),
+        (["--users-only"], False),
     ):
         result = invoke(
-            root, "setup", "vscode", "tasks", *options, env={"PTK_ROLE": role}
+            root, "setup", "vscode", "tasks", *options, env={"PTK_ROLE": ""}
         )
         assert result.exit_code == 0, result.output
         tasks = json.loads((root / ".vscode/tasks.json").read_text())["tasks"]
@@ -379,8 +382,14 @@ def test_workflow_tasks_are_idempotent_and_preserve_user_tasks(tmp_path):
             {"version": "2.0.0", "tasks": [{"label": "mine", "command": "hello"}]}
         )
     )
-    assert invoke(root, "setup", "vscode", "tasks").exit_code == 0
-    assert invoke(root, "setup", "vscode", "tasks", "--check").exit_code == 0
+    grant_maintainer(root)
+    assert invoke(root, "setup", "vscode", "tasks", env={"PTK_ROLE": ""}).exit_code == 0
+    assert (
+        invoke(
+            root, "setup", "vscode", "tasks", "--check", env={"PTK_ROLE": ""}
+        ).exit_code
+        == 0
+    )
     tasks = json.loads((folder / "tasks.json").read_text())["tasks"]
     assert tasks[0]["label"] == "mine"
     task = next(t for t in tasks if t["label"] == "ptk: workflow verify")

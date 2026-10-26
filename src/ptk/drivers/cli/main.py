@@ -23,7 +23,7 @@ from ... import __version__
 from ...application.use_cases.help import HelpCommand, HelpOption
 from ...application.use_cases.init import InitResult
 from ...domain.errors import ConfigError, PtkError
-from .access import AccessGroup
+from .access import AccessGroup, require
 from .artifacts import artifacts_group
 from .jobs import (
     ProjectGroup,
@@ -204,7 +204,7 @@ def config_schema(ctx: click.Context, output: Path | None) -> None:
 
 @cli.group("variant", cls=AccessGroup)
 def variant_group() -> None:
-    """Inspect and edit variants: list, show, explain, check, set, new, gui."""
+    """Inspect available variants and their configuration."""
 
 
 def _value(value: Any) -> str:
@@ -1237,6 +1237,7 @@ def _setup_dispatch(ctx: click.Context, **options: Any) -> None:
         return
     if supplied:
         # Compatibility: ptk setup --job A --dry-run.
+        require(ctx, "install")
         ctx.invoke(setup_command, **options)
     else:
         click.echo(ctx.get_help())

@@ -3,6 +3,9 @@ CLI command groups
 
 Use ``ptk setup`` to display the setup overview. Viewing this overview does not
 install tools or change configuration. Project jobs remain top-level commands.
+Help and completion show only commands available to the current user. The table
+below includes maintainer commands for reference; see :doc:`configuration` for
+the login-ID list and default restrictions.
 
 .. list-table::
    :header-rows: 1
@@ -69,6 +72,8 @@ Variant editing and matrices
 Both validate first, write ``local.ptk.yml`` by default, and accept ``--dry-run``
 or ``--output FILE`` for an explicit overlay. Existing unrelated YAML keys are
 preserved; formatting/comments are not. Include explicit overlays yourself.
+Both commands and ``variant gui`` require a listed maintainer. Normal users can
+select an existing variant with ``-V`` on a job or dry run.
 
 ``ptk build --all-variants`` runs every concrete variant sequentially.
 ``ptk build -V small,large`` selects a subset, deduplicating aliases. All selections

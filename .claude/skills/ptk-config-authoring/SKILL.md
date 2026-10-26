@@ -37,3 +37,11 @@ For version discovery, read [docs/versioning.rst](../../../docs/versioning.rst).
 To combine existing jobs locally, use [workflow configuration](../../../docs/workflows.rst) and the `ptk-workflow-authoring` skill. Put `workflow.ptk.yml` in the configured folder; workspace-owned workflows belong at the VMR root. Workflows preserve each call's repository settings and never run wholesale on CX. GitHub job/template generation is deferred.
 
 For upload destinations, read [Artifactory destination rules](../../../docs/artifacts.rst) and start from [the destination example](../../../examples/artifacts/config/artifactory_structure.ptk.yaml). The exact filename `artifactory_structure.ptk.yaml` is discovered in the config folder. Configure global base, event route and optional PTK-job suffix; preserve branch slashes. PTK resolves paths only; workflows select files, authenticate and upload. Preview with `ptk artifacts destination --job NAME --event release`; use `--at ISO_TIMESTAMP` for a shared explicit date and `--format github` for step outputs. Never add file-selection or credential fields to this model.
+
+Maintainers are plain login IDs in `maintainers.ptk.yml`: `maintainers: [alice, bob]`.
+Match OS usernames locally and triggering GitHub actors on Actions; do not use
+Git emails or `PTK_ROLE=maintainer`. Use `ptk setup doctor` to inspect the detected
+ID. Init seeds the creator. Configuration writers (shared-config sync, self setup,
+editor setup and variant editing) require a listed maintainer and are hidden from
+normal users. `command_audience` can add restrictions but cannot relax these defaults.
+Keep machine-wide tool installation and personal credential setup available.

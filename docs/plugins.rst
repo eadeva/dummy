@@ -112,9 +112,13 @@ Use canonical dotted paths, for example::
 
 Supported keys are ``setup``, its immediate commands/groups (``config``, ``configs``,
 ``creds``, ``vscode``, ``install``, ``self``, ``doctor``, ``init``),
-``variant`` and ``report``. Restrictions apply to descendants and compatibility
-aliases, normal/HTML help and completion. Roles use ``maintainers.ptk.yml`` as
-for jobs. This is command visibility, not a security boundary.
+``setup.configs.sync|check``, ``setup.vscode.tasks|skills``,
+``variant``, ``variant.set|new|gui``, ``version``, ``report``, ``workflow`` and
+``artifacts``. Expand alternatives to individual dotted keys in YAML.
+Restrictions apply to descendants and compatibility aliases, normal/HTML help
+and completion. Configuration writers are restricted by default; ``all`` cannot
+relax those restrictions. See :doc:`configuration` for the command list and the
+login-ID-only maintainer schema. This is not an operating-system security boundary.
 
 Runnable extension starter
 ---------------------------

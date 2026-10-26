@@ -32,7 +32,7 @@ from ...domain.logging import console_level
 from ...domain.reporting.summary import run_summary
 from ...domain.suggest import did_you_mean
 from . import console as present
-from .access import AccessGroup
+from .access import AccessGroup, denied_command
 from .report_links import print_report
 from .state import console, err_console, guarded, report_error, state_of
 
@@ -549,6 +549,8 @@ class ProjectGroup(AccessGroup):
         if spec is None:
             return None
         hidden = spec.audience == "maintainer" and state.role() != "maintainer"
+        if hidden:
+            return denied_command(cmd_name, "job")
         command = job_command(cmd_name, spec, dry_run=self.dry_run, hidden=hidden)
         if workflow is not None:
             command.short_help = f"{spec.help or cmd_name} (job / workflow)"

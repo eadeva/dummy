@@ -445,15 +445,23 @@ tools:
 
 ## 9b. Maintainer-only commands
 
-- Jobs can be marked `audience: maintainer`; built-in groups use
-  `command_audience: {setup.creds: maintainer}`.
-- `maintainers.ptk.yml` (committed, next to `.main.ptk.yml`) lists maintainers by git
-  e-mail and/or OS user name. ptk compares it with `git config user.email` and the
-  OS user; `PTK_ROLE=maintainer` forces the role (e.g. in CI).
-- For everyone else these commands are hidden from `--help`, the HTML help (`ptk help`), VS Code
-  tasks and shell completion, and refuse to run with a clear message.
-- This is a usability feature, not access control: anyone can edit the file.
-  Real protection belongs in CI permissions and credentials.
+- `maintainers.ptk.yml` in the configured folder contains `maintainers: [login-id, ...]`.
+  Local OS login IDs and triggering GitHub actor IDs are matched case-insensitively;
+  Git author names/emails and `PTK_ROLE=maintainer` do not grant privileges.
+  `PTK_ROLE=user` can reduce privileges for testing. Init seeds its creator's ID.
+- Default restricted built-ins: `setup configs sync`, `setup self`, `setup vscode`
+  and its children, `variant new/set/gui`. Additional `command_audience` policies
+  may restrict commands but cannot relax this baseline.
+- Restricted commands are absent from normal/HTML help and completion; direct calls,
+  aliases and legacy setup dispatch enforce permissions before writes.
+- Tool installation, personal credentials, inspection/validation, diagnostics,
+  version/report generation and ordinary job execution remain developer operations.
+  Init only creates missing configurations and preserves existing ones.
+- Jobs/workflows still support `audience: maintainer`; shared editor tasks use
+  `--users-only`. VMR root and repository identity lists are independent. Combined
+  editor setup preflights all member roles; no partial writes on permission failure.
+- These are CLI guardrails, not a security boundary against editing the checkout
+  or process environment. Configuration and plugins remain trusted executable code.
 
 ## 10. CLI surface
 
@@ -848,3 +856,15 @@ and four-digit numeric sort keys; arbitrary/prerelease semantic ordering and
 numeric components above 9999 are not provided by that key. Uploads, credentials,
 file selection and GitHub workflow generation remain outside this resolver.
 Docs and existing config/package skills include the portable destination example.
+
+
+## Maintainer defaults and identity schema review
+
+Replaced name/email/user records with a strict list of login IDs. Removed Git
+subprocesses from role lookup and the unconditional environment-role elevation.
+New scaffolds identify their creator; doctor reports the ID, role and list path.
+Added mandatory built-in configuration-editor restrictions, consistent alias/help/
+completion handling, and a guard on legacy setup installation dispatch. VMR root
+maintainer lists now govern workspace operations independently of member lists.
+Tests cover normal and maintainer paths, invalid/missing identity files, attempted
+role elevation, no-write denials, VMR isolation and combined-operation preflight.

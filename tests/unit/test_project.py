@@ -93,12 +93,23 @@ def test_maintainers_file(write, load):
     root = write(
         {
             ".main.ptk.yml": MINIMAL,
-            "maintainers.ptk.yml": "maintainers: [{email: a@b.c}]",
+            "maintainers.ptk.yml": "maintainers: [alice, bob]",
         }
     )
-    assert load(root).maintainers.maintainers[0].email == "a@b.c"
+    assert load(root).maintainers.maintainers == ["alice", "bob"]
     write({"maintainers.ptk.yml": "maintainers: [{name: nobody}]"})
-    with pytest.raises(ConfigError, match="needs 'email' and/or 'user'"):
+    with pytest.raises(ConfigError, match="valid string"):
+        load(root)
+
+
+@pytest.mark.parametrize(
+    "value", ["[42]", "['']", "[' alice']", "[alice, ALICE]", "null", "{}"]
+)
+def test_invalid_maintainer_ids_have_file_provenance(write, load, value):
+    root = write(
+        {".main.ptk.yml": MINIMAL, "maintainers.ptk.yml": f"maintainers: {value}"}
+    )
+    with pytest.raises(ConfigError, match="maintainers.ptk.yml"):
         load(root)
 
 

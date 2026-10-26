@@ -43,6 +43,9 @@ class Environment:
         )
         return "\n".join(lines).strip() if outcome.exit_code == 0 else None
 
+    def user_id(self) -> str | None:
+        return self._host.user_id()
+
 
 class Doctor:
     def __init__(
@@ -107,7 +110,13 @@ class Doctor:
                 f"{project.main_file} ({len(project.files)} files, {len(project.warnings)} warnings)",
             )
         )
-        checks.append(Check("role", OK, role))
+        checks.append(
+            Check(
+                "role",
+                OK,
+                f"{role}; user ID: {self._env.user_id() or 'unknown'}; list: {project.config_root / 'maintainers.ptk.yml'}",
+            )
+        )
         for status in self._tools.status(project):
             checks.append(
                 Check(f"tool {status.name}", OK, status.version or "found")

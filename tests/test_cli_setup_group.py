@@ -8,11 +8,14 @@ from click.testing import CliRunner
 from rich.text import Text
 
 from ptk.drivers.cli.main import cli
+from tests.conftest import grant_maintainer
 
 
 @pytest.fixture
 def invoke(write):
     root = write({".main.ptk.yml": "project: {name: demo}\n"})
+
+    grant_maintainer(root)
 
     def call(*args):
         return CliRunner().invoke(

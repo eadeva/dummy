@@ -1,33 +1,59 @@
 """Who is running ptk: maintainer or user (use case).
 
-``maintainers.ptk.yml`` lists maintainers by git e-mail and/or OS user name;
-``PTK_ROLE=maintainer|user`` forces a role. This only controls what is shown
-(``--help``, the HTML help, VS Code tasks) - it is not access control.
+``maintainers.ptk.yml`` lists login IDs. ``PTK_ROLE=user`` can reduce visibility;
+environment variables cannot elevate a user to maintainer. This protects normal
+CLI use, not against someone editing their own checkout or process environment.
 """
 
 from __future__ import annotations
 
 from typing import Literal
 
+from ...domain.config.model import MaintainersSpec
 from ..ports import HostEnvironment
 from .project import Project
 
 Role = Literal["maintainer", "user"]
 
+MAINTAINER_COMMANDS = frozenset(
+    {
+        "setup.configs.sync",
+        "setup.self",
+        "setup.vscode",
+        "variant.set",
+        "variant.new",
+        "variant.gui",
+    }
+)
+
+
+def command_allowed(path: str, role: Role, policies: dict[str, str]) -> bool:
+    if role == "maintainer":
+        return True
+    parts = path.split(".")
+    return all(
+        (prefix := ".".join(parts[:i])) not in MAINTAINER_COMMANDS
+        and policies.get(prefix) != "maintainer"
+        for i in range(1, len(parts) + 1)
+    )
+
 
 def resolve_role(project: Project | None, host: HostEnvironment) -> Role:
-    forced = host.variables.get("PTK_ROLE", "").strip().lower()
-    if forced in ("maintainer", "user"):
-        return forced  # type: ignore[return-value]
-    if project is None or project.maintainers is None:
+    return role_for_ids(project.maintainers if project else None, host)
+
+
+def role_for_ids(maintainers: MaintainersSpec | None, host: HostEnvironment) -> Role:
+    if (
+        host.variables.get("PTK_ROLE", "").strip().lower() == "user"
+        or maintainers is None
+    ):
         return "user"
-    email, user = host.user_identity(project.root)
-    for m in project.maintainers.maintainers:
-        if m.email and email and m.email.lower() == email.lower():
-            return "maintainer"
-        if m.user and user and m.user.lower() == user.lower():
-            return "maintainer"
-    return "user"
+    user = host.user_id()
+    return (
+        "maintainer"
+        if user and user.casefold() in {m.casefold() for m in maintainers.maintainers}
+        else "user"
+    )
 
 
 def visible(audience: str, role: Role) -> bool:

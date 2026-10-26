@@ -4,6 +4,7 @@ import yaml
 from click.testing import CliRunner
 
 from ptk.drivers.cli.main import cli
+from tests.conftest import grant_maintainer
 
 
 def setup(tmp_path):
@@ -49,6 +50,7 @@ def setup(tmp_path):
 
 def test_variant_edit_preview_and_persistence(tmp_path):
     file = setup(tmp_path)
+    grant_maintainer(tmp_path)
     runner = CliRunner()
     prefix = ["-c", str(file), "variant"]
     preview = runner.invoke(

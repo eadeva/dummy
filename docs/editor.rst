@@ -7,6 +7,12 @@ Use ``ptk setup vscode tasks`` for tasks only, or ``ptk setup vscode skills`` fo
 skills and their reference files. ``ptk setup vscode skills --check`` checks drift
 without writing (exit code 1 when an update is needed).
 
+Editor setup and all its subcommands are maintainer-only, including ``--check``.
+They are hidden from normal users and refuse direct invocation. Maintainers are
+listed by login ID in the configuration folder's ``maintainers.ptk.yml``; see
+:doc:`configuration`. Generate shared tasks with ``--users-only`` so they exclude
+maintainer jobs and workflows. Running existing tasks remains available to users.
+
 Fourteen project skills are installed under ``.github/skills/ptk-*/SKILL.md``.
 Version-matched documentation, examples and the generated configuration schema
 live under ``.github/ptk``. Skill links are relative to their own SKILL.md files;
@@ -38,6 +44,11 @@ At a VMR root, ``ptk setup vscode tasks`` includes workspace-owned workflows and
 qualified member workflows. ``ptk setup vscode`` also installs each member's
 skills/tasks. VMR tasks run from the workspace root. See :doc:`workflows` for
 parallelism, repository selection and CX restrictions.
+
+Workspace editor commands require membership in the VMR root's own
+``maintainers.ptk.yml``. Commands updating member repositories also require
+membership in each target's list; combined setup checks every member before any
+write. Use ``ptk ALIAS setup vscode`` to update only a repository you maintain.
 
 Browser links in the terminal
 -----------------------------

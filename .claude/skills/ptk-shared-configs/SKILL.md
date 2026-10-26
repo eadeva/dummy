@@ -23,3 +23,9 @@ description: Manage ptk shared pre-commit, Ruff and clang configuration with pro
 8. Run the actual affected formatter or linter when available. Keep optional binary-dependent checks explicit.
 
 9. Review generated diffs after upgrading ptk rather than silently accepting new base rules.
+
+`setup configs sync` (including `--diff`) and `setup self` require a login ID
+listed in the configuration folder's `maintainers.ptk.yml`. `setup configs check`
+is available to normal users. Verify identity with `setup doctor`; do not suggest
+`PTK_ROLE=maintainer` as a workaround. See the maintainer section of the
+[configuration guide](../../../docs/configuration.rst).

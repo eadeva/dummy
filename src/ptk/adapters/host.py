@@ -5,8 +5,6 @@ from __future__ import annotations
 import getpass
 import os
 import re
-import shutil
-import subprocess
 import sys
 from collections.abc import Mapping
 from pathlib import Path
@@ -66,25 +64,14 @@ class SystemHost:
             return "macos"
         return "linux"
 
-    def user_identity(self, root: Path | None = None) -> tuple[str | None, str | None]:
-        email = None
-        git = shutil.which("git")
-        if git:
-            try:
-                out = subprocess.run(
-                    [git, "config", "user.email"],
-                    cwd=root,
-                    env=self._environ,
-                    capture_output=True,
-                    text=True,
-                    check=False,
-                    timeout=5,
-                )
-                email = out.stdout.strip() or None
-            except (OSError, subprocess.SubprocessError):
-                email = None
+    def user_id(self) -> str | None:
+        if self._environ.get("GITHUB_ACTIONS", "").lower() == "true":
+            return (
+                self._environ.get("GITHUB_TRIGGERING_ACTOR")
+                or self._environ.get("GITHUB_ACTOR")
+                or None
+            )
         try:
-            user = getpass.getuser()
+            return getpass.getuser() or None
         except Exception:  # noqa: BLE001 - getuser can raise various errors
-            user = None
-        return email, user
+            return None

@@ -4,10 +4,22 @@ import textwrap
 from pathlib import Path
 
 import pytest
+import yaml
 
+from ptk.adapters.host import SystemHost
 from ptk.bootstrap import create_app
 
 DEMO = Path(__file__).resolve().parents[1] / "examples" / "demo"
+
+
+def grant_maintainer(root: Path) -> None:
+    """Explicitly authorize the test runner in a temporary project's real list."""
+    main = root / ".main.ptk.yml"
+    data = yaml.safe_load(main.read_text()) if main.exists() else {}
+    folder = root / data.get("repository", {}).get("config_path", ".")
+    (folder / "maintainers.ptk.yml").write_text(
+        yaml.safe_dump({"maintainers": [SystemHost().user_id()]}), encoding="utf-8"
+    )
 
 
 @pytest.fixture

@@ -145,18 +145,32 @@ def test_schema_describes_authored_files():
     )
 
 
-def test_repository_identity_ignores_callers_git_configuration(tmp_path, monkeypatch):
+def test_login_identity_does_not_query_git(tmp_path, monkeypatch):
     from ptk.adapters.host import SystemHost
 
-    for name in ["a", "b"]:
-        repo = tmp_path / name
-        subprocess.run(["git", "init", "-q", str(repo)], check=True)
-        subprocess.run(
-            ["git", "-C", str(repo), "config", "user.email", name + "@example.invalid"],
-            check=True,
-        )
-    monkeypatch.chdir(tmp_path / "a")
-    assert SystemHost().user_identity(tmp_path / "b")[0] == "b@example.invalid"
+    monkeypatch.setattr("getpass.getuser", lambda: "local-login")
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("identity lookup must not run Git")
+
+    monkeypatch.setattr(subprocess, "run", forbidden)
+    assert SystemHost({}).user_id() == "local-login"
+    assert (
+        SystemHost(
+            {
+                "GITHUB_ACTIONS": "true",
+                "GITHUB_ACTOR": "alice",
+                "GITHUB_TRIGGERING_ACTOR": "bob",
+            }
+        ).user_id()
+        == "bob"
+    )
+    assert (
+        SystemHost({"GITHUB_ACTIONS": "true", "GITHUB_ACTOR": "alice"}).user_id()
+        == "alice"
+    )
+    assert SystemHost({"GITHUB_ACTIONS": "true"}).user_id() is None
+    assert SystemHost({"GITHUB_ACTOR": "alice"}).user_id() == "local-login"
 
 
 def test_isolated_job_environment_does_not_inherit_secrets(write, load, monkeypatch):

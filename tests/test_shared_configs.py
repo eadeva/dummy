@@ -12,6 +12,7 @@ from click.testing import CliRunner
 from ptk.domain import shared_configs as sc
 from ptk.domain.errors import ConfigError
 from ptk.drivers.cli.main import cli
+from tests.conftest import grant_maintainer
 
 
 def test_deep_merge_and_delete():
@@ -106,6 +107,8 @@ def invoke(write):
             "ptk/cf.yaml": "ColumnLimit: 120\n",
         }
     )
+
+    grant_maintainer(root)
 
     def _invoke(*args):
         return CliRunner().invoke(

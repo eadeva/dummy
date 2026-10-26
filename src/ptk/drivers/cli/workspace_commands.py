@@ -6,6 +6,7 @@ import rich_click as click
 
 from ...application.use_cases.run import layout_of
 from ...bootstrap import create_app
+from .access import AccessGroup
 from .state import CliState, guarded, state_of
 
 RESERVED = {"setup", "variant", "report", "help", "repos", "workflow"}
@@ -99,7 +100,7 @@ def build_commands(root, entries):
                     catalog[f"{owner[0]}/{name}"] = (name, [owner])
         return catalog
 
-    setup = click.RichGroup(
+    setup = AccessGroup(
         "setup",
         help="Initialize missing configs; shared credentials, validation and diagnostics. Install tools under a repository.",
     )

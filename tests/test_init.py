@@ -51,6 +51,13 @@ def test_new_project_runs(tmp_path, monkeypatch):
     )
     assert result.exit_code == 0, result.output
     assert "local.ptk.yml" in (target / ".gitignore").read_text()
+    from ptk.adapters.host import SystemHost
+    from ptk.bootstrap import create_app
+
+    app = create_app()
+    initialized = app.load_project.execute(config_file=target / ".main.ptk.yml")
+    assert initialized.maintainers.maintainers == [SystemHost().user_id()]
+    assert app.role(initialized) == "maintainer"
     base = ["-c", str(target / ".main.ptk.yml"), "--no-ci"]
     assert runner.invoke(cli, [*base, "setup", "config", "validate"]).exit_code == 0
     ran = runner.invoke(cli, [*base, "hello", "--message", "custom message"])

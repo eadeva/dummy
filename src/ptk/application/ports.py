@@ -58,8 +58,8 @@ class HostEnvironment(Protocol):
     def os_name(self) -> str:
         """'windows' or 'linux' (or 'macos')."""
 
-    def user_identity(self, root: Path | None = None) -> tuple[str | None, str | None]:
-        """(git e-mail, OS user name)."""
+    def user_id(self) -> str | None:
+        """OS login name locally, triggering actor on GitHub Actions."""
 
 
 # --------------------------------------------------------------------------- execution

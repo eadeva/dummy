@@ -1,8 +1,6 @@
-# Conventional entry point for maintainer identities; stays at config root.
-maintainers: []
-# Replace maintainers: [] with real identities before restricting jobs:
-# maintainers:
-#   - name: Project Maintainer
-#     email: maintainer@example.com  # Matches this repository's Git identity.
-#     user: maintainer              # Optional operating-system username.
-# Set audience: maintainer on a job to restrict it.
+# OS login IDs locally; triggering GitHub login IDs on Actions.
+# Add your local login here if it differs from your GitHub login.
+maintainers:
+  - eadeva
+# Configuration editors are maintainer-only by default.
+# Set audience: maintainer on jobs/workflows to restrict those too.

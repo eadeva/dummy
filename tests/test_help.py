@@ -23,8 +23,8 @@ class Host:
     def os_name(self):
         return "linux"
 
-    def user_identity(self, root=None):
-        return self._identity
+    def user_id(self):
+        return self._identity[1]
 
 
 def demo_project():
@@ -33,14 +33,16 @@ def demo_project():
     )
 
 
-def test_role_from_maintainers_file_and_override():
+def test_role_from_login_ids_and_only_downward_override():
     project = demo_project()
-    emails = [m.email for m in project.maintainers.maintainers if m.email]
-    assert resolve_role(project, Host(email=emails[0].upper())) == "maintainer"
+    users = project.maintainers.maintainers
+    assert resolve_role(project, Host(user=users[0].upper())) == "maintainer"
     assert (
         resolve_role(project, Host(email="someone@else.org", user="nobody")) == "user"
     )
-    assert resolve_role(project, Host({"PTK_ROLE": "maintainer"})) == "maintainer"
+    assert resolve_role(project, Host({"PTK_ROLE": "maintainer"})) == "user"
+    assert resolve_role(project, Host({"PTK_ROLE": "user"}, user=users[0])) == "user"
+    assert resolve_role(project, Host(email=users[0])) == "user"
     assert resolve_role(None, Host()) == "user"
 
 

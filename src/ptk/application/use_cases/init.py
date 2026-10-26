@@ -8,7 +8,7 @@ from pathlib import Path
 import yaml
 
 from ...domain.errors import PtkError
-from ..ports import ProjectScaffold, WorkspaceMember
+from ..ports import HostEnvironment, ProjectScaffold, WorkspaceMember
 
 IGNORE = """# ptk generated workspace and local overrides
 .ptk/
@@ -36,8 +36,9 @@ def repository_alias(name: str) -> str:
 
 
 class InitProject:
-    def __init__(self, scaffold: ProjectScaffold):
+    def __init__(self, scaffold: ProjectScaffold, host: HostEnvironment | None = None):
         self._scaffold = scaffold
+        self._host = host
 
     def execute(
         self,
@@ -314,15 +315,18 @@ environment:
 #   build:
 #     env: {BUILD_MODE: ci}
 """,
-            "maintainers.ptk.yml": """# Conventional entry point for maintainer identities; stays at config root.
-maintainers: []
-# Replace maintainers: [] with real identities before restricting jobs:
-# maintainers:
-#   - name: Project Maintainer
-#     email: maintainer@example.com  # Matches this repository's Git identity.
-#     user: maintainer              # Optional operating-system username.
-# Set audience: maintainer on a job to restrict it.
-""",
+            "maintainers.ptk.yml": "# Maintainer login IDs: OS usernames locally, triggering GitHub actors on Actions.\n"
+            "# The creator is listed initially; add other maintainers as plain strings.\n"
+            "# Example: maintainers: [alice, bob]\n"
+            "# Configuration editors are maintainer-only by default.\n"
+            "# Set audience: maintainer on jobs/workflows to restrict them too.\n"
+            + dump(
+                {
+                    "maintainers": [user]
+                    if self._host and (user := self._host.user_id())
+                    else []
+                }
+            ),
         }
         files.update(
             {(folder / n).as_posix(): content for n, content in configs.items()}

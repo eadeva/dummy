@@ -39,8 +39,8 @@ class Host:
     def os_name(self):
         return "linux"
 
-    def user_identity(self, root=None):
-        return None, None
+    def user_id(self):
+        return None
 
 
 class FakePrompter:

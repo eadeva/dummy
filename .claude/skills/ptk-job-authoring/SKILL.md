@@ -32,3 +32,9 @@ For version discovery, read [docs/versioning.rst](../../../docs/versioning.rst).
 
 
 To combine existing jobs locally, use [workflow configuration](../../../docs/workflows.rst) and the `ptk-workflow-authoring` skill. Put `workflow.ptk.yml` in the configured folder; workspace-owned workflows belong at the VMR root. Workflows preserve each call's repository settings and never run wholesale on CX. GitHub job/template generation is deferred.
+
+Use `audience: maintainer` for configuration-writing or release jobs. Maintainer
+IDs are plain login strings in `maintainers.ptk.yml`, never Git-email records.
+Editor task generation now requires a maintainer; use `--users-only` for shared
+tasks and verify user visibility with `PTK_ROLE=user`. Role elevation via the
+environment is not supported.

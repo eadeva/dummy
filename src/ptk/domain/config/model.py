@@ -24,6 +24,7 @@ from pydantic import (
     ConfigDict,
     Field,
     StrictBool,
+    StrictStr,
     field_validator,
     model_validator,
 )
@@ -554,13 +555,20 @@ class PtkConfig(_Strict):
             "setup",
             "setup.config",
             "setup.configs",
+            "setup.configs.sync",
+            "setup.configs.check",
             "setup.creds",
             "setup.vscode",
+            "setup.vscode.tasks",
+            "setup.vscode.skills",
             "setup.install",
             "setup.self",
             "setup.doctor",
             "setup.init",
             "variant",
+            "variant.set",
+            "variant.new",
+            "variant.gui",
             "version",
             "report",
             "workflow",
@@ -613,17 +621,23 @@ class PtkConfig(_Strict):
 # --------------------------------------------------------------------------- maintainers.ptk.yml
 
 
-class Maintainer(_Strict):
-    name: str = ""
-    email: str | None = None
-    user: str | None = None
-
-    @model_validator(mode="after")
-    def _identity(self) -> Maintainer:
-        if not self.email and not self.user:
-            raise ValueError("a maintainer needs 'email' and/or 'user'")
-        return self
-
-
 class MaintainersSpec(_Strict):
-    maintainers: list[Maintainer] = Field(default_factory=list)
+    maintainers: list[StrictStr]
+
+    @field_validator("maintainers")
+    @classmethod
+    def _user_ids(cls, value: list[str]) -> list[str]:
+        seen = set()
+        for user in value:
+            if (
+                not user.strip()
+                or user != user.strip()
+                or any(ord(c) < 32 for c in user)
+            ):
+                raise ValueError(
+                    "maintainer IDs must be non-empty login names without surrounding whitespace or control characters"
+                )
+            if user.casefold() in seen:
+                raise ValueError(f"duplicate maintainer ID {user!r}")
+            seen.add(user.casefold())
+        return value

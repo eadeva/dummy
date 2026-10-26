@@ -221,11 +221,14 @@ def test_vmr_member_uses_own_alias_and_version(tmp_path, monkeypatch):
 
 
 def test_destination_command_and_job_audience_are_enforced(tmp_path):
+    from tests.conftest import grant_maintainer
+
     root = make_project(
         tmp_path, extra={"command_audience": {"artifacts": "maintainer"}}
     )
     assert "maintainer-only" in invoke(root).output
-    assert invoke(root, env={"PTK_ROLE": "maintainer"}).exit_code == 0
+    grant_maintainer(root)
+    assert invoke(root, env={"PTK_ROLE": ""}).exit_code == 0
 
 
 def test_published_example_is_packaged_and_resolves_without_github(tmp_path):

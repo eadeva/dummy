@@ -12,6 +12,7 @@ from ptk.application.use_cases.authoring import SetupAuthoring
 from ptk.authoring_bundle import SKILLS, source_files
 from ptk.domain.errors import PtkError
 from ptk.drivers.cli.main import cli
+from tests.conftest import grant_maintainer
 
 from .test_workspace import repository, workspace
 
@@ -20,6 +21,7 @@ def test_vscode_setup_installs_tasks_skills_and_working_offline_links(
     tmp_path, monkeypatch
 ):
     repository(tmp_path, "consumer")
+    grant_maintainer(tmp_path)
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
     assert runner.invoke(cli, ["setup", "vscode", "skills", "--check"]).exit_code == 1
@@ -92,6 +94,7 @@ def test_resource_updates_remove_only_unmodified_managed_files(tmp_path):
 
 def test_unowned_conflict_preflights_before_any_file_is_written(tmp_path, monkeypatch):
     repository(tmp_path, "consumer")
+    grant_maintainer(tmp_path)
     conflict = tmp_path / ".github/skills/ptk-vmr/SKILL.md"
     conflict.parent.mkdir(parents=True)
     conflict.write_text("custom VMR skill")
@@ -120,6 +123,7 @@ def test_manifest_paths_and_symlinks_cannot_escape_project(tmp_path):
 
 def test_vmr_editor_setup_uses_selected_repository(tmp_path, monkeypatch):
     a, b = workspace(tmp_path)
+    grant_maintainer(a.parent)
     monkeypatch.chdir(tmp_path)
     result = CliRunner().invoke(cli, ["firmware", "setup", "vscode"])
     assert result.exit_code == 0, result.output

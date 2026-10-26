@@ -11,6 +11,7 @@ from ptk.adapters.workspace import repositories, workspace_root
 from ptk.bootstrap import create_app
 from ptk.domain.errors import PtkError
 from ptk.drivers.cli.main import cli
+from tests.conftest import grant_maintainer
 
 
 def repository(root, alias, *, config_path="config"):
@@ -72,7 +73,7 @@ def test_config_base_execution_root_and_overlays(tmp_path, monkeypatch):
     )
     (config / "cx.ptk.yml").write_text("vars: {value: cx}")
     (config / "local.ptk.yml").write_text("vars: {value: local}")
-    (config / "maintainers.ptk.yml").write_text("maintainers: [{email: a@b.c}]")
+    (config / "maintainers.ptk.yml").write_text("maintainers: [alice]")
     (tmp_path / "local.ptk.yml").write_text("vars: {value: wrong}")
     p = create_app(environ={}).load_project.execute(config, ci=True)
     assert p.root == tmp_path and p.config_root == config
@@ -135,6 +136,7 @@ def test_vmr_cli_isolates_repositories_and_preserves_commands(tmp_path, monkeypa
 
 def test_vmr_permissions_are_per_repository(tmp_path, monkeypatch):
     a, _b = workspace(tmp_path)
+    grant_maintainer(a.parent)
     data = yaml.safe_load(a.read_text())
     data["command_audience"] = {"setup.config": "maintainer"}
     a.write_text(yaml.safe_dump(data))
@@ -237,6 +239,7 @@ def test_vmr_help_tasks_and_variant_edits(tmp_path, monkeypatch):
     import json
 
     a, _b = workspace(tmp_path)
+    grant_maintainer(a.parent)
     data = yaml.safe_load(a.read_text())
     data["variants"] = {"variants": {"debug": {}, "release": {}}}
     a.write_text(yaml.safe_dump(data))

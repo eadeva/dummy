@@ -14,3 +14,8 @@ description: Create, inspect or troubleshoot local PTK workflows in workflow.ptk
 7. Run `ptk workflow run NAME` when executing the requested jobs is authorized. Check exit status, workflow summary and child reports. Workflow `open_report` defaults to `always`; use `on-errors` for failures (including tolerated failures and imported report errors) or `null` to disable opening. CX and dry runs never open it. Child jobs keep their own policies. Read [reporting configuration](../../../docs/configuration.rst) when imported results or job report opening need adjustment.
 8. Workflow names are also direct commands (`ptk NAME`), listed in help. Local job/workflow collisions prompt; CX chooses the job. Scripts must use the explicit `run` or `workflow run` form. A workflow summary selected for opening suppresses child openings; otherwise child policies apply after completion.
 9. Run `ptk setup vscode tasks` and its `--check` mode. For a VMR, generate root workflow tasks and member job/workflow tasks where needed. Preserve user tasks. Use [the complete example](../../../examples/workflows/workflow.ptk.yml) and [its repository workflow](../../../examples/workflows/app/config/workflow.ptk.yml) as tested syntax, not as assumed repository names or jobs. See [editor integration](../../../docs/editor.rst) for interactive terminal browser links and the external-browser setting.
+
+A workspace-owned `audience: maintainer` workflow uses `maintainers.ptk.yml` at
+the VMR root. Member jobs retain their own role checks. Lists contain login IDs;
+`PTK_ROLE=maintainer` does not grant access. Editor task generation is maintainer-only;
+use `--users-only` for shared tasks. See [configuration](../../../docs/configuration.rst).

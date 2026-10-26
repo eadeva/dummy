@@ -25,3 +25,8 @@ description: Add or change ptk components, features, inherited variants, aliases
 9. Use `ptk variant set/new --dry-run` before updating local overlays; `variant gui` exports a validated standalone copy. Run matrices with `--all-variants` or `-V a,b`.
 
 10. Use `variant.generate` for bundled formats or enabled generator plugins. See [docs/plugins.rst](../../../docs/plugins.rst) for names, outputs and format restrictions.
+
+Persistent `variant new`, `variant set` and `variant gui` commands require a listed
+maintainer, including preview flags. Normal developers use `-V NAME` or temporary
+feature overrides on jobs. Maintain login IDs as strings in `maintainers.ptk.yml`;
+see [configuration](../../../docs/configuration.rst).

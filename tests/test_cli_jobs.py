@@ -13,6 +13,7 @@ from rich.text import Text
 from ptk.adapters.vscode_file import strip_jsonc
 from ptk.domain import vscode
 from ptk.drivers.cli.main import cli
+from tests.conftest import grant_maintainer
 
 HOST = {
     "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
@@ -43,9 +44,10 @@ jobs:
 @pytest.fixture
 def invoke(write):
     root = write({".main.ptk.yml": PROJECT})
+    grant_maintainer(root)
 
     def _invoke(*args: str, role: str = "user"):
-        env = {**HOST, "PTK_ROLE": role}
+        env = {**HOST, "PTK_ROLE": "user" if role == "user" else ""}
         base = ["--config", str(root / ".main.ptk.yml"), "--no-ci"]
         return CliRunner(env=env).invoke(cli, [*base, *args], catch_exceptions=False)
 
@@ -114,6 +116,7 @@ def test_maintainer_jobs_hidden_and_refused_for_users(invoke):
     refused = invoke("publish")
     assert refused.exit_code == 2 and "maintainer-only" in refused.output
     assert "maintainer-only" in invoke("run", "publish").output
+    assert "maintainer-only" in invoke("publish", "--help").output
     allowed = invoke("dry-run", "publish", role="maintainer")
     assert allowed.exit_code == 0 and "uploading" in allowed.output
 
@@ -163,8 +166,10 @@ def test_vscode_tasks_command(invoke):
     tasks_file.write_text(
         '{\n  // mine\n  "version": "2.0.0",\n  "tasks": [{"label": "lint"},],\n}\n'
     )
-    assert invoke("vscode", "tasks", "--check").exit_code == 1
-    result = invoke("vscode", "tasks", "--command", "uv run ptk")
+    assert invoke("vscode", "tasks", "--check", role="maintainer").exit_code == 1
+    result = invoke(
+        "vscode", "tasks", "--command", "uv run ptk", "--users-only", role="maintainer"
+    )
     assert (
         result.exit_code == 0
         and "comments in the file could not be kept" in result.output
@@ -173,7 +178,16 @@ def test_vscode_tasks_command(invoke):
     assert [t["label"] for t in data["tasks"]] == ["lint", "ptk: build"]
     assert data["tasks"][1]["command"] == "uv run ptk"
     assert (
-        invoke("vscode", "tasks", "--check", "--command", "uv run ptk").exit_code == 0
+        invoke(
+            "vscode",
+            "tasks",
+            "--check",
+            "--command",
+            "uv run ptk",
+            "--users-only",
+            role="maintainer",
+        ).exit_code
+        == 0
     )
     # maintainers get their jobs too, unless --users-only
     invoke("vscode", "tasks", role="maintainer")

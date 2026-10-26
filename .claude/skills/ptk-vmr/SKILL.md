@@ -20,3 +20,10 @@ For version discovery, read [docs/versioning.rst](../../../docs/versioning.rst).
 
 
 To combine existing jobs locally, use [workflow configuration](../../../docs/workflows.rst) and the `ptk-workflow-authoring` skill. Put `workflow.ptk.yml` in the configured folder; workspace-owned workflows belong at the VMR root. Workflows preserve each call's repository settings and never run wholesale on CX. GitHub job/template generation is deferred.
+
+Maintainer lists are independent: each repository's configured folder contains
+its own `maintainers.ptk.yml`; the VMR root may have a separate list for workspace
+editor setup and restricted workspace workflows. Lists contain login strings.
+Root membership does not grant member permissions. Combined editor setup checks
+all target permissions before writing; use a repository-qualified command for a
+single permitted target. See [configuration](../../../docs/configuration.rst).
