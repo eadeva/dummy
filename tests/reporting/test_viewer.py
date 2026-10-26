@@ -30,6 +30,21 @@ def request(url, **kwargs):
     return build_opener(ProxyHandler({})).open(Request(url, **kwargs), timeout=3)
 
 
+def test_token_starting_with_hyphen_is_not_parsed_as_an_option(
+    tmp_path, viewer, monkeypatch
+):
+    monkeypatch.setattr(
+        "ptk.adapters.reporting.viewer.secrets.token_urlsafe",
+        lambda size: "-leading-hyphen",
+    )
+    path = tmp_path / "report.html"
+    path.write_text("<html>ok</html>", encoding="utf-8")
+    url = viewer(path)
+    assert "/-leading-hyphen/" in url
+    with request(url) as response:
+        assert response.read() == b"<html>ok</html>"
+
+
 def test_links_serve_html_children_and_logs_but_not_source(tmp_path, viewer):
     root = tmp_path / "reports with spaces"
     child = root / "children"
