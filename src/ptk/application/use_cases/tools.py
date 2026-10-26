@@ -162,7 +162,9 @@ class ToolService:
                 lines.append,
             )
             output = "\n".join(lines) if outcome.exit_code == 0 else None
-            result.append(check_version(name, spec, output))
+            path = next((v for k, v in env.items() if k.upper() == "PATH"), "")
+            source = self._runner.which(argv[0], path=path) or ""
+            result.append(replace(check_version(name, spec, output), source=source))
         return result
 
     def problems(self, project: Project, action: str) -> list[ToolStatus]:

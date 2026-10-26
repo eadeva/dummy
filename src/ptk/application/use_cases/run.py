@@ -106,12 +106,14 @@ class PrepareRun:
         clock: Callable[[], datetime] = datetime.now,
         tools: ToolService | None = None,
         versions=None,
+        ptk_version: str = "",
     ):
         self._host = host
         self._secrets = secrets
         self._clock = clock
         self._tools = tools
         self._versions = versions
+        self._ptk_version = ptk_version
 
     def execute(self, project: Project, request: RunRequest) -> PreparedRun:
         config = project.config
@@ -137,6 +139,7 @@ class PrepareRun:
         os_name = self._host.os_name()
 
         variants = VariantService(project)
+        resolved = None
         variant_name: str | None = None
         vh_ns: dict[str, Any] = {}
         vh_env: dict[str, str] = {}
@@ -331,19 +334,17 @@ class PrepareRun:
         except SubstitutionError as exc:
             raise PtkError(f"action '{request.action}': {exc}") from None
 
+        tool_statuses = []
         if (
             self._tools is not None
             and action.required_tool_names
             and not request.dry_run
             and not any(s.uses == "tools.ensure" for s in action.walk_steps())
         ):
-            problems = [
-                status
-                for status in self._tools.status(
-                    project, action.required_tool_names, env=base
-                )
-                if not status.ok
-            ]
+            tool_statuses = self._tools.status(
+                project, action.required_tool_names, env=base
+            )
+            problems = [status for status in tool_statuses if not status.ok]
             if problems:
                 lines = "\n".join(f"  - {s.name}: {s.problem}" for s in problems)
                 raise PtkError(
@@ -380,6 +381,26 @@ class PrepareRun:
             steps=steps,
             base_env=base,
             dirs=dirs,
+            report_context={
+                "ptk_version": self._ptk_version,
+                "repository_alias": config.repository.alias
+                if config.repository
+                else config.project.name,
+                "versions": version_snapshot,
+                "variant": (
+                    {
+                        "name": resolved.name,
+                        "description": resolved.description,
+                        "chain": resolved.chain,
+                        "components": resolved.components,
+                        "features": resolved.values,
+                    }
+                    if resolved
+                    else {}
+                ),
+                "tools": [dataclasses.asdict(s) for s in tool_statuses],
+                "required_tools": list(action.required_tool_names),
+            },
         )
         # resolve every secret the selected steps need now: a missing credential
         # stops the run before anything starts, and prompts never happen in the
@@ -530,6 +551,7 @@ class RunAction:
         if reports.is_dir():
             shutil.rmtree(reports)
         reports.mkdir(parents=True, exist_ok=True)
+        plan.report_context = self._mask_context(plan.report_context)
         self._emit("run_started", plan)
         results = self._run_sequence(plan.steps)
         status = _combine(results)
@@ -729,7 +751,13 @@ class RunAction:
                         )
                 command = self._command(prepared, step, runtime)
                 if self._environment_check:
-                    self._environment_check(plan.action, command.env, command.cwd)
+                    observed = self._environment_check(
+                        plan.action, command.env, command.cwd
+                    )
+                    for status in observed or []:
+                        record = self._mask_context(dataclasses.asdict(status))
+                        if record not in plan.report_context.setdefault("tools", []):
+                            plan.report_context["tools"].append(record)
                 result.command = prepared.mask(command.display())
                 self._emit("step_started", step, result.command)
                 self._describe_command(step, command, runtime)
@@ -885,6 +913,17 @@ class RunAction:
 
     def _log(self, level: Level, text: str, step: PlannedStep | None = None) -> None:
         self._emit("message", level, self._prepared.mask(text), step)
+
+    def _mask_context(self, value):
+        if isinstance(value, str):
+            return self._prepared.mask(value)
+        if isinstance(value, dict):
+            return {
+                self._mask_context(k): self._mask_context(v) for k, v in value.items()
+            }
+        if isinstance(value, list):
+            return [self._mask_context(v) for v in value]
+        return value
 
     def _emit(self, event: str, *args: Any) -> None:
         for observer in self._observers:

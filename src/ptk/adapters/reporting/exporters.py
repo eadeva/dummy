@@ -6,7 +6,14 @@ import json
 import xml.etree.ElementTree as ET
 from dataclasses import asdict
 
-from ...domain.reporting.model import ERROR, FAILED, PASSED, SKIPPED, Report
+from ...domain.reporting.model import (
+    ERROR,
+    FAILED,
+    PASSED,
+    SKIPPED,
+    Report,
+    test_metrics,
+)
 
 ICON = {PASSED: "✅", FAILED: "❌", SKIPPED: "⏭️", "cancelled": "⏹️", ERROR: "💥"}
 
@@ -15,6 +22,7 @@ def to_json(report: Report) -> str:
     data = asdict(report)
     data["totals"] = {
         "tests": dict(report.test_totals()),
+        "test_cases": test_metrics(c for suite in report.suites for c in suite.cases),
         "findings": dict(report.finding_totals()),
     }
     return json.dumps(data, indent=2, default=str) + "\n"
@@ -30,6 +38,14 @@ def to_junit(report: Report) -> str:
         timestamp=report.started_at,
         time=f"{report.duration:.3f}",
     )
+    properties = ET.SubElement(suite, "properties")
+    for name, value in report.context.items():
+        ET.SubElement(
+            properties,
+            "property",
+            name=name,
+            value=json.dumps(value, ensure_ascii=False),
+        )
     counts = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}
     for step in report.steps:
         if step.kind == "set":
@@ -103,6 +119,32 @@ def to_markdown(report: Report) -> str:
         ),
         "",
     ]
+    context = report.context
+    alias = context.get("repository_alias", report.project)
+    version = (
+        context.get("versions", {})
+        .get("projects", {})
+        .get(alias, {})
+        .get("value", "Not recorded")
+    )
+    lines += [
+        f"**PTK version:** {_cell(context.get('ptk_version') or 'Not recorded')} · **Project version:** {_cell(version)}",
+        "",
+    ]
+    if context.get("variant"):
+        lines += [
+            "**Variant details:** `"
+            + _cell(json.dumps(context["variant"], ensure_ascii=False))
+            + "`",
+            "",
+        ]
+    if context.get("tools"):
+        lines += ["| Tool | Version | Source (executable) |", "|---|---|---|"]
+        lines += [
+            f"| {_cell(t['name'])} | {_cell(t.get('version') or 'Not detected')} | {_cell(t.get('source') or 'Not recorded')} |"
+            for t in context["tools"]
+        ]
+        lines.append("")
     if report.params:
         lines += ["| Parameter | Value | From |", "|---|---|---|"]
         for name, value in report.params.items():
@@ -123,6 +165,13 @@ def to_markdown(report: Report) -> str:
     lines.append("")
     totals = report.test_totals()
     if totals:
+        metrics = test_metrics(c for suite in report.suites for c in suite.cases)
+        lines += [
+            " | ".join(f"**{k}:** {v}" for k, v in metrics.items()),
+            "",
+            "Executed excludes skipped; failed includes errors.",
+            "",
+        ]
         parts = [
             f"{totals[s]} {s}" for s in (PASSED, FAILED, ERROR, SKIPPED) if totals[s]
         ]

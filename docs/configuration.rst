@@ -151,6 +151,32 @@ are imported into configured JSON, HTML, JUnit, Markdown or GitHub reports.
 ``report export`` regenerates reports from stored runs. Use log files and
 ``events.jsonl`` when diagnosing failed or skipped steps.
 
+Report summaries
+----------------
+
+HTML reports start with the recorded PTK/project versions, repository alias,
+selected variant description, inheritance, active components and feature values.
+Declared tool dependencies show detected versions and their resolved check
+executable paths in the command environment. Unknown versions/sources are labeled
+explicitly; configured download URLs are not presented as proven installation
+sources. This is a snapshot of declared tools, not a transitive Python package inventory.
+Multiple tool versions/sources observed during a run are retained.
+
+This context is saved with the run, so exporting an older report does not replace
+its versions or variant settings with the current configuration. Older runs without
+this data show "Not recorded". JSON, Markdown/GitHub summaries and JUnit properties
+also carry recorded context.
+
+The Tests section and each test suite have summary cards for executed, passed,
+skipped and failed cases. Executed excludes skipped cases; failed includes both
+assertion failures and test errors (for example, fixture/setup errors). Detailed
+case rows retain the distinction between failures and errors. Step counts remain
+separate from test-case counts.
+
+Every HTML table has a case-insensitive substring filter for each column. Filters
+combine across columns, operate locally/offline, and show the remaining row count.
+Clear a filter to restore rows. Filtering does not change recorded totals or cards.
+
 Maintainer visibility and current limits
 ----------------------------------------
 

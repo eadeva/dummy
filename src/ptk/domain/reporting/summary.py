@@ -32,6 +32,7 @@ def step_dict(result: StepResult) -> dict[str, Any]:
 def header(plan: ActionPlan) -> dict[str, Any]:
     return {
         "summary_version": SUMMARY_VERSION,
+        "context": plan.report_context,
         "run_id": plan.run_id,
         "project": plan.project,
         "action": plan.action,

@@ -34,6 +34,7 @@ class ToolStatus:
     found: bool
     version: str | None = None
     problem: str = ""
+    source: str = ""  # Resolved check executable in the selected command environment.
 
     @property
     def ok(self) -> bool:

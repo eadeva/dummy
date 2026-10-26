@@ -216,6 +216,7 @@ class App:
             self.credentials(project),
             tools=self.tools,
             versions=self.versions(),
+            ptk_version=__version__,
         )
 
     def run_action(self, project: Project) -> RunAction:
@@ -267,16 +268,15 @@ class App:
 
         def verify_tools(action, env, cwd):
             names = project.config.actions[action].required_tool_names
-            problems = [
-                s
-                for s in self.tools.status(project, names, env=env, cwd=cwd)
-                if not s.ok
-            ]
+            statuses = self.tools.status(project, names, env=env, cwd=cwd)
+            problems = [s for s in statuses if not s.ok]
             if problems:
                 raise PtkError(
                     "tool requirements are not satisfied in the command environment: "
                     + "; ".join(f"{s.name}: {s.problem}" for s in problems)
                 )
+
+            return statuses
 
         return RunAction(
             self.host,

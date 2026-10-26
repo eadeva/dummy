@@ -93,6 +93,8 @@ class ActionPlan:
     ]  # host/isolated env + config env + generated PTK_/VH_ vars + action env
     dirs: dict[str, str]  # bin_dir, log_dir, reports_dir (action level)
 
+    report_context: dict[str, Any] = field(default_factory=dict)
+
     def walk(self):
         for step in self.steps:
             yield from step.walk()

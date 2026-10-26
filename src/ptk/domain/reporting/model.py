@@ -103,6 +103,7 @@ class Report:
     coverage: list[Coverage] = field(default_factory=list)
     problems: list[str] = field(default_factory=list)
     ptk_version: str = ""
+    context: dict[str, Any] = field(default_factory=dict)
 
     @property
     def ok(self) -> bool:
@@ -156,7 +157,8 @@ def from_summary(
         params=dict(summary.get("params", {})),
         param_sources=dict(summary.get("param_sources", {})),
         steps=steps,
-        ptk_version=ptk_version,
+        ptk_version=summary.get("context", {}).get("ptk_version") or ptk_version,
+        context=summary.get("context", {}),
     )
     for contribution in contributions:
         report.suites += contribution.suites
@@ -164,3 +166,13 @@ def from_summary(
         report.coverage += contribution.coverage
         report.problems += contribution.problems
     return report
+
+
+def test_metrics(cases) -> dict[str, int]:
+    counts = Counter(case.status for case in cases)
+    return {
+        "Executed": sum(counts.values()) - counts[SKIPPED],
+        "Passed": counts[PASSED],
+        "Skipped": counts[SKIPPED],
+        "Failed": counts[FAILED] + counts[ERROR],
+    }
