@@ -1,0 +1,15 @@
+---
+name: ptk-workflow-authoring
+description: Create, inspect or troubleshoot local PTK workflows in workflow.ptk.yml, including sequential and parallel action groups, cross-repository VMR calls, failure handling, reports and VS Code tasks. Use for combining existing actions into a local pipeline; GitHub template generation is not implemented yet.
+---
+
+# PTK local workflow authoring
+
+1. Read [workflows](../../../docs/workflows.rst) and the target repositories' `.main.ptk.yml` files. Locate `repository.config_path`; use `ptk repos` from a VMR root to verify aliases. Read existing action definitions before composing them. Workflows run locally, not on CX/CI; do not generate or claim support for GitHub templates.
+2. Put a `workflows` mapping in `workflow.ptk.yml` directly under the owner's configuration folder. It loads automatically. For workspace-owned workflows use `workflow.ptk.yml` at the VMR root and specify `repo` on every leaf. Keep repository-owned names separate; do not merge equal names from different repositories.
+3. Build an ordered list of named `steps`. Use `{action: build}` for a local action or `{repo: backend, action: test, variant: debug, params: {suite: smoke}}` for a VMR action. Confirm each parameter and variant exists in that target. Omit variant to use its repository's normal selection. Never place secret values in workflow params.
+4. Use a group with `parallel: true` and nested `steps` for independent actions. Default to sequence for shared outputs, hardware or services. Parallel branches cannot call the same repository/action/variant or share a `python.project` environment. `max_workers` bounds active action calls across groups. Keep tool paths, credentials and environment configuration in each action's repository.
+5. Retain the default stop-on-failure behavior unless continuation is intended. `continue_on_error` tolerates the selected call/group but leaves its failure visible in reports. Cancellation is never tolerated. Put step retries, timeouts and cleanup in the action, not in invented workflow fields.
+6. Run `ptk setup config validate`, `ptk workflow show NAME` and `ptk workflow dry-run NAME`. At a VMR root select member workflows as `ALIAS/NAME`; under `ptk ALIAS workflow`, use `NAME`. Preflight validates every call; resolve missing prerequisites in the target repository before execution. Use an action's `dry-run` for command-level details.
+7. Run `ptk workflow run NAME` when executing the requested actions is authorized. Check exit status, workflow summary and child reports. Read [reporting configuration](../../../docs/configuration.rst) when imported results or automatic report opening need adjustment.
+8. Run `ptk setup vscode tasks` and its `--check` mode. For a VMR, generate root workflow tasks and member action/workflow tasks where needed. Preserve user tasks. Use [the complete example](../../../examples/workflows/workflow.ptk.yml) and [its repository workflow](../../../examples/workflows/app/config/workflow.ptk.yml) as tested syntax, not as assumed repository names or actions.

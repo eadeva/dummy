@@ -32,6 +32,8 @@ install tools or change configuration. Project actions remain top-level commands
      - Inspect the product line
    * - ``ptk report open|export``
      - View and regenerate reports
+   * - ``ptk workflow list|show|dry-run|run``
+     - Inspect or execute local action workflows (execution is disabled on CX)
    * - ``ptk ACTION`` / ``ptk run ACTION``
      - Execute project actions
    * - ``ptk dry-run ACTION``

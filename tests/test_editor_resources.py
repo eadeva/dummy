@@ -127,7 +127,7 @@ def test_vmr_editor_setup_uses_selected_repository(tmp_path, monkeypatch):
 def test_bundle_ignores_local_config_and_generated_examples(tmp_path):
     root = Path(__file__).resolve().parents[1]
     assets = source_files(root)
-    assert len([name for name in assets if name.startswith("skills/")]) == 11
+    assert len([name for name in assets if name.startswith("skills/")]) == len(SKILLS)
     assert all(
         "local.ptk.yml" not in name and ".gen.version.ptk.yml" not in name
         for name in assets

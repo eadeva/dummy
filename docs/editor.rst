@@ -7,7 +7,7 @@ Use ``ptk setup vscode tasks`` for tasks only, or ``ptk setup vscode skills`` fo
 skills and their reference files. ``ptk setup vscode skills --check`` checks drift
 without writing (exit code 1 when an update is needed).
 
-Eleven project skills are installed under ``.github/skills/ptk-*/SKILL.md``.
+Fourteen project skills are installed under ``.github/skills/ptk-*/SKILL.md``.
 Version-matched documentation, examples and the generated configuration schema
 live under ``.github/ptk``. Skill links are relative to their own SKILL.md files;
 the consuming repository needs neither PTK's source tree nor network access.
@@ -26,3 +26,13 @@ Custom skills and other GitHub files are preserved. Locally modified or conflict
 files cause an error before writing; reconcile them explicitly and rerun setup.
 Checks and writes refuse symlinked managed paths. Commit the generated skills,
 reference files and manifest together if the team should share them.
+
+Local workflows
+---------------
+
+Workflow tasks call ``ptk workflow run NAME`` on the local machine; they do not
+invoke GitHub Actions. Repository task files include actions and local workflows.
+At a VMR root, ``ptk setup vscode tasks`` includes workspace-owned workflows and
+qualified member workflows. ``ptk setup vscode`` also installs each member's
+skills/tasks. VMR tasks run from the workspace root. See :doc:`workflows` for
+parallelism, repository selection and CX restrictions.

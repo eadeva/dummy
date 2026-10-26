@@ -26,3 +26,10 @@ description: Add ptk report formats, import tool results or troubleshoot report 
 10. Never include secrets in imported results; masking engine logs does not sanitize arbitrary third-party files.
 
 Historical input snapshots travel with run summaries. Reproduce with two runs producing different input files; historical export must not import the newer results.
+
+
+Read [report summaries](../../../docs/configuration.rst) for recorded project/PTK versions, variant details and declared tool sources. Test cards count executed (excluding skipped), passed, skipped and failed (including errors); green/red/gray convey status and text retains the meaning. Per-column filters combine without changing recorded totals. `needs.json` is not a supported importer.
+
+Set an action's `open_report` to `always` or `on_errors` only when automatic local opening is wanted; omission disables it and CX/dry-run suppress it. Errors include failed steps/tests, error findings and report import problems. Browser availability must not alter the run's exit status.
+
+For local orchestration, inspect the workflow summary and immutable child reports under the workflow run directory. Read [workflows](../../../docs/workflows.rst); do not merge test cases from unrelated repositories without preserving their context.

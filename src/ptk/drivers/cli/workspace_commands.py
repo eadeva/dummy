@@ -8,7 +8,7 @@ from ...application.use_cases.run import layout_of
 from ...bootstrap import create_app
 from .state import CliState, guarded, state_of
 
-RESERVED = {"setup", "variant", "report", "help", "repos"}
+RESERVED = {"setup", "variant", "report", "help", "repos", "workflow"}
 
 
 def invoke_repository(root, alias, args):
@@ -117,6 +117,9 @@ def build_commands(root, entries):
         )
     config.add_command(originals["setup"].commands["config"].commands["schema"])
     setup.add_command(config)
+    from .workflows import workspace_vscode_group
+
+    setup.add_command(workspace_vscode_group(root, entries))
 
     @setup.command("doctor")
     @guarded
@@ -258,6 +261,16 @@ def build_commands(root, entries):
     def workspace_help():
         click.echo(root.get_help())
 
+    from .workflows import workflow_group
+
     return {
-        c.name: c for c in (setup, variant, report, list_repositories, workspace_help)
+        c.name: c
+        for c in (
+            setup,
+            variant,
+            report,
+            list_repositories,
+            workspace_help,
+            workflow_group,
+        )
     }

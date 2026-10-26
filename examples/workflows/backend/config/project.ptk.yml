@@ -1,0 +1,13 @@
+project: {name: backend}
+environment: {set: {PROJECT_IDENTITY: backend}}
+variants:
+  default: debug
+  variants:
+    debug: {}
+    release: {}
+actions:
+  test:
+    params:
+      suite: {type: choice, default: unit, choices: [unit, smoke]}
+    steps:
+      - tests: {uses: echo, with: {message: "Testing ${env.PROJECT_IDENTITY}: ${params.suite} (${vh.variant})"}}

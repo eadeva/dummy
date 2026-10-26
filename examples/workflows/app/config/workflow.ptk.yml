@@ -1,0 +1,16 @@
+# Automatically loaded from repository.config_path, beside project.ptk.yml.
+workflows:
+  verify:
+    help: Build the frontend, then run independent checks locally
+    max_workers: 2
+    steps:
+      - build: {action: build, variant: debug}
+      - checks:
+          parallel: true
+          steps:
+            - unit: {action: test, variant: debug}
+            - backend:
+                repo: backend
+                action: test
+                variant: release
+                params: {suite: smoke}

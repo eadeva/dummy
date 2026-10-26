@@ -84,6 +84,21 @@ class InitProject:
             ".gitignore": IGNORE,
         }
         configs = {
+            "workflow.ptk.yml": "# Local orchestration; run `ptk workflow run verify`. Not executed on CX.\n"
+            "# Nest steps under parallel: true for independent action calls.\n"
+            + dump(
+                {
+                    "workflows": {
+                        "verify": {
+                            "help": "Run the starter actions locally",
+                            "steps": [
+                                {"hello": {"action": "hello"}},
+                                {"build": {"action": "build"}},
+                            ],
+                        }
+                    }
+                }
+            ),
             "project.ptk.yml": "# Composition root: includes are relative to this file.\n"
             "# Add actions as separate files under actions/; the glob loads them.\n"
             + dump(
@@ -141,6 +156,7 @@ class InitProject:
             )
             + "# Action options (place alongside help/params/steps):\n"
             "#     audience: maintainer  # Restrict this action to listed maintainers.\n"
+            "#     open_report: on_errors  # always | on_errors; disabled on CX.\n"
             "#     env: {GREETING_STYLE: friendly}  # Applies only to this action.\n",
             "actions/build.ptk.yml": "# Second action: a portable build starter; no compiler installation needed.\n"
             "# Run `ptk build -V release`; replace/extend these steps for your build.\n"

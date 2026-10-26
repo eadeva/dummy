@@ -35,6 +35,7 @@ class VSCodeTasks:
         users_only: bool = False,
         check: bool = False,
         path: Path | None = None,
+        cwd: Path | None = None,
     ) -> TasksResult:
         config = project.config
         audience: Role = "user" if users_only else role
@@ -56,7 +57,36 @@ class VSCodeTasks:
         tasks, inputs = vscode.build_tasks(
             actions, command=command, variants=variants, default_variant=default_variant
         )
-        file = self._open(path or project.root / ".vscode" / "tasks.json")
+        tasks.extend(
+            vscode.workflow_tasks(
+                [
+                    (name, spec.help)
+                    for name, spec in config.workflows.items()
+                    if visible(spec.audience, audience)
+                    and visible(
+                        config.command_audience.get("workflow", "all"), audience
+                    )
+                ],
+                command=command,
+            )
+        )
+        if cwd is not None:
+            for task in tasks:
+                task["options"] = {"cwd": str(cwd)}
+        return self._save(
+            tasks, inputs, path or project.root / ".vscode" / "tasks.json", check
+        )
+
+    def workflows(
+        self, workflows, *, root: Path, command="ptk", path=None, check=False
+    ):
+        tasks = vscode.workflow_tasks(workflows, command=command)
+        for task in tasks:
+            task["options"] = {"cwd": str(root)}
+        return self._save(tasks, [], path or root / ".vscode" / "tasks.json", check)
+
+    def _save(self, tasks, inputs, path, check):
+        file = self._open(path)
         current = file.read()
         merged = vscode.merge(current, tasks, inputs)
         up_to_date = current is not None and merged == current

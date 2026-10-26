@@ -1,0 +1,4 @@
+interface:
+  display_name: "PTK Version Discovery"
+  short_description: "Configure project and component version discovery"
+  default_prompt: "Use $ptk-versioning to configure Git-managed versions and generate a version header."

@@ -30,6 +30,7 @@ from pydantic import (
 
 from ..variants.model import ProductLineSpec
 from ..versioning import VersionDependency, VersioningSpec
+from ..workflows import WorkflowFile, WorkflowSpec
 
 ACTION_RE = re.compile(r"^[a-z][a-z0-9-]*$")
 PARAM_RE = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -37,6 +38,7 @@ STEP_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 
 RESERVED_ACTIONS = {
+    "workflow",
     "config",
     "variant",
     "creds",
@@ -515,6 +517,13 @@ class ReportingSpec(_Strict):
 
 
 class PtkConfig(_Strict):
+    workflows: dict[str, WorkflowSpec] = Field(default_factory=dict)
+
+    @field_validator("workflows")
+    @classmethod
+    def _workflow_names(cls, value):
+        return WorkflowFile._names(value)
+
     repository: RepositorySpec | None = None
     virtual_monorepo: StrictBool = Field(
         default=False,
@@ -551,6 +560,7 @@ class PtkConfig(_Strict):
             "variant",
             "version",
             "report",
+            "workflow",
         ],
         Literal["all", "maintainer"],
     ] = Field(default_factory=dict)

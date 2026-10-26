@@ -81,3 +81,22 @@ def merge(
     else:
         doc.pop("inputs", None)
     return doc
+
+
+def workflow_tasks(
+    workflows: list[tuple[str, str]], *, command: str
+) -> list[dict[str, Any]]:
+    return [
+        {
+            "label": TASK_PREFIX + "workflow " + name,
+            "type": "shell",
+            "command": command,
+            "args": ["workflow", "run", name],
+            "group": "build",
+            "problemMatcher": [],
+            "detail": help_text.splitlines()[0]
+            if help_text
+            else f"Run workflow {name}",
+        }
+        for name, help_text in workflows
+    ]

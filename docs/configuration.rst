@@ -20,7 +20,7 @@ keeps configuration alongside the entry file. Entry-file includes (including
 ``!include`` and ``variants:``) resolve from this directory. Includes inside
 fragments remain relative to the fragment itself.
 
-Automatic ``versioning.ptk.yml``, ``tools.ptk.yml``, ``<action>.tools.ptk.yml``, ``cx.ptk.yml``,
+Automatic ``workflow.ptk.yml``, ``versioning.ptk.yml``, ``tools.ptk.yml``, ``<action>.tools.ptk.yml``, ``cx.ptk.yml``,
 ``local.ptk.yml`` and ``maintainers.ptk.yml`` are discovered in that directory.
 The loader applies shared tool files, main/includes, CX when enabled, local,
 and finally CLI ``--set`` overrides. Repository metadata cannot be overridden.
@@ -454,3 +454,12 @@ These signals are best-effort, especially for Windows containers or unusual
 container runtimes. Set ``PTK_DOCKER=1`` explicitly in those images; use
 ``PTK_DOCKER=0`` to override automatic detection. Having Docker installed on the
 host does not count as running inside Docker.
+
+Local orchestration
+===================
+
+Use ``workflow.ptk.yml`` to compose existing actions into local sequential and
+parallel groups, including actions from configured VMR members. Workflows load
+from the repository configuration directory; VMR roots can also own a workflow
+file. See :doc:`workflows` for complete syntax, command examples, preflight,
+reports, VS Code tasks and the explicit local-only execution boundary.

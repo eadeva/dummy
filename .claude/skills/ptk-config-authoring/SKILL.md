@@ -32,3 +32,6 @@ A project's root `.main.ptk.yml` requires `repository: {alias: lowercase-name, c
 Start from [examples/authoring/.main.ptk.yml](../../../examples/authoring/.main.ptk.yml) and its fragments for a complete tested configuration. Read [docs/configuration.rst](../../../docs/configuration.rst) for default environment isolation and explicit inheritance.
 
 For version discovery, read [docs/versioning.rst](../../../docs/versioning.rst). Keep `.main.ptk.yml` minimal; use `ptk setup init --config-dir PATH` for starter fragments. Maintain `versioning.ptk.yml`, never commit `.gen.version.ptk.yml`. Use `PTK_VERSION_ALIAS_COMPONENT_NAME` and `${version.projects.alias.value}`; generators consume the run snapshot. Declare VMR version dependencies and their variants explicitly. Do not add bump/tag operations.
+
+
+To combine existing actions locally, use [workflow configuration](../../../docs/workflows.rst) and the `ptk-workflow-authoring` skill. Put `workflow.ptk.yml` in the configured folder; workspace-owned workflows belong at the VMR root. Workflows preserve each call's repository settings and never run wholesale on CX. GitHub job/template generation is deferred.

@@ -34,6 +34,7 @@ from .actions import (
 )
 from .state import console, err_console, guarded, state_of
 from .versioning import version_group
+from .workflows import workflow_group
 from .workspace import WorkspaceGroup
 from .workspace_commands import RESERVED as WORKSPACE_COMMANDS
 
@@ -116,6 +117,9 @@ def cli(
         highlight=False,
     )
     guarded(execute)(ctx, guarded(build_request)(ctx, None))
+
+
+cli.add_command(workflow_group)
 
 
 # --------------------------------------------------------------------------- config
@@ -936,10 +940,12 @@ def vscode_tasks(
     default build task (Ctrl+Shift+B).
     """
     state = _state(ctx)
+    task_cwd = None
     parent = ctx
     while parent is not None:
         if getattr(parent.command, "repository_boundary", False):
             command = f"{command} {parent.info_name}"
+            task_cwd = state.app.workspace.root(state.project().root)
             break
         parent = parent.parent
     result = state.app.vscode_tasks.execute(
@@ -949,6 +955,7 @@ def vscode_tasks(
         users_only=users_only,
         check=check,
         path=output,
+        cwd=task_cwd,
     )
     if check:
         if result.up_to_date:

@@ -1,0 +1,4 @@
+interface:
+  display_name: "PTK Package Preparation"
+  short_description: "Prepare and validate packages without publishing"
+  default_prompt: "Use $ptk-package-preparation to prepare Python release artifacts without uploading them."

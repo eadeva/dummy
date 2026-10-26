@@ -10,6 +10,7 @@ isolated command environments, logs and reports. Python 3.12 or newer is require
    quickstart
    cli
    configuration
+   workflows
    versioning
    m11
    plugins
@@ -20,3 +21,20 @@ isolated command environments, logs and reports. Python 3.12 or newer is require
    development
 
 The implementation roadmap is maintained separately in ``docs/PLAN.md``.
+
+Current capability guide
+------------------------
+
+* Configuration discovery, init, variants, action parameters, maintainers,
+  environment isolation, tool sources and report behavior: :doc:`configuration`.
+* Local action orchestration, VMR call ownership and VS Code workflow tasks:
+  :doc:`workflows`.
+* Project/component versions, VMR dependencies, environment variables and generated
+  build files: :doc:`versioning`.
+* Commands and credential/setup entry points: :doc:`cli`; built-ins and extension
+  contracts: :doc:`plugins`.
+* Background steps and variant GUI boundaries: :doc:`m11`.
+* Package preparation without publishing: :doc:`packaging`.
+* Offline authoring resources, protected updates and editor tasks: :doc:`editor`;
+  task-specific assistant instructions: :doc:`skills`.
+* Every supported configuration field and its default: :doc:`reference`.

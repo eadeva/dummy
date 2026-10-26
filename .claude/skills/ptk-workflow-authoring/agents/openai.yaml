@@ -1,0 +1,4 @@
+interface:
+  display_name: "PTK Local Workflows"
+  short_description: "Compose local workflows across PTK repositories"
+  default_prompt: "Use $ptk-workflow-authoring to create a local workflow from my existing PTK actions."

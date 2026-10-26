@@ -1,7 +1,7 @@
 Authoring skills
 ================
 
-Canonical assistant instructions live in ``.claude/skills``. Eleven project-facing
+Canonical assistant instructions live in ``.claude/skills``. Fourteen project-facing
 skills use links relative to their SKILL.md files and are bundled with the wheel.
 Two maintainer skills operate on PTK's own source checkout.
 
@@ -98,4 +98,22 @@ ptk-plugin-development
 ----------------------
 
 .. literalinclude:: ../.claude/skills/ptk-plugin-development/SKILL.md
+   :language: markdown
+
+ptk-workflow-authoring
+----------------------
+
+.. literalinclude:: ../.claude/skills/ptk-workflow-authoring/SKILL.md
+   :language: markdown
+
+ptk-versioning
+---------------
+
+.. literalinclude:: ../.claude/skills/ptk-versioning/SKILL.md
+   :language: markdown
+
+ptk-package-preparation
+-----------------------
+
+.. literalinclude:: ../.claude/skills/ptk-package-preparation/SKILL.md
    :language: markdown

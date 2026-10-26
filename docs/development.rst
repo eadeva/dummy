@@ -93,10 +93,10 @@ configuration, while generated member actions run through the real CLI.
 Documentation and skills
 ------------------------
 
-The configuration reference is generated from the validation models. Thirteen
+The configuration reference is generated from the validation models. Sixteen
 repository-local authoring skills are shipped under ``.claude/skills`` and
 included in the documentation. Tests check catalog completeness and source links.
-The wheel bundles eleven project-facing skills, reference docs and examples
+The wheel bundles fourteen project-facing skills, reference docs and examples
 through the allowlist in ``src/ptk/authoring_bundle.py``. Keep the canonical skill
 files in ``.claude/skills``; do not maintain another copy for installed users.
 Consumer skill instructions must not depend on PTK's ``src`` or ``tests`` folders.

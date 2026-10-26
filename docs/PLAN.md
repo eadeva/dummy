@@ -795,3 +795,24 @@ Former top-level commands remain hidden compatibility aliases.
 - Generated resource hashes protect local edits and unrelated GitHub files during
   upgrades. Maintainer skills for PTK development/docs stay in its source checkout.
 - CI prepares packages and tests the installed wheel on both Linux and Windows.
+
+
+## Local workflows and current authoring coverage
+
+Implemented local `workflow.ptk.yml` composition of existing actions, including
+VMR repository-qualified calls, nested sequential/parallel groups, bounded action
+concurrency, preflight, cancellation, per-action isolation and retained child reports.
+The CLI exposes `workflow list/show/dry-run/run`; execution is rejected on CX/CI.
+VS Code tasks include workflows, and regular setup init scaffolds a local starter.
+
+Current project-facing skills now include `ptk-workflow-authoring`, `ptk-versioning`
+and `ptk-package-preparation`; existing tools/reporting/action/VMR skills cover the
+new installers, default Docker install policy, report cards, filtering and opening.
+The offline authoring bundle contains fourteen project-facing skills; two additional
+skills remain checkout-only. See docs/workflows.rst and docs/skills.rst.
+
+Deferred explicitly: `ptk setup init --workflows` will generate GitHub templates.
+Action calls become jobs invoking a generic PTK run-action GitHub Action. Sequential
+and nested parallel structure determines job `needs`: each branch inherits incoming
+needs, and its terminal jobs join before subsequent steps. Template generation,
+checkout/artifact policy and the reusable GitHub Action are not implemented yet.

@@ -1,0 +1,8 @@
+# PTK's own checks share one uv project environment, so keep them sequential.
+workflows:
+  verify:
+    help: Check style, run tests and build the documentation
+    steps:
+      - style: {action: check}
+      - tests: {action: test}
+      - documentation: {action: docs}

@@ -171,7 +171,7 @@ class LoadProject:
         # Files already included explicitly retain that placement and are not applied twice.
         tree = t.from_plain({})
         layers = []
-        for filename in ("tools.ptk.yml", "versioning.ptk.yml"):
+        for filename in ("tools.ptk.yml", "versioning.ptk.yml", "workflow.ptk.yml"):
             conventional = config_root / filename
             if conventional not in self._source.files[
                 first_read:
@@ -368,6 +368,26 @@ class ExportSchema:
             )
             schema = json.loads(text)
             schema["$defs"].pop("StepSpec", None)
+        node = schema.get("$defs", {}).get("WorkflowNode")
+        if node:
+            body = json.loads(json.dumps(node))
+            body["properties"].pop("name", None)
+            body["required"] = [r for r in body.get("required", []) if r != "name"]
+            schema["$defs"]["WorkflowBody"] = body
+            schema["$defs"]["WorkflowEntry"] = {
+                "type": "object",
+                "minProperties": 1,
+                "maxProperties": 1,
+                "additionalProperties": {
+                    "anyOf": [{"$ref": "#/$defs/WorkflowBody"}, {"type": "string"}]
+                },
+            }
+            schema = json.loads(
+                json.dumps(schema).replace(
+                    '"#/$defs/WorkflowNode"', '"#/$defs/WorkflowEntry"'
+                )
+            )
+            schema["$defs"].pop("WorkflowNode", None)
         schema["properties"]["include"] = {
             "anyOf": [
                 {"type": "string"},

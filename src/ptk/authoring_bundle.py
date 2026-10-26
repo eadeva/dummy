@@ -17,6 +17,9 @@ SKILLS = (
     "ptk-troubleshooting",
     "ptk-variant-model",
     "ptk-vmr",
+    "ptk-workflow-authoring",
+    "ptk-versioning",
+    "ptk-package-preparation",
 )
 DOCS = (
     "cli",
@@ -27,8 +30,10 @@ DOCS = (
     "quickstart",
     "reference",
     "versioning",
+    "workflows",
+    "packaging",
 )
-EXAMPLES = ("authoring", "plugin", "quickstart")
+EXAMPLES = ("authoring", "plugin", "quickstart", "workflows")
 
 
 def source_files(root: Path) -> dict[str, Path]:
