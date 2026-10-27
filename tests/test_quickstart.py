@@ -16,7 +16,7 @@ EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "quickstart"
 def test_quickstart(tmp_path, variant):
     root = tmp_path / "project with spaces"
     shutil.copytree(EXAMPLE, root)
-    base = ["-c", str(root / ".main.ptk.yml")]
+    base = ["-C", str(root / ".main.ptk.yml")]
     runner = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"})
     preview = runner.invoke(cli, [*base, "-V", variant, "dry-run", "build"])
     assert preview.exit_code == 0, preview.output
@@ -24,7 +24,7 @@ def test_quickstart(tmp_path, variant):
     message = "Hello with spaces & punctuation"
     run = runner.invoke(cli, [*base, "-V", variant, "build", "--message", message])
     assert run.exit_code == 0, run.output
-    assert (root / "_bin" / variant / "message.txt").read_text() == message
+    assert (root / "_bin" / variant / "build" / "message.txt").read_text() == message
     folder = root / "_reports" / variant / "build"
     report = json.loads((folder / "report.json").read_text())
     assert report["status"] == "passed"

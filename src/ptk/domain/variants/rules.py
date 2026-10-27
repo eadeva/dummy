@@ -216,6 +216,7 @@ def resolve(line: ProductLineSpec, name: str) -> ResolvedVariant:
     assigned: dict[str, tuple[Any, str]] = {}
     data: dict[str, Any] = {}
     for vname, spec in chain:
+        result.repo_variants.update(spec.repo_variants)
         data = _deep_merge(data, spec.data)
         for feature, value in spec.features.items():
             if feature not in index:

@@ -51,9 +51,9 @@ order, omitting empty groups. At a VMR root, Repositories replaces Jobs.
 
 Put global options before the group, and installation options after ``install``::
 
-   uv run ptk -c examples/quickstart/.main.ptk.yml setup config validate
-   uv run ptk -c examples/quickstart/.main.ptk.yml setup install --job build --dry-run
-   uv run ptk -c examples/quickstart/.main.ptk.yml setup creds list
+   uv run ptk -C examples/quickstart/.main.ptk.yml setup config validate
+   uv run ptk -C examples/quickstart/.main.ptk.yml setup install --job build --dry-run
+   uv run ptk -C examples/quickstart/.main.ptk.yml setup creds list
 
 The ``ptk init`` alias also remains available.
 
@@ -80,7 +80,8 @@ It selects the variant for jobs, version discovery/generation, report commands,
 artifact destinations and ``variant show`` when NAME is omitted. An explicit
 NAME on ``variant show`` takes precedence. It is irrelevant to setup/config/help/pre-commit,
 variant list/check/explain (which have their own explicit selection), describe,
-and workflow commands. Workflows retain the variants declared on their job calls.
+and workflow list/show. Workflow execution selects the owner variant and resolves
+other repositories through its ``repo_variants`` mappings.
 The option is no longer accepted after a job or subcommand.
 
 ``--ci`` / ``--no-ci`` is maintainer-only: hidden from user help and completion,
@@ -313,3 +314,76 @@ An explicit DIRECTORY always selects one project, even from inside a VMR::
    ptk setup init path/to/new-repository --name firmware --config-dir config/ptk --yes
 
 Outside VMR mode, omitting DIRECTORY continues to initialize the current directory.
+
+Cleaning and re-running
+-----------------------
+
+Global options precede the command (and a VMR repository alias)::
+
+   ptk -V debug --clean build
+   ptk -V debug,release -c build
+   ptk -V debug --re-run build
+   ptk -V debug -rr firmware workflow run verify
+   ptk -V debug --clean dry-run build
+   ptk -V debug --re-run workflow dry-run verify
+
+``--clean`` / ``-c`` deletes the selected jobs' folders in all four output
+categories (binaries, builds, logs and reports), then stops. ``--re-run`` / ``-rr``
+deletes the same folders, then executes. They are mutually exclusive and apply to
+jobs and workflows. Clean-only does not install tools/hooks, resolve credentials,
+run version commands or require job parameter values. Re-run preflights execution
+before deletion. Workflow cleanup covers every referenced job in its resolved
+repository and variant, deduplicating repeated calls. Job/step execution filters
+still apply; a disallowed job variant is a configuration error, not a silent skip.
+
+``clean-all`` removes the repository's complete output folders across every job
+and variant. At a VMR root, select a repository or explicitly clean the workspace::
+
+   ptk clean-all
+   ptk firmware clean-all
+   ptk vmr-clean-all
+   ptk clean-all --dry-run
+   ptk vmr-clean-all --yes
+
+Both all-clean commands list the directories and ask for confirmation; ``--yes``
+(or ``-y``) skips the prompt. ``vmr-clean-all`` includes all configured member
+repositories and the VMR root's default output folders (including workspace
+workflow reports). Job/workflow clean and re-run do not prompt. Dry-run modes
+never delete folders. PTK preflights all paths before deletion and refuses
+repository roots, paths outside repositories, symlink paths, configuration/Git
+metadata, tracked source files and active job locks. Filesystem errors can still
+interrupt deletion; cleanup is not a transactional filesystem operation.
+
+Migration: ``--config`` now uses uppercase ``-C``. Lowercase ``-c`` means clean.
+Binary output paths now include the job: ``_bin/<variant>/<job>``. Jobs using
+``${run.bin_dir}`` receive the new path automatically; update hard-coded paths.
+Old files directly under ``_bin/<variant>`` remain until ``clean-all``.
+
+PTK cleanup versus native build-tool cleanup
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+PTK deletes output directories. It does not invoke Bazel or CMake's clean targets.
+Arguments after ``--`` are forwarded to job steps marked ``passthrough: true``;
+``--args-for STEP="ARGS"`` targets a particular eligible step. PTK options must
+appear before the job; forwarded arguments appear after it.
+
+For a CMake build job with a passthrough step running ``cmake --build build``, use::
+
+   ptk build -- --target clean
+   ptk build -- --clean-first
+
+Bazel's ``clean`` is a subcommand, not a ``-clean`` flag. Configure a dedicated
+job, for example::
+
+   jobs:
+     bazel-clean:
+       steps:
+         - clean:
+             run: [bazel, clean]
+             passthrough: true
+
+Then ``ptk bazel-clean`` invokes native ``bazel clean`` and
+``ptk bazel-clean -- --expunge`` invokes ``bazel clean --expunge``. Appending
+``clean`` to a job running ``bazel build`` does not switch its subcommand.
+Native cleanup scope is controlled by the build tool and its working directory;
+it is independent of PTK's selected-job folder cleanup.

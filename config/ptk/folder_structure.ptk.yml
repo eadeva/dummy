@@ -1,0 +1,6 @@
+# Output folders for this repository, also used by clean-all.
+layout:
+  builds: _builds
+  bin: _bin
+  logs: _logs
+  reports: _reports

@@ -74,6 +74,10 @@ def _plan(
 ) -> PlannedStep:
     label = "/".join(path)
     skip = inherited_skip
+    if skip is None and step.only_cx and not ctx.symbols.get("ci", False):
+        skip = "only_cx: step requires CX/CI"
+    if skip is None:
+        skip = variant_restriction(step, ctx.symbols.get("variant"))
     if skip is None and step.when:
         try:
             if not expressions.evaluate(step.when, ctx.symbols):
@@ -150,3 +154,12 @@ def _append(step: PlannedStep, args: list[str]) -> None:
         step.run = [*step.run, *args]
     elif step.run is not None:
         step.run = " ".join([step.run, *(shlex.quote(a) for a in args)])
+
+
+def variant_restriction(spec, variant):
+    name = variant or "default"
+    if spec.only_variants and name not in spec.only_variants:
+        return f"variant {name!r} is not in only_variants"
+    if name in spec.omit_variants:
+        return f"variant {name!r} is in omit_variants"
+    return None

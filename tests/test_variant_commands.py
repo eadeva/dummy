@@ -51,7 +51,7 @@ def test_all_variants_and_override_aliases(tmp_path):
     file = setup(tmp_path)
     result = CliRunner().invoke(
         cli,
-        ["-c", str(file), "go", "--all-variants", "-bo", "SIZE=3", "-mp", "who=team"],
+        ["-C", str(file), "go", "--all-variants", "-bo", "SIZE=3", "-mp", "who=team"],
     )
     assert result.exit_code == 0, result.output
     summaries = [
@@ -65,11 +65,11 @@ def test_all_variants_and_override_aliases(tmp_path):
 def test_variant_selection_preflight_and_dry_run(tmp_path):
     file = setup(tmp_path)
     runner = CliRunner()
-    result = runner.invoke(cli, ["-c", str(file), "-V", "small,missing", "go"])
+    result = runner.invoke(cli, ["-C", str(file), "-V", "small,missing", "go"])
     assert result.exit_code == 2
     assert not (tmp_path / "_logs").exists()
     preview = runner.invoke(
-        cli, ["-c", str(file), "-V", "small,large", "dry-run", "go"]
+        cli, ["-C", str(file), "-V", "small,large", "dry-run", "go"]
     )
     assert preview.exit_code == 0, preview.output
     assert not (tmp_path / "_logs").exists()
@@ -89,7 +89,7 @@ def test_matrix_failure_preserves_later_runs(tmp_path):
         }
     )
     file.write_text(yaml.safe_dump(config))
-    result = CliRunner().invoke(cli, ["-c", str(file), "go", "--all-variants"])
+    result = CliRunner().invoke(cli, ["-C", str(file), "go", "--all-variants"])
     assert result.exit_code == 1, result.output
     summaries = {
         json.loads(p.read_text())["variant"]: json.loads(p.read_text())["status"]
@@ -100,6 +100,6 @@ def test_matrix_failure_preserves_later_runs(tmp_path):
 
 def test_global_feature_override(tmp_path):
     file = setup(tmp_path)
-    result = CliRunner().invoke(cli, ["-c", str(file), "--set", "vh.SIZE=6", "go"])
+    result = CliRunner().invoke(cli, ["-C", str(file), "--set", "vh.SIZE=6", "go"])
     assert result.exit_code == 0, result.output
     assert "6 world" in result.output

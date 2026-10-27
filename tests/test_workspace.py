@@ -130,7 +130,7 @@ def test_vmr_cli_isolates_repositories_and_preserves_commands(tmp_path, monkeypa
     monkeypatch.chdir(a.parent / "config")
     nested = runner.invoke(cli, ["bootloader", "build"])
     assert nested.exit_code == 0, nested.output
-    explicit = runner.invoke(cli, ["-c", str(a), "build"])
+    explicit = runner.invoke(cli, ["-C", str(a), "build"])
     assert explicit.exit_code == 0, explicit.output
 
 

@@ -159,7 +159,7 @@ def test_explicit_checks_work_without_automatic_installation(tmp_path, mode):
         path.write_text(yaml.safe_dump(data))
     if mode == "ci":
         result = CliRunner(env={"PTK_CI": "1", "PTK_ROLE": "user"}).invoke(
-            cli, ["-c", str(root / ".main.ptk.yml"), "pre-commit", "check"]
+            cli, ["-C", str(root / ".main.ptk.yml"), "pre-commit", "check"]
         )
     else:
         result = invoke(root, "pre-commit", "check")

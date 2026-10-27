@@ -51,7 +51,7 @@ workspace node. Set `projectToolkit.discoveryTimeout` (seconds) for slow project
 - Use **Display Variant** to inspect resolved features. Variant creation and
   editing are performed in the project's YAML configuration.
 - Expand **Workflows** to run or dry-run local workflows. Workflows retain their
-  configured per-job variants. On CI, workflows can only be dry-run; individual
+  owner variant and its repository variant mappings. On CI, workflows can only be dry-run; individual
   jobs remain runnable. The help icon displays workflow usage.
 - Expand **Built-in commands** to browse the CLI tree, including **setup > creds**,
   configuration, variants, reports and **help**. **CLI help** displays `ptk --help`;
@@ -130,3 +130,19 @@ configuration path and JSON output.
 The extension has no runtime npm dependencies. PTK owns configuration parsing,
 role filtering and execution. Discovery does not run jobs or install tools, but
 PTK may import configured project plugins, so workspace trust is required.
+
+### Cleanup and workflow variants (0.3.0)
+
+The selected variant also applies to repository-owned workflows; PTK resolves
+other repositories using the owner's `repo_variants` mapping. Missing mappings
+fail before execution or cleanup.
+
+The trash and restart icons clean selected job/variant outputs or clean and
+re-run them. Clean requires no job parameters. All four output categories are
+removed; these actions execute immediately. Repository `clean-all` and workspace
+`vmr-clean-all` are in Built-in commands and ask for confirmation in the terminal.
+Use their Options action for `--dry-run` or `--yes`. Saved tasks accept `clean`
+or `reRun`, with optional `preview: true` to inspect without deletion.
+
+Update the CLI together with the extension. The config shorthand is now `-C`;
+`-c` means clean. Binary folders now include the job name.

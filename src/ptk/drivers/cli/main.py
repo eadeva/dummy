@@ -62,7 +62,7 @@ click.rich_click.SHOW_ARGUMENTS = True
     invoke_without_command=True,
 )
 @click.option(
-    "-c",
+    "-C",
     "--config",
     type=click.Path(path_type=Path, dir_okay=False, exists=True),
     is_eager=True,  # known before --help lists the project's jobs
@@ -93,7 +93,19 @@ click.rich_click.SHOW_ARGUMENTS = True
 @click.option(
     "-V",
     "--variant",
-    help="Variant name/alias (comma-separated for jobs). Used by jobs, variant show, versions, reports and artifact destinations. Ignored by setup, config, pre-commit, help and workflows (which select variants per job).",
+    help="Variant name/alias (comma-separated for jobs). Used by jobs, variant show, versions, reports and artifact destinations. Workflows map the owner variant to repository variants. Ignored by setup, config, pre-commit and help.",
+)
+@click.option(
+    "--clean",
+    "-c",
+    is_flag=True,
+    help="Delete selected job/variant output folders and stop (jobs/workflows only).",
+)
+@click.option(
+    "--re-run",
+    "-rr",
+    is_flag=True,
+    help="Delete selected job/variant output folders, then run (jobs/workflows only).",
 )
 @click.version_option(__version__, prog_name="ptk")
 @click.pass_context
@@ -105,6 +117,8 @@ def cli(
     ci: bool | None,
     verbose: int,
     variant: str | None,
+    clean: bool = False,
+    re_run: bool = False,
 ) -> None:
     """[bold]ptk[/] - project tool kit.
 
@@ -122,6 +136,12 @@ def cli(
         and not can_switch_ci(ctx)
     ):
         raise PtkError("--ci/--no-ci is a maintainer-only option")
+    from .cleanup import mode
+
+    if mode(state) and ctx.invoked_subcommand is not None:
+        name = ctx.invoked_subcommand
+        if name in ctx.command.commands and name not in {"run", "dry-run", "workflow"}:
+            raise PtkError("--clean and --re-run apply only to jobs and workflows")
     if ctx.invoked_subcommand is not None:
         return
     if (
@@ -143,6 +163,9 @@ def cli(
     guarded(execute)(ctx, guarded(build_request)(ctx, None))
 
 
+from .cleanup import clean_all
+
+cli.add_command(clean_all)
 cli.add_command(workflow_group)
 cli.add_command(describe)
 cli.add_command(pre_commit_group)
@@ -294,6 +317,11 @@ def variant_show(
         + (f" - {resolved.description}" if resolved.description else "")
     )
     console.print(f"inherits   : {' -> '.join(resolved.chain)}")
+    if resolved.repo_variants:
+        mappings = Table("repository", "variant", box=None, pad_edge=False)
+        for alias, selected in resolved.repo_variants.items():
+            mappings.add_row(alias, selected)
+        console.print(mappings)
     console.print(f"components : {', '.join(resolved.components) or '-'}")
     table = Table("feature", "component", "value", "source", box=None, pad_edge=False)
     for f in resolved.features.values():

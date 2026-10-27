@@ -124,7 +124,7 @@ def test_dry_run_discovers_without_writing(write, load):
         },
     )
     result = CliRunner().invoke(
-        cli, ["-c", str(root / ".main.ptk.yml"), "dry-run", "go"]
+        cli, ["-C", str(root / ".main.ptk.yml"), "dry-run", "go"]
     )
     assert result.exit_code == 0, result.output
     assert not list(root.rglob(".gen.version.ptk.yml"))
@@ -329,7 +329,7 @@ def test_cli_and_generated_input_exclusion(write):
         },
     )
     runner = CliRunner()
-    base = ["-c", str(root / ".main.ptk.yml")]
+    base = ["-C", str(root / ".main.ptk.yml")]
     for cmd in ("show", "check"):
         result = runner.invoke(cli, [*base, "version", cmd])
         assert result.exit_code == 0, result.output

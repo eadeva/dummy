@@ -154,7 +154,7 @@ test("workflow and job name collisions dispatch explicitly and CI allows preview
   assert.equal(h.tasks.length, 0);
   assert.match(h.errors[0], /locally only/);
   await h.command("preview", h.target("workflow"));
-  assert.deepEqual(h.tasks[0].execution.args.slice(2), ["workflow", "dry-run", "build"]);
+  assert.deepEqual(h.tasks[0].execution.args.slice(2), ["--variant", "small", "workflow", "dry-run", "build"]);
   const restored = await h.api.taskProvider.resolveTask(h.tasks[0]);
   assert.deepEqual(restored.execution.args, h.tasks[0].execution.args);
   assert.equal((await h.api.taskProvider.provideTasks()).some(task => task.definition.kind === "workflow"), false);
@@ -322,4 +322,20 @@ test("VMR root built-ins omit member configuration and older CLIs retain CLI hel
   assert.ok(commands.some(node => /Update PTK/.test(node.label)));
   await h.command("showHelp", commands[0]);
   assert.deepEqual(h.tasks[1].execution.args, ["--config", doc.projects[0].entry_file, "--help"]);
+});
+
+test("clean bypasses required parameters and survives saved-task restoration", async t => {
+  const doc = inventory();
+  doc.projects[0].jobs[0].params[0].required = true;
+  const h = harness(t, [doc]);
+  await h.controller.ready();
+  await h.command("clean", h.target());
+  assert.equal(h.tasks.length, 1);
+  assert.equal(h.tasks[0].definition.clean, true);
+  assert.deepEqual(h.tasks[0].execution.args.slice(2), ["--variant", "small", "--clean", "run", "build"]);
+  const restored = await h.api.taskProvider.resolveTask(h.tasks[0]);
+  assert.deepEqual(restored.execution.args, h.tasks[0].execution.args);
+  await h.command("reRun", h.target("workflow"));
+  assert.equal(h.tasks[1].definition.reRun, true);
+  assert.deepEqual(h.tasks[1].execution.args.slice(2), ["--variant", "small", "--re-run", "workflow", "run", "build"]);
 });

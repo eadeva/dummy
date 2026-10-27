@@ -48,7 +48,7 @@ class VSCodeTasks:
                 passthrough=any(s.passthrough for s in spec.walk_steps()),
             )
             for name, spec in config.jobs.items()
-            if visible(spec.audience, audience)
+            if visible(spec.audience, audience) and (not spec.only_cx or project.ci)
         ]
         variants: list[str] = []
         default_variant = None

@@ -104,7 +104,7 @@ def test_report_inputs_are_fresh_and_history_is_immutable(tmp_path):
         )
     )
     runner = CliRunner()
-    base = ["-c", str(main)]
+    base = ["-C", str(main)]
     assert runner.invoke(cli, [*base, "go"]).exit_code == 0
     first_id = json.loads((tmp_path / "_logs/default/go/run.json").read_text())[
         "run_id"

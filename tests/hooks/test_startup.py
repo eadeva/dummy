@@ -43,7 +43,7 @@ def test_help_preview_and_ci_do_not_install(tmp_path, monkeypatch, args):
     monkeypatch.setattr(GitHooks, "ensure", forbidden)
     if args == ["build"]:
         result = CliRunner(env={"PTK_CI": "1", "PTK_ROLE": "user"}).invoke(
-            cli, ["-c", str(root / ".main.ptk.yml"), *args]
+            cli, ["-C", str(root / ".main.ptk.yml"), *args]
         )
     else:
         result = invoke(root, *args)

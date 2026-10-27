@@ -42,7 +42,7 @@ A complete repository-owned workflow:
 The example lives in a small manual VMR. From ``examples/workflows`` run::
 
    ptk workflow list
-   ptk workflow run all
+   ptk workflow run frontend/all
    ptk workflow run frontend/verify
    ptk frontend workflow run verify
    ptk frontend/verify
@@ -59,9 +59,6 @@ Job calls and groups
 
 * ``job``: an existing job name; ``- build: build`` is shorthand.
 * ``repo``: a VMR repository alias. Omission means the workflow's owner.
-* ``variant``: one concrete variant name or its alias. Omission uses that
-  repository's normal selected/default variant. There is no cross-repository
-  global variant selection or implicit variant matrix.
 * ``params``: values for parameters already declared by the target job.
   Values use that job's types, choices and validation. Secret parameters are
   not configurable in a workflow; keep secrets in the target job's credential
@@ -70,7 +67,7 @@ Job calls and groups
   sequencing and exit status. The child report still records the failure.
 
 A group replaces ``job`` with nested ``steps`` and optionally ``parallel: true``.
-It can also set ``continue_on_error``. Groups cannot set ``repo``, ``variant`` or
+It can also set ``continue_on_error``. Groups cannot set ``repo`` or
 ``params``; make each call's repository context explicit. Sibling entry names must
 be unique. Workflow entries call jobs, never other workflows or arbitrary shell
 commands. Put shell commands, retries, step timeouts, skip filters and cleanup
@@ -135,14 +132,15 @@ It needs only a ``workflows`` mapping, not a project entry file, and supports no
 includes. Every workspace-owned leaf must specify ``repo``. Only discovered,
 configured VMR members can be referenced; filesystem paths are not repo selectors.
 
-.. literalinclude:: ../examples/workflows/workflow.ptk.yml
-   :language: yaml
+Workspace-owned workflows have no variant configuration. They can call repositories
+without variants; workflows involving variant-enabled repositories must be owned by
+a repository with the required mappings. For example, use ``frontend/all``.
 
 Workspace-owned names are unqualified, for example ``all``. Member-owned names
 are qualified, for example ``frontend/verify``; identical names in different
 repositories never merge. Under ``ptk frontend workflow``, use the local name
 ``verify``. Manual VMR members should be invoked from the workspace root to retain
-membership context. An explicit ``-c`` entry selects that repository's command
+membership context. An explicit ``-C`` entry selects that repository's command
 surface; automatic Git-pointer membership can still resolve its dependencies.
 
 An owner workflow's ``audience`` and ``command_audience.workflow`` policy are
@@ -198,8 +196,9 @@ JSON files remain available for automation. Workflow ``on-errors`` uses a hyphen
 retains its existing spelling.
 
 ``ptk setup vscode tasks`` adds ``ptk: workflow NAME`` tasks alongside job tasks.
-Workflow tasks use their configured per-call variants and have no global variant
-picker. Regeneration preserves user tasks and is checked with ``--check``.
+Generated workflow tasks use the owner repository's default variant and its
+repository mappings. The Project Toolkit extension also offers an owner variant
+selector. Regeneration preserves user tasks and is checked with ``--check``.
 
 At VMR level, ``ptk setup vscode tasks`` generates workspace tasks for workspace
 and repository-qualified workflows. ``ptk ALIAS setup vscode tasks`` generates
@@ -230,3 +229,35 @@ adding generation, including group-level continuation; do not blindly flatten
 those policies into a different execution order. Job identifiers must be stable
 and unique even when the same job is called more than once. Checkout, artifact
 handoff, GitHub permissions and the reusable job are also future work.
+
+Owner variant mappings
+----------------------
+
+A workflow's owning repository defines cross-repository selections in its variant
+configuration. The following belongs inside the existing ``variants`` section::
+
+   default: debug
+   variants:
+     debug:
+       repo_variants:
+         backend: development
+         bootloader: debug
+     release:
+       repo_variants:
+         backend: production
+         bootloader: release
+
+``ptk -V debug frontend workflow run verify`` selects ``frontend``'s ``debug``
+variant. Its own job calls use that variant; calls to ``backend`` use
+``development`` and calls to ``bootloader`` use ``debug``. Without ``-V``, the
+owner's configured default is selected. Select one owner variant per workflow
+invocation. Mappings inherit through ``extends``; a child's entries override its
+parents' entries by repository alias.
+
+A missing mapping for a referenced variant-enabled repository, an unknown target
+variant or an invalid owner variant fails before jobs execute or outputs are
+deleted. Repositories without variants need no mapping; mapping a variant to
+such a repository is an error. Names are VMR repository aliases, not directory
+paths. Workflow calls no longer accept ``variant``: migrate those fields into
+``repo_variants``. Dry runs print the resolved repository/job/variant for each
+call; clean and re-run use those same selections.

@@ -30,7 +30,7 @@ retain job actions and CLI help, with an update hint for built-in browsing.
 
 Selecting a variant stores the choice in VS Code's workspace state for that
 repository. **Use project default** clears it. Selection never rewrites PTK YAML.
-Workflows keep their authored per-job variant selections. Use **Display Variant**
+Workflows use the selected owner variant and its repository variant mappings. Use **Display Variant**
 for resolved features and **Open Latest Job Report** for PTK's report links.
 
 Multiple folders, VMR members and workspace workflows are supported. Discovery
@@ -131,3 +131,15 @@ requests. After expiry, run the report command again for a fresh link. File
 reports remain available permanently. No helper starts on CX, for redirected
 output, or outside VS Code; automatic report opening remains a separate policy.
 Remote VS Code sessions require port forwarding to the machine running PTK.
+
+Cleanup actions
+---------------
+
+Jobs and workflows expose **Clean Job or Workflow Outputs** (trash icon) and
+**Clean Outputs and Re-run Job or Workflow** (restart icon). They use the selected
+repository variant; workflow mappings are resolved by PTK. Clean does not prompt
+for job parameters. Saved tasks support mutually exclusive ``clean`` and ``reRun``
+booleans and can combine either with ``preview: true`` to inspect deletion paths.
+The built-in command tree exposes ``clean-all`` for repositories and
+``vmr-clean-all`` at the VMR root. Their confirmation occurs in the focused PTK
+terminal; the Options action also exposes ``--dry-run`` and ``--yes``.

@@ -58,7 +58,7 @@ def test_new_project_runs(tmp_path, monkeypatch):
     initialized = app.load_project.execute(config_file=target / ".main.ptk.yml")
     assert initialized.maintainers.maintainers == [SystemHost().user_id()]
     assert app.role(initialized) == "maintainer"
-    base = ["-c", str(target / ".main.ptk.yml")]
+    base = ["-C", str(target / ".main.ptk.yml")]
     assert runner.invoke(cli, [*base, "setup", "config", "validate"]).exit_code == 0
     ran = runner.invoke(cli, [*base, "hello", "--message", "custom message"])
     assert ran.exit_code == 0, ran.output
@@ -151,13 +151,13 @@ def test_custom_config_directory_and_outputs(tmp_path):
         "build.ptk.yml",
         "hello.ptk.yml",
     ]
-    base = ["-c", str(tmp_path / ".main.ptk.yml")]
+    base = ["-C", str(tmp_path / ".main.ptk.yml")]
     for variant in ("debug", "release"):
         result = runner.invoke(cli, [*base, "--variant", variant, "hello"])
         assert result.exit_code == 0, result.output
         result = runner.invoke(cli, [*base, "--variant", variant, "build"])
         assert result.exit_code == 0, result.output
-        assert (tmp_path / f"_bin/{variant}/generated/version.h").is_file()
+        assert (tmp_path / f"_bin/{variant}/build/generated/version.h").is_file()
     assert len(list(tmp_path.rglob(".gen.version.ptk.yml"))) == 4
 
 
@@ -222,7 +222,7 @@ def test_scaffold_nested_includes_variants_and_ci(tmp_path):
         "jobs:\n  check:\n    steps:\n      - check: {uses: echo, with: {message: discovered}}\n"
     )
     result = CliRunner(env={"PTK_CI": "0"}).invoke(
-        cli, ["-c", str(tmp_path / ".main.ptk.yml"), "check"]
+        cli, ["-C", str(tmp_path / ".main.ptk.yml"), "check"]
     )
     assert result.exit_code == 0, result.output
     assert "discovered" in result.output

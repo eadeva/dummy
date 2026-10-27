@@ -172,6 +172,7 @@ class LoadProject:
         tree = t.from_plain({})
         layers = []
         for filename in (
+            "folder_structure.ptk.yml",
             "tools.ptk.yml",
             "versioning.ptk.yml",
             "workflow.ptk.yml",

@@ -76,7 +76,7 @@ def invoke(write):
         result = CliRunner(env=env).invoke(
             cli,
             [
-                "-c",
+                "-C",
                 str(root / ".main.ptk.yml"),
                 "workflow",
                 mode,

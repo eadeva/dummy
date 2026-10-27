@@ -651,3 +651,36 @@ parallel groups, including jobs from configured VMR members. Workflows load
 from the repository configuration directory; VMR roots can also own a workflow
 file. See :doc:`workflows` for complete syntax, command examples, preflight,
 reports, VS Code tasks and the explicit local-only execution boundary.
+
+Output folder configuration
+---------------------------
+
+Place ``folder_structure.ptk.yml`` in each repository's ``repository.config_path``::
+
+   layout:
+     builds: _builds
+     bin: _bin
+     logs: _logs
+     reports: _reports
+
+PTK discovers this file automatically as a conventional defaults layer. Existing
+explicit ``layout`` settings and normal overlays retain their usual precedence.
+Absent this file, these four PTK defaults apply; there is no VMR-level inheritance.
+Folder values are plain directory names. ``layout.root`` defaults to the repository
+root; cleanup requires its output directories to remain inside the repository.
+An existing ``reporting.dir`` override is also included in cleanup.
+
+All four categories use ``<variant>/<job>`` beneath their configured directory.
+Without variants, the variant directory is ``default``. This keeps selected-job
+cleanup from deleting another job's binaries. ``ptk setup init`` generates the
+folder configuration file for new repositories.
+
+Execution filters
+-----------------
+
+Jobs and job steps accept ``only_cx: true``, ``only_variants: [debug, release]`` and
+``omit_variants: [debug]``. ``only_cx`` hides a job outside CX/CI, including the
+extension inventory, and explicit execution is rejected. Job variant restrictions
+return an error. At step level, these filters skip the step (and nested children).
+They never select a variant. Variant filters match resolved concrete names;
+``default`` represents repositories without variants.

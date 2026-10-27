@@ -72,6 +72,10 @@ test("actual VMR discovery supports member jobs and workspace workflow previews"
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   project(path.join(root, "a"), "alpha");
   project(path.join(root, "b"), "beta");
+  const entry = path.join(root, "a/.main.ptk.yml");
+  const config = JSON.parse(fs.readFileSync(entry, "utf8"));
+  delete config.variants;
+  fs.writeFileSync(entry, JSON.stringify(config));
   fs.writeFileSync(path.join(root, ".main.ptk.yml"), "virtual_monorepo: true\nmembers: [a, b]\n");
   fs.writeFileSync(path.join(root, "workflow.ptk.yml"), "workflows:\n  verify:\n    steps:\n    - build: {repo: alpha, job: build}\n");
   const doc = core.parseInventory(invoke(root, ["describe", "--json"]));
@@ -85,8 +89,31 @@ test("actual VMR discovery supports member jobs and workspace workflow previews"
   assert.match(configs, /"alpha"/);
   assert.match(configs, /"beta"/);
   const job = targets.find(target => target.kind === "job" && target.project.alias === "alpha");
-  invoke(root, core.argsFor(job, { preview: true, variant: "large" }));
+  invoke(root, core.argsFor(job, { preview: true }));
   const workflow = targets.find(target => target.kind === "workflow" && !target.project);
   invoke(root, core.argsFor(workflow, { preview: true }));
   assert.equal(fs.existsSync(path.join(root, "_logs")), false);
+});
+
+test("actual cleanup controls remove only the chosen job variant", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk clean extension "));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  project(root, "demo");
+  const doc = core.parseInventory(invoke(root, ["describe", "--json"]));
+  const target = core.availableTargets([{ inventory: doc }]).find(t => t.kind === "job");
+  for (const variant of ["small", "large"]) for (const folder of ["_bin", "_builds", "_logs", "_reports"]) {
+    const dir = path.join(root, folder, variant, "build");
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, "marker"), "keep");
+  }
+  invoke(root, core.argsFor(target, { variant: "large", clean: true }));
+  assert.equal(fs.existsSync(path.join(root, "_bin/large/build")), false);
+  assert.equal(fs.existsSync(path.join(root, "_bin/small/build/marker")), true);
+  const builtins = core.availableBuiltins([{ inventory: doc }]);
+  const cleanAll = builtins.find(t => t.name === "clean-all");
+  assert.ok(cleanAll);
+  invoke(root, core.argsFor(cleanAll, { inputs: { dry_run: ["true"] } }));
+  assert.equal(fs.existsSync(path.join(root, "_bin/small/build/marker")), true);
+  invoke(root, core.argsFor(cleanAll, { inputs: { yes: ["true"] } }));
+  assert.equal(fs.existsSync(path.join(root, "_bin")), false);
 });

@@ -40,6 +40,8 @@ STEP_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 
 RESERVED_JOBS = {
+    "clean-all",
+    "vmr-clean-all",
     "describe",
     "pre-commit",
     "artifacts",
@@ -60,6 +62,8 @@ RESERVED_JOBS = {
     "version",
 }
 RESERVED_PARAMS = {
+    "clean",
+    "re_run",
     "from",
     "to",
     "variant",
@@ -267,6 +271,9 @@ def normalize_step_entry(raw: Any) -> Any:
 
 
 class StepSpec(_Strict):
+    only_cx: bool = False
+    only_variants: list[str] = Field(default_factory=list)
+    omit_variants: list[str] = Field(default_factory=list)
     name: str
     title: str | None = None
     run: str | list[str] | None = None
@@ -345,6 +352,9 @@ def _unique(names: list[str], where: str) -> None:
 
 
 class JobSpec(_Strict):
+    only_cx: bool = False
+    only_variants: list[str] = Field(default_factory=list)
+    omit_variants: list[str] = Field(default_factory=list)
     open_report: Literal["always", "on_errors"] | None = None
     version_dependencies: dict[str, VersionDependency] = Field(default_factory=dict)
     environment: EnvironmentSpec | None = None
@@ -573,6 +583,7 @@ class PtkConfig(_Strict):
             "workflow",
             "artifacts",
             "pre-commit",
+            "clean-all",
         ],
         Literal["all", "maintainer"],
     ] = Field(default_factory=dict)

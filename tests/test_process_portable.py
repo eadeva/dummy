@@ -112,7 +112,7 @@ def test_cli_redirected_legacy_encoding_does_not_abort_job(tmp_path):
         encoding="utf-8",
     )
     result = subprocess.run(
-        [sys.executable, "-m", "ptk.drivers.cli.main", "-c", str(config), "hello"],
+        [sys.executable, "-m", "ptk.drivers.cli.main", "-C", str(config), "hello"],
         env={**os.environ, "PYTHONIOENCODING": "cp1252:strict"},
         capture_output=True,
         check=False,

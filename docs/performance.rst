@@ -122,6 +122,6 @@ Use the Python environment containing PTK and the repository where help is slow:
 
 Profiling adds overhead: use it to identify expensive work, not to claim wall-time
 speedups. Compare workspace-root help with ``ptk ALIAS --help`` and explicit
-``ptk -c PATH/TO/.main.ptk.yml --help`` to separate workspace configuration cost
+``ptk -C PATH/TO/.main.ptk.yml --help`` to separate workspace configuration cost
 from base startup. Record PTK/Python versions, OS, repository count, config size
 and selected plugins. Keep profiles local; they contain source and project paths.

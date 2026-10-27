@@ -20,7 +20,7 @@ def invoke(write):
     def call(*args):
         return CliRunner(env={"PTK_CI": "0"}).invoke(
             cli,
-            ["-c", str(root / ".main.ptk.yml"), *args],
+            ["-C", str(root / ".main.ptk.yml"), *args],
             catch_exceptions=False,
         )
 

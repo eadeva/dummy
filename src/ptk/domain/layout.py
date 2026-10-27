@@ -1,7 +1,7 @@
 """Workspace folder layout (pure).
 
     <root>/_builds/<variant>/<job>/<set>/<step>/    working directory per step
-    <root>/_bin/<variant>/                              binaries / artifacts per variant
+    <root>/_bin/<variant>/<job>/                        binaries / artifacts per job
     <root>/_logs/<variant>/<job>/run.log             whole run of a job
     <root>/_logs/<variant>/<job>/<set>/<step>.log    one log per step
     <root>/_reports/<variant>/<job>/<set>/<step>/    reports per step
@@ -47,8 +47,9 @@ class Layout:
             self.builds, self._variant(variant), safe(job), *self._steps(step_path)
         )
 
-    def bin_dir(self, variant: str | None) -> PurePath:
-        return self.root.joinpath(self.bin, self._variant(variant))
+    def bin_dir(self, variant: str | None, job: str | None = None) -> PurePath:
+        base = self.root.joinpath(self.bin, self._variant(variant))
+        return base / safe(job) if job is not None else base
 
     def job_log_dir(self, variant: str | None, job: str) -> PurePath:
         return self.root.joinpath(self.logs, self._variant(variant), safe(job))

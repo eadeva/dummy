@@ -8,7 +8,16 @@ from ...bootstrap import create_app
 from .access import AccessGroup
 from .state import CliState, guarded, state_of
 
-RESERVED = {"setup", "variant", "report", "help", "repos", "workflow", "describe"}
+RESERVED = {
+    "setup",
+    "variant",
+    "report",
+    "help",
+    "repos",
+    "workflow",
+    "describe",
+    "vmr-clean-all",
+}
 
 
 def invoke_repository(root, alias, args):
@@ -263,6 +272,7 @@ def build_commands(root, entries):
     def workspace_help():
         click.echo(root.get_help())
 
+    from .cleanup import vmr_clean_all
     from .workflows import workflow_group
 
     return {
@@ -274,6 +284,7 @@ def build_commands(root, entries):
             list_repositories,
             workspace_help,
             workflow_group,
+            vmr_clean_all,
             originals["describe"],
         )
     }

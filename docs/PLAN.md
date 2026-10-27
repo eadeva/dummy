@@ -296,7 +296,7 @@ Cobertura, ...) · `files.copy` / `files.clean` · `wait` · `echo`.
 
 ```
 _builds/<variant>/<job>/<set>/<step>/    working directory per step  ${run.build_dir}
-_bin/<variant>/                             binaries per variant        ${run.bin_dir}
+_bin/<variant>/<job>/                       binaries per job        ${run.bin_dir}
 _logs/<variant>/<job>/run.log            whole run; <set>/<step>.log per step
 _reports/<variant>/<job>/<set>/<step>/   reports per step            ${run.reports_dir}
 ```
@@ -940,3 +940,19 @@ See docs/performance.rst for measurements and remaining VMR scaling costs.
   scripts. Status/help are read-only; checks do not install Git hook scripts.
 - Hook revisions remain managed through base configs and project overlays.
   The CI quality job now invokes `ptk pre-commit check`.
+
+
+## Cleanup and workflow variant mappings (2026-10-27)
+
+Implemented global `--clean/-c` and `--re-run/-rr`, repository `clean-all` and
+workspace `vmr-clean-all`, with complete preflight, confirmation for all-clean,
+and active-run locking. `--config` now uses `-C`. Each repository can define
+`folder_structure.ptk.yml`; defaults remain `_bin`, `_builds`, `_logs`, `_reports`.
+Binary paths now include the job to make selected cleanup safe.
+
+Workflow owner variants map repository aliases through inherited `repo_variants`.
+Missing/invalid mappings fail before execution/deletion; workflow calls cannot
+select variants. Job-level variant filters error; step-level filters skip;
+`only_cx` jobs are hidden locally. Extension 0.3.0 exposes clean/re-run, mapped
+workflow variant selection and both all-clean built-ins. Native tool cleanup
+and passthrough syntax are documented separately.

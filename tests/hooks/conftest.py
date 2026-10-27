@@ -110,7 +110,7 @@ def repository(root, *, alias="app", enabled=True, output=None):
 def invoke(root, *args):
     return CliRunner(env={"PTK_ROLE": "user", "PTK_CI": "0"}).invoke(
         cli,
-        ["-c", str(root / ".main.ptk.yml"), *args],
+        ["-C", str(root / ".main.ptk.yml"), *args],
         catch_exceptions=False,
     )
 

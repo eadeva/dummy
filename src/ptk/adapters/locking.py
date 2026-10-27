@@ -28,3 +28,39 @@ def file_lock(path: Path, timeout: float = 10):
         yield
     finally:
         path.unlink(missing_ok=True)
+
+
+@contextmanager
+def job_lock(root: Path, variant: str | None, job: str):
+    """Register a running job while excluding repository-wide cleanup."""
+    from contextlib import ExitStack
+
+    from ..domain.layout import safe
+
+    with ExitStack() as stack:
+        with file_lock(root / ".ptk" / "output-cleanup.lock"):
+            stack.enter_context(
+                file_lock(
+                    root
+                    / ".ptk"
+                    / "locks"
+                    / safe(variant or "default")
+                    / (safe(job) + ".lock"),
+                    timeout=0,
+                )
+            )
+        yield
+
+
+@contextmanager
+def output_cleanup_lock(roots):
+    """Prevent new jobs from starting and refuse to delete active job outputs."""
+    from contextlib import ExitStack
+
+    with ExitStack() as stack:
+        for root in sorted(set(roots)):
+            stack.enter_context(file_lock(root / ".ptk" / "output-cleanup.lock"))
+            active = list((root / ".ptk" / "locks").rglob("*.lock"))
+            if active:
+                raise PtkError(f"cannot clean while a job is locked: {active[0]}")
+        yield

@@ -139,6 +139,8 @@ class PrepareRun:
                 f"'{request.job}' is a maintainer-only job "
                 "(login IDs are listed in maintainers.ptk.yml)"
             )
+        if job.only_cx and not project.ci:
+            raise PtkError(f"job {request.job!r} is only available in CX/CI")
         host_env = self._host.variables
         os_name = self._host.os_name()
 
@@ -176,6 +178,12 @@ class PrepareRun:
             raise PtkError("feature overrides require variants")
         elif request.variant:
             raise PtkError(f"--variant {request.variant}: this project has no variants")
+
+        from ...domain.execution.planning import variant_restriction
+
+        reason = variant_restriction(job, variant_name)
+        if reason:
+            raise PtkError(f"job {request.job!r}: {reason}")
 
         version_snapshot = (
             self._versions.resolve(project, variant_name, request.job)
@@ -234,7 +242,7 @@ class PrepareRun:
             else None
         )
         dirs = {
-            "bin_dir": str(layout.bin_dir(variant_name)),
+            "bin_dir": str(layout.bin_dir(variant_name, request.job)),
             "log_dir": str(layout.job_log_dir(variant_name, request.job)),
             "reports_dir": str(layout.reports_dir(variant_name, request.job)),
             "build_dir": str(layout.build_dir(variant_name, request.job)),

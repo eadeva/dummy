@@ -249,10 +249,21 @@ def execute(
         )
     else:
         names = [None]
-    if setup:
+    from .cleanup import clean_selected, mode
+
+    cleaning = mode(state)
+    if setup and not state.clean:
         job = request.job or project.config.project.default_job
         if job:
             install_tools(state, project, [job])
+    if state.clean:
+        from ...application.use_cases.cleanup import prepare_cleanup
+
+        prepared = [
+            prepare_cleanup(project, request.job, name, state.role()) for name in names
+        ]
+        clean_selected(prepared, dry_run=request.dry_run)
+        return
     # Preflight the whole selection before executing the first variant.
     prepared = [
         state.app.prepare_run(project).execute(
@@ -260,6 +271,10 @@ def execute(
         )
         for name in names
     ]
+    if cleaning:
+        clean_selected(prepared, dry_run=request.dry_run)
+        if state.clean:
+            return
     if not request.dry_run:
         state.app.hooks.execute(project, click.echo)
     codes = []
@@ -273,21 +288,13 @@ def execute(
 
 
 def _execute_one(ctx, request, *, quiet=False, show_env=False, prepared=None):
-    from ...adapters.locking import file_lock
-
     if request.dry_run:
         return _execute_one_unlocked(
             ctx, request, quiet=quiet, show_env=show_env, prepared=prepared
         )
-    # Keep logs, report inputs and exports from concurrent CLI runs separate.
-    lock = (
-        prepared.project.root
-        / ".ptk"
-        / "locks"
-        / (prepared.plan.variant or "default")
-        / (prepared.plan.job + ".lock")
-    )
-    with file_lock(lock):
+    from ...adapters.locking import job_lock
+
+    with job_lock(prepared.project.root, prepared.plan.variant, prepared.plan.job):
         return _execute_one_unlocked(
             ctx, request, quiet=quiet, show_env=show_env, prepared=prepared
         )
@@ -447,7 +454,9 @@ def job_command(
         for param in list(given):
             if spec.params[param].type == "secret":
                 given[param] = (
-                    "********" if dry_run else click.prompt(param, hide_input=True)
+                    "********"
+                    if dry_run or state_of(ctx).clean
+                    else click.prompt(param, hide_input=True)
                 )
         quiet = options.pop("quiet", False)
         show_env = options.pop("show_env", False)
@@ -497,7 +506,15 @@ class ProjectGroup(AccessGroup):
 
     def _jobs(self, ctx: click.Context) -> dict[str, JobSpec]:
         project = state_of(ctx).try_project()
-        return dict(project.config.jobs) if project else {}
+        return (
+            {
+                name: spec
+                for name, spec in project.config.jobs.items()
+                if not spec.only_cx or project.ci
+            }
+            if project
+            else {}
+        )
 
     def _workflows(self, ctx):
         if self.dry_run:
@@ -539,6 +556,8 @@ class ProjectGroup(AccessGroup):
         except PtkError as exc:
             return _broken(cmd_name, exc)
         spec = project.config.jobs.get(cmd_name)
+        if spec is not None and spec.only_cx and not project.ci:
+            return None
         workflow = self._workflows(ctx).get(cmd_name)
         if workflow is not None and (
             spec is None

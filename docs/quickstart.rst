@@ -41,7 +41,7 @@ requirements; no secret values or tool installations are needed.
 
 The starter has debug/release variants and a literal ``0.1.0`` version, so it
 runs without tools, credentials or Git tags. ``hello`` demonstrates parameters
-and version substitutions; ``build`` generates ``_bin/<variant>/generated/version.h`` and
+and version substitutions; ``build`` generates ``_bin/<variant>/build/generated/version.h`` and
 ``version.cmake``. Each run also writes its ignored ``.gen.version.ptk.yml``
 snapshot. See :doc:`versioning` to select Git tags or existing manifests instead.
 
@@ -64,13 +64,13 @@ The quickstart uses only the Python interpreter running ptk. It needs no CMake,
 compiler, credentials, or network connection once ptk is installed. Commands
 below work from the repository root on Linux and Windows::
 
-   uv run ptk -c examples/quickstart/.main.ptk.yml config validate
-   uv run ptk -c examples/quickstart/.main.ptk.yml -V debug dry-run build
-   uv run ptk -c examples/quickstart/.main.ptk.yml -V debug build --message "Hello from ptk"
-   uv run ptk -c examples/quickstart/.main.ptk.yml -V release build
+   uv run ptk -C examples/quickstart/.main.ptk.yml config validate
+   uv run ptk -C examples/quickstart/.main.ptk.yml -V debug dry-run build
+   uv run ptk -C examples/quickstart/.main.ptk.yml -V debug build --message "Hello from ptk"
+   uv run ptk -C examples/quickstart/.main.ptk.yml -V release build
 
 ``dry-run`` displays the commands without executing the steps. ``build`` first
-writes ``examples/quickstart/_bin/<variant>/message.txt``, then runs a parallel
+writes ``examples/quickstart/_bin/<variant>/build/message.txt``, then runs a parallel
 check set. The extra check is enabled for ``debug`` and skipped for ``release``.
 The unit check writes JUnit XML which ptk imports into its report.
 
@@ -79,7 +79,7 @@ Inspect the results
 
 Open ``examples/quickstart/_reports/debug/build/report.html`` in a browser, or::
 
-   uv run ptk -c examples/quickstart/.main.ptk.yml -V debug report open build
+   uv run ptk -C examples/quickstart/.main.ptk.yml -V debug report open build
 
 JSON, JUnit XML and Markdown reports are written alongside the HTML. Logs are in
 ``examples/quickstart/_logs/debug/build``. Previous logs are retained according

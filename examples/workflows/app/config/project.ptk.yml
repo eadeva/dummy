@@ -1,14 +1,27 @@
-project: {name: frontend}
-environment: {set: {PROJECT_IDENTITY: frontend}}
+project:
+  name: frontend
+environment:
+  set:
+    PROJECT_IDENTITY: frontend
 variants:
   default: debug
   variants:
-    debug: {}
-    release: {}
+    debug:
+      repo_variants:
+        backend: release
+    release:
+      repo_variants:
+        backend: release
 jobs:
   build:
     steps:
-      - build: {uses: echo, with: {message: "Building ${env.PROJECT_IDENTITY} (${vh.variant})"}}
+    - build:
+        uses: echo
+        with:
+          message: Building ${env.PROJECT_IDENTITY} (${vh.variant})
   test:
     steps:
-      - tests: {uses: echo, with: {message: "Testing ${env.PROJECT_IDENTITY} (${vh.variant})"}}
+    - tests:
+        uses: echo
+        with:
+          message: Testing ${env.PROJECT_IDENTITY} (${vh.variant})

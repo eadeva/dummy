@@ -81,7 +81,7 @@ def invoke(root, *args, env=None, variant=None):
     ).invoke(
         cli,
         [
-            "-c",
+            "-C",
             str(root / ".main.ptk.yml"),
             *(["-V", variant] if variant else []),
             "artifacts",

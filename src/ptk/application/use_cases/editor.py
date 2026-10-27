@@ -50,7 +50,7 @@ def describe_project(project, role):
                 ],
             }
             for name, spec in config.jobs.items()
-            if visible(spec.audience, role)
+            if visible(spec.audience, role) and (not spec.only_cx or project.ci)
         ],
         "workflows": [
             {"name": name, "help": spec.help}

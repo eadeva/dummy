@@ -187,6 +187,7 @@ class Constraint(_Strict):
 
 
 class VariantSpec(_Strict):
+    repo_variants: dict[str, str] = Field(default_factory=dict)
     description: str = ""
     abstract: bool = False
     extends: list[str] = Field(default_factory=list)
@@ -313,6 +314,7 @@ class ResolvedFeature(BaseModel):
 
 
 class ResolvedVariant(BaseModel):
+    repo_variants: dict[str, str] = Field(default_factory=dict)
     name: str
     description: str = ""
     abstract: bool = False

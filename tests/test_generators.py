@@ -125,7 +125,7 @@ def test_builtin_generation_copy_clean_and_configs(tmp_path):
             }
         )
     )
-    result = CliRunner().invoke(cli, ["-c", str(config), "-V", "demo", "go"])
+    result = CliRunner().invoke(cli, ["-C", str(config), "-V", "demo", "go"])
     assert result.exit_code == 0, result.output
     assert (tmp_path / "_bin/demo/variant.h").exists()
     assert not (tmp_path / "_builds/demo/go/gen").exists()

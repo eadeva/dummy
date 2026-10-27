@@ -59,8 +59,8 @@ test("previews translate typed options and boolean flags", () => {
   assert.throws(() => core.argsFor(target(), { params: { token: "secret" } }), /unknown or secret/);
 });
 
-test("workflows retain their authored variants and resolve shared names explicitly", () => {
-  assert.deepEqual(core.argsFor(target("workflow"), { variant: "large" }).slice(2), ["workflow", "run", "build"]);
+test("workflows select their owner variants and resolve shared names explicitly", () => {
+  assert.deepEqual(core.argsFor(target("workflow"), { variant: "large" }).slice(2), ["--variant", "large", "workflow", "run", "build"]);
   assert.deepEqual(core.argsFor({ kind: "workflow", name: "all" }, { preview: true }), ["workflow", "dry-run", "all"]);
   assert.deepEqual(core.argsFor(target("report"), { variant: "large" }).slice(2), ["--variant", "large", "report", "open", "build"]);
   assert.deepEqual(core.argsFor(target("variant")).slice(2), ["variant", "show", "build"]);
@@ -145,4 +145,12 @@ test("missing executables, failing processes and timeouts are reported", async (
   await assert.rejects(core.readInventory({ executable: path.resolve("nonexistent-ptk-executable"), arguments: [], timeout: 1 }, process.cwd()), /executable not found/);
   await assert.rejects(core.readInventory({ executable: process.execPath, arguments: ["-e", "process.stderr.write('invalid project'); process.exit(2)", "--"], timeout: 10 }, process.cwd()), /invalid project/);
   await assert.rejects(core.readInventory({ executable: process.execPath, arguments: ["-e", "setTimeout(() => {}, 5000)", "--"], timeout: 0.1 }, process.cwd()), /timed out/);
+});
+
+test("cleanup flags precede commands and workflow variants are forwarded", () => {
+  const job = target("job");
+  assert.deepEqual(core.argsFor(job, { clean: true, variant: "large" }).slice(2), ["--variant", "large", "--clean", "run", "build"]);
+  assert.deepEqual(core.argsFor(target("workflow"), { reRun: true, variant: "large", preview: true }).slice(2), ["--variant", "large", "--re-run", "workflow", "dry-run", "build"]);
+  assert.throws(() => core.argsFor(job, { clean: true, reRun: true }), /Choose/);
+  assert.deepEqual(core.argsFor(job, { clean: true, help: true }).slice(2), ["build", "--help"]);
 });

@@ -55,7 +55,7 @@ def test_help_loads_project_plugins_and_identity_once_per_invocation(
     monkeypatch.setattr(App, "configure_project", configure)
     monkeypatch.setattr(SystemHost, "user_id", user_id)
     runner = CliRunner(env={"PTK_ROLE": ""})
-    args = ["-c", str(file), "setup", "--help"]
+    args = ["-C", str(file), "setup", "--help"]
     result = runner.invoke(cli, args)
     assert result.exit_code == 0 and "vscode" in result.output, result.output
     assert calls == {"load": 1, "configure": 1, "identity": 1}
@@ -81,7 +81,7 @@ def test_failed_configuration_is_loaded_once_but_retry_next_invocation(
 
     monkeypatch.setattr(LoadProject, "execute", load)
     runner = CliRunner(env={"PTK_ROLE": "user"})
-    args = ["-c", str(file), "--help"]
+    args = ["-C", str(file), "--help"]
     assert runner.invoke(cli, args).exit_code == 0
     assert len(calls) == 1
     file.write_text(valid)
@@ -105,7 +105,7 @@ unused = ['ptk.adapters.tools', 'ptk.adapters.python_env', 'ptk.adapters.reporti
 assert not set(unused).intersection(sys.modules), sorted(set(unused).intersection(sys.modules))
 """
     result = subprocess.run(
-        [sys.executable, "-c", code, "-c", str(file), *args],
+        [sys.executable, "-c", code, "-C", str(file), *args],
         env=os.environ.copy(),
         capture_output=True,
         text=True,

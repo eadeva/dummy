@@ -8,5 +8,5 @@ jobs:
     steps:
       - prepare:
           python: {project: ., groups: [release, docs]}
-          run: [python, scripts/prepare_package.py, --output, "${run.bin_dir}/package"]
+          run: [python, scripts/prepare_package.py, --output, "${run.bin_dir}"]
           timeout: 900

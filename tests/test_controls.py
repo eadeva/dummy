@@ -49,7 +49,7 @@ def test_secret_prompt_and_path_param(tmp_path):
     )
     result = CliRunner().invoke(
         cli,
-        ["-c", str(file), "go", "--token", "--output", "two words"],
+        ["-C", str(file), "go", "--token", "--output", "two words"],
         input="secret-value\n",
     )
     assert result.exit_code == 0, result.output

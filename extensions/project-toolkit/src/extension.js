@@ -272,30 +272,32 @@ function createController(vscode, context) {
     const definition = { type: "project-toolkit", kind: target.kind, name: target.name, root: target.root };
     if (options.variant) definition.variant = options.variant;
     if (options.preview !== undefined) definition.preview = options.preview;
+    if (options.clean !== undefined) definition.clean = options.clean;
+    if (options.reRun !== undefined) definition.reRun = options.reRun;
     if (options.params && Object.keys(options.params).length) definition.params = options.params;
     if (options.help !== undefined) definition.help = options.help;
     if (options.inputs && Object.keys(options.inputs).length) definition.inputs = options.inputs;
-    const task = new vscode.Task(definition, target.folder, `${options.help ? "Help " : options.preview ? "Dry Run " : ""}${title(target)}`, "project-toolkit",
+    const task = new vscode.Task(definition, target.folder, `${options.help ? "Help " : options.preview ? "Dry Run " : options.clean ? "Clean " : options.reRun ? "Re-run " : ""}${title(target)}`, "project-toolkit",
       new vscode.ProcessExecution(config.executable, [...config.arguments, ...core.argsFor(target, options)], { cwd: target.root }), []);
     task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Dedicated, clear: false, focus: target.kind === "builtin" && !options.help };
     return task;
   }
 
-  async function run(element, preview = false, editOptional = false) {
+  async function run(element, preview = false, editOptional = false, cleanup = {}) {
     const target = await chooseTarget(element, editOptional);
     if (!target) return;
     let variant;
     let params = {};
-    if (target.kind === "job") {
+    if (target.project && ["job", "workflow"].includes(target.kind)) {
       variant = variantFor(target.project);
       if (!variant && target.project.variants.some(v => !v.abstract)) {
         variant = await selectVariant(target);
         if (!variant) return;
       }
-      params = await parameters(target, editOptional);
+      if (target.kind === "job" && !cleanup.clean) params = await parameters(target, editOptional);
       if (params === undefined) return;
     }
-    return vscode.tasks.executeTask(makeTask(target, { preview, variant, params }));
+    return vscode.tasks.executeTask(makeTask(target, { preview, variant, params, ...cleanup }));
   }
 
   function command(name, callback) {
@@ -310,6 +312,8 @@ function createController(vscode, context) {
   command("refresh", refresh);
   command("run", element => run(element));
   command("preview", element => run(element, true));
+  command("clean", element => run(element, false, false, { clean: true }));
+  command("reRun", element => run(element, false, false, { reRun: true }));
   command("runWithParameters", element => run(element, false, true));
   command("showHelp", async element => {
     const target = element?.kind && element.kind !== "builtin"
@@ -354,7 +358,7 @@ function createController(vscode, context) {
       if (!vscode.workspace.isTrusted) return [];
       await pending;
       return core.availableTargets(records).filter(t => !(t.kind === "workflow" && t.ci) && !(t.spec.params || []).some(p => p.required))
-        .map(t => makeTask(t, { variant: t.kind === "job" ? variantFor(t.project) : undefined }));
+        .map(t => makeTask(t, { variant: t.project ? variantFor(t.project) : undefined }));
     },
     async resolveTask(task) {
       if (!vscode.workspace.isTrusted) return;
@@ -363,14 +367,14 @@ function createController(vscode, context) {
       const targets = d.kind === "builtin" ? core.availableBuiltins(records) : core.availableTargets(records);
       const target = targets.find(t => t.kind === d.kind && t.name === d.name && t.root === d.root);
       if (!target || target.ci && target.kind === "workflow" && !d.preview && !d.help) return;
-      if (!d.help && (target.spec.params || []).some(p => p.required && !Object.hasOwn(d.kind === "builtin" ? d.inputs || {} : d.params || {}, p.name))) {
+      if (!d.help && !(d.kind === "job" && d.clean === true) && (target.spec.params || []).some(p => p.required && !Object.hasOwn(d.kind === "builtin" ? d.inputs || {} : d.params || {}, p.name))) {
         const action = d.kind === "builtin" ? "Run Command with Options" : "Run Job with Parameters";
         output.appendLine(`Use Project Toolkit: ${action} to supply required parameters for ${target.name}.`);
         return;
       }
       const resolved = makeTask(target, {
-        variant: target.kind === "job" ? d.variant || variantFor(target.project) : undefined,
-        preview: d.preview, params: d.params, help: d.help, inputs: d.inputs,
+        variant: target.project ? d.variant || variantFor(target.project) : undefined,
+        preview: d.preview, params: d.params, help: d.help, inputs: d.inputs, clean: d.clean, reRun: d.reRun,
       });
       resolved.definition = task.definition;
       resolved.name = task.name;

@@ -37,7 +37,7 @@ def test_inventory_is_read_only_filters_roles_and_omits_secret_values(tmp_path):
     entry.write_text(yaml.safe_dump(data))
     grant_maintainer(tmp_path)
     before = snapshot(tmp_path)
-    base = ["-c", str(entry), "describe", "--json"]
+    base = ["-C", str(entry), "describe", "--json"]
     for role, expected in (("user", ["go"]), ("", ["go", "secret-job"])):
         result = CliRunner(
             env={"PTK_ROLE": role, "PTK_CI": "0", "EXAMPLE_TOKEN": "SECRET_VALUE"}
@@ -78,7 +78,7 @@ def test_inventory_respects_group_policies(tmp_path):
     data["workflows"] = {"verify": {"steps": [{"go": "go"}]}}
     entry.write_text(yaml.safe_dump(data))
     result = CliRunner(env={"PTK_ROLE": "user"}).invoke(
-        cli, ["-c", str(entry), "describe", "--json"]
+        cli, ["-C", str(entry), "describe", "--json"]
     )
     project = json.loads(result.output)["projects"][0]
     assert project["variants"] == [] and project["workflows"] == []
@@ -145,7 +145,7 @@ def test_command_metadata_does_not_resolve_defaults_or_invoke_callbacks(
     )
     before = snapshot(tmp_path)
     result = CliRunner(env={"PTK_ROLE": "user"}).invoke(
-        cli, ["-c", str(entry), "describe", "--json"]
+        cli, ["-C", str(entry), "describe", "--json"]
     )
     assert result.exit_code == 0, result.output
     commands = command_paths(json.loads(result.output)["projects"][0]["commands"])

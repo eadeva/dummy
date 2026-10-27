@@ -102,7 +102,7 @@ def test_installed_plugin_distribution_end_to_end(tmp_path, monkeypatch):
             }
         )
     )
-    result = CliRunner().invoke(cli, ["-c", str(config), "-V", "one", "go"])
+    result = CliRunner().invoke(cli, ["-C", str(config), "-V", "one", "go"])
     assert result.exit_code == 0, result.output
     assert "plugin-secret" not in result.output
     module = importlib.import_module("ptk_test_extension")

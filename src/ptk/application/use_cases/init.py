@@ -85,6 +85,17 @@ class InitProject:
             ".gitignore": IGNORE,
         }
         configs = {
+            "folder_structure.ptk.yml": "# Repository-local output folders; PTK uses these defaults when this file is absent.\n"
+            + dump(
+                {
+                    "layout": {
+                        "builds": "_builds",
+                        "bin": "_bin",
+                        "logs": "_logs",
+                        "reports": "_reports",
+                    }
+                }
+            ),
             "workflow.ptk.yml": "# Local orchestration; run `ptk workflow run verify`. Not executed on CX.\n"
             "# Nest steps under parallel: true for independent job calls.\n"
             "# open_report: always (default), on-errors, or null to disable opening.\n"

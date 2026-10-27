@@ -16,7 +16,7 @@ from tests.test_workspace import workspace
 @pytest.mark.parametrize("mode", ["--ci", "--no-ci"])
 def test_ci_switch_hidden_and_denied_for_user(tmp_path, mode):
     config = setup(tmp_path)
-    base = ["-c", str(config)]
+    base = ["-C", str(config)]
     grant_maintainer(tmp_path)
     runner = CliRunner(env={"PTK_ROLE": "user", "PTK_CI": "0"})
     help_result = runner.invoke(cli, [*base, "--help"])
@@ -40,7 +40,7 @@ def test_maintainer_can_switch_and_visibility_does_not_leak(tmp_path):
     config = setup(tmp_path)
     grant_maintainer(tmp_path)
     (tmp_path / "cx.ptk.yml").write_text("vars: {selected_layer: cx}\n")
-    base = ["-c", str(config)]
+    base = ["-C", str(config)]
     runner = CliRunner(env={"PTK_ROLE": "", "PTK_CI": "0"})
     assert "--ci" in runner.invoke(cli, [*base, "--help"]).output
     for flag, expected in (("--ci", True), ("--no-ci", False)):
@@ -57,7 +57,7 @@ def test_maintainer_can_switch_and_visibility_does_not_leak(tmp_path):
 def test_ci_detection_remains_available_to_everyone(tmp_path):
     config = setup(tmp_path)
     result = CliRunner(env={"PTK_CI": "1", "PTK_ROLE": "user"}).invoke(
-        cli, ["-c", str(config), "describe", "--json"]
+        cli, ["-C", str(config), "describe", "--json"]
     )
     assert result.exit_code == 0, result.output
     assert json.loads(result.output)["ci"] is True
@@ -69,7 +69,7 @@ def test_ci_detection_remains_available_to_everyone(tmp_path):
 def test_global_variant_reaches_default_generic_and_shortcut_jobs(tmp_path, command):
     config = setup(tmp_path)
     result = CliRunner(env={"PTK_CI": "0"}).invoke(
-        cli, ["-c", str(config), "-V", "large", *command]
+        cli, ["-C", str(config), "-V", "large", *command]
     )
     assert result.exit_code == 0, result.output
     assert "8 world" in result.output
@@ -77,19 +77,19 @@ def test_global_variant_reaches_default_generic_and_shortcut_jobs(tmp_path, comm
 
 def test_global_variant_display_and_irrelevant_commands(tmp_path):
     config = setup(tmp_path)
-    base = ["-c", str(config), "-V", "large"]
+    base = ["-C", str(config), "-V", "large"]
     runner = CliRunner(env={"PTK_CI": "0"})
     result = runner.invoke(cli, [*base, "variant", "show", "--json"])
     assert json.loads(result.output)["name"] == "large"
     result = runner.invoke(cli, [*base, "variant", "show", "small", "--json"])
     assert json.loads(result.output)["name"] == "small"
     result = runner.invoke(
-        cli, ["-c", str(config), "-V", "irrelevant", "setup", "config", "validate"]
+        cli, ["-C", str(config), "-V", "irrelevant", "setup", "config", "validate"]
     )
     assert result.exit_code == 0, result.output
     result = runner.invoke(cli, [*base, "go", "--all-variants"])
     assert result.exit_code == 2 and "not both" in result.output
-    result = runner.invoke(cli, ["-c", str(config), "go", "-V", "large"])
+    result = runner.invoke(cli, ["-C", str(config), "go", "-V", "large"])
     assert result.exit_code == 2 and "No such option" in result.output
 
 
@@ -99,7 +99,7 @@ def test_variant_mutations_removed_for_everyone(tmp_path, command, role):
     config = setup(tmp_path)
     grant_maintainer(tmp_path)
     result = CliRunner(env={"PTK_ROLE": role}).invoke(
-        cli, ["-c", str(config), "variant", command, "--help"]
+        cli, ["-C", str(config), "variant", command, "--help"]
     )
     assert result.exit_code == 2 and "No such command" in result.output
     assert not (tmp_path / "local.ptk.yml").exists()

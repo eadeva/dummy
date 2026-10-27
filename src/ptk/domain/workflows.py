@@ -14,7 +14,6 @@ class WorkflowNode(BaseModel):
     name: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
     job: str | None = Field(default=None, pattern=NAME)
     repo: str | None = Field(default=None, pattern=NAME)
-    variant: str | None = None
     params: dict[str, Any] = Field(default_factory=dict)
     steps: list[WorkflowNode] | None = Field(default=None, min_length=1)
     parallel: bool = False
@@ -31,8 +30,8 @@ class WorkflowNode(BaseModel):
             raise ValueError("choose exactly one of job or steps")
         if self.job is not None and self.parallel:
             raise ValueError("parallel belongs on a group with steps")
-        if self.steps is not None and (self.repo or self.variant or self.params):
-            raise ValueError("repo, variant and params belong on job calls")
+        if self.steps is not None and (self.repo or self.params):
+            raise ValueError("repo and params belong on job calls")
         return self
 
 

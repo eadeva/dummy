@@ -42,7 +42,7 @@ def repository(root, alias="app", *, jobs=None, workflows=None, extra=None):
 
 def invoke(root, *args, env=None):
     return CliRunner(env={"PTK_ROLE": "user", "PTK_CI": "0", **(env or {})}).invoke(
-        cli, ["-c", str(root / ".main.ptk.yml"), *args], catch_exceptions=False
+        cli, ["-C", str(root / ".main.ptk.yml"), *args], catch_exceptions=False
     )
 
 
@@ -406,7 +406,7 @@ def test_published_example_runs_locally_without_github(tmp_path, monkeypatch):
     monkeypatch.chdir(target)
     runner = CliRunner(env={"PTK_ROLE": "user", "PTK_CI": "0"})
     for args in (
-        ["workflow", "run", "all"],
+        ["workflow", "run", "frontend/all"],
         ["workflow", "run", "frontend/verify"],
         ["frontend", "workflow", "run", "verify"],
     ):

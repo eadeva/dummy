@@ -1,9 +1,2 @@
-# Workspace workflows use explicit repository aliases on every job call.
-workflows:
-  all:
-    help: Run both repositories locally
-    parallel: true
-    max_workers: 2
-    steps:
-      - frontend: {repo: frontend, job: test, variant: debug}
-      - backend: {repo: backend, job: test, variant: debug}
+# Variant-aware workflows belong to a repository; see frontend/all and frontend/verify.
+workflows: {}

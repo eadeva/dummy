@@ -33,9 +33,9 @@ From the repository root:
 
 ```bash
 uv sync
-uv run ptk -c examples/quickstart/.main.ptk.yml dry-run build
-uv run ptk -c examples/quickstart/.main.ptk.yml -V debug build
-uv run ptk -c examples/quickstart/.main.ptk.yml -V release build
+uv run ptk -C examples/quickstart/.main.ptk.yml dry-run build
+uv run ptk -C examples/quickstart/.main.ptk.yml -V debug build
+uv run ptk -C examples/quickstart/.main.ptk.yml -V release build
 ```
 
 This example runs without compilers or credentials and writes logs and reports

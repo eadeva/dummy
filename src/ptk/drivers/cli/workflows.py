@@ -95,8 +95,14 @@ def select(ctx, name):
 
 
 @click.group("workflow", cls=AccessGroup)
-def workflow_group():
+@click.pass_context
+@guarded
+def workflow_group(ctx):
     """List, inspect and run sequential/parallel groups of repository jobs."""
+    from .cleanup import mode
+
+    if mode(state_of(ctx)) and ctx.invoked_subcommand not in {"run", "dry-run"}:
+        raise PtkError("--clean and --re-run require workflow run or workflow dry-run")
 
 
 @workflow_group.command("list")
@@ -140,7 +146,7 @@ def show_workflow(ctx, name):
 
 
 def execute_workflow(ctx, name, *, dry_run=False):
-    from ...adapters.locking import file_lock
+    from ...adapters.locking import job_lock
     from ...application.use_cases.run import Cancelled, RunRequest, layout_of
     from ...application.use_cases.workflow import (
         CallOutcome,
@@ -157,6 +163,16 @@ def execute_workflow(ctx, name, *, dry_run=False):
         raise PtkError(
             "workflows run locally only; CX/CI execution uses individual jobs (GitHub template generation is planned separately)"
         )
+    from ...application.use_cases.workflow_variants import WorkflowVariants
+    from .cleanup import clean_selected, mode
+
+    cleaning = mode(parent)
+    owner_project = None
+    if owner is not None:
+        owner_project = create_app(host=parent.app.host).load_project.execute(
+            config_file=entries[owner], overrides=parent.overrides, ci=parent.ci
+        )
+    variants = WorkflowVariants(owner_project, parent.variant)
     bindings = {}
 
     def prepare(node, path):
@@ -189,12 +205,19 @@ def execute_workflow(ctx, name, *, dry_run=False):
             )
         request = RunRequest(
             job=node.job,
-            variant=node.variant,
+            variant=variants.for_project(alias, project),
             params=node.params,
             dry_run=dry_run,
             role=state.role(),
         )
-        prepared = state.app.prepare_run(project).execute(project, request)
+        if parent.clean:
+            from ...application.use_cases.cleanup import prepare_cleanup
+
+            prepared = prepare_cleanup(
+                project, request.job, request.variant, request.role
+            )
+        else:
+            prepared = state.app.prepare_run(project).execute(project, request)
         bindings[path] = state
         return alias, prepared
 
@@ -210,8 +233,15 @@ def execute_workflow(ctx, name, *, dry_run=False):
             click.echo(
                 f"{indent}{node.spec.name}: {node.repo}/{p.job} [{p.variant or 'default'}]"
             )
+    if cleaning:
+        clean_selected(
+            [node.prepared for node in plan.walk() if node.prepared is not None],
+            dry_run=dry_run,
+        )
+        if parent.clean:
+            return
     if dry_run:
-        click.echo("workflow preview; no jobs executed")
+        click.echo("workflow dry-run; no jobs executed")
         return
     # Install once per participating repository, before any parallel job starts.
     checked_repositories = set()
@@ -239,14 +269,7 @@ def execute_workflow(ctx, name, *, dry_run=False):
     def run(node, cancel):
         state, prepared = bindings[node.path], node.prepared
         p = prepared.plan
-        lock = (
-            prepared.project.root
-            / ".ptk"
-            / "locks"
-            / (p.variant or "default")
-            / (p.job + ".lock")
-        )
-        with file_lock(lock):
+        with job_lock(prepared.project.root, p.variant, p.job):
             console.print(
                 f"[bold]{escape('/'.join(node.path))}: {escape(node.repo)}/{escape(p.job)}[/]"
             )

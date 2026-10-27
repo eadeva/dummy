@@ -52,7 +52,7 @@ def test_mutation_commands_denied_before_side_effects(tmp_path, args, forced):
         tmp_path, command_audience={"setup.vscode": "all", "variant": "all"}
     )
     before = snapshot(tmp_path)
-    result = CliRunner(env={"PTK_ROLE": forced}).invoke(cli, ["-c", str(config), *args])
+    result = CliRunner(env={"PTK_ROLE": forced}).invoke(cli, ["-C", str(config), *args])
     assert result.exit_code != 0 and "maintainer-only" in result.output, result.output
     assert snapshot(tmp_path) == before
 
@@ -60,7 +60,7 @@ def test_mutation_commands_denied_before_side_effects(tmp_path, args, forced):
 def test_normal_help_html_and_completion_exclude_mutations(tmp_path):
     config = project(tmp_path)
     runner = CliRunner(env={"PTK_ROLE": "user"})
-    base = ["-c", str(config)]
+    base = ["-C", str(config)]
     for group, hidden, shown in [
         (["setup"], ["vscode", "self"], ["install", "creds", "config", "doctor"]),
         (["setup", "configs"], ["sync"], ["check"]),
@@ -111,7 +111,7 @@ def test_missing_or_invalid_configuration_does_not_expose_mutations(
             (tmp_path / "maintainers.ptk.yml").write_text(
                 "maintainers: [{user: old-schema}]"
             )
-            base = ["-c", str(tmp_path / ".main.ptk.yml")]
+            base = ["-C", str(tmp_path / ".main.ptk.yml")]
         for args in (
             ["setup", "self"],
             ["vscode", "--help"],
@@ -129,7 +129,7 @@ def test_listed_user_can_edit_but_downgrade_cannot(tmp_path):
     config = project(tmp_path)
     grant_maintainer(tmp_path)
     runner = CliRunner(env={"PTK_ROLE": ""})
-    base = ["-c", str(config)]
+    base = ["-C", str(config)]
     assert "vscode" in runner.invoke(cli, [*base, "setup", "--help"]).output
     result = runner.invoke(cli, [*base, "setup", "configs", "sync"])
     assert result.exit_code == 0, result.output
@@ -148,7 +148,7 @@ def test_explicit_policy_still_protects_aliases_and_legacy_setup_dispatch(tmp_pa
         command_audience={"setup.creds": "maintainer", "setup.install": "maintainer"},
     )
     runner = CliRunner(env={"PTK_ROLE": "user"})
-    base = ["-c", str(config)]
+    base = ["-C", str(config)]
     for args in (
         ["setup", "creds", "list"],
         ["creds", "list"],
@@ -177,7 +177,7 @@ def test_developer_installation_credentials_and_read_commands_remain_available(
         ["setup", "config", "validate"],
         ["variant", "show"],
     ):
-        result = runner.invoke(cli, ["-c", str(config), *args])
+        result = runner.invoke(cli, ["-C", str(config), *args])
         assert result.exit_code == 0, result.output
 
 

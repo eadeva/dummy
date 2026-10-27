@@ -107,3 +107,20 @@ def test_feature_spec_validation():
         FeatureSpec(type="int", min=5, default=1)
     with pytest.raises(ValidationError):
         ProductLineSpec.model_validate({"components": {"Bad": {}}})
+
+
+def test_repository_variant_mappings_inherit_and_override():
+    line = ProductLineSpec.model_validate(
+        {
+            "variants": {
+                "base": {
+                    "abstract": True,
+                    "repo_variants": {"a": "debug", "b": "test"},
+                },
+                "release": {"extends": ["base"], "repo_variants": {"a": "release"}},
+            },
+        }
+    )
+    result = vr.resolve(line, "release")
+    assert result.repo_variants == {"a": "release", "b": "test"}
+    assert result.model_dump()["repo_variants"] == result.repo_variants

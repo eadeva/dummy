@@ -93,8 +93,8 @@ are merged across members.
 
 Local preview works without GitHub or network access::
 
-   ptk -c examples/artifacts/.main.ptk.yml artifacts destination --job package --event release
-   ptk -c examples/artifacts/.main.ptk.yml artifacts destination --job package --event release --at 2026-10-26T15:07:00+01:00
+   ptk -C examples/artifacts/.main.ptk.yml artifacts destination --job package --event release
+   ptk -C examples/artifacts/.main.ptk.yml artifacts destination --job package --event release --at 2026-10-26T15:07:00+01:00
 
 ``--event`` overrides the detected event for routing. ``--at`` accepts a
 timezone-aware ISO timestamp and fixes all date placeholders for this resolution.

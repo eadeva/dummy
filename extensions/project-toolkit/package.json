@@ -2,7 +2,7 @@
   "name": "project-toolkit",
   "displayName": "Project Toolkit",
   "description": "Run PTK jobs, workflows and built-in commands, browse help, select variants and open reports.",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "publisher": "eadeva",
   "license": "UNLICENSED",
   "private": true,
@@ -86,7 +86,7 @@
       },
       {
         "command": "project-toolkit.selectVariant",
-        "title": "Select Variant for Jobs",
+        "title": "Select Variant for Jobs and Workflows",
         "category": "Project Toolkit",
         "icon": "$(list-selection)"
       },
@@ -131,6 +131,18 @@
         "title": "Run Command with Options",
         "category": "Project Toolkit",
         "icon": "$(settings-gear)"
+      },
+      {
+        "command": "project-toolkit.clean",
+        "title": "Clean Job or Workflow Outputs",
+        "category": "Project Toolkit",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "project-toolkit.reRun",
+        "title": "Clean Outputs and Re-run Job or Workflow",
+        "category": "Project Toolkit",
+        "icon": "$(debug-restart)"
       }
     ],
     "menus": {
@@ -185,6 +197,16 @@
           "command": "project-toolkit.runBuiltinWithParameters",
           "when": "view == project-toolkit.projects && viewItem == builtin",
           "group": "inline@2"
+        },
+        {
+          "command": "project-toolkit.clean",
+          "when": "view == project-toolkit.projects && viewItem =~ /^(job|workflow)/",
+          "group": "inline@5"
+        },
+        {
+          "command": "project-toolkit.reRun",
+          "when": "view == project-toolkit.projects && viewItem =~ /^(job|workflow)/",
+          "group": "inline@6"
         }
       ]
     },
@@ -241,7 +263,7 @@
           },
           "variant": {
             "type": "string",
-            "description": "Optional job variant; workflows retain their configured selections."
+            "description": "Job variant or workflow owner variant (repository mappings are resolved by PTK)."
           },
           "preview": {
             "type": "boolean",
@@ -269,6 +291,16 @@
               }
             },
             "description": "Non-secret built-in arguments and options, keyed by parameter name; each array holds literal values."
+          },
+          "clean": {
+            "type": "boolean",
+            "default": false,
+            "description": "Delete selected output folders and stop."
+          },
+          "reRun": {
+            "type": "boolean",
+            "default": false,
+            "description": "Delete selected output folders and then execute."
           }
         },
         "when": "processExecutionSupported && isWorkspaceTrusted"

@@ -81,7 +81,7 @@ def test_plugin_starter_installed_entry_point_runs(tmp_path, monkeypatch):
             }
         )
     )
-    result = CliRunner().invoke(cli, ["-c", str(config), "check"])
+    result = CliRunner().invoke(cli, ["-C", str(config), "check"])
     assert result.exit_code == 0 and "Example check passed" in result.output, (
         result.output
     )

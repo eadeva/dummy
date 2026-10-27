@@ -319,7 +319,7 @@ def test_job_versions_coexist_and_path_contains_only_selected_tools(
     assert second_paths[0] not in app.tools.environment(one)["PATH"]
     for job, version in [("one", "1.0.0"), ("two", "2.0.0"), ("one", "1.0.0")]:
         result = CliRunner(env={"PTK_CI": "0", **env}).invoke(
-            cli, ["-c", str(root / ".main.ptk.yml"), job]
+            cli, ["-C", str(root / ".main.ptk.yml"), job]
         )
         assert result.exit_code == 0 and f"selectedtool {version}" in result.output, (
             result.output
@@ -331,7 +331,7 @@ def test_job_versions_coexist_and_path_contains_only_selected_tools(
     }
     write({".main.ptk.yml": yaml.safe_dump(data)})
     result = CliRunner(env={"PTK_CI": "0", **env}).invoke(
-        cli, ["-c", str(root / ".main.ptk.yml"), "one"]
+        cli, ["-C", str(root / ".main.ptk.yml"), "one"]
     )
     assert result.exit_code == 1
     assert (

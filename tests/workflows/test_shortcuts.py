@@ -49,7 +49,7 @@ def test_local_collision_prompts_before_parsing_target_options(
     )
     result = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"}).invoke(
         cli,
-        ["-c", str(root / ".main.ptk.yml"), "verify"],
+        ["-C", str(root / ".main.ptk.yml"), "verify"],
         input=choice + "\n",
         catch_exceptions=False,
     )
@@ -68,7 +68,7 @@ def test_collision_is_noninteractive_in_help_cx_and_explicit_commands(tmp_path):
     assert ambiguous.exit_code == 2 and "non-interactive" in ambiguous.output
     assert not (root / "job-ran").exists()
     ci = CliRunner(env={"PTK_CI": "1", "PTK_ROLE": "user"}).invoke(
-        cli, ["-c", str(root / ".main.ptk.yml"), "verify"]
+        cli, ["-C", str(root / ".main.ptk.yml"), "verify"]
     )
     assert ci.exit_code == 0 and (root / "job-ran").is_file(), ci.output
     assert not (root / "workflow-ran").exists()

@@ -108,7 +108,9 @@ function builtinArgs(spec, inputs = {}) {
   return [...options, ...(positional.length ? ["--", ...positional] : [])];
 }
 
-function argsFor(target, { variant, preview = false, params = {}, help = false, inputs = {} } = {}) {
+function argsFor(target, { variant, preview = false, params = {}, help = false, inputs = {}, clean = false, reRun = false } = {}) {
+  if (typeof clean !== "boolean" || typeof reRun !== "boolean" || clean && reRun) throw new Error("Choose clean or re-run.");
+  if ((clean || reRun) && !["job", "workflow"].includes(target.kind)) throw new Error("Cleanup applies to jobs and workflows.");
   if (typeof help !== "boolean") throw new Error("Task help must be a boolean.");
   if (typeof preview !== "boolean" || !object(params) || !Object.values(params).every(v => typeof v === "string")) {
     throw new Error("Dry-run mode must be a boolean and parameters must be string values.");
@@ -117,7 +119,9 @@ function argsFor(target, { variant, preview = false, params = {}, help = false, 
     throw new Error("Task contains an unknown or secret parameter. Use PTK's credential environment or terminal prompt for secrets.");
   }
   const args = target.project ? ["--config", target.project.entry_file] : [];
-  if (variant && !["workflow", "builtin"].includes(target.kind)) args.push("--variant", variant);
+  if (variant && target.kind !== "builtin") args.push("--variant", variant);
+  if (!help && clean) args.push("--clean");
+  if (!help && reRun) args.push("--re-run");
   if (help) {
     if (target.kind === "job") return [...args, target.name, "--help"];
     if (target.kind === "workflow") return [...args, "workflow", "run", target.name, "--help"];
