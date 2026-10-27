@@ -125,6 +125,7 @@ function argsFor(target, { variant, preview = false, params = {}, help = false, 
   }
   switch (target.kind) {
     case "builtin":
+      if (preview) throw new Error("Built-in commands do not support Preview. Use their --dry-run option where available.");
       if (!target.spec.runnable) throw new Error("Choose a subcommand or open this command's help.");
       args.push(...target.spec.path, ...builtinArgs(target.spec, inputs));
       break;

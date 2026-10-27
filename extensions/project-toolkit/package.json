@@ -246,7 +246,7 @@
           "preview": {
             "type": "boolean",
             "default": false,
-            "description": "Preview without executing the job or workflow."
+            "description": "Preview without executing the job or workflow. Not supported for built-in commands."
           },
           "params": {
             "type": "object",
