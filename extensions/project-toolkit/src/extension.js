@@ -98,7 +98,7 @@ function createController(vscode, context) {
       const children = project[`${kind}s`].map(spec => ({
         ...common, kind, name: spec.name, spec, label: spec.name, tooltip: spec.help,
         contextValue: kind === "job" && project.capabilities.reports ? "job-report" : kind,
-        description: kind === "workflow" ? (common.ci ? "preview only on CI" : "local") : (spec.default ? "default" : ""),
+        description: kind === "workflow" ? (common.ci ? "dry-run only on CI" : "local") : (spec.default ? "default" : ""),
         icon: kind === "job" ? "tools" : "git-merge",
       }));
       if (children.length) groups.push({ label: kind === "job" ? "Jobs" : "Workflows", children });
@@ -268,14 +268,14 @@ function createController(vscode, context) {
   function makeTask(target, options = {}) {
     trusted();
     const config = settings(target.folder);
-    if (target.kind === "workflow" && target.ci && !options.preview && !options.help) throw new Error("Workflows run locally only; CI can preview workflows or run individual jobs.");
+    if (target.kind === "workflow" && target.ci && !options.preview && !options.help) throw new Error("Workflows run locally only; CI can dry-run workflows or run individual jobs.");
     const definition = { type: "project-toolkit", kind: target.kind, name: target.name, root: target.root };
     if (options.variant) definition.variant = options.variant;
     if (options.preview !== undefined) definition.preview = options.preview;
     if (options.params && Object.keys(options.params).length) definition.params = options.params;
     if (options.help !== undefined) definition.help = options.help;
     if (options.inputs && Object.keys(options.inputs).length) definition.inputs = options.inputs;
-    const task = new vscode.Task(definition, target.folder, `${options.help ? "Help " : options.preview ? "Preview " : ""}${title(target)}`, "project-toolkit",
+    const task = new vscode.Task(definition, target.folder, `${options.help ? "Help " : options.preview ? "Dry Run " : ""}${title(target)}`, "project-toolkit",
       new vscode.ProcessExecution(config.executable, [...config.arguments, ...core.argsFor(target, options)], { cwd: target.root }), []);
     task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Dedicated, clear: false, focus: target.kind === "builtin" && !options.help };
     return task;

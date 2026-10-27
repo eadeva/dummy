@@ -53,7 +53,7 @@ uv run sphinx-build -W --keep-going -b html docs docs/_build/html
 
 The [Project Toolkit extension](extensions/project-toolkit/README.md) adds a
 sidebar for jobs, local workflows, built-in commands, variants and reports. Job
-rows have Run, Preview, Parameters and Help icons with tooltips. Expand built-in
+rows have Run, Dry Run, Parameters and Help icons with tooltips. Expand built-in
 commands to access setup, credentials and help, or select a variant for your jobs.
 It supports single repositories, VMRs and multiple workspace folders.
 
@@ -61,7 +61,7 @@ Install the VSIX through **Extensions: Install from VSIX...**. Build it from the
 repository root with `ptk extension` (or `uv run ptk extension`), or download
 the VSIX artifact from the branch's CI run. The job requires Node.js 22+ and npm,
 installs the build dependencies, runs the checks and writes
-`extensions/project-toolkit/project-toolkit-0.2.0.vsix`.
+`extensions/project-toolkit/project-toolkit-0.2.1.vsix`.
 PTK must be installed on the workspace host. See
 [editor documentation](docs/editor.rst) for setup and permissions.
 

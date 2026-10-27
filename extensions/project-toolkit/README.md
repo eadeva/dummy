@@ -8,8 +8,8 @@ sidebar, help, variant selection, parameter prompts, configuration and reports.
 1. Install PTK from the same checkout/version as this extension. The CLI must
    support `ptk describe --json` (inventory schema version 1).
 2. In VS Code, run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.2.0.vsix`. You can also use
-   `code --install-extension project-toolkit-0.2.0.vsix`.
+   `project-toolkit-0.2.1.vsix`. You can also use
+   `code --install-extension project-toolkit-0.2.1.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -34,11 +34,13 @@ workspace node. Set `projectToolkit.discoveryTimeout` (seconds) for slow project
 
 ## Use
 
-- Expand **Jobs** and hover over a job to see four icons: **Run**, **Preview**,
+- Expand **Jobs** and hover over a job to see four icons: **Run**, **Dry Run**,
   **Run Job with Parameters** (gear) and **Show Help** (question mark). Each icon
   has a tooltip. Output appears in VS Code's task terminal; **Tasks: Terminate
   Task** stops a running task. Help displays the job's `--help` without running it
   or asking for parameters.
+  **Dry Run** calls `ptk dry-run JOB` or `ptk workflow dry-run NAME`: it shows what
+  would run without executing the job or workflow steps.
 - Use the parameter icon or **Run Job with Parameters** in the command palette
   to override optional parameters. Required non-secret parameters are prompted
   automatically. Lists use comma-separated values; PTK validates the supplied
@@ -48,8 +50,8 @@ workspace node. Set `projectToolkit.discoveryTimeout` (seconds) for slow project
   clear it. PTK configuration files are unchanged by selection.
 - Use **Display Variant** to inspect resolved features. Variant creation and
   editing are performed in the project's YAML configuration.
-- Expand **Workflows** to run or preview local workflows. Workflows retain their
-  configured per-job variants. On CI, workflows can only be previewed; individual
+- Expand **Workflows** to run or dry-run local workflows. Workflows retain their
+  configured per-job variants. On CI, workflows can only be dry-run; individual
   jobs remain runnable. The help icon displays workflow usage.
 - Expand **Built-in commands** to browse the CLI tree, including **setup > creds**,
   configuration, variants, reports and **help**. **CLI help** displays `ptk --help`;
@@ -95,7 +97,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.2.0.vsix`. Use `ptk dry-run extension`
+`extensions/project-toolkit/project-toolkit-0.2.1.vsix`. Use `ptk dry-run extension`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:
@@ -119,7 +121,7 @@ tests on Linux and Windows.
 Controller tests inject the VS Code API and check task restoration, permissions,
 workspace trust, multi-root selection and cancellation; they are not graphical
 extension-host acceptance tests. For a manual smoke test, install the VSIX, open
-`examples/quickstart`, preview and run a job, select a variant, and run the same
+`examples/quickstart`, dry-run and run a job, select a variant, and run the same
 task again through **Tasks: Run Task**. Hover over the four job icons to check their
 tooltips, open job help, and expand **Built-in commands > setup > creds** to inspect
 help and run `list`. Check **setup > config > show** with the gear to select a

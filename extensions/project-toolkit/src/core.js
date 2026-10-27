@@ -111,7 +111,7 @@ function builtinArgs(spec, inputs = {}) {
 function argsFor(target, { variant, preview = false, params = {}, help = false, inputs = {} } = {}) {
   if (typeof help !== "boolean") throw new Error("Task help must be a boolean.");
   if (typeof preview !== "boolean" || !object(params) || !Object.values(params).every(v => typeof v === "string")) {
-    throw new Error("Task preview must be a boolean and parameters must be string values.");
+    throw new Error("Dry-run mode must be a boolean and parameters must be string values.");
   }
   if (target.kind === "job" && Object.keys(params).some(key => !target.spec.params.some(p => p.name === key))) {
     throw new Error("Task contains an unknown or secret parameter. Use PTK's credential environment or terminal prompt for secrets.");
@@ -125,7 +125,7 @@ function argsFor(target, { variant, preview = false, params = {}, help = false, 
   }
   switch (target.kind) {
     case "builtin":
-      if (preview) throw new Error("Built-in commands do not support Preview. Use their --dry-run option where available.");
+      if (preview) throw new Error("Built-in commands do not support generic dry runs. Use their --dry-run option where available.");
       if (!target.spec.runnable) throw new Error("Choose a subcommand or open this command's help.");
       args.push(...target.spec.path, ...builtinArgs(target.spec, inputs));
       break;

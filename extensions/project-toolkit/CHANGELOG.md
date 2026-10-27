@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- Rename Preview to Dry Run in command titles, tooltips, task labels and messages
+  to match PTK's CLI. Execution behavior and existing saved tasks are unchanged.
+
 ## 0.2.0
 
 - Add inline job icons with tooltips for parameter entry and help, alongside run

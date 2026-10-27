@@ -118,7 +118,7 @@ test("built-in required and positional arguments are validated while help needs 
   assert.deepEqual(core.argsFor(target, { inputs: { name: ["a"], field: ["b"], extra: ["c", "d"] } }),
     ["setup", "creds", "set", "--", "a", "b", "c", "d"]);
   assert.deepEqual(core.argsFor(target, { help: true }), ["setup", "creds", "set", "--help"]);
-  assert.throws(() => core.argsFor(target, { preview: true, inputs: { name: ["a"] } }), /do not support Preview/);
+  assert.throws(() => core.argsFor(target, { preview: true, inputs: { name: ["a"] } }), /do not support generic dry runs/);
   target.spec.runnable = false;
   assert.throws(() => core.argsFor(target), /Choose a subcommand/);
 });

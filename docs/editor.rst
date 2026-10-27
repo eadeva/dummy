@@ -10,13 +10,15 @@ using VS Code's **Extensions: Install from VSIX...**, then open a trusted PTK
 repository or VMR. PTK must be installed on the workspace host and support
 ``ptk describe --json``. The extension requires VS Code 1.96 or newer.
 
-Hover over a job to see Run, Preview, **Run Job with Parameters** (gear) and
+Hover over a job to see Run, Dry Run, **Run Job with Parameters** (gear) and
 **Show Help** (question mark), each with a tooltip. The gear prompts for optional
 overrides; required non-secret parameters are prompted automatically. Help shows
 the job's ``--help`` without running it or asking for parameters.
+Dry Run calls ``ptk dry-run JOB`` or ``ptk workflow dry-run NAME`` and shows the
+planned steps without executing them.
 Provide secrets through their configured environment variables. Tasks execute
 PTK as a process and show output in the task terminal. Saved tasks preserve
-preview mode, parameters, variants and help requests.
+dry-run mode, parameters, variants and help requests.
 
 Expand **Built-in commands** to browse ``setup``, ``setup creds``, ``help`` and
 other permitted commands. The tree has Run, Options and Help icons. Required
@@ -45,7 +47,7 @@ host. Increase ``projectToolkit.discoveryTimeout`` for slow discovery.
 
 Build from the repository root with ``ptk extension`` or ``uv run ptk extension``.
 The job checks Node.js 22+ and npm, installs the build dependencies, runs the
-checks and writes ``extensions/project-toolkit/project-toolkit-0.2.0.vsix``.
+checks and writes ``extensions/project-toolkit/project-toolkit-0.2.1.vsix``.
 Use ``ptk dry-run extension`` to preview it. Node.js and npm must be on PATH.
 Set ``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
 integration tests. CI builds downloadable VSIX artifacts on Linux and Windows;

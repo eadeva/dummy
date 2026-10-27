@@ -2,7 +2,7 @@
   "name": "project-toolkit",
   "displayName": "Project Toolkit",
   "description": "Run PTK jobs, workflows and built-in commands, browse help, select variants and open reports.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "eadeva",
   "license": "UNLICENSED",
   "private": true,
@@ -74,7 +74,7 @@
       },
       {
         "command": "project-toolkit.preview",
-        "title": "Preview Job or Workflow",
+        "title": "Dry Run Job or Workflow",
         "category": "Project Toolkit",
         "icon": "$(inspect)"
       },
@@ -246,7 +246,7 @@
           "preview": {
             "type": "boolean",
             "default": false,
-            "description": "Preview without executing the job or workflow. Not supported for built-in commands."
+            "description": "Dry-run without executing the job or workflow. Not supported for built-in commands."
           },
           "params": {
             "type": "object",
