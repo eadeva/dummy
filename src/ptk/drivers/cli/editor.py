@@ -8,7 +8,61 @@ import rich_click as click
 from ...application.use_cases.role import visible
 from ...bootstrap import create_app
 from ...domain.errors import PtkError
+from .access import allowed
 from .state import CliState, guarded, state_of
+
+
+def describe_commands(ctx, commands=None, path=()):
+    """Read the declared Click tree without invoking callbacks or resolving defaults."""
+    result = []
+    if commands is None:
+        commands = getattr(ctx.command, "commands", {})
+    for name, command in sorted(commands.items()):
+        if command.hidden or not allowed(ctx, name):
+            continue
+        params = []
+        for param in command.params:
+            if getattr(param, "hidden", False) or getattr(param, "hide_input", False):
+                continue
+            option = isinstance(param, click.Option)
+            params.append(
+                {
+                    "name": param.name,
+                    "kind": "option" if option else "argument",
+                    "help": getattr(param, "help", None) or "",
+                    "required": param.required,
+                    "type": param.type.name,
+                    "choices": list(param.type.choices)
+                    if isinstance(param.type, click.Choice)
+                    else [],
+                    "nargs": param.nargs,
+                    "multiple": getattr(param, "multiple", False),
+                    "is_flag": getattr(param, "is_flag", False),
+                    "option": next(
+                        (opt for opt in param.opts if opt.startswith("--")),
+                        param.opts[0],
+                    )
+                    if option
+                    else None,
+                    "secondary_option": next(iter(param.secondary_opts), None)
+                    if option
+                    else None,
+                }
+            )
+        with click.Context(command, info_name=name, parent=ctx) as child:
+            children = describe_commands(child, path=(*path, name))
+        result.append(
+            {
+                "name": name,
+                "path": [*path, name],
+                "help": command.get_short_help_str(180),
+                "runnable": not isinstance(command, click.Group)
+                or command.invoke_without_command,
+                "params": params,
+                "children": children,
+            }
+        )
+    return result
 
 
 @click.command("describe")
@@ -34,6 +88,8 @@ def describe(ctx, as_json):
     workspace = entries is not None
     projects = []
     workflows = []
+    commands = []
+    command_ctx = ctx.parent
     if workspace:
         from ...adapters.workflow_files import read_workflows
 
@@ -54,7 +110,13 @@ def describe(ctx, as_json):
                 overrides=parent.overrides,
             )
             try:
-                projects.append(describe_project(state.project(), state.role()))
+                project = describe_project(state.project(), state.role())
+                group = command_ctx.command.get_command(command_ctx, alias)
+                with click.Context(
+                    group, info_name=alias, parent=command_ctx, obj=state
+                ) as member_ctx:
+                    project["commands"] = describe_commands(member_ctx)
+                projects.append(project)
             except PtkError as exc:
                 projects.append(
                     {
@@ -64,10 +126,15 @@ def describe(ctx, as_json):
                         "error": str(exc),
                     }
                 )
+        from .workspace_commands import build_commands
+
+        commands = describe_commands(command_ctx, build_commands(command_ctx, entries))
     else:
         project = parent.project()
         root, role = project.root, parent.role()
-        projects.append(describe_project(project, role))
+        item = describe_project(project, role)
+        item["commands"] = describe_commands(command_ctx)
+        projects.append(item)
     result = {
         "schema_version": 1,
         "ptk_version": parent.app.version,
@@ -77,6 +144,7 @@ def describe(ctx, as_json):
         "ci": parent.app.host.is_ci() if parent.ci is None else parent.ci,
         "projects": projects,
         "workflows": workflows,
+        "commands": commands,
     }
     if as_json:
         click.echo(json.dumps(result, indent=2))

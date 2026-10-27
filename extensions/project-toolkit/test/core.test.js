@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("node:path");
 const core = require("../src/core");
-const { inventory } = require("./fixtures");
+const { inventory, builtinParam } = require("./fixtures");
 
 function target(kind = "job") {
   const project = inventory().projects[0];
@@ -74,6 +74,64 @@ test("target discovery preserves healthy VMR members and workspace workflows", (
   const targets = core.availableTargets([{ inventory: doc, folder: "workspace" }, { error: "unavailable" }]);
   assert.deepEqual(targets.map(t => [t.kind, t.name]), [["job", "build"], ["workflow", "build"], ["workflow", "all"]]);
   assert.equal(targets[2].project, undefined);
+});
+
+test("built-in commands are optional for older CLIs but malformed metadata is rejected", () => {
+  const doc = inventory();
+  delete doc.projects[0].commands;
+  assert.doesNotThrow(() => core.parseInventory(JSON.stringify(doc)));
+  for (const corrupt of [command => { command.path = ["--unexpected"]; }, command => { command.children = null; },
+    command => { command.params = [builtinParam("bad", { kind: "option", option: null })]; }]) {
+    const bad = inventory();
+    corrupt(bad.projects[0].commands[0]);
+    assert.throws(() => core.parseInventory(JSON.stringify(bad)), /built-in command inventory/);
+  }
+});
+
+test("job and workflow help bypasses required parameters", () => {
+  const job = target();
+  job.spec.params[0].required = true;
+  assert.deepEqual(core.argsFor(job, { help: true }).slice(2), ["build", "--help"]);
+  assert.deepEqual(core.argsFor(target("workflow"), { help: true }).slice(2), ["workflow", "run", "build", "--help"]);
+});
+
+test("built-in options, repeated values and leading-dash positional arguments stay literal", () => {
+  const target = { kind: "builtin", spec: { path: ["setup", "config", "show"], runnable: true, params: [
+    builtinParam("path"),
+    builtinParam("item", { kind: "option", option: "--item", multiple: true }),
+    builtinParam("enabled", { kind: "option", option: "--enabled", secondary_option: "--no-enabled", is_flag: true }),
+  ] } };
+  assert.deepEqual(core.argsFor(target, { variant: "ignored", inputs: { path: ["--literal;$(value)"], item: ["a b", "-c"], enabled: ["false"] } }),
+    ["setup", "config", "show", "--item=a b", "--item=-c", "--no-enabled", "--", "--literal;$(value)"]);
+  assert.throws(() => core.argsFor(target, { inputs: { unexpected: ["value"] } }), /Invalid built-in/);
+  assert.throws(() => core.argsFor(target, { inputs: { path: "value" } }), /Invalid built-in/);
+  assert.throws(() => core.argsFor(target, { inputs: { enabled: ["maybe"] } }), /Invalid flag/);
+});
+
+test("built-in required and positional arguments are validated while help needs no values", () => {
+  const target = { kind: "builtin", spec: { path: ["setup", "creds", "set"], runnable: true, params: [
+    builtinParam("name", { required: true }), builtinParam("field"), builtinParam("extra", { nargs: -1 }),
+  ] } };
+  assert.throws(() => core.argsFor(target), /Required argument: name/);
+  assert.throws(() => core.argsFor(target, { inputs: { name: ["a", "b"] } }), /number of values/);
+  assert.throws(() => core.argsFor(target, { inputs: { name: ["a"], extra: ["b"] } }), /preceding positional/);
+  assert.deepEqual(core.argsFor(target, { inputs: { name: ["a"], field: ["b"], extra: ["c", "d"] } }),
+    ["setup", "creds", "set", "--", "a", "b", "c", "d"]);
+  assert.deepEqual(core.argsFor(target, { help: true }), ["setup", "creds", "set", "--help"]);
+  target.spec.runnable = false;
+  assert.throws(() => core.argsFor(target), /Choose a subcommand/);
+});
+
+test("built-in discovery keeps VMR root and member contexts separate", () => {
+  const doc = inventory();
+  doc.mode = "workspace";
+  doc.commands = [{ name: "repos", path: ["repos"], runnable: true, params: [], children: [] }];
+  const targets = core.availableBuiltins([{ inventory: doc, folder: "workspace" }]);
+  const member = targets.find(t => t.name === "setup creds set");
+  assert.equal(member.project, doc.projects[0]);
+  assert.deepEqual(core.argsFor(member, { help: true }), ["--config", member.project.entry_file, "setup", "creds", "set", "--help"]);
+  assert.deepEqual(core.argsFor(targets.find(t => t.name === "repos")), ["repos"]);
+  assert.equal(targets.filter(t => t.name === "--help").length, 2);
 });
 
 test("discovery invokes an actual executable and parses stdout without a shell", async () => {

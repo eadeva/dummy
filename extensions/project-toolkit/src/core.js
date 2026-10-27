@@ -7,6 +7,22 @@ const object = value => value !== null && typeof value === "object" && !Array.is
 const absolute = value => typeof value === "string" && path.isAbsolute(value);
 const named = value => object(value) && typeof value.name === "string" && value.name.length > 0;
 
+function validBuiltinParam(param) {
+  return named(param) && ["option", "argument"].includes(param.kind) && typeof param.required === "boolean" &&
+    Number.isInteger(param.nargs) && (param.nargs === -1 || param.nargs > 0) &&
+    typeof param.multiple === "boolean" && typeof param.is_flag === "boolean" &&
+    Array.isArray(param.choices) && param.choices.every(choice => typeof choice === "string") &&
+    (param.kind === "argument" || typeof param.option === "string" && param.option.startsWith("-")) &&
+    (param.secondary_option == null || typeof param.secondary_option === "string" && param.secondary_option.startsWith("-"));
+}
+
+function validCommands(commands) {
+  return commands === undefined || Array.isArray(commands) && commands.every(command => named(command) &&
+    Array.isArray(command.path) && command.path.length && command.path.every(word => typeof word === "string" && word.length && !word.startsWith("-")) &&
+    typeof command.runnable === "boolean" && Array.isArray(command.children) && validCommands(command.children) &&
+    Array.isArray(command.params) && command.params.every(validBuiltinParam));
+}
+
 function parseInventory(text) {
   let doc;
   try { doc = JSON.parse(text); } catch {
@@ -16,11 +32,13 @@ function parseInventory(text) {
       !Array.isArray(doc.workflows) || !doc.workflows.every(named) || !absolute(doc.root) || typeof doc.ci !== "boolean") {
     throw new Error("Unsupported PTK inventory. Update PTK and Project Toolkit together.");
   }
+  if (!validCommands(doc.commands)) throw new Error("Invalid PTK built-in command inventory.");
   for (const project of doc.projects) {
     if (!object(project) || typeof project.alias !== "string" || !absolute(project.root) || !absolute(project.entry_file)) {
       throw new Error("Invalid repository paths in PTK inventory.");
     }
     if (project.error) continue;
+    if (!validCommands(project.commands)) throw new Error("Invalid PTK built-in command inventory.");
     if (![project.jobs, project.workflows, project.variants].every(items => Array.isArray(items) && items.every(named)) ||
         !object(project.capabilities) || !["validate", "variants", "reports"].every(key => typeof project.capabilities[key] === "boolean") ||
         !Array.isArray(project.config_files) || !project.config_files.every(absolute) ||
@@ -57,7 +75,41 @@ function selectedVariant(project, saved) {
   return concrete.some(v => v.name === project.default_variant) ? project.default_variant : undefined;
 }
 
-function argsFor(target, { variant, preview = false, params = {} } = {}) {
+function builtinArgs(spec, inputs = {}) {
+  if (!object(inputs) || Object.entries(inputs).some(([key, values]) =>
+    !spec.params.some(p => p.name === key) || !Array.isArray(values) || !values.every(value => typeof value === "string"))) {
+    throw new Error("Invalid built-in command arguments.");
+  }
+  const options = [], positional = [];
+  let omittedArgument = false;
+  for (const param of spec.params) {
+    const values = Object.hasOwn(inputs, param.name) ? inputs[param.name] : [];
+    if (!values.length) {
+      if (param.required) throw new Error(`Required argument: ${param.name}`);
+      if (param.kind === "argument") omittedArgument = true;
+      continue;
+    }
+    if (param.kind === "argument" && omittedArgument) throw new Error(`Supply preceding positional arguments before ${param.name}.`);
+    if (param.is_flag) {
+      if (values.length !== 1 || !["true", "false"].includes(values[0])) throw new Error(`Invalid flag: ${param.name}`);
+      if (values[0] === "true") options.push(param.option);
+      else if (param.secondary_option) options.push(param.secondary_option);
+    } else if (param.kind === "argument") {
+      if (param.nargs !== -1 && values.length !== param.nargs) throw new Error(`Invalid number of values for ${param.name}.`);
+      positional.push(...values);
+    } else {
+      if ((!param.multiple && values.length !== param.nargs) || values.length % param.nargs) throw new Error(`Invalid number of values for ${param.name}.`);
+      for (let i = 0; i < values.length; i += param.nargs) {
+        // Bind a leading-dash value to its option rather than parsing it as a flag.
+        options.push(`${param.option}=${values[i]}`, ...values.slice(i + 1, i + param.nargs));
+      }
+    }
+  }
+  return [...options, ...(positional.length ? ["--", ...positional] : [])];
+}
+
+function argsFor(target, { variant, preview = false, params = {}, help = false, inputs = {} } = {}) {
+  if (typeof help !== "boolean") throw new Error("Task help must be a boolean.");
   if (typeof preview !== "boolean" || !object(params) || !Object.values(params).every(v => typeof v === "string")) {
     throw new Error("Task preview must be a boolean and parameters must be string values.");
   }
@@ -65,8 +117,17 @@ function argsFor(target, { variant, preview = false, params = {} } = {}) {
     throw new Error("Task contains an unknown or secret parameter. Use PTK's credential environment or terminal prompt for secrets.");
   }
   const args = target.project ? ["--config", target.project.entry_file] : [];
-  if (variant && target.kind !== "workflow") args.push("--variant", variant);
+  if (variant && !["workflow", "builtin"].includes(target.kind)) args.push("--variant", variant);
+  if (help) {
+    if (target.kind === "job") return [...args, target.name, "--help"];
+    if (target.kind === "workflow") return [...args, "workflow", "run", target.name, "--help"];
+    if (target.kind === "builtin") return [...args, ...target.spec.path, "--help"];
+  }
   switch (target.kind) {
+    case "builtin":
+      if (!target.spec.runnable) throw new Error("Choose a subcommand or open this command's help.");
+      args.push(...target.spec.path, ...builtinArgs(target.spec, inputs));
+      break;
     case "job":
       args.push(...(preview ? ["dry-run", target.name] : ["run", target.name]));
       for (const [key, value] of Object.entries(params)) {
@@ -112,4 +173,28 @@ function availableTargets(records) {
   return targets;
 }
 
-module.exports = { parseInventory, readInventory, selectedVariant, argsFor, availableTargets };
+function builtinTargets(owner, commands = []) {
+  const result = [{ ...owner, kind: "builtin", name: "--help", spec: { name: "CLI help", path: [], params: [], children: [], runnable: false } }];
+  function visit(items) {
+    for (const spec of items) {
+      result.push({ ...owner, kind: "builtin", name: spec.path.join(" "), spec });
+      visit(spec.children);
+    }
+  }
+  visit(commands);
+  return result;
+}
+
+function availableBuiltins(records) {
+  return records.flatMap(({ inventory, folder }) => {
+    if (!inventory) return [];
+    const common = { folder, ci: inventory.ci };
+    return [
+      ...inventory.projects.filter(project => !project.error).flatMap(project =>
+        builtinTargets({ ...common, project, root: project.root }, project.commands)),
+      ...(inventory.mode === "workspace" ? builtinTargets({ ...common, root: inventory.root }, inventory.commands) : []),
+    ];
+  });
+}
+
+module.exports = { parseInventory, readInventory, selectedVariant, argsFor, availableTargets, availableBuiltins, builtinTargets };

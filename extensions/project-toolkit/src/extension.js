@@ -70,6 +70,25 @@ function createController(vscode, context) {
   const variantFor = project => core.selectedVariant(project, context.workspaceState.get(variantKey(project)));
   const title = target => `${target.project?.alias || path.basename(target.root)} / ${target.kind} / ${target.name}`;
 
+  function builtinTree(owner, commands) {
+    const targets = core.builtinTargets(owner, commands);
+    const nodes = new Map(targets.map(target => [target.name, {
+      ...target, label: target.spec.name, tooltip: target.spec.help,
+      id: JSON.stringify([owner.folder.uri.fsPath, owner.project?.entry_file || owner.root, "builtin", target.name]),
+      icon: target.spec.children.length ? "folder" : "terminal",
+      collapsed: true, contextValue: target.spec.runnable ? "builtin" : "builtin-group",
+    }]));
+    for (const node of nodes.values()) {
+      if (node.spec.children.length) node.children = node.spec.children.map(child => nodes.get(child.path.join(" ")));
+    }
+    const help = nodes.get("--help");
+    help.icon = "question";
+    help.command = { command: "project-toolkit.showHelp", title: "Show CLI help", arguments: [targets[0]] };
+    const children = [help, ...(commands || []).map(spec => nodes.get(spec.path.join(" ")))];
+    if (!commands) children.push({ label: "Update PTK to browse built-in commands", icon: "info" });
+    return { label: "Built-in commands", children, icon: "terminal" };
+  }
+
   function projectNode(project, record) {
     const common = { project, folder: record.folder, root: project.root, ci: record.inventory.ci };
     if (project.error) return { ...common, label: project.alias, description: "configuration error", tooltip: project.error, icon: "error" };
@@ -93,6 +112,7 @@ function createController(vscode, context) {
       ...common, label: "Validate configuration", icon: "check",
       command: { command: "project-toolkit.validate", title: "Validate", arguments: [common] },
     });
+    groups.push(builtinTree(common, project.commands));
     groups.push({ label: "Configuration", children: project.config_files.map(file => ({
       label: path.relative(project.root, file), icon: "file-code", tooltip: file,
       command: { command: "vscode.open", title: "Open configuration", arguments: [vscode.Uri.file(file)] },
@@ -112,11 +132,15 @@ function createController(vscode, context) {
           kind: "workflow", name: spec.name, spec, root: record.inventory.root, folder: record.folder, ci: record.inventory.ci,
           label: spec.name, tooltip: spec.help, icon: "git-merge", contextValue: "workflow",
         })) });
+        if (record.inventory.mode === "workspace") children.push(builtinTree({ root: record.inventory.root, folder: record.folder, ci: record.inventory.ci }, record.inventory.commands));
         return { label: record.folder.name, description: record.inventory.mode === "workspace" ? "VMR" : "", children, icon: "root-folder" };
       });
     },
     getTreeItem(element) {
-      const item = new vscode.TreeItem(element.label, element.children ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None);
+      const item = new vscode.TreeItem(element.label, element.children
+        ? element.collapsed ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.Expanded
+        : vscode.TreeItemCollapsibleState.None);
+      item.id = element.id;
       item.description = element.description;
       item.tooltip = element.tooltip;
       item.contextValue = element.contextValue;
@@ -150,6 +174,19 @@ function createController(vscode, context) {
       return found;
     }
     const selected = await vscode.window.showQuickPick(targets.map(target => ({ label: title(target), description: target.spec.help, target })), { placeHolder: "Choose a PTK job or workflow" });
+    return selected?.target;
+  }
+
+  async function chooseBuiltin(element, helpOnly = false) {
+    trusted();
+    await pending;
+    const targets = core.availableBuiltins(records).filter(target => helpOnly || target.spec.runnable);
+    if (element?.kind) {
+      const found = targets.find(target => target.root === element.root && target.name === element.name && target.project?.entry_file === element.project?.entry_file);
+      if (!found) throw new Error("This command is no longer available. Refresh projects.");
+      return found;
+    }
+    const selected = await vscode.window.showQuickPick(targets.map(target => ({ label: title(target), description: target.spec.help, target })), { placeHolder: "Choose a PTK command" });
     return selected?.target;
   }
 
@@ -192,17 +229,55 @@ function createController(vscode, context) {
     return values;
   }
 
+  async function builtinParameters(target, editOptional) {
+    const specs = target.spec.params;
+    const selected = new Set(specs.filter(param => param.required).map(param => param.name));
+    if (editOptional) {
+      const picked = await vscode.window.showQuickPick(specs.map(param => ({
+        label: param.option || param.name.toUpperCase(), description: param.help, param, picked: param.required,
+      })), { canPickMany: true, placeHolder: "Arguments and options to supply; omitted options keep PTK defaults" });
+      if (!picked) return;
+      for (const item of picked) selected.add(item.param.name);
+    }
+    // Positional arguments cannot skip an earlier optional slot.
+    const arguments_ = specs.filter(param => param.kind === "argument");
+    const last = arguments_.findLastIndex(param => selected.has(param.name));
+    for (const param of arguments_.slice(0, last + 1)) selected.add(param.name);
+    const inputs = {};
+    for (const param of specs.filter(param => selected.has(param.name))) {
+      const values = [];
+      const repeated = param.multiple || param.nargs === -1;
+      let more;
+      do {
+        for (let i = 0; i < Math.max(1, param.nargs); i++) {
+          const choices = param.is_flag ? ["true", "false"] : param.choices;
+          const prompt = `${target.name}: ${param.option || param.name}${repeated || param.nargs > 1 ? ` (${values.length + 1})` : ""}`;
+          const value = choices.length ? await vscode.window.showQuickPick(choices, { placeHolder: prompt })
+            : await vscode.window.showInputBox({ title: prompt, prompt: param.help || "Enter one value; spaces are preserved" });
+          if (value === undefined) return;
+          values.push(value);
+        }
+        more = repeated ? await vscode.window.showQuickPick(["Done", "Add another value"], { placeHolder: `More values for ${param.option || param.name}?` }) : "Done";
+        if (more === undefined) return;
+      } while (more !== "Done");
+      inputs[param.name] = values;
+    }
+    return inputs;
+  }
+
   function makeTask(target, options = {}) {
     trusted();
     const config = settings(target.folder);
-    if (target.kind === "workflow" && target.ci && !options.preview) throw new Error("Workflows run locally only; CI can preview workflows or run individual jobs.");
+    if (target.kind === "workflow" && target.ci && !options.preview && !options.help) throw new Error("Workflows run locally only; CI can preview workflows or run individual jobs.");
     const definition = { type: "project-toolkit", kind: target.kind, name: target.name, root: target.root };
     if (options.variant) definition.variant = options.variant;
     if (options.preview !== undefined) definition.preview = options.preview;
     if (options.params && Object.keys(options.params).length) definition.params = options.params;
-    const task = new vscode.Task(definition, target.folder, `${options.preview ? "Preview " : ""}${title(target)}`, "project-toolkit",
+    if (options.help !== undefined) definition.help = options.help;
+    if (options.inputs && Object.keys(options.inputs).length) definition.inputs = options.inputs;
+    const task = new vscode.Task(definition, target.folder, `${options.help ? "Help " : options.preview ? "Preview " : ""}${title(target)}`, "project-toolkit",
       new vscode.ProcessExecution(config.executable, [...config.arguments, ...core.argsFor(target, options)], { cwd: target.root }), []);
-    task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Dedicated, clear: false };
+    task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Dedicated, clear: false, focus: target.kind === "builtin" && !options.help };
     return task;
   }
 
@@ -236,6 +311,20 @@ function createController(vscode, context) {
   command("run", element => run(element));
   command("preview", element => run(element, true));
   command("runWithParameters", element => run(element, false, true));
+  command("showHelp", async element => {
+    const target = element?.kind && element.kind !== "builtin"
+      ? await chooseTarget(element) : await chooseBuiltin(element, true);
+    if (target) return vscode.tasks.executeTask(makeTask(target, { help: true }));
+  });
+  async function runBuiltin(element, editOptional = false) {
+    const target = await chooseBuiltin(element);
+    if (!target) return;
+    const inputs = await builtinParameters(target, editOptional);
+    if (inputs === undefined) return;
+    return vscode.tasks.executeTask(makeTask(target, { inputs }));
+  }
+  command("runBuiltin", element => runBuiltin(element));
+  command("runBuiltinWithParameters", element => runBuiltin(element, true));
   command("selectVariant", selectVariant);
   command("showVariant", async element => {
     const owner = await chooseProject(element, "variants");
@@ -271,15 +360,17 @@ function createController(vscode, context) {
       if (!vscode.workspace.isTrusted) return;
       await pending;
       const d = task.definition;
-      const target = core.availableTargets(records).find(t => t.kind === d.kind && t.name === d.name && t.root === d.root);
-      if (!target || target.ci && target.kind === "workflow" && !d.preview) return;
-      if ((target.spec.params || []).some(p => p.required && !Object.hasOwn(d.params || {}, p.name))) {
-        output.appendLine(`Use Project Toolkit: Run Job with Parameters to supply required parameters for ${target.name}.`);
+      const targets = d.kind === "builtin" ? core.availableBuiltins(records) : core.availableTargets(records);
+      const target = targets.find(t => t.kind === d.kind && t.name === d.name && t.root === d.root);
+      if (!target || target.ci && target.kind === "workflow" && !d.preview && !d.help) return;
+      if (!d.help && (target.spec.params || []).some(p => p.required && !Object.hasOwn(d.kind === "builtin" ? d.inputs || {} : d.params || {}, p.name))) {
+        const action = d.kind === "builtin" ? "Run Command with Options" : "Run Job with Parameters";
+        output.appendLine(`Use Project Toolkit: ${action} to supply required parameters for ${target.name}.`);
         return;
       }
       const resolved = makeTask(target, {
         variant: target.kind === "job" ? d.variant || variantFor(target.project) : undefined,
-        preview: d.preview, params: d.params,
+        preview: d.preview, params: d.params, help: d.help, inputs: d.inputs,
       });
       resolved.definition = task.definition;
       resolved.name = task.name;

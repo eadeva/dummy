@@ -915,3 +915,16 @@ See docs/performance.rst for measurements and remaining VMR scaling costs.
 - CI tests and packages VSIX artifacts on Linux and Windows. Installation instructions
   are in the extension README and docs/editor.rst. Marketplace publication and a
   graphical extension-host acceptance run remain separate from this implementation.
+
+### Sidebar command access (extension 0.2.0)
+
+- Added inline job parameter/help icons with tooltips alongside run and preview.
+  Help bypasses required-parameter prompts and stays help when a task is restored.
+- Extended inventory schema 1 with optional built-in command metadata from Click,
+  filtered by command audience. Discovery does not invoke callbacks or resolve
+  parameter defaults; hidden and secret-input options are omitted.
+- Added a nested built-in command tree for repositories and VMR roots, including
+  setup, credentials and help, with required/optional argument prompts and focused
+  task terminals for interactive CLI prompts. Older inventories retain CLI help.
+- Added role, read-only discovery, inline-menu, argument, cancellation and saved
+  task coverage, plus real CLI help/configuration/credential-list integration.

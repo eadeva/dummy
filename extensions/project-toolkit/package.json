@@ -1,8 +1,8 @@
 {
   "name": "project-toolkit",
   "displayName": "Project Toolkit",
-  "description": "Run PTK jobs and local workflows, select variants, inspect configuration and open reports.",
-  "version": "0.1.0",
+  "description": "Run PTK jobs, workflows and built-in commands, browse help, select variants and open reports.",
+  "version": "0.2.0",
   "publisher": "eadeva",
   "license": "UNLICENSED",
   "private": true,
@@ -81,7 +81,8 @@
       {
         "command": "project-toolkit.runWithParameters",
         "title": "Run Job with Parameters",
-        "category": "Project Toolkit"
+        "category": "Project Toolkit",
+        "icon": "$(settings-gear)"
       },
       {
         "command": "project-toolkit.selectVariant",
@@ -112,6 +113,24 @@
         "title": "Open Configuration File",
         "category": "Project Toolkit",
         "icon": "$(go-to-file)"
+      },
+      {
+        "command": "project-toolkit.showHelp",
+        "title": "Show Help",
+        "category": "Project Toolkit",
+        "icon": "$(question)"
+      },
+      {
+        "command": "project-toolkit.runBuiltin",
+        "title": "Run Command",
+        "category": "Project Toolkit",
+        "icon": "$(play)"
+      },
+      {
+        "command": "project-toolkit.runBuiltinWithParameters",
+        "title": "Run Command with Options",
+        "category": "Project Toolkit",
+        "icon": "$(settings-gear)"
       }
     ],
     "menus": {
@@ -135,7 +154,8 @@
         },
         {
           "command": "project-toolkit.runWithParameters",
-          "when": "view == project-toolkit.projects && viewItem =~ /^job/"
+          "when": "view == project-toolkit.projects && viewItem =~ /^job/",
+          "group": "inline@3"
         },
         {
           "command": "project-toolkit.openReport",
@@ -150,6 +170,21 @@
           "command": "project-toolkit.showVariant",
           "when": "view == project-toolkit.projects && viewItem == variant",
           "group": "inline@1"
+        },
+        {
+          "command": "project-toolkit.showHelp",
+          "when": "view == project-toolkit.projects && viewItem =~ /^(job|workflow|builtin)/",
+          "group": "inline@4"
+        },
+        {
+          "command": "project-toolkit.runBuiltin",
+          "when": "view == project-toolkit.projects && viewItem == builtin",
+          "group": "inline@1"
+        },
+        {
+          "command": "project-toolkit.runBuiltinWithParameters",
+          "when": "view == project-toolkit.projects && viewItem == builtin",
+          "group": "inline@2"
         }
       ]
     },
@@ -194,7 +229,8 @@
             "type": "string",
             "enum": [
               "job",
-              "workflow"
+              "workflow",
+              "builtin"
             ]
           },
           "name": {
@@ -218,6 +254,21 @@
               "type": "string"
             },
             "description": "Non-secret job parameter overrides; required parameters must be supplied."
+          },
+          "help": {
+            "type": "boolean",
+            "default": false,
+            "description": "Display command or job help without running it or requiring parameters."
+          },
+          "inputs": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "description": "Non-secret built-in arguments and options, keyed by parameter name; each array holds literal values."
           }
         },
         "when": "processExecutionSupported && isWorkspaceTrusted"

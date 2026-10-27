@@ -45,6 +45,14 @@ test("actual PTK inventory, preview, job parameters and variant inspection agree
   const doc = core.parseInventory(invoke(root, ["describe", "--json"]));
   const target = core.availableTargets([{ inventory: doc }]).find(target => target.kind === "job");
   assert.equal(target.spec.params.some(p => p.name === "token"), false);
+  assert.match(invoke(root, core.argsFor(target, { help: true })), /--message/);
+  const builtins = core.availableBuiltins([{ inventory: doc }]);
+  const show = builtins.find(target => target.name === "setup config show");
+  assert.equal(JSON.parse(invoke(root, core.argsFor(show, { inputs: { path: ["project.name"], fmt: ["json"] } }))), "demo");
+  invoke(root, core.argsFor(builtins.find(target => target.name === "setup creds list")));
+  invoke(root, core.argsFor(builtins.find(target => target.name === "setup creds set"), { help: true }));
+  invoke(root, core.argsFor(builtins.find(target => target.name === "--help"), { help: true }));
+  assert.deepEqual(fs.readdirSync(root, { recursive: true }), before);
   const options = { variant: "large", params: { message: "text with spaces;$(literal)", verbose: "false", tags: "one,two" } };
   const preview = invoke(root, core.argsFor(target, { ...options, preview: true }));
   assert.match(preview, /text with spaces/);
@@ -69,6 +77,13 @@ test("actual VMR discovery supports member jobs and workspace workflow previews"
   const doc = core.parseInventory(invoke(root, ["describe", "--json"]));
   assert.equal(doc.mode, "workspace");
   const targets = core.availableTargets([{ inventory: doc }]);
+  const builtins = core.availableBuiltins([{ inventory: doc }]);
+  const member = builtins.find(target => target.project?.alias === "alpha" && target.name === "setup config show");
+  assert.equal(JSON.parse(invoke(root, core.argsFor(member, { inputs: { path: ["project.name"], fmt: ["json"] } }))), "alpha");
+  const shared = builtins.find(target => !target.project && target.name === "setup config show");
+  const configs = invoke(root, core.argsFor(shared, { inputs: { path: ["project.name"], fmt: ["json"] } }));
+  assert.match(configs, /"alpha"/);
+  assert.match(configs, /"beta"/);
   const job = targets.find(target => target.kind === "job" && target.project.alias === "alpha");
   invoke(root, core.argsFor(job, { preview: true, variant: "large" }));
   const workflow = targets.find(target => target.kind === "workflow" && !target.project);

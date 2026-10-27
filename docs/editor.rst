@@ -5,16 +5,26 @@ Project Toolkit extension
 -----------------------------
 
 The ``project-toolkit`` extension in ``extensions/project-toolkit`` provides a
-sidebar for jobs, workflows, variants and configuration files. Install the VSIX
+sidebar for jobs, workflows, built-in commands, variants and configuration files. Install the VSIX
 using VS Code's **Extensions: Install from VSIX...**, then open a trusted PTK
 repository or VMR. PTK must be installed on the workspace host and support
 ``ptk describe --json``. The extension requires VS Code 1.96 or newer.
 
-Use Run or Preview beside a job/workflow. **Run Job with Parameters** prompts for
-optional overrides; required non-secret parameters are prompted automatically.
+Hover over a job to see Run, Preview, **Run Job with Parameters** (gear) and
+**Show Help** (question mark), each with a tooltip. The gear prompts for optional
+overrides; required non-secret parameters are prompted automatically. Help shows
+the job's ``--help`` without running it or asking for parameters.
 Provide secrets through their configured environment variables. Tasks execute
 PTK as a process and show output in the task terminal. Saved tasks preserve
-preview mode, parameters and variants.
+preview mode, parameters, variants and help requests.
+
+Expand **Built-in commands** to browse ``setup``, ``setup creds``, ``help`` and
+other permitted commands. The tree has Run, Options and Help icons. Required
+arguments are prompted automatically; the gear lets you supply optional values.
+Credential values and vault passwords stay in PTK's hidden terminal prompts.
+**CLI help** displays ``ptk --help``; **help** opens PTK's HTML help.
+Update PTK from the same checkout to expose the command tree. Older inventories
+retain job actions and CLI help, with an update hint for built-in browsing.
 
 Selecting a variant stores the choice in VS Code's workspace state for that
 repository. **Use project default** clears it. Selection never rewrites PTK YAML.
@@ -35,7 +45,7 @@ host. Increase ``projectToolkit.discoveryTimeout`` for slow discovery.
 
 Build from the repository root with ``ptk extension`` or ``uv run ptk extension``.
 The job checks Node.js 22+ and npm, installs the build dependencies, runs the
-checks and writes ``extensions/project-toolkit/project-toolkit-0.1.0.vsix``.
+checks and writes ``extensions/project-toolkit/project-toolkit-0.2.0.vsix``.
 Use ``ptk dry-run extension`` to preview it. Node.js and npm must be on PATH.
 Set ``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
 integration tests. CI builds downloadable VSIX artifacts on Linux and Windows;

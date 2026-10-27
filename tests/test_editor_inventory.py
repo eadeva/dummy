@@ -2,6 +2,7 @@
 
 import json
 
+import rich_click as click
 import yaml
 from click.testing import CliRunner
 
@@ -10,6 +11,14 @@ from tests.conftest import grant_maintainer
 from tests.test_command_access import snapshot
 from tests.test_variant_commands import setup
 from tests.test_workspace import workspace
+
+
+def command_paths(commands):
+    result = {}
+    for command in commands:
+        result[" ".join(command["path"])] = command
+        result.update(command_paths(command["children"]))
+    return result
 
 
 def test_inventory_is_read_only_filters_roles_and_omits_secret_values(tmp_path):
@@ -37,6 +46,12 @@ def test_inventory_is_read_only_filters_roles_and_omits_secret_values(tmp_path):
         doc = json.loads(result.output)
         assert doc["schema_version"] == 1 and doc["mode"] == "repository"
         project = doc["projects"][0]
+        commands = command_paths(project["commands"])
+        assert {"help", "setup", "setup creds", "setup creds set"} <= commands.keys()
+        assert ("setup vscode" in commands) is (role == "")
+        assert ("setup configs sync" in commands) is (role == "")
+        assert "creds" not in commands  # Hidden compatibility alias.
+        assert "go" not in commands  # Jobs have their own section.
         assert [j["name"] for j in project["jobs"]] == expected
         assert project["capabilities"]["setup_vscode"] is (role == "")
         assert project["default_variant"] == "small"
@@ -68,6 +83,13 @@ def test_inventory_respects_group_policies(tmp_path):
     project = json.loads(result.output)["projects"][0]
     assert project["variants"] == [] and project["workflows"] == []
     assert not any(project["capabilities"].values())
+    commands = command_paths(project["commands"])
+    assert not any(
+        path.startswith(("variant", "report", "workflow", "setup config "))
+        for path in commands
+    )
+    assert "setup config" not in commands
+    assert "setup creds list" in commands
 
 
 def test_vmr_inventory_retains_healthy_members_when_one_is_invalid(
@@ -90,8 +112,49 @@ def test_vmr_inventory_retains_healthy_members_when_one_is_invalid(
     assert {p["alias"] for p in doc["projects"]} == {"firmware", "bootloader"}
     assert [w["name"] for w in doc["workflows"]] == ["verify"]
     assert "error" in next(p for p in doc["projects"] if p["alias"] == "bootloader")
+    assert "repos" in command_paths(doc["commands"])
+    healthy = next(p for p in doc["projects"] if p["alias"] == "firmware")
+    assert "repos" not in command_paths(healthy["commands"])
+    assert "setup creds set" in command_paths(healthy["commands"])
     result = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"}).invoke(
         cli, ["firmware", "describe", "--json"]
     )
     assert result.exit_code == 0, result.output
     assert json.loads(result.output)["mode"] == "repository"
+
+
+def test_command_metadata_does_not_resolve_defaults_or_invoke_callbacks(
+    tmp_path, monkeypatch
+):
+    entry = setup(tmp_path)
+    command = cli.commands["setup"].commands["creds"].commands["set"]
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Discovery must not resolve defaults or invoke commands")
+
+    monkeypatch.setattr(command, "callback", forbidden)
+    monkeypatch.setattr(command.params[0], "default", forbidden)
+    monkeypatch.setattr(
+        command,
+        "params",
+        [
+            *command.params,
+            click.Option(["--private"], hide_input=True, default="SECRET_DEFAULT"),
+            click.Option(["--hidden"], hidden=True),
+        ],
+    )
+    before = snapshot(tmp_path)
+    result = CliRunner(env={"PTK_ROLE": "user"}).invoke(
+        cli, ["-c", str(entry), "describe", "--json"]
+    )
+    assert result.exit_code == 0, result.output
+    commands = command_paths(json.loads(result.output)["projects"][0]["commands"])
+    params = {p["name"]: p for p in commands["setup creds set"]["params"]}
+    assert set(params) == {"name", "field", "store"}
+    assert params["name"]["kind"] == "argument" and params["name"]["required"]
+    assert params["store"]["option"] == "--store"
+    assert "default" not in params["name"]
+    fmt = next(p for p in commands["setup config show"]["params"] if p["name"] == "fmt")
+    assert fmt["choices"] == ["yaml", "json"]
+    assert "SECRET_DEFAULT" not in result.output
+    assert snapshot(tmp_path) == before
