@@ -41,6 +41,7 @@ NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 
 RESERVED_JOBS = {
     "describe",
+    "pre-commit",
     "artifacts",
     "workflow",
     "config",
@@ -571,6 +572,7 @@ class PtkConfig(_Strict):
             "report",
             "workflow",
             "artifacts",
+            "pre-commit",
         ],
         Literal["all", "maintainer"],
     ] = Field(default_factory=dict)

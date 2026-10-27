@@ -928,3 +928,15 @@ See docs/performance.rst for measurements and remaining VMR scaling costs.
   task terminals for interactive CLI prompts. Older inventories retain CLI help.
 - Added role, read-only discovery, inline-menu, argument, cancellation and saved
   task coverage, plus real CLI help/configuration/credential-list integration.
+
+## Built-in pre-commit commands
+
+- Added repository-scoped `pre-commit run/check/install/uninstall/status/validate`,
+  available in VMR members and the extension's discovered command tree.
+- Reuse the configured output and managed runtime, including explicit checks when
+  automatic installation is disabled or on CI. Support staged/all/file/ref
+  selection, single-hook execution, common stages and native failure exit codes.
+- Installation and removal preserve custom hook management and restore legacy
+  scripts. Status/help are read-only; checks do not install Git hook scripts.
+- Hook revisions remain managed through base configs and project overlays.
+  The CI quality job now invokes `ptk pre-commit check`.

@@ -22,6 +22,8 @@ order, omitting empty groups. At a VMR root, Repositories replaces Jobs.
      - Inspect, validate and export project configuration
    * - ``ptk setup configs sync|check``
      - Generate and verify shared tool configurations
+   * - ``ptk pre-commit run|check|install|uninstall|status|validate``
+     - Run repository checks and manage local Git hooks
    * - ``ptk setup install``
      - Check tools and install missing or outdated versions
    * - ``ptk setup creds setup|set|list|test|remove``
@@ -76,7 +78,7 @@ and, in a VMR, before the repository alias::
 
 It selects the variant for jobs, version discovery/generation, report commands,
 artifact destinations and ``variant show`` when NAME is omitted. An explicit
-NAME on ``variant show`` takes precedence. It is irrelevant to setup/config/help,
+NAME on ``variant show`` takes precedence. It is irrelevant to setup/config/help/pre-commit,
 variant list/check/explain (which have their own explicit selection), describe,
 and workflow commands. Workflows retain the variants declared on their job calls.
 The option is no longer accepted after a job or subcommand.
@@ -90,6 +92,67 @@ their own permissions. The default mode remains automatically detected.
 ``variant list``, ``show``, ``explain`` and ``check`` are read-only. Edit the YAML
 configuration directly to change the product line or configured default.
 Persistent variant editing commands and the desktop editor have been removed.
+
+Pre-commit commands
+-------------------
+
+The built-in ``pre-commit`` group uses the current repository's configured
+pre-commit file and PTK's managed runtime. No separate pre-commit executable on
+PATH is required. In a VMR, select a member: ``ptk ALIAS pre-commit ...``.
+There is no implicit operation across all repositories.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 60
+
+   * - Command
+     - Behavior
+   * - ``ptk pre-commit run [HOOK]``
+     - Run checks on staged files; optionally select one hook ID
+   * - ``ptk pre-commit check [HOOK]``
+     - Run checks on all tracked files, equivalent to ``run --all-files``
+   * - ``ptk pre-commit install``
+     - Install or repair every configured Git hook type
+   * - ``ptk pre-commit uninstall``
+     - Remove pre-commit scripts and restore their saved legacy hooks
+   * - ``ptk pre-commit status``
+     - Inspect installation without changing anything; exit 1 when missing/unusable
+   * - ``ptk pre-commit validate``
+     - Validate the configuration with pre-commit's schema without running checks
+
+Examples::
+
+   ptk pre-commit run
+   ptk pre-commit check --show-diff-on-failure
+   ptk pre-commit run ruff-check --all-files
+   ptk pre-commit run --file src/main.py --file "tests/example test.py"
+   ptk pre-commit run --from-ref origin/main --to-ref HEAD
+   ptk pre-commit check --hook-stage manual --verbose
+   ptk firmware pre-commit status
+
+``--file`` is repeatable; paths are relative to the repository root and must stay
+inside it. File selection, ``--all-files`` and a ref pair are mutually exclusive;
+``--from-ref`` and ``--to-ref`` must be supplied together. ``--hook-stage`` supports
+``pre-commit``, ``pre-push`` and ``manual``. Hook output is streamed, and failed
+checks retain pre-commit's nonzero exit code. Hooks may format or otherwise modify
+files; ``check`` is not a dry run.
+
+Explicit commands honor ``configs.pre-commit.output`` even when automatic
+installation is disabled. Without an entry, they use ``.pre-commit-config.yaml``.
+Checks and validation may prepare the managed pre-commit runtime, but do not
+install Git hook scripts. Checks work on CI and with a custom ``core.hooksPath``;
+install/uninstall refuse that setting to preserve existing hook management.
+Uninstall leaves the runtime and caches available for future checks. Linked
+worktrees share Git hook scripts, so installation/removal affects those worktrees.
+If ``configs.pre-commit.enabled`` is true, the next local job installs hooks again.
+
+These commands do not regenerate configuration or change hook revisions.
+Maintainers change the project overlay and run
+``ptk setup configs sync pre-commit``; PTK upgrades supply newer base revisions.
+``ptk setup configs check pre-commit`` checks whether the generated file is current.
+Use ``command_audience: {pre-commit: maintainer}`` to restrict the whole group.
+The VS Code extension discovers these built-ins automatically after updating PTK
+and refreshing projects.
 
 Variant matrices
 ----------------

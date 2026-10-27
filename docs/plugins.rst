@@ -112,7 +112,7 @@ Use canonical dotted paths, for example::
 Supported keys are ``setup``, its immediate commands/groups (``config``, ``configs``,
 ``creds``, ``vscode``, ``install``, ``self``, ``doctor``, ``init``),
 ``setup.configs.sync|check``, ``setup.vscode.tasks|skills``,
-``variant``, ``version``, ``report``, ``workflow`` and
+``pre-commit``, ``variant``, ``version``, ``report``, ``workflow`` and
 ``artifacts``. Expand alternatives to individual dotted keys in YAML.
 Restrictions apply to descendants and compatibility aliases, normal/HTML help
 and completion. Configuration writers are restricted by default; ``all`` cannot

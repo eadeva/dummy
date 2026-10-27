@@ -267,10 +267,15 @@ maintainer. Installation, validation or verification failures stop the job or
 workflow before its first step. Linked worktrees share hooks and should use the
 same relative pre-commit configuration path and installed hook types.
 
+Use ``ptk pre-commit install|uninstall|status`` for explicit hook management,
+``ptk pre-commit run`` for staged files and ``ptk pre-commit check`` for all tracked
+files. ``ptk pre-commit validate`` checks the hook configuration. These commands
+honor a custom ``configs.pre-commit.output`` and also work when automatic
+installation is disabled. See :doc:`cli` for file/ref selection and exit codes.
+
 Automatic installation prevents forgotten setup. It cannot prevent deliberate
-local bypass such as ``git commit --no-verify``. Run
-``uv tool run pre-commit run --all-files`` in CI (add ``--config PATH`` for a custom
-output), and require that check through GitHub branch protection/rulesets.
+local bypass such as ``git commit --no-verify``. Run ``ptk pre-commit check`` in CI
+and require that check through GitHub branch protection/rulesets.
 ``ptk setup configs check`` verifies generated configuration freshness; it does
 not execute the hooks. Installation does not make ``setup self`` or
 ``setup configs sync`` available to non-maintainers.

@@ -203,6 +203,14 @@ class RepositoryHooks(Protocol):
 
     def ensure(self, root: Path, config: Path, out: Callable[[str], None]) -> None: ...
 
+    def run(
+        self, root: Path, config: Path, args: list[str], out: Callable[[str], None]
+    ) -> ProcessOutcome: ...
+
+    def uninstall(
+        self, root: Path, config: Path, out: Callable[[str], None]
+    ) -> None: ...
+
 
 class SharedConfigFiles(Protocol):
     """Base configs shipped with ptk and the project's config files."""

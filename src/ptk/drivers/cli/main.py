@@ -24,6 +24,7 @@ from ...domain.errors import ConfigError, PtkError
 from .access import AccessGroup, MaintainerOption, can_switch_ci, require
 from .artifacts import artifacts_group
 from .editor import describe
+from .hooks import pre_commit_group
 from .jobs import (
     ProjectGroup,
     build_request,
@@ -92,7 +93,7 @@ click.rich_click.SHOW_ARGUMENTS = True
 @click.option(
     "-V",
     "--variant",
-    help="Variant name/alias (comma-separated for jobs). Used by jobs, variant show, versions, reports and artifact destinations. Ignored by setup, config, help and workflows (which select variants per job).",
+    help="Variant name/alias (comma-separated for jobs). Used by jobs, variant show, versions, reports and artifact destinations. Ignored by setup, config, pre-commit, help and workflows (which select variants per job).",
 )
 @click.version_option(__version__, prog_name="ptk")
 @click.pass_context
@@ -144,6 +145,7 @@ def cli(
 
 cli.add_command(workflow_group)
 cli.add_command(describe)
+cli.add_command(pre_commit_group)
 
 
 # --------------------------------------------------------------------------- config

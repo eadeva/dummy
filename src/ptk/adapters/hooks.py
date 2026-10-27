@@ -85,7 +85,7 @@ class GitHooks:
         root: Path,
         argv: list[str],
         *,
-        timeout: float = 30,
+        timeout: float | None = 30,
         out: Callable[[str], None] | None = None,
     ) -> tuple[ProcessOutcome, str]:
         lines = []
@@ -110,7 +110,9 @@ class GitHooks:
             )
         return text
 
-    def _target(self, root: Path, config: Path) -> HookTarget:
+    def _target(
+        self, root: Path, config: Path, *, check_hooks_path: bool = True
+    ) -> HookTarget:
         if not config.is_file():
             raise PtkError(
                 f"pre-commit configuration missing: {config}; ask a maintainer to run "
@@ -149,12 +151,12 @@ class GitHooks:
         if len(paths) != 2 or not Path(paths[0]).samefile(root):
             raise PtkError(f"pre-commit requires a Git repository rooted at {root}")
         result, custom = self._call(root, ["git", "config", "--get", "core.hooksPath"])
-        if result.exit_code == 0:
+        if result.exit_code == 0 and check_hooks_path:
             raise PtkError(
                 f"pre-commit hook conflict in {root}: core.hooksPath is set to {custom!r}; "
                 "ask a maintainer to reconcile the existing hook configuration"
             )
-        if result.exit_code != 1:
+        if result.exit_code not in (0, 1):
             raise PtkError(
                 f"cannot inspect Git hook configuration in {root}: {result.error or custom}"
             )
@@ -303,4 +305,65 @@ class GitHooks:
         except OSError as exc:
             raise PtkError(
                 f"cannot install pre-commit hooks in {root}: {exc}"
+            ) from None
+
+    def run(
+        self, root: Path, config: Path, args: list[str], out: Callable[[str], None]
+    ) -> ProcessOutcome:
+        """Run checks or validate configuration without installing Git hook scripts."""
+        try:
+            target = self._target(root, config, check_hooks_path=False)
+            with file_lock(target.common / "ptk" / "pre-commit.lock", timeout=600):
+                python = self._runtime(target, out)
+            if args[0] == "validate-config":
+                command = ["validate-config", target.config]
+            else:
+                command = [args[0], "--config", target.config, *args[1:]]
+            result, _ = self._call(
+                root,
+                [python, "-I", "-m", "pre_commit", *command],
+                timeout=None,
+                out=out,
+            )
+            return result
+        except OSError as exc:
+            raise PtkError(f"cannot run pre-commit in {root}: {exc}") from None
+
+    def uninstall(self, root: Path, config: Path, out: Callable[[str], None]) -> None:
+        try:
+            target = self._target(root, config)
+            with file_lock(target.common / "ptk" / "pre-commit.lock", timeout=600):
+                for kind in target.types:
+                    hook = target.path(kind)
+                    backup = hook.with_name(kind + ".legacy")
+                    if (
+                        hook.is_symlink()
+                        or backup.is_symlink()
+                        or any(p.exists() and not p.is_file() for p in (hook, backup))
+                    ):
+                        raise PtkError(
+                            f"pre-commit hook conflict: {hook}; left unchanged"
+                        )
+                python = self._runtime(target, out)
+                self._checked(
+                    root,
+                    [
+                        python,
+                        "-I",
+                        "-m",
+                        "pre_commit",
+                        "uninstall",
+                        "--config",
+                        target.config,
+                        *[
+                            arg
+                            for kind in target.types
+                            for arg in ("--hook-type", kind)
+                        ],
+                    ],
+                    out=out,
+                )
+        except OSError as exc:
+            raise PtkError(
+                f"cannot uninstall pre-commit hooks in {root}: {exc}"
             ) from None

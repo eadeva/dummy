@@ -175,6 +175,9 @@ ptk                                  run the default job (project.default_job)
 ptk JOB [--PARAM VALUE]... [--from STEP] [--to STEP] [--params FILE]
            [-q] [--args-for STEP="ARGS"]... [-- ARGS]
 ptk dry-run [JOB [same options]] [--env]   what would run - nothing is executed
+ptk pre-commit run [HOOK] [--all-files]   run checks on staged or all tracked files
+ptk pre-commit check [HOOK]              run checks on all tracked files
+ptk pre-commit install | uninstall | status | validate
 ptk run [JOB] [-p NAME=VALUE]... [same options]   generic form for scripts and CI
 ptk workflow list | show NAME | dry-run NAME | run NAME
 ptk setup config validate | show [PATH] [--sources] [--format yaml|json] | schema [-o FILE]
