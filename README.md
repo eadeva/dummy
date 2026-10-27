@@ -56,10 +56,13 @@ sidebar for jobs, local workflows, variants, configuration and reports. Run or
 preview jobs, supply parameters and select a variant without editing configuration.
 It supports single repositories, VMRs and multiple workspace folders.
 
-Install the VSIX through **Extensions: Install from VSIX...**. Build it with
-`npm ci` and `npm run package` inside `extensions/project-toolkit`, or download
-the VSIX artifact from the branch's CI run. PTK must be installed on the workspace
-host. See [editor documentation](docs/editor.rst) for setup and permissions.
+Install the VSIX through **Extensions: Install from VSIX...**. Build it from the
+repository root with `ptk extension` (or `uv run ptk extension`), or download
+the VSIX artifact from the branch's CI run. The job requires Node.js 22+ and npm,
+installs the build dependencies, runs the checks and writes
+`extensions/project-toolkit/project-toolkit-0.1.0.vsix`.
+PTK must be installed on the workspace host. See
+[editor documentation](docs/editor.rst) for setup and permissions.
 
 ## Tools
 

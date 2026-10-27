@@ -66,10 +66,23 @@ values belong in task parameters.
 
 ## Build and verify
 
-From this folder, with Node.js 22 or newer:
+With Node.js 22 or newer and npm installed, run from the PTK repository root:
 
 ```sh
-npm ci
+ptk extension
+# Or, with the checkout's uv environment:
+uv run ptk extension
+```
+
+The job checks Node.js and npm, installs the locked build dependencies and runs
+the package command. The VSIX is written to
+`extensions/project-toolkit/project-toolkit-0.1.0.vsix`. Use `ptk dry-run extension`
+to preview the steps. Node.js must already be installed and available on PATH.
+
+To run the same build directly from this extension folder:
+
+```sh
+npm ci --include=dev
 npm run package
 ```
 
@@ -82,7 +95,8 @@ at the repository root, on Linux/macOS:
 PTK_TEST_PYTHON="$PWD/../../.venv/bin/python" npm run package
 ```
 
-CI packages the extension and runs these integration tests on Linux and Windows.
+CI uses `uv run ptk extension` to package the extension and run these integration
+tests on Linux and Windows.
 Controller tests inject the VS Code API and check task restoration, permissions,
 workspace trust, multi-root selection and cancellation; they are not graphical
 extension-host acceptance tests. For a manual smoke test, install the VSIX, open

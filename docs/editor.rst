@@ -33,8 +33,11 @@ Set ``projectToolkit.executable`` to a program or absolute path and
 roots without a uv project. SSH/WSL/container sessions run PTK on their workspace
 host. Increase ``projectToolkit.discoveryTimeout`` for slow discovery.
 
-Build with ``npm ci`` and ``npm run package`` in the extension folder. Set
-``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
+Build from the repository root with ``ptk extension`` or ``uv run ptk extension``.
+The job checks Node.js 22+ and npm, installs the build dependencies, runs the
+checks and writes ``extensions/project-toolkit/project-toolkit-0.1.0.vsix``.
+Use ``ptk dry-run extension`` to preview it. Node.js and npm must be on PATH.
+Set ``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
 integration tests. CI builds downloadable VSIX artifacts on Linux and Windows;
 Marketplace publication is separate. See the extension README for installation,
 settings and manual smoke-test instructions.

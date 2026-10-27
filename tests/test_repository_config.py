@@ -19,7 +19,7 @@ def test_repository_jobs_and_single_component_free_variant():
     app = create_app()
     project = app.load_project.execute(config_file=ROOT / ".main.ptk.yml", ci=False)
     assert project.config.repository.alias == "ptk"
-    assert set(project.config.jobs) == {"test", "docs", "check", "package"}
+    assert set(project.config.jobs) == {"test", "docs", "check", "package", "extension"}
     assert project.config.project.default_job == "test"
     assert list(project.config.variants.variants) == ["default"]
     assert not project.config.variants.components

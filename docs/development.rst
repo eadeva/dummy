@@ -21,8 +21,13 @@ Run from the repository root; the project uses its own PTK configuration in
    uv run ptk docs
    uv run ptk package
 
+Build the VS Code extension with ``uv run ptk extension`` (or ``ptk extension``
+with an installed CLI). This job needs Node.js 22+ and npm on PATH. It installs
+locked npm dependencies, runs extension checks and creates the VSIX under
+``extensions/project-toolkit``. ``ptk dry-run extension`` previews its steps.
+
 An installed ``ptk`` can run the same jobs without the ``uv run`` prefix.
-The job's Python runtime always selects this checkout's uv project.
+Jobs using a Python runtime always select this checkout's uv project.
 ``test`` and ``check`` select its ``dev`` dependency group; ``docs`` selects
 ``docs``, installing missing dependencies as needed. Groups remain defined in
 ``pyproject.toml`` rather than duplicated in PTK tool definitions.
@@ -134,8 +139,8 @@ Acceptance boundaries
 The VS Code extension's ``npm run package`` runs JavaScript syntax checks and
 Node tests, then packages a VSIX. ``PTK_TEST_PYTHON`` enables integration tests
 which invoke the real CLI from Node for repository and VMR discovery, previews,
-parameter passing and execution. The extension CI job runs on Linux and Windows
-and uploads the VSIX. Controller tests use an injected VS Code API; graphical
+parameter passing and execution. The extension CI job runs ``uv run ptk extension``
+on Linux and Windows and uploads the VSIX. Controller tests use an injected VS Code API; graphical
 extension-host acceptance remains a manual check. See :doc:`editor`.
 
 Plugin contracts and generators are documented in :doc:`plugins`; variant inspection

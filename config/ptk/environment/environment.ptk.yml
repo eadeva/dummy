@@ -1,5 +1,5 @@
 # Keep commands isolated while allowing package access.
-# The test job alone inherits PATH because it exercises host-installed tools.
+# Test and extension jobs inherit PATH for their host-installed tools.
 environment:
   isolate: true
   inherit_path: false
@@ -14,3 +14,11 @@ environment:
     - NO_PROXY
     - SSL_CERT_FILE
     - REQUESTS_CA_BUNDLE
+    - NODE_EXTRA_CA_CERTS
+    - NPM_CONFIG_REGISTRY
+    - NPM_CONFIG_USERCONFIG
+    - NPM_CONFIG_CACHE
+    - npm_config_registry
+    - npm_config_userconfig
+    - npm_config_cache
+    - PTK_TEST_PYTHON
