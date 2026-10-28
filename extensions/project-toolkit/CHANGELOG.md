@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.1
+
+- Apply text edits when leaving a field or saving; keep focus, drafts and cursor stable during save replies.
+- Avoid tree redraws during source checks, unsaved YAML typing and unchanged refreshes.
+- Use named steps and values for list rows, semantic icons and stable tree identities.
+- Remove the form navigation sidebar; use the VS Code tree and breadcrumbs.
+
 ## 0.5.0
 
 - Use the installed PTK's merged configuration tree, schema, sources and diagnostics.

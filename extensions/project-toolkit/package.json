@@ -2,7 +2,7 @@
   "name": "project-toolkit",
   "displayName": "Project Toolkit",
   "description": "Run PTK jobs, workflows and built-in commands, browse help, select variants and open reports.",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "publisher": "eadeva",
   "license": "UNLICENSED",
   "private": true,
@@ -110,7 +110,7 @@
       },
       {
         "command": "project-toolkit.openConfig",
-        "title": "Open Configuration File",
+        "title": "Open Configuration",
         "category": "Project Toolkit",
         "icon": "$(go-to-file)"
       },
@@ -352,7 +352,7 @@
     ]
   },
   "scripts": {
-    "check": "node --check src/core.js && node --check src/extension.js && node --check src/config-model.js && node --check src/editors.js && node --check src/parameters.js && node --check media/schema.js && node --check media/editor.js",
+    "check": "node --check src/core.js && node --check src/extension.js && node --check src/config-model.js && node --check src/editors.js && node --check src/parameters.js && node --check media/schema.js && node --check media/presentation.js && node --check media/editor.js",
     "test": "node --test test/*.test.js",
     "package": "vsce package --no-dependencies --skip-license",
     "vscode:prepublish": "npm run check && npm test && npm run build",

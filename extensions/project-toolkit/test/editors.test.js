@@ -89,3 +89,15 @@ test("parameter window validates values, filters secrets, and resolves only once
   h.panels[1].dispose();
   assert.equal(await cancelled, undefined);
 });
+
+test("file form typing does not refresh the tree before a document is saved", async () => {
+  const h = harness("project: {name: old}\n");
+  const p = await h.resolve();
+  await p.receive({ type: "ready" });
+  await p.receive(edit(1, "new"));
+  assert.equal(h.changeCount(), 0);
+  h.external("project: {name: raw}\n");
+  assert.equal(h.changeCount(), 0);
+  await p.receive({ type: "save" });
+  assert.equal(h.changeCount(), 1);
+});

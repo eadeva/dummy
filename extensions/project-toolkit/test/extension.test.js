@@ -23,7 +23,7 @@ function harness(t, docs = [inventory()], trusted = true) {
   let editorActions;
   const watchers = [];
   const taskEnd = [];
-  let outputShown = 0;
+  let outputShown = 0, treeChanges = 0;
   const disposable = () => ({ dispose() {} });
   const folder = doc => ({ name: path.basename(doc.root), uri: { scheme: "file", fsPath: doc.root } });
   const folders = docs.map(folder);
@@ -31,7 +31,7 @@ function harness(t, docs = [inventory()], trusted = true) {
     calls.push({ settings, cwd });
     return structuredClone(docs.find(doc => doc.root === cwd));
   });
-  class EventEmitter { event = () => disposable(); fire() {} dispose() {} }
+  class EventEmitter { event = () => disposable(); fire() { treeChanges++; } dispose() {} }
   class Task {
     constructor(definition, scope, name, source, execution, problemMatchers) {
       Object.assign(this, { definition, scope, name, source, execution, problemMatchers });
@@ -87,7 +87,7 @@ function harness(t, docs = [inventory()], trusted = true) {
   t.after(() => context.subscriptions.forEach(item => item.dispose()));
   const command = (name, element) => commands.get(`project-toolkit.${name}`)(element);
   const target = (kind = "job", index = 0) => ({ kind, name: "build", project: docs[index].projects[0], root: docs[index].projects[0].root });
-  return { api, controller, command, target, context, state, tasks, errors, logs, picks, inputs, calls, config, watchers, taskEnd, outputShown: () => outputShown, forms, formRequests, opened, editorActions };
+  return { api, controller, command, target, context, state, tasks, errors, logs, picks, inputs, calls, config, watchers, taskEnd, outputShown: () => outputShown, forms, formRequests, opened, editorActions, treeChanges: () => treeChanges };
 }
 
 test("activation discovers projects and runs jobs as processes with global variants", async t => {
@@ -600,4 +600,47 @@ test("variant selection uses only the per-target setting", async t => {
   await h.controller.ready();
   await h.command("run", h.target());
   assert.deepEqual(h.tasks[0].execution.args.slice(2), ["--variant", "small", "run", "build"]);
+});
+
+test("configuration list entries use names and values and skip named-step wrappers", async t => {
+  const doc = inventory();
+  doc.projects[0].configuration.value = {
+    jobs: { build: { steps: [{ compile: { run: "make" } }, { test: { uses: "echo" } }, { run: "echo direct", name: "Direct step" }] } },
+    environment: { keep: ["PATH", "HOME", "PATH"] },
+    artifactory: { events: { push: { path: "branches" } } },
+  };
+  const h = harness(t, [doc]);
+  await h.controller.ready();
+  const config = h.controller.provider.getChildren()[0].children[0].children.find(node => node.label === "Configuration");
+  const jobs = config.children.find(node => node.label === "jobs");
+  const steps = jobs.children[0].children[0];
+  assert.deepEqual(steps.children.map(node => node.label), ["compile", "test", "Direct step"]);
+  assert.deepEqual(steps.children[0].configPath, ["jobs", "build", "steps", 0, "compile"]);
+  assert.deepEqual(steps.children[0].children.map(node => node.label), ["run"]);
+  assert.equal(steps.children[0].icon, "terminal");
+  assert.equal(jobs.icon, "tasklist");
+  const keep = config.children.find(node => node.label === "environment").children[0];
+  assert.deepEqual(keep.children.map(node => node.label), ["PATH", "HOME", "PATH"]);
+  assert.equal(new Set(keep.children.map(node => node.id)).size, 3);
+  assert.ok(keep.children.every(node => !node.icon && !node.description));
+  await h.command("openConfig", steps.children[0]);
+  assert.deepEqual(h.opened.at(-1).path, ["jobs", "build", "steps", 0, "compile"]);
+});
+
+test("unchanged refreshes and edit preflight do not redraw the tree; identities survive saves", async t => {
+  const doc = inventory();
+  const h = harness(t, [doc]);
+  await h.controller.ready();
+  const before = h.treeChanges();
+  const ids = tree => tree.flatMap(node => [node.id, ...ids(node.children || [])]);
+  const original = ids(h.controller.provider.getChildren());
+  await h.controller.refresh();
+  assert.equal(h.treeChanges(), before);
+  doc.projects[0].configuration.value.jobs.build.help = "New help";
+  await h.editorActions.project(doc.projects[0].entry_file, { publish: false });
+  assert.equal(h.treeChanges(), before);
+  assert.deepEqual(ids(h.controller.provider.getChildren()), original);
+  await h.editorActions.project(doc.projects[0].entry_file);
+  assert.equal(h.treeChanges(), before + 1);
+  assert.deepEqual(ids(h.controller.provider.getChildren()), original);
 });

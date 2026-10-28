@@ -2,18 +2,13 @@
 
 const path = require("node:path");
 const core = require("./core");
+const presentation = require("../media/presentation");
 const { createEditors } = require("./editors");
 const { validateParameters } = require("./parameters");
 
 // Native theme colours keep the tree readable in light, dark and high contrast
 // themes. Labels and icon shapes carry the same meaning without relying on colour.
 const iconColors = {
-  "root-folder": "charts.blue", repo: "charts.blue",
-  tools: "charts.green", "git-merge": "charts.purple",
-  "symbol-enum": "charts.orange", "pass-filled": "charts.green",
-  "settings-gear": "charts.yellow", "file-code": "charts.yellow",
-  terminal: "charts.blue", folder: "charts.blue",
-  question: "charts.purple", info: "charts.blue", check: "charts.green",
   error: "errorForeground", warning: "list.warningForeground",
 };
 
@@ -32,10 +27,19 @@ function createController(vscode, context, editorFactory = createEditors) {
   const diagnostics = vscode.languages?.createDiagnosticCollection("ptk");
   if (diagnostics) context.subscriptions.push(diagnostics);
   const editors = editorFactory(vscode, context, {
-    changed: () => changed.fire(),
+    changed: () => schedule(),
     validate: async uri => validateConfiguration({ configFile: uri.fsPath }),
-    project: async entry => {
-      await refresh();
+    project: async (entry, { publish = true } = {}) => {
+      if (publish) await refresh();
+      else {
+        await pending;
+        const record = records.find(record => record.inventory?.projects.some(project => project.entry_file === entry));
+        if (!record) throw new Error("PTK project is no longer available.");
+        const inventory = await core.readInventory(settings(record.folder), record.folder.uri.fsPath);
+        const project = inventory.projects.find(project => project.entry_file === entry);
+        if (!project) throw new Error("PTK project is no longer available.");
+        return { project, folder: record.folder, root: project.root };
+      }
       for (const record of records) {
         const project = record.inventory?.projects.find(project => project.entry_file === entry);
         if (project) return { project, folder: record.folder, root: project.root };
@@ -81,7 +85,8 @@ function createController(vscode, context, editorFactory = createEditors) {
     // overlapping CLI instances while files are being installed or generated.
     pending = pending.then(async () => {
       if (current !== revision || disposed || !vscode.workspace.isTrusted) return;
-      loading = true; changed.fire();
+      loading = true;
+      if (!records.length) changed.fire();
       const folders = (vscode.workspace.workspaceFolders || []).filter(folder => folder.uri.scheme === "file");
       const result = await Promise.all(folders.map(async folder => {
         try {
@@ -92,6 +97,8 @@ function createController(vscode, context, editorFactory = createEditors) {
         }
       }));
       if (current !== revision || disposed || !vscode.workspace.isTrusted) return;
+      const content = items => JSON.stringify(items.map(({ folder, ...record }) => [folder.uri.fsPath, record]));
+      const different = content(records) !== content(result);
       records = result;
       loading = false;
       diagnostics?.clear();
@@ -109,7 +116,7 @@ function createController(vscode, context, editorFactory = createEditors) {
       for (const record of records) {
         if (record.error) output.appendLine(`${record.folder.name}: ${record.error}`);
       }
-      changed.fire();
+      if (different) changed.fire();
     });
     return pending;
   }
@@ -162,15 +169,17 @@ function createController(vscode, context, editorFactory = createEditors) {
     const config = common.project.configuration;
     const sources = new Map(config.sources.map(source => [JSON.stringify(source.path), source]));
     function field(value, configPath, label) {
+      const name = presentation.namedEntry(value, configPath);
+      if (name) return field(value[name], [...configPath, name], name);
       const source = sources.get(JSON.stringify(configPath));
       const object = value !== null && typeof value === "object";
       const node = { ...common, kind: "configuration", configPath, label,
         id: JSON.stringify([common.folder.uri.fsPath, common.project.entry_file, "configuration", configPath]),
-        collapsed: true, icon: object ? "symbol-namespace" : "symbol-property",
+        collapsed: true, icon: presentation.icon(value, configPath),
         tooltip: source ? `${source.file}:${source.line}` : "Not configured",
-        description: value === undefined ? "not configured" : object ? "" : String(value),
+        description: value === undefined ? "not configured" : object || typeof configPath.at(-1) === "number" ? "" : String(value),
       };
-      if (object) node.children = Object.entries(value).map(([key, child]) => field(child, [...configPath, Array.isArray(value) ? Number(key) : key], Array.isArray(value) ? `Item ${Number(key) + 1}` : key));
+      if (object) node.children = Object.entries(value).map(([key, child]) => field(child, [...configPath, Array.isArray(value) ? Number(key) : key], Array.isArray(value) ? presentation.listLabel(child, [...configPath, Number(key)]) : key));
       node.command = { command: "project-toolkit.openConfig", title: "Edit configuration", arguments: [node] };
       return node;
     }
@@ -198,14 +207,21 @@ function createController(vscode, context, editorFactory = createEditors) {
         return { ...target, label: spec.name, tooltip: spec.help,
           contextValue: core.canOpenReport(target) ? `${kind}-report` : kind,
           description: [variantFor(target), kind === "workflow" && common.ci ? "dry-run only on CI" : spec.default ? "default" : ""].filter(Boolean).join(" · "),
-          icon: kind === "job" ? "tools" : "git-merge",
+          icon: kind === "job" ? "play-circle" : "git-merge",
         };
       });
-      if (children.length) groups.push({ label: kind === "job" ? "Jobs" : "Workflows", icon: kind === "job" ? "tools" : "git-merge", children });
+      if (children.length) groups.push({ label: kind === "job" ? "Jobs" : "Workflows", icon: kind === "job" ? "tasklist" : "git-merge", children });
     }
     groups.push(builtinTree(common, project.commands), configurationNode(common));
     return { ...common, label: project.alias, description: project.name, tooltip: project.root,
       contextValue: "project", icon: "repo", children: groups };
+  }
+
+  function identified(node, parent) {
+    const parts = [...parent, node.kind || "group", node.name || node.label];
+    node.id ||= JSON.stringify(parts);
+    for (const child of node.children || []) identified(child, parts);
+    return node;
   }
 
   const provider = {
@@ -213,7 +229,7 @@ function createController(vscode, context, editorFactory = createEditors) {
     getChildren(element) {
       if (element) return element.children || [];
       if (loading && !records.length) return [{ label: "Loading PTK configuration…", icon: "sync" }];
-      return records.map(record => {
+      return records.map(record => identified((() => {
         if (record.error) return {
           label: record.folder.name, description: "PTK unavailable", tooltip: `${record.error}\nClick to show the discovery error.`, icon: "warning",
           command: { command: "project-toolkit.showOutput", title: "Show PTK Discovery Error" },
@@ -228,11 +244,11 @@ function createController(vscode, context, editorFactory = createEditors) {
           contextValue: core.canOpenReport({ kind: "workflow", commands: record.inventory.commands }) ? "workflow-report" : "workflow",
         })) });
         if (record.inventory.mode === "workspace") children.push(builtinTree({ root: record.inventory.root, folder: record.folder, ci: record.inventory.ci }, record.inventory.commands));
-        return { label: record.folder.name, description: loading ? "Loading…" : record.inventory.mode === "workspace" ? "VMR" : "", children, icon: "root-folder" };
-      });
+        return { label: record.folder.name, description: record.inventory.mode === "workspace" ? "VMR" : "", children, icon: "root-folder" };
+      })(), [record.folder.uri.fsPath]));
     },
     getTreeItem(element) {
-      const item = new vscode.TreeItem(element.label, element.children || element.hasChildren
+      const item = new vscode.TreeItem(element.label, element.children?.length || element.hasChildren
         ? element.collapsed ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.Expanded
         : vscode.TreeItemCollapsibleState.None);
       item.id = element.id;

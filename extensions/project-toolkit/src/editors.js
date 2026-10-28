@@ -18,7 +18,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
   function html(webview) {
     const nonce = crypto.randomBytes(18).toString("base64");
     const resource = name => webview.asWebviewUri(vscode.Uri.joinPath(media, name));
-    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';"><link rel="stylesheet" href="${resource("editor.css")}"><title>Project Toolkit</title></head><body><div id="app"></div><script nonce="${nonce}" src="${resource("schema.js")}"></script><script nonce="${nonce}" src="${resource("editor.js")}"></script></body></html>`;
+    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';"><link rel="stylesheet" href="${resource("editor.css")}"><title>Project Toolkit</title></head><body><div id="app"></div><script nonce="${nonce}" src="${resource("schema.js")}"></script><script nonce="${nonce}" src="${resource("presentation.js")}"></script><script nonce="${nonce}" src="${resource("editor.js")}"></script></body></html>`;
   }
   function configure(panel) {
     panel.webview.options = { enableScripts: true, localResourceRoots: [media] };
@@ -41,10 +41,9 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
       function state(extra = {}) { return post({ type: "state", ...configurationState(document), ...extra }); }
       const updates = vscode.workspace.onDidChangeTextDocument(event => {
         if (event.document.uri.toString() !== key) return;
-        changed();
         if (!applying) state();
       });
-      const saves = vscode.workspace.onDidSaveTextDocument(saved => { if (saved.uri.toString() === key) state(); });
+      const saves = vscode.workspace.onDidSaveTextDocument(saved => { if (saved.uri.toString() === key) { changed(); state({ reason: "saved" }); } });
       const messages = panel.webview.onDidReceiveMessage(message => {
         // Serialize edits, save and raw-editor switches for this document.
         chain = chain.then(async () => {
@@ -77,7 +76,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
             if (message.type === "save" || message.type === "validate") {
               if (!await document.save()) throw new Error("The configuration could not be saved.");
               if (message.type === "validate") await validate(document.uri);
-              return state();
+              return state({ reason: message.type === "save" ? "saved" : "validated" });
             }
             if (message.type === "raw") return vscode.commands.executeCommand("vscode.openWith", document.uri, "default");
           } catch (error) { await state({ ack: message.id, issue: error.message }); }
@@ -130,7 +129,6 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
       owner = await reloadProject(owner.project.entry_file);
       config = owner.project.configuration;
       version++;
-      changed();
       return state(extra);
     }
     async function newFile() {
@@ -156,8 +154,8 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
         try {
           trusted();
           if (message.type === "ready") return state({ selection });
-          if (message.type === "save") return refresh();
-          if (message.type === "validate") { await validate(vscode.Uri.file(owner.project.entry_file)); return refresh(); }
+          if (message.type === "save") return state({ reason: "saved" });
+          if (message.type === "validate") { await validate(vscode.Uri.file(owner.project.entry_file)); return state({ reason: "validated" }); }
           if (message.type === "raw") {
             const selected = await vscode.window.showQuickPick(config.files.map(file => ({ label: path.relative(owner.root, file), file })), { placeHolder: "Open configuration source" });
             if (selected) return vscode.commands.executeCommand("vscode.openWith", vscode.Uri.file(selected.file), "default");
@@ -166,7 +164,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
           if (message.type !== "edit") return;
           if (message.version !== version) throw new Error("Configuration changed. Review the refreshed form before editing again.");
           const before = config;
-          owner = await reloadProject(owner.project.entry_file);
+          owner = await reloadProject(owner.project.entry_file, { publish: false });
           config = owner.project.configuration;
           if (JSON.stringify(before.fingerprints) !== JSON.stringify(config.fingerprints)) throw new Error("A source file changed. Review the refreshed configuration before editing again.");
           const destination = message.newFile ? await newFile() : undefined;

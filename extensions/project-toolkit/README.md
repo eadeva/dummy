@@ -8,8 +8,8 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
 1. Install PTK from the same checkout/version as this extension. The CLI must
    support `ptk describe --json` (inventory schema version 1).
 2. In VS Code, run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.5.0.vsix`. You can also use
-   `code --install-extension project-toolkit-0.5.0.vsix`.
+   `project-toolkit-0.5.1.vsix`. You can also use
+   `code --install-extension project-toolkit-0.5.1.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -124,7 +124,15 @@ or merge implementation and does not substitute a bundled schema for the runtime
 PTK and the extension must both support this configuration interface. Discovery
 reports an error if the installed PTK does not provide it.
 
-The project form saves changes automatically and reloads them through PTK.
+Text and number fields stay local while you type. Leaving a field, pressing
+**Save** / **Ctrl/Cmd+S**, or navigating to another section applies the finished
+edit; the project form then saves and reloads it through PTK. Checkboxes, choices
+and structural actions apply immediately. Save replies preserve active text,
+focus and the cursor; unchanged inventories do not redraw the tree.
+
+Use the VS Code tree for navigation. The form has no second navigation sidebar;
+breadcrumbs show the current field path. List rows show step names or their values
+instead of item numbers, and named steps open their fields directly.
 Ordinary edits go back to their recorded source. Choose **Next change: new file…**
 to place a change in a new fragment. Existing definitions are removed from their
 old files in the same VS Code workspace edit, so no overwrite conflict is left
@@ -161,7 +169,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.5.0.vsix`. Use `ptk dry-run extension`
+`extensions/project-toolkit/project-toolkit-0.5.1.vsix`. Use `ptk dry-run extension`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:
@@ -214,3 +222,8 @@ or `reRun`, with optional `preview: true` to inspect without deletion.
 
 Update the CLI together with the extension. The config shorthand is now `-C`;
 `-c` means clean. Binary folders now include the job name.
+
+Browser regression tests exercise the actual form scripts, including slow typing,
+focus/cursor preservation and navigation. Install Playwright with Chromium to run
+them, or set `PTK_TEST_PLAYWRIGHT` to its module path and `PTK_TEST_CHROMIUM` to a
+Chromium executable. Without Playwright these tests are explicitly skipped.
