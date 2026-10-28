@@ -20,7 +20,6 @@ def make_project(root, alias="demo", extra=None):
         yaml.safe_dump(
             {
                 "repository": {"alias": alias, "config_path": "config"},
-                "include": "project.ptk.yml",
             }
         )
     )
@@ -141,6 +140,10 @@ def test_pr_payload_github_outputs_omitted_job_suffix_and_overlays(tmp_path):
     event_file.write_text(
         json.dumps({"pull_request": {"number": 42}, "token": "do-not-expose"})
     )
+    source = root / "config/artifactory_structure.ptk.yaml"
+    structure = yaml.safe_load(source.read_text())
+    del structure["artifactory"]["base_path"]
+    source.write_text(yaml.safe_dump(structure))
     (root / "config/local.ptk.yml").write_text("artifactory: {base_path: local}\n")
     result = invoke(
         root,

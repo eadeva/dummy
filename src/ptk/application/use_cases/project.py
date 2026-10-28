@@ -16,10 +16,10 @@ from pydantic import BaseModel, ValidationError
 from ...domain.config import rules as config_rules
 from ...domain.config import tree as t
 from ...domain.config.defaults import apply_defaults, normalize_requirements
-from ...domain.config.model import JOB_RE, MaintainersSpec, PtkConfig, WorkspaceSpec
+from ...domain.config.model import MaintainersSpec, PtkConfig, WorkspaceSpec
 from ...domain.config.schema_walk import unknown_keys
 from ...domain.errors import ConfigError, Location, Problem
-from ..ports import CX_FILE, LOCAL_FILE, MAINTAINERS_FILE, ConfigSource, HostEnvironment
+from ..ports import MAINTAINERS_FILE, ConfigSource, HostEnvironment
 
 _UNION_TAG = re.compile(
     r"^(str|int|float|bool|none|list\[.*\]|dict\[.*\]|literal\[.*\]|.*\[.*\]|function-.*)$",
@@ -39,6 +39,8 @@ class Project:
     ci: bool = False
     selected_tools: list[str] | None = None
     warnings: list[Problem] = field(default_factory=list)
+    authored_tree: t.Node | None = None
+    fingerprints: dict[str, str] = field(default_factory=dict)
 
     @property
     def config_root(self) -> Path:
@@ -131,6 +133,13 @@ class LoadProject:
         self._source = source
         self._host = host
         self._version = ptk_version
+        self.editor_tree: t.Node | None = None
+        self.editor_files: list[Path] = []
+        self.editor_main: Path | None = None
+
+    @property
+    def fingerprints(self):
+        return self._source.fingerprints
 
     def execute(
         self,
@@ -146,7 +155,10 @@ class LoadProject:
             else self._source.find_main(start or Path.cwd())
         )
         root = main.parent
-        first_read = len(self._source.files)
+        self.editor_main = main
+        self.editor_tree = None
+        is_ci = self._host.is_ci() if ci is None else ci
+        self.editor_files = self._source.discover(main, ci=is_ci)
         main_tree = self._source.read(main)
         marker = t.get(main_tree, ("virtual_monorepo",))
         if marker is not None and marker.value is True:
@@ -161,46 +173,27 @@ class LoadProject:
         metadata = t.get(main_tree, ("repository", "config_path"))
         config_root = (root / metadata.value).resolve() if metadata else root
         is_ci = self._host.is_ci() if ci is None else ci
-        overlays = []
-        for name, enabled in ((CX_FILE, is_ci), (LOCAL_FILE, True)):
-            layer_file = config_root / name
-            if enabled and self._source.exists(layer_file):
-                overlays.append((name, self._source.read(layer_file)))
-
-        # Conventional tool files are defaults: explicit main/includes win.
-        # Files already included explicitly retain that placement and are not applied twice.
-        tree = t.from_plain({})
-        layers = []
-        for filename in (
-            "folder_structure.ptk.yml",
-            "tools.ptk.yml",
-            "versioning.ptk.yml",
-            "workflow.ptk.yml",
-            "artifactory_structure.ptk.yaml",
-        ):
-            conventional = config_root / filename
-            if conventional not in self._source.files[
-                first_read:
-            ] and self._source.exists(conventional):
-                tree = t.merge(tree, self._source.read(conventional))
-                layers.append(filename)
-        names = set()
-        for candidate in [tree, main_tree, *(node for _, node in overlays)]:
-            jobs = t.get(candidate, ("jobs",))
-            if jobs is not None and jobs.is_map:
-                names.update(n for n in jobs.value if JOB_RE.fullmatch(n))
-        for name in sorted(names):
-            tool_file = config_root / f"{name}.tools.ptk.yml"
-            if tool_file not in self._source.files[first_read:] and self._source.exists(
-                tool_file
-            ):
-                tree = t.merge(tree, self._source.read(tool_file))
-                layers.append(tool_file.name)
-        tree = t.merge(tree, main_tree)
-        layers.append(main.name)
-        for name, overlay in overlays:
-            tree = t.merge(tree, overlay)
-            layers.append(name)
+        tree = main_tree
+        layers = [main.name]
+        for file in self.editor_files:
+            if file == main:
+                continue
+            fragment = self._source.read(file)
+            for key in ("repository", "virtual_monorepo"):
+                if key in fragment.value:
+                    raise ConfigError(
+                        [
+                            Problem(
+                                f"{key} must be defined only in .main.ptk.yml",
+                                key,
+                                fragment.value[key].loc,
+                            )
+                        ]
+                    )
+            tree = t.merge_unique(tree, fragment)
+            layers.append(str(file.relative_to(root)))
+        authored_tree = tree
+        self.editor_tree = authored_tree
         for text in overrides:
             path, value = parse_override(text)
             loc = Location(f"--set {text}")
@@ -258,9 +251,11 @@ class LoadProject:
             root=root,
             main_file=main,
             tree=tree,
-            files=list(dict.fromkeys(self._source.files)),
+            files=list(self.editor_files),
             layers=layers,
             ci=is_ci,
+            authored_tree=authored_tree,
+            fingerprints=self.fingerprints,
         )
         project.maintainers = self.maintainers(config_root)
         return project
@@ -364,6 +359,7 @@ class ExportSchema:
                 "type": "object",
                 "minProperties": 1,
                 "maxProperties": 1,
+                "default": {"step": {"run": "echo Hello"}},
                 "description": '- step-name: {run|uses|steps: ...}  or  - step-name: "command"',
                 "additionalProperties": {
                     "anyOf": [
@@ -386,6 +382,7 @@ class ExportSchema:
             body["required"] = [r for r in body.get("required", []) if r != "name"]
             schema["$defs"]["WorkflowBody"] = body
             schema["$defs"]["WorkflowEntry"] = {
+                "default": {"job": {"job": "hello"}},
                 "type": "object",
                 "minProperties": 1,
                 "maxProperties": 1,
@@ -399,13 +396,6 @@ class ExportSchema:
                 )
             )
             schema["$defs"].pop("WorkflowNode", None)
-        schema["properties"]["include"] = {
-            "anyOf": [
-                {"type": "string"},
-                {"type": "array", "items": {"type": "string"}},
-            ]
-        }
-        schema["properties"]["variants"]["anyOf"].append({"type": "string"})
         for definition in [schema, schema.get("$defs", {}).get("JobSpec", {})]:
             properties = definition.get("properties", {})
             if "requires_tools" in properties:
@@ -415,7 +405,7 @@ class ExportSchema:
                         {"type": "array", "items": {"type": "string"}},
                     ]
                 }
-        # Project content may be supplied entirely by includes.
+        # Each discovered file may supply any disjoint subset of the schema.
         schema["required"] = []
         schema["properties"]["repository"] = {"$ref": "#/$defs/RepositorySpec"}
         # Authored omission means automatic discovery, not explicit standalone.
@@ -435,7 +425,7 @@ class ExportSchema:
                         if key not in {"virtual_monorepo", "members"}
                     }
                 },
-                "else": {"required": ["repository"], "properties": {"members": False}},
+                "else": {"properties": {"members": False}},
             }
         ]
         schema["title"] = "ptk configuration (*.ptk.yml)"

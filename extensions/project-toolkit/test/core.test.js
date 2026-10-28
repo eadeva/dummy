@@ -137,7 +137,7 @@ test("built-in discovery keeps VMR root and member contexts separate", () => {
 
 test("discovery invokes an actual executable and parses stdout without a shell", async () => {
   const doc = inventory(process.cwd());
-  const script = `if (process.argv.slice(1).join(' ') !== 'describe --json') process.exit(3); process.stdout.write(${JSON.stringify(JSON.stringify(doc))})`;
+  const script = `if (process.argv.slice(1).join(' ') !== 'describe --json --configuration') process.exit(3); process.stdout.write(${JSON.stringify(JSON.stringify(doc))})`;
   assert.deepEqual(await core.readInventory({ executable: process.execPath, arguments: ["-e", script, "--"], timeout: 10 }, process.cwd()), doc);
 });
 
@@ -160,7 +160,7 @@ test("uv launch arguments prevent implicit syncing on POSIX and Windows without 
     const settings = { executable, arguments: ["run", "--project", "folder with spaces", "ptk"] };
     assert.deepEqual(core.launchArgs(settings, ["version", "check"]), ["run", "--no-sync", "--project", "folder with spaces", "ptk", "version", "check"]);
     assert.deepEqual(settings.arguments, ["run", "--project", "folder with spaces", "ptk"]);
-    assert.deepEqual(core.launchArgs({ executable, arguments: ["run", "--no-sync", "ptk"] }, ["describe", "--json"]), ["run", "--no-sync", "ptk", "describe", "--json"]);
+    assert.deepEqual(core.launchArgs({ executable, arguments: ["run", "--no-sync", "ptk"] }, ["describe", "--json", "--configuration"]), ["run", "--no-sync", "ptk", "describe", "--json", "--configuration"]);
   }
   assert.deepEqual(core.launchArgs({ executable: "ptk", arguments: [] }, ["version", "check"]), ["version", "check"]);
   assert.deepEqual(core.launchArgs({ executable: "uv", arguments: ["tool", "run", "ptk"] }, ["--help"]), ["tool", "run", "ptk", "--help"]);

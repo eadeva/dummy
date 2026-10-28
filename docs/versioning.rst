@@ -3,7 +3,7 @@ Version discovery and generated build files
 
 PTK discovers versions; it never bumps versions, commits changes or creates tags.
 Put maintained rules in ``versioning.ptk.yml`` in ``repository.config_path``.
-This conventional file loads automatically before main/includes and overlays.
+Every ``*.ptk.yml`` file is discovered automatically; fields cannot overwrite another file.
 A project without versioning configuration runs as before.
 
 Every configured job run resolves versions once after variant selection and
@@ -15,7 +15,7 @@ before its steps. Execution atomically writes a unique snapshot to::
 resolved values even if a step changes Git state or a source manifest. Subsequent
 runs discover again. Snapshots are retained until the user removes them; they are
 not included in log-history rotation. Add ``.gen.version.ptk.yml`` to ``.gitignore``
-(the initializer does this). Generated snapshots are excluded from include globs
+(the initializer does this). Generated snapshots are excluded from configuration discovery
 and refused as explicit configuration inputs. They never feed back into discovery.
 Dry runs discover versions but do not write snapshots or execute job steps.
 Custom discovery commands still execute in a dry run: they must be read-only.

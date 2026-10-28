@@ -364,6 +364,9 @@
     },
     "EventRoute": {
       "additionalProperties": false,
+      "default": {
+        "path": ""
+      },
       "properties": {
         "path": {
           "anyOf": [
@@ -1853,6 +1856,11 @@
       "type": "object",
       "minProperties": 1,
       "maxProperties": 1,
+      "default": {
+        "step": {
+          "run": "echo Hello"
+        }
+      },
       "description": "- step-name: {run|uses|steps: ...}  or  - step-name: \"command\"",
       "additionalProperties": {
         "anyOf": [
@@ -1937,6 +1945,11 @@
       "type": "object"
     },
     "WorkflowEntry": {
+      "default": {
+        "job": {
+          "job": "hello"
+        }
+      },
       "type": "object",
       "minProperties": 1,
       "maxProperties": 1,
@@ -2059,9 +2072,6 @@
         },
         {
           "type": "null"
-        },
-        {
-          "type": "string"
         }
       ],
       "default": null
@@ -2151,19 +2161,6 @@
       "title": "Command Audience",
       "type": "object"
     },
-    "include": {
-      "anyOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      ]
-    },
     "members": {
       "anyOf": [
         {
@@ -2218,14 +2215,10 @@
           "logging": false,
           "reporting": false,
           "plugins": false,
-          "command_audience": false,
-          "include": false
+          "command_audience": false
         }
       },
       "else": {
-        "required": [
-          "repository"
-        ],
         "properties": {
           "members": false
         }

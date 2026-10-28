@@ -13,7 +13,6 @@ def configured_project(root, versioning):
         yaml.safe_dump(
             {
                 "repository": {"alias": "ptk", "config_path": "config"},
-                "include": "versioning.ptk.yml",
                 "project": {"name": "ptk"},
                 "variants": {"default": "release", "variants": {"release": {}}},
             }

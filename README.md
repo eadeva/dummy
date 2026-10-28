@@ -139,10 +139,10 @@ All ptk files end in `.ptk.yml`:
 
 | File | Purpose |
 |------|---------|
-| `.main.ptk.yml` | repository-root entry: alias, configuration path and includes |
-| `*.ptk.yml` | fragments pulled in with `include:` (e.g. `ptk/jobs/*.ptk.yml`) |
+| `.main.ptk.yml` | repository-root marker: alias and default authoring folder |
+| `*.ptk.yml` | automatically discovered fragments using their full schema paths |
 | `cx.ptk.yml` | applied automatically in CI |
-| `local.ptk.yml` | personal overrides (git-ignore it) |
+| `local.ptk.yml` | personal additions, without duplicate definitions (git-ignore it) |
 | `maintainers.ptk.yml` | who sees maintainer-only jobs |
 | `workflow.ptk.yml` | local sequential/parallel groups of job calls |
 
@@ -152,16 +152,18 @@ repository: {alias: demo, config_path: .}
 schema_version: 1
 # ptk_version: ">=0.1,<0.2"            # optional: choose your supported PTK releases
 project: {name: demo, default_job: build}
-include: [ptk/jobs/*.ptk.yml]
-variants: ptk/variants.ptk.yml       # plain string = include this file here
 vars: {preset: "${vh.variant}"}
 ```
 
-Loading order: automatic `tools.ptk.yml`, `versioning.ptk.yml`, `workflow.ptk.yml` and `<job>.tools.ptk.yml` → `.main.ptk.yml` (+ includes) → `cx.ptk.yml` (in CI) →
-`local.ptk.yml` → `--set PATH=VALUE`.
+PTK discovers all `*.ptk.yml` and `*.ptk.yaml` files throughout the repository,
+excluding generated/dependency folders, symlinks and nested project boundaries.
+`repository.config_path` remains the default authoring folder. `cx.ptk.yml` is
+CI-only; maintainer identities are loaded separately. Files merge disjoint map
+fields; duplicate scalar/list definitions raise an error with both locations.
+`include`, `!include`, `!append`, `!replace` and variant filename shorthand are
+removed. Use full schema paths in every file. Explicit CLI `--set` still applies
+a runtime override. See [migration details](docs/configuration.rst).
 
-* mappings merge deeply, lists are replaced; `!replace`, `!append` and
-  `!include file-or-glob` give explicit control
 * every value remembers its file and line: `ptk setup config show --sources`
 * unknown keys, unknown names in conditions and `${...}` references are errors
   with `file:line` and "did you mean ..."
@@ -347,7 +349,7 @@ or with `--config-dir config/ptk`. The path is relative to the repository root;
 there is no implicit default. Scripts must supply `--config-dir`. It creates a minimal root entry and
 two runnable jobs in `jobs/hello.ptk.yml` and `jobs/build.ptk.yml`.
 Variants, tools, versioning, environment, credentials and shared settings have
-separate folders with commented configuration examples. `project.ptk.yml` includes
+separate folders with commented configuration examples. `project.ptk.yml` defines the project; PTK discovers
 them; the conventional CX and maintainer entry files remain at the config root.
 A local `workflow.ptk.yml` starter sequences the two generated jobs.
 Run `ptk hello` for messages and `ptk build` for generated version files. Existing files are protected; missing ignore rules are appended.

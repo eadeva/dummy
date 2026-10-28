@@ -4,8 +4,6 @@ repository:
 project:
   name: Authoring example
   default_job: build
-include: [jobs.ptk.yml]
-variants: variants.ptk.yml
 param_defaults:
   jobs: 4
 environment:

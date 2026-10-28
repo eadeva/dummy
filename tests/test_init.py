@@ -25,7 +25,7 @@ def test_use_case_renders_valid_configuration(tmp_path):
         tmp_path, 'My "project": #1', config_path="ptk", dry_run=True
     )
     entry = yaml.safe_load(result.files[".main.ptk.yml"])
-    assert set(entry) == {"repository", "include"}
+    assert set(entry) == {"repository"}
     config = yaml.safe_load(result.files["ptk/project.ptk.yml"])
     assert config["project"]["name"] == 'My "project": #1'
     assert config["project"]["default_job"] == "hello"

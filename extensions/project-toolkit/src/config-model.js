@@ -164,4 +164,4 @@ function minimalEdit(before, after) {
   return { start, end, text: after.slice(start, afterEnd) };
 }
 
-module.exports = { inspect, edit, minimalEdit, validatePath };
+module.exports = { parse, inspect, edit, minimalEdit, validatePath };

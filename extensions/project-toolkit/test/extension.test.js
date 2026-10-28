@@ -50,6 +50,7 @@ function harness(t, docs = [inventory()], trusted = true) {
       createOutputChannel: () => ({ appendLine: line => logs.push(line), show() { outputShown++; }, dispose() {} }),
       registerTreeDataProvider: () => disposable(),
       showErrorMessage: async message => errors.push(message),
+      showInformationMessage: async (message, ...actions) => { logs.push(message); return picks.shift()?.(actions); },
       showQuickPick: async (items, options) => picks.shift()?.(items, options),
       showInputBox: async () => inputs.shift(),
     },
@@ -81,6 +82,7 @@ function harness(t, docs = [inventory()], trusted = true) {
   const controller = createController(api, context, (_api, _context, actions) => { editorActions = actions; return ({
     async parameters(target, options) { formRequests.push({ target, options }); return forms.shift()?.(target, options); },
     async open(uri, path = []) { opened.push({ uri, path }); },
+    async openProject(owner, path = []) { opened.push({ owner, path }); },
     async children(element) { return [{ label: "Test field", configPath: [...element.configPath, "jobs"] }]; },
   }); });
   t.after(() => context.subscriptions.forEach(item => item.dispose()));
@@ -115,7 +117,8 @@ test("untrusted workspaces never discover or run PTK", async t => {
 test("variant choices are workspace state only and can return to the configured default", async t => {
   const h = harness(t);
   await h.controller.ready();
-  await h.command("selectVariant", { ...h.target(), name: "large" });
+  h.picks.push(items => items.find(item => item.name === "large"));
+  await h.command("selectVariant", h.target());
   await h.command("run", h.target());
   assert.equal(h.tasks[0].definition.variant, "large");
   h.picks.push(items => items.find(item => item.reset));
@@ -180,7 +183,8 @@ test("workflow and job name collisions dispatch explicitly and CI allows preview
 test("multi-root projects keep independent variant selections", async t => {
   const h = harness(t, [inventory(path.resolve("first")), inventory(path.resolve("second"))]);
   await h.controller.ready();
-  await h.command("selectVariant", { ...h.target("job", 0), name: "large" });
+  h.picks.push(items => items.find(item => item.name === "large"));
+  await h.command("selectVariant", h.target("job", 0));
   await h.command("run", h.target("job", 1));
   await h.command("run", h.target("job", 0));
   assert.equal(h.tasks[0].definition.variant, "small");
@@ -208,8 +212,9 @@ test("report permissions and capability checks apply to palette commands", async
   await h.controller.ready();
   await h.command("openReport", h.target());
   await h.command("validate", h.target());
-  assert.equal(h.tasks.length, 0);
-  assert.equal(h.errors.length, 2);
+  assert.equal(h.tasks.length, 1);
+  assert.equal(h.tasks[0].definition.kind, "validate");
+  assert.equal(h.errors.length, 1);
 });
 
 test("workspace workflows use the workspace root without a member config", async t => {
@@ -347,7 +352,8 @@ test("report actions target job variants and aggregate workflows without running
   doc.projects[0].jobs[0].params[0].required = true;
   const h = harness(t, [doc]);
   await h.controller.ready();
-  await h.command("selectVariant", { ...h.target(), name: "large" });
+  h.picks.push(items => items.find(item => item.name === "large"));
+  await h.command("selectVariant", h.target());
   h.api.window.showQuickPick = h.api.window.showInputBox = () => assert.fail("Report actions must not prompt for run parameters");
   await h.command("openReport", h.target());
   await h.command("openReport", h.target("workflow"));
@@ -483,17 +489,15 @@ test("clean bypasses required parameters and survives saved-task restoration", a
 });
 
 
-test("configuration files expand lazily and open the form at a field path", async t => {
+test("configuration tree follows PTK schema and opens logical fields", async t => {
   const h = harness(t);
   await h.controller.ready();
-  const project = h.controller.provider.getChildren()[0].children[0];
-  const files = project.children.find(node => node.label === "Configuration").children;
-  assert.ok(files[0].hasChildren);
-  assert.equal(h.controller.provider.getTreeItem(files[0]).state, 1);
-  assert.equal((await h.controller.provider.getChildren(files[0]))[0].label, "Test field");
-  await h.command("openConfig", { ...files[0], configPath: ["jobs", "build"] });
-  assert.equal(h.opened[0].uri.fsPath, files[0].configFile);
-  assert.deepEqual(h.opened[0].path, ["jobs", "build"]);
+  const config = h.controller.provider.getChildren()[0].children[0].children.find(node => node.label === "Configuration");
+  const jobs = config.children.find(node => node.label === "jobs");
+  assert.deepEqual(jobs.configPath, ["jobs"]);
+  assert.ok(!config.children.some(node => node.configFile));
+  await h.command("openConfig", jobs);
+  assert.deepEqual(h.opened[0].path, ["jobs"]);
 });
 
 test("parameter form can choose a preview and does not override omitted defaults", async t => {
@@ -544,21 +548,50 @@ test("configuration files and validation remain available after an invalid save 
   await h.controller.refresh();
   await h.controller.refresh();
   const warning = h.controller.provider.getChildren()[0];
-  assert.ok(warning.children.some(node => node.configFile === file));
+  assert.ok(warning.children.some(node => node.label === "Validate configuration"));
   await h.editorActions.validate({ fsPath: file });
   assert.deepEqual(h.tasks[0].execution.args.slice(-3), ["setup", "config", "validate"]);
   assert.equal(h.tasks[0].execution.args[1], h.target().project.entry_file);
 });
 
 
-test("shared configuration files have unique tree identities in different repositories", async t => {
-  const a = inventory(path.resolve("first")), b = inventory(path.resolve("second"));
-  const shared = path.resolve("common.ptk.yml");
-  a.projects[0].config_files.push(shared);
-  b.projects[0].config_files.push(shared);
-  const h = harness(t, [a, b]);
+test("logical configuration paths have unique identities across projects", async t => {
+  const h = harness(t, [inventory(path.resolve("first")), inventory(path.resolve("second"))]);
   await h.controller.ready();
-  const files = h.controller.provider.getChildren().map(root => root.children[0].children.find(node => node.label === "Configuration").children.find(node => node.configFile === shared));
-  assert.notEqual(files[0].id, files[1].id);
-  assert.notDeepEqual(files[0].configOwner, files[1].configOwner);
+  const fields = h.controller.provider.getChildren().map(root => root.children[0].children.find(node => node.label === "Configuration").children[0]);
+  assert.notEqual(fields[0].id, fields[1].id);
+});
+
+test("jobs and workflows select variants independently with no Variants group", async t => {
+  const h = harness(t);
+  await h.controller.ready();
+  h.picks.push(items => items.find(item => item.name === "large"));
+  await h.command("selectVariant", h.target());
+  await h.command("run", h.target());
+  await h.command("run", h.target("workflow"));
+  assert.equal(h.tasks[0].definition.variant, "large");
+  assert.equal(h.tasks[1].definition.variant, "small");
+  const groups = h.controller.provider.getChildren()[0].children[0].children;
+  assert.ok(!groups.some(node => node.label === "Variants"));
+  assert.match(groups.find(node => node.label === "Jobs").children[0].description, /large/);
+});
+
+test("validation on an empty workspace offers init using an explicit config directory", async t => {
+  const doc = inventory(); doc.projects = [];
+  const h = harness(t, [doc]);
+  await h.controller.ready();
+  h.picks.push(actions => actions[0]); h.inputs.push("configuration");
+  await h.command("validate");
+  assert.ok(h.logs.some(message => /No PTK project found/.test(message)));
+  assert.deepEqual(h.tasks[0].execution.args, ["setup", "init", "--config-dir", "configuration", "--", doc.root]);
+});
+
+test("initial invalid project exposes diagnostics and validation without prior inventory", async t => {
+  const doc = inventory(); doc.projects[0].error = "invalid event route";
+  doc.projects[0].diagnostics = [{ file: doc.projects[0].entry_file, line: 4, message: "invalid event route" }];
+  const h = harness(t, [doc]); await h.controller.ready();
+  const node = h.controller.provider.getChildren()[0].children[0];
+  assert.equal(node.description, "configuration error");
+  await h.command("validate", node);
+  assert.equal(h.tasks[0].definition.kind, "validate");
 });

@@ -36,14 +36,22 @@ class ConfigSource(Protocol):
     def find_main(self, start: Path) -> Path:
         """Locate ``.main.ptk.yml`` in ``start`` or a parent directory."""
 
+    def discover(self, main: Path, *, ci: bool = False) -> list[Path]:
+        """Return repository configuration files, including the entry marker."""
+        ...
+
     def read(self, file: Path) -> Node:
-        """Read a file including everything it includes."""
+        """Read one configuration mapping with source locations."""
 
     def exists(self, file: Path) -> bool: ...
 
     @property
     def files(self) -> list[Path]:
         """All files read so far, in order."""
+
+    @property
+    def fingerprints(self) -> dict[str, str]:
+        """Content hashes captured at the time each source was parsed."""
 
 
 class HostEnvironment(Protocol):

@@ -28,7 +28,9 @@ class PathRoute(BaseModel):
 
 
 class EventRoute(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(
+        extra="forbid", json_schema_extra={"default": {"path": ""}}
+    )
     path: str | None = None
     repository: str | None = None
     branch: PathRoute | None = None

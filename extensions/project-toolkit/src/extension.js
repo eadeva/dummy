@@ -24,21 +24,30 @@ function createController(vscode, context, editorFactory = createEditors) {
   let revision = 0;
   let timer;
   let disposed = false;
+  let loading = false;
   let pending = Promise.resolve();
   const changed = new vscode.EventEmitter();
   const output = vscode.window.createOutputChannel("Project Toolkit");
   context.subscriptions.push(changed, output);
+  const diagnostics = vscode.languages?.createDiagnosticCollection("ptk");
+  if (diagnostics) context.subscriptions.push(diagnostics);
   const editors = editorFactory(vscode, context, {
     changed: () => changed.fire(),
-    validate: async uri => {
-      const owner = records.flatMap(record => ((record.inventory || record.previous)?.projects || []).map(project => ({ project, folder: record.folder, root: project.root })))
-        .find(owner => owner.project.config_files?.includes(uri.fsPath) || owner.project.entry_file === uri.fsPath);
-      if (!owner) throw new Error("Open a configuration file from the PTK project tree to validate its whole project.");
-      if (owner.project.capabilities?.validate === false) throw new Error("Configuration validation is not available for this project's role.");
-      // Validation must stay available while an invalid edit prevents discovery.
-      // The CLI rechecks the current configuration and permissions when it runs.
-      return vscode.tasks.executeTask(makeTask({ ...owner, kind: "validate", name: "configuration" }));
+    validate: async uri => validateConfiguration({ configFile: uri.fsPath }),
+    project: async entry => {
+      await refresh();
+      for (const record of records) {
+        const project = record.inventory?.projects.find(project => project.entry_file === entry);
+        if (project) return { project, folder: record.folder, root: project.root };
+      }
+      throw new Error("PTK project is no longer available.");
     },
+    configuration: async uri => {
+      await pending;
+      return records.flatMap(record => record.inventory?.projects || [])
+        .find(project => project.config_files?.includes(uri.fsPath))?.configuration;
+    },
+
   });
 
   function trusted() {
@@ -72,6 +81,7 @@ function createController(vscode, context, editorFactory = createEditors) {
     // overlapping CLI instances while files are being installed or generated.
     pending = pending.then(async () => {
       if (current !== revision || disposed || !vscode.workspace.isTrusted) return;
+      loading = true; changed.fire();
       const folders = (vscode.workspace.workspaceFolders || []).filter(folder => folder.uri.scheme === "file");
       const result = await Promise.all(folders.map(async folder => {
         try {
@@ -83,6 +93,19 @@ function createController(vscode, context, editorFactory = createEditors) {
       }));
       if (current !== revision || disposed || !vscode.workspace.isTrusted) return;
       records = result;
+      loading = false;
+      diagnostics?.clear();
+      const byFile = new Map();
+      for (const project of records.flatMap(record => record.inventory?.projects || [])) {
+        for (const issue of project.diagnostics || []) {
+          if (!diagnostics) continue;
+          const line = Math.max(0, (issue.line || 1) - 1);
+          const items = byFile.get(issue.file) || [];
+          items.push(new vscode.Diagnostic(new vscode.Range(line, 0, line, 1), `${issue.path ? `${issue.path}: ` : ""}${issue.message}`, vscode.DiagnosticSeverity.Error));
+          byFile.set(issue.file, items);
+        }
+      }
+      for (const [file, items] of byFile) diagnostics.set(vscode.Uri.file(file), items);
       for (const record of records) {
         if (record.error) output.appendLine(`${record.folder.name}: ${record.error}`);
       }
@@ -99,8 +122,9 @@ function createController(vscode, context, editorFactory = createEditors) {
     timer = setTimeout(refresh, 350);
   }
 
-  const variantKey = project => `variant:${project.entry_file}`;
-  const variantFor = project => core.selectedVariant(project, context.workspaceState.get(variantKey(project)));
+  const variantKey = target => `variant:${target.project.entry_file}:${target.kind}:${target.name}`;
+  const variantFor = target => core.selectedVariant(target.project, context.workspaceState.get(variantKey(target))
+    ?? context.workspaceState.get(`variant:${target.project.entry_file}`));
   const title = target => `${target.project?.alias || path.basename(target.root)} / ${target.kind} / ${target.name}`;
 
   function builtinTree(owner, commands) {
@@ -131,46 +155,62 @@ function createController(vscode, context, editorFactory = createEditors) {
     return { label: "Built-in commands", children, icon: "terminal" };
   }
 
-  function configNode(file, common = {}) {
-    const configOwner = [common.folder?.uri.fsPath || common.root, common.project?.entry_file || common.root];
-    const node = { ...common, kind: "config-file", configFile: file, configPath: [], configOwner,
-      label: path.relative(common.root || path.dirname(file), file), icon: "file-code", tooltip: file,
-      id: JSON.stringify([configOwner, file, []]), hasChildren: true, collapsed: true };
-    node.command = { command: "project-toolkit.openConfig", title: "Edit configuration", arguments: [node] };
+  function validationNode(owner = {}) {
+    return { ...owner, label: "Validate configuration", icon: "check",
+      command: { command: "project-toolkit.validate", title: "Validate configuration", arguments: [owner] } };
+  }
+
+  function configurationNode(common) {
+    const config = common.project.configuration;
+    if (!config || config.version !== 1) return { label: "Configuration", icon: "warning", children: [
+      { label: "Update PTK to use the configuration editor", icon: "info" },
+    ] };
+    const sources = new Map(config.sources.map(source => [JSON.stringify(source.path), source]));
+    function field(value, configPath, label) {
+      const source = sources.get(JSON.stringify(configPath));
+      const object = value !== null && typeof value === "object";
+      const node = { ...common, kind: "configuration", configPath, label,
+        id: JSON.stringify([common.folder.uri.fsPath, common.project.entry_file, "configuration", configPath]),
+        collapsed: true, icon: object ? "symbol-namespace" : "symbol-property",
+        tooltip: source ? `${source.file}:${source.line}` : "Not configured",
+        description: value === undefined ? "not configured" : object ? "" : String(value),
+      };
+      if (object) node.children = Object.entries(value).map(([key, child]) => field(child, [...configPath, Array.isArray(value) ? Number(key) : key], Array.isArray(value) ? `Item ${Number(key) + 1}` : key));
+      node.command = { command: "project-toolkit.openConfig", title: "Edit configuration", arguments: [node] };
+      return node;
+    }
+    const value = config.value || {};
+    const keys = [...new Set([...Object.keys(config.schema.properties || {}).filter(key => key !== "members"), ...Object.keys(value)])];
+    const node = field(value, [], "Configuration");
+    node.children = keys.map(key => field(value[key], [key], key));
     return node;
   }
 
   function projectNode(project, record) {
     const common = { project, folder: record.folder, root: project.root, ci: record.inventory.ci };
-    if (project.error) return { ...common, label: project.alias, description: "configuration error", tooltip: project.error, icon: "error", children: [configNode(project.entry_file, common)] };
-    const variants = project.variants.filter(v => !v.abstract);
-    const groups = [];
-    for (const kind of ["job", "workflow"]) {
-      const children = project[`${kind}s`].map(spec => ({
-        ...common, kind, name: spec.name, spec, label: spec.name, tooltip: spec.help,
-        contextValue: core.canOpenReport({ ...common, kind }) ? `${kind}-report` : kind,
-        description: kind === "workflow" ? (common.ci ? "dry-run only on CI" : "local") : (spec.default ? "default" : ""),
-        icon: kind === "job" ? "tools" : "git-merge",
-      }));
-      if (children.length) groups.push({
-        label: kind === "job" ? "Jobs" : "Workflows",
-        icon: kind === "job" ? "tools" : "git-merge", children,
-      });
+    const groups = [validationNode(common)];
+    if (project.error) {
+      groups.push(...(project.diagnostics || [{ message: project.error, file: project.entry_file }]).map(issue => ({
+        label: issue.message, description: issue.path, tooltip: `${issue.file}:${issue.line || 1}`, icon: "error",
+        command: { command: "vscode.open", title: "Open configuration error", arguments: [vscode.Uri.file(issue.file), { selection: vscode.Range ? new vscode.Range((issue.line || 1) - 1, 0, (issue.line || 1) - 1, 0) : undefined }] },
+      })));
+      groups.push(configurationNode(common));
+      return { ...common, label: project.alias, description: "configuration error", tooltip: project.error, icon: "error", children: groups };
     }
-    if (variants.length) groups.push({ label: "Variants", icon: "symbol-enum", children: variants.map(spec => ({
-      ...common, kind: "variant", name: spec.name, label: spec.name, tooltip: spec.description,
-      description: variantFor(project) === spec.name ? "selected" : "", contextValue: "variant",
-      icon: variantFor(project) === spec.name ? "pass-filled" : "symbol-enum",
-      command: { command: "project-toolkit.selectVariant", title: "Select variant", arguments: [{ ...common, name: spec.name }] },
-    })) });
-    if (project.capabilities.validate) groups.push({
-      ...common, label: "Validate configuration", icon: "check",
-      command: { command: "project-toolkit.validate", title: "Validate", arguments: [common] },
-    });
-    groups.push(builtinTree(common, project.commands));
-    groups.push({ label: "Configuration", icon: "settings-gear", children: project.config_files.map(file => configNode(file, common)) });
-    return { ...common, label: project.alias, description: variantFor(project) || project.name, tooltip: project.root,
-      contextValue: variants.length ? "project-variants" : "project", icon: "repo", children: groups };
+    for (const kind of ["job", "workflow"]) {
+      const children = project[`${kind}s`].map(spec => {
+        const target = { ...common, kind, name: spec.name, spec };
+        return { ...target, label: spec.name, tooltip: spec.help,
+          contextValue: core.canOpenReport(target) ? `${kind}-report` : kind,
+          description: [variantFor(target), kind === "workflow" && common.ci ? "dry-run only on CI" : spec.default ? "default" : ""].filter(Boolean).join(" · "),
+          icon: kind === "job" ? "tools" : "git-merge",
+        };
+      });
+      if (children.length) groups.push({ label: kind === "job" ? "Jobs" : "Workflows", icon: kind === "job" ? "tools" : "git-merge", children });
+    }
+    groups.push(builtinTree(common, project.commands), configurationNode(common));
+    return { ...common, label: project.alias, description: project.name, tooltip: project.root,
+      contextValue: "project", icon: "repo", children: groups };
   }
 
   const provider = {
@@ -178,21 +218,23 @@ function createController(vscode, context, editorFactory = createEditors) {
     getChildren(element) {
       if (element?.configFile) return editors.children(element);
       if (element) return element.children || [];
+      if (loading && !records.length) return [{ label: "Loading PTK configuration…", icon: "sync" }];
       return records.map(record => {
         if (record.error) return {
           label: record.folder.name, description: "PTK unavailable", tooltip: `${record.error}\nClick to show the discovery error.`, icon: "warning",
           command: { command: "project-toolkit.showOutput", title: "Show PTK Discovery Error" },
-          children: (record.previous?.projects || []).flatMap(project =>
-            (project.config_files || [project.entry_file]).map(file => configNode(file, { root: project.root }))),
+          children: [validationNode({ folder: record.folder, root: record.folder.uri.fsPath }),
+            ...(record.previous?.projects || []).map(project => projectNode({ ...project, error: record.error }, { ...record, inventory: record.previous }))],
         };
         const children = record.inventory.projects.map(project => projectNode(project, record));
+        if (!children.length) children.push(validationNode({ folder: record.folder, root: record.folder.uri.fsPath }));
         if (record.inventory.workflows.length) children.unshift({ label: "Workspace workflows", icon: "git-merge", children: record.inventory.workflows.map(spec => ({
           kind: "workflow", name: spec.name, spec, root: record.inventory.root, folder: record.folder, ci: record.inventory.ci,
           label: spec.name, tooltip: spec.help, icon: "git-merge",
           contextValue: core.canOpenReport({ kind: "workflow", commands: record.inventory.commands }) ? "workflow-report" : "workflow",
         })) });
         if (record.inventory.mode === "workspace") children.push(builtinTree({ root: record.inventory.root, folder: record.folder, ci: record.inventory.ci }, record.inventory.commands));
-        return { label: record.folder.name, description: record.inventory.mode === "workspace" ? "VMR" : "", children, icon: "root-folder" };
+        return { label: record.folder.name, description: loading ? "Loading…" : record.inventory.mode === "workspace" ? "VMR" : "", children, icon: "root-folder" };
       });
     },
     getTreeItem(element) {
@@ -252,23 +294,21 @@ function createController(vscode, context, editorFactory = createEditors) {
   }
 
   async function selectVariant(element) {
-    const owner = await chooseProject(element, "variants");
-    if (!owner) return;
-    const choices = owner.project.variants.filter(v => !v.abstract);
-    let selected = choices.find(v => v.name === element?.name);
-    if (!selected) selected = await vscode.window.showQuickPick([
-      { label: "Use project default", description: owner.project.default_variant || "No default configured", reset: true },
-      ...choices.map(v => ({ label: v.name, description: v.description, name: v.name })),
-    ], { placeHolder: `Variant for ${owner.project.alias} jobs (configuration stays unchanged)` });
-    if (!selected) return;
-    if (selected.reset) {
-      await context.workspaceState.update(variantKey(owner.project), undefined);
-      changed.fire();
-      return variantFor(owner.project);
+    const target = await chooseTarget(element);
+    if (!target) return;
+    if (!target.project) {
+      await vscode.window.showInformationMessage("Workspace workflows use the variants configured on their repository steps.");
+      return;
     }
-    await context.workspaceState.update(variantKey(owner.project), selected.name);
+    const choices = target.project.variants.filter(v => !v.abstract);
+    const selected = await vscode.window.showQuickPick([
+      { label: "Use project default", description: target.project.default_variant || "No default configured", reset: true },
+      ...choices.map(v => ({ label: v.name, description: v.description, name: v.name })),
+    ], { placeHolder: `Variant for ${target.kind} ${target.name}${target.kind === "workflow" ? " (repository mappings apply)" : ""}` });
+    if (!selected) return;
+    await context.workspaceState.update(variantKey(target), selected.reset ? undefined : selected.name);
     changed.fire();
-    return selected.name;
+    return variantFor(target);
   }
 
   async function builtinParameters(target, editOptional) {
@@ -333,7 +373,7 @@ function createController(vscode, context, editorFactory = createEditors) {
     let variant;
     let params = {};
     if (target.project && ["job", "workflow"].includes(target.kind)) {
-      variant = variantFor(target.project);
+      variant = variantFor(target);
       if (!variant && target.project.variants.some(v => !v.abstract)) {
         variant = await selectVariant(target);
         if (!variant) return;
@@ -386,27 +426,54 @@ function createController(vscode, context, editorFactory = createEditors) {
   command("showVariant", async element => {
     const owner = await chooseProject(element, "variants");
     if (!owner) return;
-    const name = element?.name || variantFor(owner.project) || await selectVariant(owner);
+    const name = element?.name || core.selectedVariant(owner.project) || await selectVariant(owner);
     if (name) return vscode.tasks.executeTask(makeTask({ ...owner, kind: "variant", name }));
   });
   command("openReport", async element => {
     const target = await chooseTarget(element);
     if (!target) return;
     return vscode.tasks.executeTask(makeTask(target, {
-      report: true, variant: target.kind === "job" ? variantFor(target.project) : undefined,
+      report: true, variant: target.kind === "job" ? variantFor(target) : undefined,
     }));
   });
-  command("validate", async element => {
-    const owner = await chooseProject(element, "validate");
+  async function validateConfiguration(element = {}) {
+    trusted();
+    await pending;
+    const candidates = records.flatMap(record => ((record.inventory || record.previous)?.projects || [])
+      .map(project => ({ project, folder: record.folder, root: project.root })));
+    let owner = candidates.find(candidate => element.project?.entry_file === candidate.project.entry_file ||
+      element.configFile && (candidate.project.config_files?.includes(element.configFile) || element.configFile === candidate.project.entry_file));
+    if (!owner && candidates.length === 1) owner = candidates[0];
+    if (!owner && candidates.length > 1) {
+      owner = (await vscode.window.showQuickPick(candidates.map(owner => ({ label: owner.project.alias, description: owner.root, owner })), { placeHolder: "Validate PTK repository" }))?.owner;
+      if (!owner) return;
+    }
     if (owner) return vscode.tasks.executeTask(makeTask({ ...owner, kind: "validate", name: "configuration" }));
-  });
+    const folder = element.folder || vscode.workspace.workspaceFolders?.[0];
+    const record = records.find(record => record.folder === folder);
+    if (record?.error) {
+      // Let PTK report the actual loading/runtime error; a discovery failure is
+      // not evidence that there is no project.
+      return vscode.tasks.executeTask(makeTask({ folder, root: folder.uri.fsPath, kind: "validate", name: "configuration" }));
+    }
+    const action = await vscode.window.showInformationMessage("No PTK project found (.main.ptk.yml).", "PTK setup init");
+    if (action === "PTK setup init") return initializeProject(folder);
+  }
+  async function initializeProject(folder) {
+    trusted();
+    folder = folder || vscode.workspace.workspaceFolders?.[0];
+    if (!folder) { await vscode.window.showInformationMessage("Open a folder before running PTK setup init."); return; }
+    const configDir = await vscode.window.showInputBox({ title: "PTK setup init", prompt: "Configuration folder relative to the repository root", value: "config/ptk" });
+    if (!configDir?.trim()) return;
+    return vscode.tasks.executeTask(makeTask({ folder, root: folder.uri.fsPath, kind: "init", name: "project" }, { configDir: configDir.trim() }));
+  }
+  command("validate", validateConfiguration);
+  command("init", () => initializeProject());
   command("openConfig", async element => {
     trusted();
     if (element?.configFile) return editors.open(vscode.Uri.file(element.configFile), element.configPath || []);
-    const owner = await chooseProject(element);
-    if (!owner) return;
-    const picked = await vscode.window.showQuickPick(owner.project.config_files.map(file => ({ label: path.relative(owner.root, file), file })), { placeHolder: "Configuration file" });
-    if (picked) return editors.open(vscode.Uri.file(picked.file));
+    const owner = element?.project ? element : await chooseProject(element);
+    if (owner) return editors.openProject(owner, element?.configPath || []);
   });
 
   command("openConfigForm", async uri => {
@@ -420,7 +487,7 @@ function createController(vscode, context, editorFactory = createEditors) {
       if (!vscode.workspace.isTrusted) return [];
       await pending;
       return core.availableTargets(records).filter(t => !(t.kind === "workflow" && t.ci) && !(t.spec.params || []).some(p => p.required && !p.env))
-        .map(t => makeTask(t, { variant: t.project ? variantFor(t.project) : undefined }));
+        .map(t => makeTask(t, { variant: t.project ? variantFor(t) : undefined }));
     },
     async resolveTask(task) {
       if (!vscode.workspace.isTrusted) return;
@@ -435,7 +502,7 @@ function createController(vscode, context, editorFactory = createEditors) {
         return;
       }
       const resolved = makeTask(target, {
-        variant: target.project && !d.help ? d.variant || variantFor(target.project) : undefined,
+        variant: target.project && !d.help ? d.variant || variantFor(target) : undefined,
         preview: d.preview, params: d.params, help: d.help, inputs: d.inputs, clean: d.clean, reRun: d.reRun, report: d.report,
       });
       resolved.definition = task.definition;

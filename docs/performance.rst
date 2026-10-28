@@ -81,7 +81,7 @@ What changed
 * Compute diagnostic filenames once per YAML file, preserving individual line
   locations. The baseline 100-member profile recomputed paths about 80,000 times.
 * Use PyYAML's C safe parser when available, with the Python safe parser as a
-  fallback. Both backends are tested for includes, custom tags, merge keys,
+  fallback. Both backends are tested for removed-directive errors, YAML merge keys,
   duplicate keys and error locations.
 * Load/configure each CLI project and resolve its role once per invocation.
   Cache expected failures too, so broken or absent configuration is not repeatedly

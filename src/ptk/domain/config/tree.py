@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from ..errors import Location
+from ..errors import ConfigError, Location, Problem
 
 Op = Literal["replace", "append"] | None
 Path = tuple[str | int, ...]
@@ -78,6 +78,36 @@ def merge(base: Node | None, overlay: Node, _path: Path = ()) -> Node:
                 key_locs[key] = overlay.key_locs[key]
         return Node(merged, overlay.loc or base.loc, key_locs=key_locs)
     return _strip_ops(overlay)
+
+
+def merge_unique(base: Node, incoming: Node, path: Path = ()) -> Node:
+    """Combine authored files without precedence, retaining every source location.
+
+    Maps may contribute disjoint fields. Lists and scalar values have one owner,
+    even when two definitions are identical. Explicit runtime overrides continue
+    to use merge(), separately from file composition.
+    """
+    if base.is_map and incoming.is_map:
+        values = dict(base.value)
+        locations = dict(base.key_locs)
+        for key, value in incoming.value.items():
+            values[key] = (
+                merge_unique(values[key], value, (*path, key))
+                if key in values
+                else value
+            )
+            if key not in locations and key in incoming.key_locs:
+                locations[key] = incoming.key_locs[key]
+        return Node(values, base.loc or incoming.loc, key_locs=locations)
+    raise ConfigError(
+        [
+            Problem(
+                f"configuration conflict: already defined at {base.loc}; overwriting is not allowed",
+                format_path(path),
+                incoming.loc,
+            )
+        ]
+    )
 
 
 def _strip_ops(node: Node) -> Node:

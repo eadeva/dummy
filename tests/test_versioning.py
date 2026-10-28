@@ -324,7 +324,6 @@ def test_cli_and_generated_input_exclusion(write):
     root = project(
         write,
         {
-            "include": ["*.ptk.yml"],
             "versioning": {"project": {"source": "literal", "version": "1.0.0"}},
         },
     )

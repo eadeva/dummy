@@ -2,7 +2,7 @@
   "name": "project-toolkit",
   "displayName": "Project Toolkit",
   "description": "Run PTK jobs, workflows and built-in commands, browse help, select variants and open reports.",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "publisher": "eadeva",
   "license": "UNLICENSED",
   "private": true,
@@ -149,10 +149,20 @@
         "title": "Open PTK Form",
         "category": "Project Toolkit",
         "icon": "$(settings-gear)"
+      },
+      {
+        "command": "project-toolkit.init",
+        "title": "Initialize PTK Project",
+        "category": "Project Toolkit"
       }
     ],
     "menus": {
       "view/title": [
+        {
+          "command": "project-toolkit.validate",
+          "when": "view == project-toolkit.projects",
+          "group": "navigation@1"
+        },
         {
           "command": "project-toolkit.refresh",
           "when": "view == project-toolkit.projects",
@@ -182,8 +192,8 @@
         },
         {
           "command": "project-toolkit.selectVariant",
-          "when": "view == project-toolkit.projects && viewItem == project-variants",
-          "group": "inline@1"
+          "when": "view == project-toolkit.projects && viewItem =~ /^(job|workflow)/",
+          "group": "inline@3"
         },
         {
           "command": "project-toolkit.showVariant",

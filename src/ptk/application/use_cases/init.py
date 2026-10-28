@@ -79,7 +79,6 @@ class InitProject:
             ".main.ptk.yml": dump(
                 {
                     "repository": {"alias": alias, "config_path": folder.as_posix()},
-                    "include": "project.ptk.yml",
                 }
             ),
             ".gitignore": IGNORE,
@@ -113,21 +112,12 @@ class InitProject:
                     }
                 }
             ),
-            "project.ptk.yml": "# Composition root: includes are relative to this file.\n"
-            "# Add jobs as separate files under jobs/; the glob loads them.\n"
+            "project.ptk.yml": "# Project settings; all *.ptk.yml files in this repository are discovered.\n"
+            "# Add jobs as separate files anywhere inside this repository.\n"
             + dump(
                 {
                     "schema_version": 1,
-                    "include": [
-                        "tools/tools.ptk.yml",
-                        "versioning/versioning.ptk.yml",
-                        "environment/environment.ptk.yml",
-                        "credentials/credentials.ptk.yml",
-                        "configs/configs.ptk.yml",
-                        "jobs/*.ptk.yml",
-                    ],
                     "project": {"name": name, "default_job": "hello"},
-                    "variants": "variants/variants.ptk.yml",
                 }
             )
             + "# Optional project-wide parameter defaults (only for declared parameters):\n"
@@ -209,11 +199,10 @@ class InitProject:
             "#       - configure:\n"
             '#           run: [cmake, -S, ., -B, "${run.build_dir}"]\n'
             "#           timeout: 120\n",
-            "variants/variants.ptk.yml": "# Variant model: includes here are relative to variants/.\n"
-            "# Add a separate file per variant and include it below.\n"
+            "variants/variants.ptk.yml": "# Variant model; every file uses its full schema path.\n"
+            "# Add separate variant files; PTK discovers them automatically.\n"
             + dump(
                 {
-                    "include": ["debug.ptk.yml", "release.ptk.yml"],
                     "default": "debug",
                     "components": {
                         "core": {
@@ -322,9 +311,9 @@ configs: {}
 environment:
   set:
     PTK_CI: "true"
-# Optional job override; place at the top level:
+# Optional additional CI-only job; place at the top level:
 # jobs:
-#   build:
+#   ci-build:
 #     env: {BUILD_MODE: ci}
 """,
             "maintainers.ptk.yml": "# Maintainer login IDs: OS usernames locally, triggering GitHub actors on Actions.\n"
@@ -340,6 +329,15 @@ environment:
                 }
             ),
         }
+        for filename in (
+            "variants/variants.ptk.yml",
+            "variants/debug.ptk.yml",
+            "variants/release.ptk.yml",
+        ):
+            configs[filename] = (
+                "# Automatically discovered variant configuration.\n"
+                + dump({"variants": yaml.safe_load(configs[filename])})
+            )
         files.update(
             {(folder / n).as_posix(): content for n, content in configs.items()}
         )

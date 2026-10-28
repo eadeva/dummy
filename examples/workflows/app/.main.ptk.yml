@@ -1,2 +1,1 @@
 repository: {alias: frontend, config_path: config}
-include: project.ptk.yml

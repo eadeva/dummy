@@ -37,6 +37,13 @@ function parseInventory(text) {
     if (!object(project) || typeof project.alias !== "string" || !absolute(project.root) || !absolute(project.entry_file)) {
       throw new Error("Invalid repository paths in PTK inventory.");
     }
+    const config = project.configuration;
+    if (config?.version === 1 && (!object(config.schema) || config.value !== null && !object(config.value) ||
+        !Array.isArray(config.files) || !config.files.every(absolute) ||
+        !Array.isArray(config.sources) || !config.sources.every(source => object(source) && absolute(source.file) &&
+          Array.isArray(source.path) && source.path.every(key => typeof key === "string" || Number.isSafeInteger(key) && key >= 0)))) {
+      throw new Error("Invalid PTK configuration interface. Update PTK and Project Toolkit together.");
+    }
     if (project.error) continue;
     if (!validCommands(project.commands)) throw new Error("Invalid PTK built-in command inventory.");
     if (![project.jobs, project.workflows, project.variants].every(items => Array.isArray(items) && items.every(named)) ||
@@ -78,13 +85,17 @@ function ignoreConfigEvent(file, roots, configFiles = []) {
   });
 }
 
-function readInventory(settings, cwd) {
+function readInventory(settings, cwd, configuration = true) {
   return new Promise((resolve, reject) => {
-    execFile(settings.executable, launchArgs(settings, ["describe", "--json"]), {
+    execFile(settings.executable, launchArgs(settings, ["describe", "--json", ...(configuration ? ["--configuration"] : [])]), {
       cwd, timeout: settings.timeout * 1000, maxBuffer: 8 * 1024 * 1024,
       windowsHide: true, encoding: "utf8", shell: false,
     }, (error, stdout, stderr) => {
       if (error) {
+        if (configuration && /(?:No such option|unrecognized arguments?).*--configuration/i.test(stderr + stdout)) {
+          readInventory(settings, cwd, false).then(resolve, reject);
+          return;
+        }
         const reason = error.killed ? "Discovery timed out." : error.code === "ENOENT"
           ? "PTK executable not found. Install PTK or configure projectToolkit.executable."
           : (stderr.trim() || stdout.trim() || error.message).slice(-4000);
@@ -135,7 +146,7 @@ function builtinArgs(spec, inputs = {}) {
   return [...options, ...(positional.length ? ["--", ...positional] : [])];
 }
 
-function argsFor(target, { variant, preview = false, params = {}, help = false, inputs = {}, clean = false, reRun = false, report = false } = {}) {
+function argsFor(target, { variant, preview = false, params = {}, help = false, inputs = {}, clean = false, reRun = false, report = false, configDir } = {}) {
   if (typeof clean !== "boolean" || typeof reRun !== "boolean" || clean && reRun) throw new Error("Choose clean or re-run.");
   if ((clean || reRun) && !["job", "workflow"].includes(target.kind)) throw new Error("Cleanup applies to jobs and workflows.");
   if (typeof help !== "boolean") throw new Error("Task help must be a boolean.");
@@ -163,6 +174,8 @@ function argsFor(target, { variant, preview = false, params = {}, help = false, 
     if (target.kind === "builtin") return [...args, ...target.spec.path, "--help"];
   }
   switch (target.kind) {
+    case "init":
+      return ["setup", "init", "--config-dir", configDir, "--", target.root];
     case "builtin":
       if (preview) throw new Error("Built-in commands do not support generic dry runs. Use their --dry-run option where available.");
       if (!target.spec.runnable) throw new Error("Choose a subcommand or open this command's help.");

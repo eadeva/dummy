@@ -6,7 +6,7 @@
   const app = document.getElementById("app");
   let state, schema, selected = [], kind, issue = "", serial = 0, inflight, timer;
   const queue = new Map();
-  let deferred;
+  let deferred, nextFile = false;
   let parameterDraft = {};
   const stored = vscode.getState() || {};
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -57,7 +57,11 @@
   }
   function status() {
     const node = document.getElementById("status");
-    if (node) node.textContent = inflight || queue.size ? "Applying edits…" : state.dirty ? "Unsaved changes · Ctrl/Cmd+S to save" : "Saved";
+    const destination = document.getElementById("next-file");
+    if (destination) destination.value = nextFile ? "new" : "current";
+    const validation = document.getElementById("validation-error");
+    if (validation) { validation.textContent = state.validationError || ""; validation.hidden = !state.validationError; }
+    if (node) node.textContent = inflight || queue.size ? "Applying edits…" : state.dirty ? "Unsaved changes · Ctrl/Cmd+S to save" : state.logical ? "Changes are saved automatically and loaded by PTK" : "Saved";
   }
   function flush() {
     clearTimeout(timer);
@@ -66,7 +70,8 @@
       const operations = [...queue.values()];
       queue.clear();
       inflight = { id: ++serial, structural: operations.some(op => op.render || op.op !== "set" || op.value !== null && typeof op.value === "object") };
-      vscode.postMessage({ type: "edit", id: inflight.id, version: state.version, operations });
+      vscode.postMessage({ type: "edit", id: inflight.id, version: state.version, operations, newFile: nextFile });
+      nextFile = false;
       status();
     } else if (deferred) { const action = deferred; deferred = undefined; action(); }
   }
@@ -137,6 +142,13 @@
     actions.append(button("Raw YAML", () => afterEdits(() => vscode.postMessage({ type: "raw" }))),
       button("Save & validate", () => afterEdits(() => vscode.postMessage({ type: "validate" }))),
       button("Save", () => afterEdits(() => vscode.postMessage({ type: "save" })), ""));
+    if (state.logical) {
+      const destination = el("select", undefined, { "aria-label": "File for next change", id: "next-file" });
+      destination.append(el("option", "Next change: existing source", { value: "current" }), el("option", "Next change: new file…", { value: "new" }));
+      destination.value = nextFile ? "new" : "current";
+      destination.addEventListener("change", () => { nextFile = destination.value === "new"; });
+      actions.prepend(destination);
+    }
     toolbar.append(heading, actions);
     header.append(toolbar, el("p", "", { className: "status", id: "status", role: "status" }));
     app.append(header);
@@ -148,7 +160,7 @@
     }
     const layout = el("div", undefined, { className: "layout" });
     const nav = el("nav", undefined, { "aria-label": "Configuration sections" });
-    nav.append(el("div", "In this file", { className: "caption" }));
+    nav.append(el("div", state.logical ? "Configuration" : "In this file", { className: "caption" }));
     const all = button("All fields", () => navigate([]));
     if (!selected.length) all.classList.add("selected"); nav.append(all);
     for (const key of Object.keys(state.value || {})) {
@@ -164,9 +176,13 @@
     kinds.value = kind;
     kinds.addEventListener("change", () => afterEdits(() => { kind = kinds.value; remember(); renderConfiguration(); }));
     fragment.append(kinds, el("p", "Optional fields follow PTK’s model. Use a fragment schema for files included inside a field.", { className: "help" }));
-    nav.append(fragment);
+    if (!state.logical) nav.append(fragment);
     const main = el("main");
     notice(main);
+    if (state.logical) {
+      const validation = el("p", state.validationError || "", { className: "notice error", role: "alert", id: "validation-error" });
+      validation.hidden = !state.validationError; main.append(validation);
+    }
     while (selected.length && (valueAt(selected) === undefined || valueAt(selected) === null || typeof valueAt(selected) !== "object")) selected.pop();
     const crumbs = el("div", undefined, { className: "crumbs", "aria-label": "Field path" });
     crumbs.append(button("Configuration", () => navigate([]), "link"));
@@ -376,10 +392,10 @@
       }
     }
     if (first) {
-      kind = stored.kind || S.infer(state.value, state.filename);
+      kind = state.logical ? "configuration" : stored.kind || S.infer(state.value, state.filename);
       selected = message.selection?.length ? message.selection : stored.selected || [];
     }
-    if (schema && (!own || structural || message.issue)) renderConfiguration();
+    if (schema && (state.error || !own || structural || message.issue)) renderConfiguration();
     else status();
     flush();
   });

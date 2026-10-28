@@ -8,10 +8,7 @@ project:
   description: Infotainment demo for ptk
   default_job: build
 
-include:
-  - ptk/jobs/*.ptk.yml
 
-variants: ptk/variants.ptk.yml
 
 vars:
   preset: ${vh.variant}

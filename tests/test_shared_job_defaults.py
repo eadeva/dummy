@@ -54,7 +54,7 @@ jobs:
         p.location(("jobs", "build", "params", "jobs", "default")).file
         == "tools.ptk.yml"
     )
-    assert p.layers == ["tools.ptk.yml", "build.tools.ptk.yml", ".main.ptk.yml"]
+    assert p.layers == [".main.ptk.yml", "build.tools.ptk.yml", "tools.ptk.yml"]
 
 
 def test_cx_overrides_and_requirement_layers_merge_by_tool(write, load):
@@ -63,7 +63,7 @@ def test_cx_overrides_and_requirement_layers_merge_by_tool(write, load):
             ".main.ptk.yml": MAIN
             + "\ntools: {a: {}, b: {}, c: {}}\nrequires_tools: [a]\n",
             "build.tools.ptk.yml": "jobs: {build: {requires_tools: [b]}}",
-            "cx.ptk.yml": "param_defaults: {jobs: 12}\njobs: {build: {requires_tools: {c: true, a: false}}}",
+            "cx.ptk.yml": "jobs: {build: {requires_tools: {c: true, a: false}}}",
             "local.ptk.yml": "param_defaults: {jobs: 16}",
         }
     )
@@ -75,16 +75,16 @@ def test_cx_overrides_and_requirement_layers_merge_by_tool(write, load):
     assert "cx.ptk.yml" in cx.layers
 
 
-def test_explicit_include_is_not_loaded_twice(write, load):
+def test_discovered_file_is_loaded_once(write, load):
     root = write(
         {
-            ".main.ptk.yml": "include: [tools.ptk.yml]\n" + MAIN,
-            "tools.ptk.yml": "vars: {items: !append [one]}\nparam_defaults: {jobs: 4}",
+            ".main.ptk.yml": MAIN,
+            "tools.ptk.yml": "vars: {items: [one]}\nparam_defaults: {jobs: 4}",
         }
     )
     p = load(root)
     assert p.config.vars["items"] == ["one"]
-    assert p.layers == [".main.ptk.yml"]
+    assert p.layers == [".main.ptk.yml", "tools.ptk.yml"]
 
 
 def test_global_default_validated_for_each_parameter(write, load):
