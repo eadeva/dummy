@@ -79,3 +79,24 @@ def test_python_groups_are_only_allowed_for_project_mode():
             PythonSpec.model_validate(data)
     with pytest.raises(ValidationError, match="invalid dependency group"):
         PythonSpec(project=".", groups=["--no-project"])
+
+
+@pytest.mark.parametrize("ci", [False, True], ids=["local", "ci"])
+@pytest.mark.parametrize(
+    "entry",
+    [ROOT / ".main.ptk.yml", *sorted((ROOT / "examples").rglob(".main.ptk.yml"))],
+    ids=lambda entry: entry.relative_to(ROOT).as_posix(),
+)
+def test_checked_in_configuration_uses_discovered_schema_fragments(entry, ci):
+    import yaml
+
+    metadata = yaml.safe_load(entry.read_text())
+    if metadata.get("virtual_monorepo") is True:
+        from ptk.adapters.config.yaml_loader import YamlConfigReader
+
+        YamlConfigReader().read(entry)
+        return
+    project = create_app().load_project.execute(config_file=entry, ci=ci)
+    assert project.config.repository.alias == metadata["repository"]["alias"]
+    assert entry in project.files
+    assert all(file.name.endswith((".ptk.yml", ".ptk.yaml")) for file in project.files)

@@ -1,42 +1,56 @@
 Authoring configuration
 =======================
 
-Files and precedence
---------------------
+Files and discovery
+-------------------
 
-Place a project's ``.main.ptk.yml`` at the repository root. It must declare an alias and
-configuration directory, for example::
+Keep ``.main.ptk.yml`` at the repository root. It identifies the project::
 
    repository:
      alias: firmware
      config_path: tooling/ptk
-   project:
-     name: Firmware
-   include: [jobs.ptk.yml]
 
-The alias uses lowercase letters, digits and hyphens, starting with a letter.
-``config_path`` is a relative, existing directory inside the repository; ``.``
-keeps configuration alongside the entry file. Entry-file includes (including
-``!include`` and ``variants:``) resolve from this directory. Includes inside
-fragments remain relative to the fragment itself.
+The alias starts with a lowercase letter and contains lowercase letters, digits
+and hyphens. ``config_path`` remains an existing relative directory inside the
+repository: it is the default authoring folder and the location of the independent
+``maintainers.ptk.yml`` identity list, not a loading boundary.
 
-Automatic ``artifactory_structure.ptk.yaml``, ``workflow.ptk.yml``, ``versioning.ptk.yml``, ``tools.ptk.yml``, ``<job>.tools.ptk.yml``, ``cx.ptk.yml``,
-``local.ptk.yml`` and ``maintainers.ptk.yml`` are discovered in that directory.
-The loader applies shared tool files, main/includes, CX when enabled, local,
-and finally CLI ``--set`` overrides. Repository metadata cannot be overridden.
-Keep local overrides out of git. Edit the local overlay directly
-in this configuration directory. Commands, workspace outputs and shared tool
-configuration outputs still use the repository root.
+PTK recursively discovers ``*.ptk.yml`` and ``*.ptk.yaml`` throughout the repository.
+Each file contributes fields at their complete schema path, for example::
 
-Automatic discovery searches upwards and stops at a Git repository boundary.
-The old ``main.ptk.yml`` filename is not discovered. ``--config`` explicitly
-selects an entry file, including standalone exported snapshots.
-Maintainers can use global ``--no-ci`` to inspect local behavior independently of the host.
+   # src/build/build.ptk.yml
+   jobs:
+     build:
+       steps:
+         - compile: {run: make}
+
+Mappings combine disjoint fields. Every scalar and list has exactly one source;
+duplicate definitions are errors even if their values are identical. Conflicts
+name the schema path and both source files and lines. Lists are atomic and are
+never concatenated or overwritten during file composition. CLI ``--set`` remains
+an explicit runtime override. Shared defaults and variant inheritance still use
+their documented model rules.
+
+``cx.ptk.yml`` contributes fields only in CI. ``local.ptk.yml`` is an ordinary
+discovered fragment and should be git-ignored; it cannot overwrite another file.
+``repository`` and ``virtual_monorepo`` belong only in ``.main.ptk.yml``.
+Commands and output paths remain relative to the repository root.
+
+Discovery does not follow symlinks or enter nested PTK/Git repositories. It skips
+Git metadata, ``.ptk``, virtual environments, ``node_modules``, ``site-packages``,
+Python caches, ``dist``, conventional build/log/report/output folders, and managed
+``.github/ptk`` reference material. Generated ``.gen.version.ptk.yml`` snapshots
+are never configuration inputs. Maintainer identities retain their separate
+loading and validation rules.
+
+Project discovery still searches upwards and stops at a Git repository boundary.
+The filename remains exactly ``.main.ptk.yml``. Maintainers may use ``--no-ci``
+to inspect local behavior independently of the host.
 
 A manual VMR has a separate workspace-root ``.main.ptk.yml`` with
 ``virtual_monorepo: true`` and an optional ``members: [nested/repository, other]``
-list of exact relative paths. This marker has no ``repository``, includes or
-project settings. Without ``members``, ptk checks direct child directories only;
+list of exact relative paths. This marker has no ``repository`` or project
+settings. Without ``members``, ptk checks direct child directories only;
 each participating project still declares its own alias and configuration path.
 Git-repo workspaces instead use ``.repo/project.list`` and need no PTK marker.
 
@@ -47,14 +61,12 @@ or ``--set``. Repository metadata and workspace markers must be literal YAML,
 without include tags or merge directives. See :doc:`cli` for membership rules
 and how commands behave from workspace roots and member directories.
 
-Mappings merge deeply; lists replace. ``!replace`` replaces a node,
-``!append`` extends a list, and ``!include`` inserts another file. Unknown
-fields fail validation; ``ptk setup config show --sources`` identifies their
+Unknown fields fail validation; ``ptk setup config show --sources`` identifies their
 source files and lines.
 
-A ``variants`` string names a separate variant file. Other schema fields use
-the types in :doc:`reference`. ``ptk_version`` is a version requirement; this
-repository's development version needs a range such as ``>=0.1.0.dev0,<0.2``.
+Every file uses the root schema and the field types in :doc:`reference`.
+``ptk_version`` is a version requirement; this repository's development version
+needs a range such as ``>=0.1.0.dev0,<0.2``.
 
 Date and time substitutions
 ---------------------------
@@ -119,7 +131,7 @@ This is a breaking terminology change; old names are not aliases:
 * Update Python integrations to ``JobSpec``, ``JobPlan``, ``RunJob``,
   ``RunRequest.job`` and ``App.run_job``.
 * New scaffolds use a ``jobs/`` folder. Existing fragment filenames are arbitrary;
-  if you rename them, update their ``include`` paths too.
+  keep the ``.ptk.yml`` suffix so automatic discovery continues after a rename.
 * Regenerate editor resources with ``ptk setup vscode``. This updates managed
   tasks and replaces the unmodified ``ptk-action-authoring`` skill with
   ``ptk-job-authoring``, preserving locally edited resources.
@@ -438,20 +450,16 @@ be forcibly terminated. ``wait`` cooperates with deadlines and Ctrl+C.
 Shared defaults and tool files
 ------------------------------
 
-``tools.ptk.yml`` and ``<job>.tools.ptk.yml`` in the configuration directory are loaded
-automatically when present. Job filenames are discovered for jobs declared
-in the main configuration, its includes, global tools file or enabled overlays.
-Files already included explicitly are not applied again automatically.
+Tool and job-tool filenames are organizational conventions. PTK discovers all
+``*.ptk.yml`` files recursively and combines their disjoint fields; no filename
+has precedence. Additional tool definitions in job files are shared definitions.
+Put job-specific differences under that job's ``requires_tools``. These differ
+from the global ``tools`` schema path and still use the documented default rules.
 
-Precedence, from lowest to highest: automatic ``tools.ptk.yml`` and ``versioning.ptk.yml``, automatic job
-tool files (alphabetical), main configuration/includes, ``cx.ptk.yml`` in CI,
-``local.ptk.yml``, then command-line overrides. Explicit includes retain their
-normal position. Additional tool definitions in job files are shared definitions;
-put job-specific changes under that job's ``requires_tools``.
-
-``cx.ptk.yml`` is the automatic workflow overlay filename. GitHub Actions is
-recognized automatically; maintainers can force the mode with ``--ci`` / ``--no-ci``. The old
-``ci.ptk.yml`` filename is not automatically loaded.
+``cx.ptk.yml`` is CI-only. GitHub Actions is recognized automatically; maintainers
+can force the mode with ``--ci`` / ``--no-ci``. A file named ``ci.ptk.yml`` is now
+an ordinary fragment and loads in all modes; rename it to ``cx.ptk.yml`` if it is
+intended only for CI. Active files cannot redefine each other's values.
 
 Global ``param_defaults`` supplies defaults only to parameters that a job
 explicitly declares. Job-specific ``default`` values take precedence. An
@@ -678,8 +686,8 @@ Place ``folder_structure.ptk.yml`` in each repository's ``repository.config_path
      logs: _logs
      reports: _reports
 
-PTK discovers this file automatically as a conventional defaults layer. Existing
-explicit ``layout`` settings and normal overlays retain their usual precedence.
+PTK discovers this file automatically. Define each layout field in one file;
+duplicate definitions are errors.
 Absent this file, these four PTK defaults apply; there is no VMR-level inheritance.
 Folder values are plain directory names. ``layout.root`` defaults to the repository
 root; cleanup requires its output directories to remain inside the repository.

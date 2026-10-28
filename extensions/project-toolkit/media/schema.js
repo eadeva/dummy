@@ -40,7 +40,6 @@
     if (chosen.type === "object") {
       const value = {};
       for (const key of chosen.required || []) value[key] = initial(chosen.properties?.[key], root, depth + 1);
-      if (!Object.keys(value).length && chosen.minProperties) value.step = { run: "echo Hello" };
       return value;
     }
     if (chosen.type === "array") return Array.from({ length: chosen.minItems || 0 }, () => initial(chosen.items, root, depth + 1));
@@ -48,15 +47,5 @@
     if (["number", "integer"].includes(chosen.type)) return chosen.minimum ?? (chosen.exclusiveMinimum !== undefined ? chosen.exclusiveMinimum + 1 : 0);
     return chosen.type === "null" ? null : "";
   }
-  function infer(value, filename = "") {
-    if (Array.isArray(value)) return "steps";
-    if (value && ("components" in value || "constraints" in value || "default" in value && "variants" in value) || /variants?\.ptk\.ya?ml$/i.test(filename) && !value?.project) return "ProductLineSpec";
-    return "configuration";
-  }
-  function rootSchema(schema, kind) {
-    if (kind === "configuration") return schema;
-    if (kind === "steps") return { type: "array", items: { $ref: "#/$defs/StepEntry" } };
-    return { $ref: `#/$defs/${kind}` };
-  }
-  return { type, resolve, choices, effective, child, at, initial, infer, rootSchema };
+  return { type, resolve, choices, effective, child, at, initial };
 });

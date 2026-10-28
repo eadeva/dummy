@@ -1,7 +1,7 @@
 """Meta-model of the ptk configuration (entities).
 
-Entry point is ``.main.ptk.yml``; further ``*.ptk.yml`` files are pulled in
-with ``include:``. Unknown keys are errors everywhere.
+Entry point is ``.main.ptk.yml``; further ``*.ptk.yml`` files are discovered recursively
+and contribute disjoint fields. Unknown keys are errors everywhere.
 
 Steps are written as an ordered list of single-key mappings::
 

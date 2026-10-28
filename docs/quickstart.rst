@@ -22,20 +22,20 @@ a terminal to enter it at the prompt; there is no default. Scripts, redirected
 input and ``--yes`` require ``--config-dir PATH``. The path is relative to the
 repository root, including when the same choice is applied to multiple VMR
 repositories. The root
-``.main.ptk.yml`` contains only repository metadata and the project include.
-The chosen directory contains ``project.ptk.yml`` as its include index, plus:
+``.main.ptk.yml`` contains only repository metadata.
+The chosen directory contains ``project.ptk.yml`` for project settings, plus:
 
 * ``jobs/hello.ptk.yml`` and ``jobs/build.ptk.yml``: two independent jobs.
-  ``jobs/*.ptk.yml`` loads additional job files automatically.
+  PTK discovers additional job files anywhere in the repository.
 * ``variants/variants.ptk.yml``: component/feature model and default selection;
-  includes ``debug.ptk.yml`` and ``release.ptk.yml`` from the same folder.
+  ``debug.ptk.yml`` and ``release.ptk.yml`` contribute their full ``variants`` paths.
 * ``tools/tools.ptk.yml`` and ``versioning/versioning.ptk.yml``.
 * ``environment/environment.ptk.yml`` and ``credentials/credentials.ptk.yml``.
 * ``configs/configs.ptk.yml`` for shared formatter/linter settings.
 
-``cx.ptk.yml`` and ``maintainers.ptk.yml`` stay at the configuration root because
-they are conventional discovery entry points. Other nested files are loaded by
-explicit includes. Optional settings contain commented field examples and usage
+``maintainers.ptk.yml`` stays at the configuration root as an independent identity
+list. ``cx.ptk.yml`` is CI-only. Other fragments are discovered recursively;
+no include index is needed. Optional settings contain commented field examples and usage
 notes, including managed tools, credential providers, Git versions and job
 requirements; no secret values or tool installations are needed.
 

@@ -23,7 +23,6 @@ def repository(root, alias="app", *, jobs=None, workflows=None, extra=None):
         yaml.safe_dump(
             {
                 "repository": {"alias": alias, "config_path": "config"},
-                "include": "project.ptk.yml",
             }
         ),
         encoding="utf-8",

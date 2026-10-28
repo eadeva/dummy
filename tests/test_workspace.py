@@ -23,7 +23,6 @@ def repository(root, alias, *, config_path="config"):
             {
                 "repository": {"alias": alias, "config_path": config_path},
                 "project": {"name": alias, "default_job": "build"},
-                "include": ["jobs.ptk.yml"],
             }
         )
     )
@@ -64,20 +63,21 @@ def workspace(tmp_path):
     return a, b
 
 
-def test_config_base_execution_root_and_overlays(tmp_path, monkeypatch):
+def test_config_default_directory_execution_root_and_discovery(tmp_path, monkeypatch):
     main = repository(tmp_path, "firmware", config_path="tooling/ptk")
     config = main.parent / "tooling/ptk"
     (config / "tools.ptk.yml").write_text("tools: {ninja: {version: '>=1'}}")
     (config / "build.tools.ptk.yml").write_text(
         "jobs: {build: {requires_tools: {ninja: true}}}"
     )
-    (config / "cx.ptk.yml").write_text("vars: {value: cx}")
-    (config / "local.ptk.yml").write_text("vars: {value: local}")
+    (config / "cx.ptk.yml").write_text("vars: {ci: cx}")
+    (config / "local.ptk.yml").write_text("vars: {local: local}")
     (config / "maintainers.ptk.yml").write_text("maintainers: [alice]")
-    (tmp_path / "local.ptk.yml").write_text("vars: {value: wrong}")
+    (tmp_path / "local.ptk.yml").write_text("vars: {outside_config_dir: discovered}")
     p = create_app(environ={}).load_project.execute(config, ci=True)
     assert p.root == tmp_path and p.config_root == config
-    assert p.config.vars["value"] == "local"
+    assert p.config.vars["value"] == "firmware"
+    assert p.config.vars["outside_config_dir"] == "discovered"
     assert p.config.jobs["build"].required_tool_names == ["ninja"]
     assert p.maintainers is not None
     # The generated command executes relative to repo root, not config dir.
@@ -143,6 +143,8 @@ def test_vmr_permissions_are_per_repository(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     runner = CliRunner(env={"PTK_ROLE": "user"})
     result = runner.invoke(cli, ["firmware", "setup", "config", "validate"])
+    assert result.exit_code == 0, result.output
+    result = runner.invoke(cli, ["firmware", "setup", "config", "show"])
     assert result.exit_code != 0 and "maintainer-only" in result.output
     result = runner.invoke(cli, ["bootloader", "setup", "config", "validate"])
     assert result.exit_code == 0, result.output
@@ -218,10 +220,10 @@ def test_symlink_git_and_unindexed_workspaces(tmp_path):
     assert repositories(root) == {"a": main}
 
 
-def test_nested_include_bases_and_source_locations(tmp_path):
+def test_nested_discovery_and_source_locations(tmp_path):
     main = repository(tmp_path, "demo")
     (tmp_path / "config/parts").mkdir()
-    (tmp_path / "config/jobs.ptk.yml").write_text("include: [parts/values.ptk.yml]\n")
+    (tmp_path / "config/jobs.ptk.yml").write_text("{}\n")
     (tmp_path / "config/parts/values.ptk.yml").write_text("vars: {value: fragment}\n")
     data = yaml.safe_load(main.read_text())
     data["project"].pop("default_job")
@@ -263,7 +265,7 @@ def test_vmr_help_tasks_and_read_only_variants(tmp_path, monkeypatch):
     assert not (a.parent / "local.ptk.yml").exists()
 
 
-def test_unselected_repository_broken_include_does_not_block_command(
+def test_unselected_repository_missing_job_does_not_block_command(
     tmp_path, monkeypatch
 ):
     _a, b = workspace(tmp_path)
@@ -272,7 +274,7 @@ def test_unselected_repository_broken_include_does_not_block_command(
     result = CliRunner().invoke(cli, ["firmware", "build"])
     assert result.exit_code == 0, result.output
     result = CliRunner().invoke(cli, ["bootloader", "setup", "config", "validate"])
-    assert result.exit_code != 0 and "included file not found" in result.output
+    assert result.exit_code != 0 and "unknown job" in result.output
 
 
 def test_shared_workspace_views_and_no_global_installer(tmp_path, monkeypatch):

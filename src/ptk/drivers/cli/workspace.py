@@ -42,6 +42,13 @@ class WorkspaceGroup(ProjectGroup):
         # Init resolves its scope itself, including members without PTK config.
         if args[:2] == ["setup", "init"] or args[:1] == ["init"]:
             ctx.meta["vmr_repositories"] = None
+        if args[:1] == ["describe"]:
+            try:
+                self._repositories(ctx)
+            except click.ClickException:
+                # The editor must be able to report malformed marker metadata.
+                # Let its normal project loader return structured diagnostics.
+                ctx.meta["vmr_repositories"] = None
         return super().resolve_command(ctx, args)
 
     def _repositories(self, ctx):

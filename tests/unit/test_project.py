@@ -8,12 +8,12 @@ def test_layers_ci_local_and_overrides(write, load):
     root = write(
         {
             ".main.ptk.yml": MINIMAL + "vars: {where: main, a: 1}\n",
-            "cx.ptk.yml": "vars: {where: ci}",
-            "local.ptk.yml": "vars: {where: local, b: 2}",
+            "cx.ptk.yml": "vars: {ci: true}",
+            "local.ptk.yml": "vars: {b: 2}",
         }
     )
     project = load(root)
-    assert project.config.vars == {"where": "local", "a": 1, "b": 2}
+    assert project.config.vars == {"where": "main", "a": 1, "b": 2}
     assert project.layers == [".main.ptk.yml", "local.ptk.yml"]
     ci = load(
         root,

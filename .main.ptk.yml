@@ -1,4 +1,4 @@
+# Project marker; PTK discovers configuration fragments throughout this repository.
 repository:
   alias: ptk
-  config_path: config/ptk
-include: project.ptk.yml
+  config_path: config/ptk  # Default authoring folder and maintainer-list location.

@@ -1,16 +1,8 @@
-# Composition root: includes are relative to this file.
-# Add jobs as separate files under jobs/; the glob loads them.
+# Project settings; all *.ptk.yml files are discovered automatically.
+# Add jobs as separate files anywhere in the repository.
 schema_version: 1
-include:
-- tools/tools.ptk.yml
-- versioning/versioning.ptk.yml
-- environment/environment.ptk.yml
-- credentials/credentials.ptk.yml
-- configs/configs.ptk.yml
-- jobs/*.ptk.yml
 project:
   name: ptk
   default_job: test
-variants: variants/variants.ptk.yml
 # Test dependencies and doc dependencies are declared once in pyproject.toml.
 # Each job runs this checkout, even when the invoking PTK was installed globally.

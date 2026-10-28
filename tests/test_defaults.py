@@ -81,14 +81,15 @@ def test_template_default_is_type_checked_at_run_time(write):
         prepare(root, variant="fast")
 
 
-def test_defaults_can_be_overridden_per_layer(write):
+def test_duplicate_defaults_are_rejected_across_files(write):
     root = write(
         {
             ".main.ptk.yml": PROJECT,
             "local.ptk.yml": "jobs: {hello: {params: {who: {default: me}}}}\n",
         }
     )
-    assert prepare(root, variant="slow").params["who"] == "me"
+    with pytest.raises(ConfigError, match="configuration conflict"):
+        prepare(root, variant="slow")
 
 
 @pytest.mark.parametrize(

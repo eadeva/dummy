@@ -7,7 +7,7 @@ from packaging.version import InvalidVersion, Version
 
 
 def configured_version(root: Path) -> str:
-    # Reuse normal includes, config overlays, variant overrides and Git discovery.
+    # Reuse normal discovery, unique file composition, variant overrides and Git discovery.
     # Keep imports lazy: rebuilding an sdist only needs its frozen metadata.
     from ptk.adapters.config.source import FileConfigSource
     from ptk.adapters.host import SystemHost

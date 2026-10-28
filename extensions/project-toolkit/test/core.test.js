@@ -13,7 +13,7 @@ function target(kind = "job") {
 
 test("inventory accepts the versioned CLI contract and isolated broken members", () => {
   const doc = inventory();
-  doc.projects.push({ alias: "broken", root: doc.root, entry_file: path.join(doc.root, "bad.yml"), error: "Invalid configuration" });
+  doc.projects.push({ configuration: { ...doc.projects[0].configuration, value: null }, alias: "broken", root: doc.root, entry_file: path.join(doc.root, "bad.yml"), error: "Invalid configuration" });
   assert.deepEqual(core.parseInventory(JSON.stringify(doc)), doc);
 });
 
@@ -76,10 +76,10 @@ test("target discovery preserves healthy VMR members and workspace workflows", (
   assert.equal(targets[2].project, undefined);
 });
 
-test("built-in commands are optional for older CLIs but malformed metadata is rejected", () => {
+test("built-in command metadata is required and malformed metadata is rejected", () => {
   const doc = inventory();
   delete doc.projects[0].commands;
-  assert.doesNotThrow(() => core.parseInventory(JSON.stringify(doc)));
+  assert.throws(() => core.parseInventory(JSON.stringify(doc)), /built-in command inventory/);
   for (const corrupt of [command => { command.path = ["--unexpected"]; }, command => { command.children = null; },
     command => { command.params = [builtinParam("bad", { kind: "option", option: null })]; }]) {
     const bad = inventory();
@@ -137,7 +137,7 @@ test("built-in discovery keeps VMR root and member contexts separate", () => {
 
 test("discovery invokes an actual executable and parses stdout without a shell", async () => {
   const doc = inventory(process.cwd());
-  const script = `if (process.argv.slice(1).join(' ') !== 'describe --json') process.exit(3); process.stdout.write(${JSON.stringify(JSON.stringify(doc))})`;
+  const script = `if (process.argv.slice(1).join(' ') !== 'describe --json --configuration') process.exit(3); process.stdout.write(${JSON.stringify(JSON.stringify(doc))})`;
   assert.deepEqual(await core.readInventory({ executable: process.execPath, arguments: ["-e", script, "--"], timeout: 10 }, process.cwd()), doc);
 });
 
@@ -160,13 +160,13 @@ test("uv launch arguments prevent implicit syncing on POSIX and Windows without 
     const settings = { executable, arguments: ["run", "--project", "folder with spaces", "ptk"] };
     assert.deepEqual(core.launchArgs(settings, ["version", "check"]), ["run", "--no-sync", "--project", "folder with spaces", "ptk", "version", "check"]);
     assert.deepEqual(settings.arguments, ["run", "--project", "folder with spaces", "ptk"]);
-    assert.deepEqual(core.launchArgs({ executable, arguments: ["run", "--no-sync", "ptk"] }, ["describe", "--json"]), ["run", "--no-sync", "ptk", "describe", "--json"]);
+    assert.deepEqual(core.launchArgs({ executable, arguments: ["run", "--no-sync", "ptk"] }, ["describe", "--json", "--configuration"]), ["run", "--no-sync", "ptk", "describe", "--json", "--configuration"]);
   }
   assert.deepEqual(core.launchArgs({ executable: "ptk", arguments: [] }, ["version", "check"]), ["version", "check"]);
   assert.deepEqual(core.launchArgs({ executable: "uv", arguments: ["tool", "run", "ptk"] }, ["--help"]), ["tool", "run", "ptk", "--help"]);
 });
 
-test("watch filtering ignores installed resources but respects explicitly included configuration", () => {
+test("watch filtering ignores installed resources but respects PTK-reported source files", () => {
   for (const [paths, root] of [[path, path.resolve("project")], [path.win32, "C:\\git\\project"]]) {
     const generated = paths.join(root, "config", ".gen.version.ptk.yml");
     assert.equal(core.ignoreConfigEvent(generated, [root], [generated]), true);
@@ -177,4 +177,19 @@ test("watch filtering ignores installed resources but respects explicitly includ
     }
     assert.equal(core.ignoreConfigEvent(paths.join(root, "config", "jobs", "new.ptk.yml"), [root]), false);
   }
+});
+
+
+test("configuration interface is required and unknown versions are rejected", () => {
+  for (const configuration of [undefined, null, { version: 2 }, { version: 1 }]) {
+    const doc = inventory();
+    doc.projects[0].configuration = configuration;
+    assert.throws(() => core.parseInventory(JSON.stringify(doc)), /configuration interface/);
+  }
+});
+
+test("discovery does not retry without the configuration interface", async () => {
+  const doc = inventory();
+  const script = `if (process.argv.includes('--configuration')) { process.stderr.write('No such option: --configuration'); process.exit(2); } process.stdout.write(${JSON.stringify(JSON.stringify(doc))});`;
+  await assert.rejects(core.readInventory({ executable: process.execPath, arguments: ["-e", script, "--"], timeout: 10 }, process.cwd()), /No such option: --configuration/);
 });

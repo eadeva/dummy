@@ -183,7 +183,7 @@ def config_group() -> None:
 @click.pass_context
 @guarded
 def config_validate(ctx: click.Context) -> None:
-    """Validate .main.ptk.yml and everything it includes."""
+    """Validate every discovered configuration file in the PTK project."""
     project = _state(ctx).project()
     console.print(
         f"[green]configuration is valid[/] ({len(project.files)} file(s), "

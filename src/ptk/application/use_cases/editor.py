@@ -1,12 +1,69 @@
 """Read-only editor inventory. Never resolve versions, tools or credentials."""
 
 from dataclasses import asdict
+from math import isfinite
+from pathlib import Path
 
+from ...domain.config import tree as t
+from ...domain.config.discovery import IGNORED_DIRECTORIES
+from .project import ExportSchema
 from .role import command_allowed, visible
 from .variants import VariantService
 
 
-def describe_project(project, role):
+def describe_configuration(tree, root, files, error=None, fingerprints=None):
+    """Authored model and schema from the installed PTK, never an editor loader."""
+    sources = []
+    locked = []
+
+    def portable(value, path=()):
+        if isinstance(value, dict):
+            return {key: portable(child, (*path, key)) for key, child in value.items()}
+        if isinstance(value, list):
+            return [
+                portable(child, (*path, index)) for index, child in enumerate(value)
+            ]
+        if value is None or isinstance(value, (str, bool)):
+            return value
+        if (
+            isinstance(value, int)
+            and abs(value) <= 2**53 - 1
+            or isinstance(value, float)
+            and isfinite(value)
+            and abs(value) <= 2**53 - 1
+        ):
+            return value
+        # Preserve precise YAML values in their source; JSON/JavaScript cannot
+        # round-trip dates, binary data, infinities or arbitrarily large integers.
+        locked.append(list(path))
+        return str(value)
+
+    value = portable(t.to_plain(tree)) if tree is not None else None
+    if tree is not None:
+        for path, location in t.provenance(tree).items():
+            file = Path(location.file)
+            if not file.is_absolute():
+                file = root / file
+            sources.append(
+                {"path": list(path), "file": str(file), "line": location.line}
+            )
+    return {
+        "version": 1,
+        "fingerprints": fingerprints or {},
+        "write_directory": str(t.get(tree, ("repository", "config_path")).value)
+        if tree is not None and t.get(tree, ("repository", "config_path"))
+        else "config/ptk",
+        "ignored_directories": sorted(IGNORED_DIRECTORIES),
+        "schema": ExportSchema().execute(),
+        "value": value,
+        "locked": locked,
+        "sources": sources,
+        "files": [str(file) for file in files],
+        "error": error,
+    }
+
+
+def describe_project(project, role, *, configuration=False):
     """Expose only permitted operations and authored, non-secret parameter metadata."""
     config = project.config
     capabilities = {
@@ -28,6 +85,18 @@ def describe_project(project, role):
         "root": str(project.root),
         "entry_file": str(project.main_file),
         "config_files": [str(path) for path in project.files],
+        **(
+            {
+                "configuration": describe_configuration(
+                    project.authored_tree or project.tree,
+                    project.root,
+                    project.files,
+                    fingerprints=project.fingerprints,
+                )
+            }
+            if configuration
+            else {}
+        ),
         "role": role,
         "capabilities": capabilities,
         "default_variant": next((item.name for item in items if item.default), None),

@@ -8,8 +8,8 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
 1. Install PTK from the same checkout/version as this extension. The CLI must
    support `ptk describe --json` (inventory schema version 1).
 2. In VS Code, run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.4.0.vsix`. You can also use
-   `code --install-extension project-toolkit-0.4.0.vsix`.
+   `project-toolkit-0.5.1.vsix`. You can also use
+   `code --install-extension project-toolkit-0.5.1.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -98,13 +98,10 @@ Multiple VS Code folders and VMR member repositories are supported. The extensio
 refreshes after PTK YAML and VMR project-list changes and after PTK tasks finish;
 **Refresh Projects** forces another discovery. Configuration copies inside
 virtual environments, installed packages and generated output are ignored, except
-for files explicitly included by a project. Discovery requests are serialized
+for files reported by PTK as configuration sources. Discovery requests are serialized
 and repeated requests are coalesced. A broken VMR member is shown with its error while healthy
 members remain usable.
 The command tree comes from PTK's inventory, including its role restrictions.
-If **Update PTK to browse built-in commands** appears, update the CLI from this
-checkout and refresh. Job actions and CLI help still work with older inventories.
-
 Jobs with no required non-secret parameters and local workflows also appear in
 **Tasks: Run Task**. Saved `project-toolkit` tasks retain their `variant`, `params`
 and `preview` fields. Supply required parameters in `params`, or launch through
@@ -118,31 +115,47 @@ available from the sidebar/palette and are not automatically added to Run Task.
 
 ## Configuration tree and form
 
-Expand **Configuration** and a source file to browse its sections, jobs, steps
-and scalar fields. Click a file or field to open **PTK Configuration**. Add jobs,
-rename dictionary entries, add optional model fields, change types for union
-fields, and add/remove/reorder list items. The form edits the source file you
-selected; includes are never flattened into the entry file.
+**Configuration** displays PTK's logical schema tree, independent of the files
+that store it. Jobs, workflows, variants, Artifactory events and other sections
+open at their schema path. The installed PTK supplies the authored values,
+schema, source locations and loading/validation errors through
+`describe --json --configuration`. The extension has no configuration discovery
+or merge implementation and does not substitute a bundled schema for the runtime.
+PTK and the extension must both support this configuration interface. Discovery
+reports an error if the installed PTK does not provide it.
 
-Edits update VS Code's text document, with normal unsaved indicators, undo/redo
-and save. Use **Save** or Ctrl/Cmd+S, or **Save & validate** to save and launch
-PTK's project validation in the terminal. Semantic constraints, cross-file
-references and plugin options remain PTK's responsibility. Fields may be
-incomplete while editing. **Raw YAML** switches to the text editor;
-**Open PTK Form** in its title bar switches back. It is also available in the
-command palette and via **Reopen Editor With… > PTK Configuration**.
+Text and number fields stay local while you type. Leaving a field, pressing
+**Save** / **Ctrl/Cmd+S**, or navigating to another section applies the finished
+edit; the project form then saves and reloads it through PTK. Checkboxes, choices
+and structural actions apply immediately. Save replies preserve active text,
+focus and the cursor; unchanged inventories do not redraw the tree.
 
-The form preserves comments, YAML anchors, include paths and merge tags; YAML
-spacing may be normalized on edit. Aliases, includes and complex mapping keys
-are shown as authored values and edited in raw YAML. Files with YAML syntax
-errors still offer the raw editor. External changes refresh the form; stale
-edits are rejected instead of overwriting newer content.
+Use the VS Code tree for navigation. The form has no second navigation sidebar;
+breadcrumbs show the current field path. List rows show step names or their values
+instead of item numbers, and named steps open their fields directly.
+Ordinary edits go back to their recorded source. Choose **Next change: new file…**
+to place a change in a new fragment. Existing definitions are removed from their
+old files in the same VS Code workspace edit, so no overwrite conflict is left
+behind. Lists stay together in one file. Repository metadata stays in
+`.main.ptk.yml`. Source fingerprints reject stale edits, and unsaved YAML documents
+must be saved or undone before using the project form.
 
-Optional fields come from the bundled PTK model schema. Update the CLI and
-extension together when the model changes. **Schema for this file** selects a
-fragment model for files included inside a specific field; variants and step
-lists are recognized automatically. The configuration tree shows authored
-values, while job execution uses PTK's fully resolved configuration.
+**Raw YAML** opens a source chooser. The optional file editor retains normal
+VS Code save/undo behavior and gets its schema from the installed PTK too.
+Simple source edits preserve comments and scalar spelling; moving a section
+or replacing a split object can normalize its YAML formatting. Use Raw YAML
+for aliases or complex values that the form cannot safely edit.
+
+Loading errors appear in the tree and Problems panel, with links to their source.
+The **Validate Configuration** toolbar action is always available. A workspace
+without `.main.ptk.yml` displays **No PTK project found** and offers **PTK setup init**,
+which asks for the configuration directory.
+
+Choose variants from the selector on each job or repository workflow row. The
+selected value appears beside the row and is remembered independently per target.
+Repository workflows use PTK's existing repository variant mappings; workspace
+workflows retain the variants configured on their steps. There is no separate
+Variants group. Variant definitions remain editable under Configuration.
 
 ## Build and verify
 
@@ -156,7 +169,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.4.0.vsix`. Use `ptk dry-run extension`
+`extensions/project-toolkit/project-toolkit-0.5.1.vsix`. Use `ptk dry-run extension`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:
@@ -209,3 +222,8 @@ or `reRun`, with optional `preview: true` to inspect without deletion.
 
 Update the CLI together with the extension. The config shorthand is now `-C`;
 `-c` means clean. Binary folders now include the job name.
+
+Browser regression tests exercise the actual form scripts, including slow typing,
+focus/cursor preservation and navigation. Install Playwright with Chromium to run
+them, or set `PTK_TEST_PLAYWRIGHT` to its module path and `PTK_TEST_CHROMIUM` to a
+Chromium executable. Without Playwright these tests are explicitly skipped.

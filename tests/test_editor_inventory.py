@@ -82,13 +82,17 @@ def test_inventory_respects_group_policies(tmp_path):
     )
     project = json.loads(result.output)["projects"][0]
     assert project["variants"] == [] and project["workflows"] == []
-    assert not any(project["capabilities"].values())
+    assert project["capabilities"]["validate"]
+    assert not any(
+        value for key, value in project["capabilities"].items() if key != "validate"
+    )
     commands = command_paths(project["commands"])
     assert not any(
         path.startswith(("variant", "report", "workflow", "setup config "))
+        and path != "setup config validate"
         for path in commands
     )
-    assert "setup config" not in commands
+    assert "setup config validate" in commands
     assert "setup creds list" in commands
 
 

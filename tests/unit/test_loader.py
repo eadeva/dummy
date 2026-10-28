@@ -11,7 +11,7 @@ from ptk.domain.errors import ConfigError
 
 @pytest.fixture(autouse=True, params=["SafeLoader", "CSafeLoader"])
 def parser_backend(request, monkeypatch):
-    """Includes, tags, anchors and diagnostics must work with either backend."""
+    """YAML nodes, anchors and diagnostics must work with either backend."""
     parser = getattr(yaml, request.param, None)
     if parser is None:
         pytest.skip("PyYAML C extension unavailable")
@@ -23,86 +23,10 @@ def read(root: Path, name: str = "fragment.ptk.yml"):
     return reader.read(root / name), reader
 
 
-def test_include_order_and_main_file_wins(write):
-    root = write(
-        {
-            "fragment.ptk.yml": """
-            include: [parts/*.ptk.yml]
-            vars: {a: main}
-        """,
-            "parts/1.ptk.yml": "vars: {a: one, b: one}",
-            "parts/2.ptk.yml": "vars: {b: two, c: two}",
-        }
-    )
-    node, reader = read(root)
-    assert t.to_plain(node) == {"vars": {"a": "main", "b": "two", "c": "two"}}
-    prov = t.provenance(node)
-    assert str(prov[("vars", "b")]) == "parts/2.ptk.yml:1"
-    assert len(reader.files) == 3
-
-
-def test_include_tag_glob_merges_mappings_and_concatenates_lists(write):
-    root = write(
-        {
-            "fragment.ptk.yml": """
-            tools: !include tools/*.ptk.yml
-            list: !include lists/*.ptk.yml
-        """,
-            "tools/a.ptk.yml": "cmake: {version: '>=3.28'}",
-            "tools/b.ptk.yml": "ninja: {version: '>=1.11'}",
-            "lists/a.ptk.yml": "[1, 2]",
-            "lists/b.ptk.yml": "[3]",
-        }
-    )
-    # lists as top-level documents are only allowed via !include, not as main file
-    node, _ = read(root)
-    data = t.to_plain(node)
-    assert set(data["tools"]) == {"cmake", "ninja"}
-    assert data["list"] == [1, 2, 3]
-
-
-def test_replace_and_append_tags(write):
-    root = write(
-        {
-            "fragment.ptk.yml": """
-        include: [base.ptk.yml]
-        environment:
-          set: !replace {ONLY: "1"}
-          keep: !append [B]
-    """,
-            "base.ptk.yml": """
-        environment:
-          set: {A: "1", B: "2"}
-          keep: [A]
-    """,
-        }
-    )
-    data = t.to_plain(read(root)[0])
-    assert data["environment"] == {"set": {"ONLY": "1"}, "keep": ["A", "B"]}
-
-
-def test_variants_string_is_include_sugar(write):
-    root = write(
-        {
-            "fragment.ptk.yml": "variants: product/line.ptk.yml",
-            "product/line.ptk.yml": "default: a\nvariants: {a: {}}",
-        }
-    )
-    assert t.to_plain(read(root)[0])["variants"]["default"] == "a"
-
-
 @pytest.mark.parametrize(
     "files, message",
     [
         ({"fragment.ptk.yml": "a: 1\na: 2"}, "duplicate key 'a'"),
-        (
-            {
-                "fragment.ptk.yml": "include: [x.ptk.yml]",
-                "x.ptk.yml": "include: [fragment.ptk.yml]",
-            },
-            "include cycle",
-        ),
-        ({"fragment.ptk.yml": "include: [missing.ptk.yml]"}, "included file not found"),
         ({"fragment.ptk.yml": "a: !foo 1"}, "unknown tag !foo"),
         ({"fragment.ptk.yml": "a: [1"}, "invalid YAML"),
         ({"fragment.ptk.yml": "- 1"}, "top level must be a mapping"),

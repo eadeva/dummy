@@ -17,7 +17,7 @@ function validBuiltinParam(param) {
 }
 
 function validCommands(commands) {
-  return commands === undefined || Array.isArray(commands) && commands.every(command => named(command) &&
+  return Array.isArray(commands) && commands.every(command => named(command) &&
     Array.isArray(command.path) && command.path.length && command.path.every(word => typeof word === "string" && word.length && !word.startsWith("-")) &&
     typeof command.runnable === "boolean" && Array.isArray(command.children) && validCommands(command.children) &&
     Array.isArray(command.params) && command.params.every(validBuiltinParam));
@@ -26,7 +26,7 @@ function validCommands(commands) {
 function parseInventory(text) {
   let doc;
   try { doc = JSON.parse(text); } catch {
-    throw new Error("PTK did not return JSON. Update PTK to a version supporting 'describe --json'.");
+    throw new Error("PTK did not return JSON. Update PTK and Project Toolkit together.");
   }
   if (!object(doc) || doc.schema_version !== 1 || !Array.isArray(doc.projects) ||
       !Array.isArray(doc.workflows) || !doc.workflows.every(named) || !absolute(doc.root) || typeof doc.ci !== "boolean") {
@@ -36,6 +36,13 @@ function parseInventory(text) {
   for (const project of doc.projects) {
     if (!object(project) || typeof project.alias !== "string" || !absolute(project.root) || !absolute(project.entry_file)) {
       throw new Error("Invalid repository paths in PTK inventory.");
+    }
+    const config = project.configuration;
+    if (!object(config) || config.version !== 1 || !object(config.schema) || config.value !== null && !object(config.value) ||
+        !Array.isArray(config.files) || !config.files.every(absolute) ||
+        !Array.isArray(config.sources) || !config.sources.every(source => object(source) && absolute(source.file) &&
+          Array.isArray(source.path) && source.path.every(key => typeof key === "string" || Number.isSafeInteger(key) && key >= 0))) {
+      throw new Error("Invalid PTK configuration interface. Update PTK and Project Toolkit together.");
     }
     if (project.error) continue;
     if (!validCommands(project.commands)) throw new Error("Invalid PTK built-in command inventory.");
@@ -66,7 +73,7 @@ function ignoreConfigEvent(file, roots, configFiles = []) {
   const paths = /^[A-Za-z]:[\\/]|^\\\\/.test(file) ? path.win32 : path;
   const normalize = value => paths === path.win32 ? paths.resolve(value).toLowerCase() : paths.resolve(value);
   if (paths.basename(file).toLowerCase() === ".gen.version.ptk.yml") return true;
-  // Explicit includes win over conventional output/environment directory names.
+  // PTK-reported source files always trigger a refresh.
   if (configFiles.some(config => normalize(config) === normalize(file))) return false;
   const runtimeDirs = new Set([".venv", "venv", ".ptk", ".git", "node_modules", "site-packages", "__pycache__", "_builds", "_bin", "_logs", "_reports", "dist"]);
   return roots.some(root => {
@@ -80,7 +87,7 @@ function ignoreConfigEvent(file, roots, configFiles = []) {
 
 function readInventory(settings, cwd) {
   return new Promise((resolve, reject) => {
-    execFile(settings.executable, launchArgs(settings, ["describe", "--json"]), {
+    execFile(settings.executable, launchArgs(settings, ["describe", "--json", "--configuration"]), {
       cwd, timeout: settings.timeout * 1000, maxBuffer: 8 * 1024 * 1024,
       windowsHide: true, encoding: "utf8", shell: false,
     }, (error, stdout, stderr) => {
@@ -135,7 +142,7 @@ function builtinArgs(spec, inputs = {}) {
   return [...options, ...(positional.length ? ["--", ...positional] : [])];
 }
 
-function argsFor(target, { variant, preview = false, params = {}, help = false, inputs = {}, clean = false, reRun = false, report = false } = {}) {
+function argsFor(target, { variant, preview = false, params = {}, help = false, inputs = {}, clean = false, reRun = false, report = false, configDir } = {}) {
   if (typeof clean !== "boolean" || typeof reRun !== "boolean" || clean && reRun) throw new Error("Choose clean or re-run.");
   if ((clean || reRun) && !["job", "workflow"].includes(target.kind)) throw new Error("Cleanup applies to jobs and workflows.");
   if (typeof help !== "boolean") throw new Error("Task help must be a boolean.");
@@ -163,6 +170,8 @@ function argsFor(target, { variant, preview = false, params = {}, help = false, 
     if (target.kind === "builtin") return [...args, ...target.spec.path, "--help"];
   }
   switch (target.kind) {
+    case "init":
+      return ["setup", "init", "--config-dir", configDir, "--", target.root];
     case "builtin":
       if (preview) throw new Error("Built-in commands do not support generic dry runs. Use their --dry-run option where available.");
       if (!target.spec.runnable) throw new Error("Choose a subcommand or open this command's help.");
@@ -213,7 +222,7 @@ function availableTargets(records) {
   return targets;
 }
 
-function builtinTargets(owner, commands = []) {
+function builtinTargets(owner, commands) {
   const result = [{ ...owner, kind: "builtin", name: "--help", spec: { name: "CLI help", path: [], params: [], children: [], runnable: false } }];
   function visit(items) {
     for (const spec of items) {
@@ -240,7 +249,7 @@ function availableBuiltins(records) {
 function canOpenReport(target) {
   if (target.kind === "job" && !target.project?.capabilities.reports) return false;
   const commands = target.project?.commands ?? target.commands;
-  if (!commands) return target.kind === "job";
+  if (!commands) return false;
   const name = target.kind === "job" ? "report open" : "workflow report";
   return builtinTargets({}, commands).some(command => command.name === name && command.spec.runnable);
 }

@@ -59,18 +59,6 @@ test("invalid YAML retains Raw YAML access and failed saves do not validate", as
   assert.match(p.messages.at(-1).issue, /could not be saved/);
 });
 
-test("configuration tree reads unsaved documents and keeps aliases as authored leaves", async () => {
-  const h = harness("jobs:\n  build:\n    steps: !include steps.yml\n");
-  const root = { configFile: h.document.uri.fsPath, configPath: [] };
-  const jobs = (await h.editors.children(root))[0];
-  assert.equal(jobs.label, "jobs");
-  const build = (await h.editors.children(jobs))[0];
-  const steps = (await h.editors.children(build))[0];
-  assert.equal(steps.hasChildren, false);
-  assert.equal(steps.description, "steps.yml");
-  h.external("jobs:\n  changed: {}\n");
-  assert.equal((await h.editors.children(jobs))[0].label, "changed");
-});
 
 test("opening a tree field navigates an existing form and never creates an arbitrary replacement file", async () => {
   const h = harness();
@@ -100,4 +88,16 @@ test("parameter window validates values, filters secrets, and resolves only once
   const cancelled = h.editors.parameters(target, { preview: false });
   h.panels[1].dispose();
   assert.equal(await cancelled, undefined);
+});
+
+test("file form typing does not refresh the tree before a document is saved", async () => {
+  const h = harness("project: {name: old}\n");
+  const p = await h.resolve();
+  await p.receive({ type: "ready" });
+  await p.receive(edit(1, "new"));
+  assert.equal(h.changeCount(), 0);
+  h.external("project: {name: raw}\n");
+  assert.equal(h.changeCount(), 0);
+  await p.receive({ type: "save" });
+  assert.equal(h.changeCount(), 1);
 });

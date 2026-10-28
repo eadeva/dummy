@@ -42,7 +42,7 @@ test("actual PTK inventory, preview, job parameters and variant inspection agree
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   project(root, "demo");
   const before = fs.readdirSync(root, { recursive: true });
-  const doc = core.parseInventory(invoke(root, ["describe", "--json"]));
+  const doc = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));
   const target = core.availableTargets([{ inventory: doc }]).find(target => target.kind === "job");
   assert.match(invoke(root, core.argsFor(target, { variant: "large", report: true })), /Info:.*job.*hasn't run yet/s);
   const workflow = core.availableTargets([{ inventory: doc }]).find(target => target.kind === "workflow");
@@ -81,7 +81,7 @@ test("actual VMR discovery supports member jobs and workspace workflow previews"
   fs.writeFileSync(entry, JSON.stringify(config));
   fs.writeFileSync(path.join(root, ".main.ptk.yml"), "virtual_monorepo: true\nmembers: [a, b]\n");
   fs.writeFileSync(path.join(root, "workflow.ptk.yml"), "workflows:\n  verify:\n    steps:\n    - build: {repo: alpha, job: build}\n");
-  const doc = core.parseInventory(invoke(root, ["describe", "--json"]));
+  const doc = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));
   assert.equal(doc.mode, "workspace");
   const targets = core.availableTargets([{ inventory: doc }]);
   const builtins = core.availableBuiltins([{ inventory: doc }]);
@@ -104,7 +104,7 @@ test("actual cleanup controls remove only the chosen job variant", { skip: !pyth
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk clean extension "));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   project(root, "demo");
-  const doc = core.parseInventory(invoke(root, ["describe", "--json"]));
+  const doc = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));
   const target = core.availableTargets([{ inventory: doc }]).find(t => t.kind === "job");
   for (const variant of ["small", "large"]) for (const folder of ["_bin", "_builds", "_logs", "_reports"]) {
     const dir = path.join(root, folder, variant, "build");
@@ -151,7 +151,7 @@ test("real uv discovery and version-check launch do not sync or alter installed 
   assert.notEqual(unsafelySynced.status, 0);
   assert.doesNotMatch(unsafelySynced.stdout, /command started/);
   const doc = require("./fixtures").inventory(root);
-  const script = `import json,sys; print(json.dumps(json.loads(${JSON.stringify(JSON.stringify(doc))})) if sys.argv[-2:] == ['describe', '--json'] else 'Version sources and resolved names are valid.')`;
+  const script = `import json,sys; print(json.dumps(json.loads(${JSON.stringify(JSON.stringify(doc))})) if sys.argv[-3:] == ['describe', '--json', '--configuration'] else 'Version sources and resolved names are valid.')`;
   const settings = { executable: uv, arguments: ["run", "--offline", "--project", root, "python", "-c", script, "--"], timeout: 10 };
   assert.deepEqual(await core.readInventory(settings, root), doc);
   const checked = spawnSync(uv, core.launchArgs(settings, ["version", "check"]), { cwd: root, encoding: "utf8", timeout: 10000 });
@@ -181,5 +181,85 @@ test("configuration form round-trips PTK YAML scalar types and creates valid job
   const edited = model.edit(fs.readFileSync(entry, "utf8"), [{ op: "add", path: ["jobs", "new-job"], value: S.initial(schema.$defs.JobSpec, schema) }]);
   fs.writeFileSync(entry, edited);
   invoke(root, ["setup", "config", "validate"]);
-  assert.ok(core.parseInventory(invoke(root, ["describe", "--json"])).projects[0].jobs.some(job => job.name === "new-job"));
+  assert.ok(core.parseInventory(invoke(root, ["describe", "--json", "--configuration"])).projects[0].jobs.some(job => job.name === "new-job"));
+});
+
+test("runtime schema drives event editing and new files reload through PTK", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
+  const { plan } = require("../src/project-edits");
+  const S = require("../media/schema");
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk composed form "));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  project(root, "composed");
+  fs.writeFileSync(path.join(root, "events.ptk.yml"), "artifactory:\n  url: https://example.invalid\n  repository: packages\n  events:\n    push: {path: branches}\n");
+  const read = () => core.parseInventory(invoke(root, ["describe", "--json", "--configuration"])).projects[0].configuration;
+  let config = read();
+  const event = S.initial(config.schema.$defs.EventRoute, config.schema);
+  assert.deepEqual(event, { path: "" });
+  function apply(operations, filename) {
+    const docs = new Map(config.files.map(file => [file, fs.readFileSync(file, "utf8")]));
+    for (const [file, text] of plan(config, docs, operations, path.join(root, filename))) fs.writeFileSync(file, text);
+    invoke(root, ["setup", "config", "validate"]);
+    config = read();
+  }
+  apply([{ op: "add", path: ["artifactory", "events", "release"], value: event }], "release.ptk.yml");
+  apply([{ op: "set", path: ["artifactory", "events", "push", "path"], value: "new-branches" }], "push.ptk.yml");
+  assert.equal(config.value.artifactory.events.push.path, "new-branches");
+  assert.deepEqual(config.value.artifactory.events.release, { path: "" });
+  assert.equal(config.sources.find(source => JSON.stringify(source.path) === JSON.stringify(["artifactory", "events", "push", "path"])).file, path.join(root, "push.ptk.yml"));
+});
+
+test("project form applies and saves a multi-file edit then detects stale sources", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, async t => {
+  const { createEditors } = require("../src/editors");
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk live form "));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  project(root, "live");
+  const entry = path.join(root, ".main.ptk.yml");
+  const describe = () => ({ root, project: core.parseInventory(invoke(root, ["describe", "--json", "--configuration"])).projects[0] });
+  const documents = new Map(), messages = [];
+  let receive;
+  const uri = fsPath => ({ fsPath, toString() { return fsPath; } });
+  const disposable = () => ({ dispose() {} });
+  async function document(uri) {
+    if (!documents.has(uri.fsPath)) {
+      let text = fs.readFileSync(uri.fsPath, "utf8");
+      const doc = { uri, version: 1, isDirty: false, getText: () => text, positionAt: offset => offset,
+        replace(start, end, next) { text = text.slice(0, start) + next + text.slice(end); this.version++; this.isDirty = true; },
+        async save() { fs.writeFileSync(uri.fsPath, text); this.isDirty = false; return true; },
+      };
+      documents.set(uri.fsPath, doc);
+    }
+    return documents.get(uri.fsPath);
+  }
+  const panel = { webview: { cspSource: "test:", asWebviewUri: uri => uri.fsPath,
+    postMessage: async message => { messages.push(message); return true; },
+    onDidReceiveMessage: handler => { receive = handler; return disposable(); } }, onDidDispose: disposable, dispose() {}, reveal() {} };
+  const api = {
+    Uri: { file: uri, joinPath: (base, ...parts) => uri(path.join(base.fsPath, ...parts)) }, ViewColumn: { Active: 1 },
+    Range: class { constructor(start, end) { Object.assign(this, { start, end }); } },
+    Position: class { constructor(line, character) { Object.assign(this, { line, character }); } },
+    WorkspaceEdit: class { changes = []; replace(uri, range, text) { this.changes.push({ uri, range, text }); } createFile(uri) { this.changes.push({ uri, create: true }); } insert(uri, position, text) { this.replace(uri, { start: 0, end: 0 }, text); } },
+    workspace: { isTrusted: true, openTextDocument: document,
+      fs: { createDirectory: async uri => fs.mkdirSync(uri.fsPath, { recursive: true }) },
+      async applyEdit(edit) { for (const change of edit.changes) {
+        if (change.create) fs.writeFileSync(change.uri.fsPath, "", { flag: "wx" });
+        else (await document(change.uri)).replace(change.range.start, change.range.end, change.text);
+      } return true; },
+    },
+    window: { registerCustomEditorProvider: disposable, createWebviewPanel: () => panel,
+      showInputBox: async () => "config/parameters.ptk.yml", showErrorMessage: async error => assert.fail(error) },
+  };
+  const editors = createEditors(api, { subscriptions: [], extensionUri: uri(path.join(repo, "extensions/project-toolkit")) }, { project: async () => describe() });
+  await editors.openProject(describe(), ["jobs", "build", "params"]);
+  await receive({ type: "ready" });
+  await receive({ type: "edit", id: 1, version: messages.at(-1).version, newFile: true,
+    operations: [{ op: "set", path: ["jobs", "build", "params", "message", "default"], value: "updated" }] });
+  assert.equal(messages.at(-1).issue, undefined);
+  assert.equal(messages.at(-1).value.jobs.build.params.message.default, "updated");
+  assert.ok(fs.existsSync(path.join(root, "config/parameters.ptk.yml")));
+  invoke(root, ["setup", "config", "validate"]);
+  fs.appendFileSync(entry, "\n# external change\n");
+  await receive({ type: "edit", id: 2, version: messages.at(-1).version,
+    operations: [{ op: "set", path: ["jobs", "build", "params", "message", "default"], value: "should not apply" }] });
+  assert.match(messages.at(-1).issue, /source file changed/i);
+  assert.equal(describe().project.configuration.value.jobs.build.params.message.default, "updated");
 });

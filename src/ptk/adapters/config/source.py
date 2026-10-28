@@ -7,6 +7,7 @@ from pathlib import Path
 from ...application.ports import MAIN_FILE
 from ...domain.config.tree import Node
 from ...domain.errors import ConfigError, Problem
+from .discovery import discover_files
 from .yaml_loader import YamlConfigReader
 
 
@@ -47,9 +48,16 @@ class FileConfigSource:
             self._reader = YamlConfigReader(display_root=file.resolve().parent)
         return self._reader.read(file)
 
+    def discover(self, main: Path, *, ci: bool = False) -> list[Path]:
+        return discover_files(main, ci=ci)
+
     def exists(self, file: Path) -> bool:
         return file.is_file()
 
     @property
     def files(self) -> list[Path]:
         return list(self._reader.files) if self._reader else []
+
+    @property
+    def fingerprints(self) -> dict[str, str]:
+        return dict(self._reader.fingerprints) if self._reader else {}

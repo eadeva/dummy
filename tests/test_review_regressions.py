@@ -13,8 +13,8 @@ from click.testing import CliRunner
 from ptk.adapters.credentials.vault import Vault
 from ptk.adapters.process import SubprocessRunner
 from ptk.application.use_cases.project import ExportSchema
-from ptk.application.use_cases.tools import tools_for_jobs
 from ptk.bootstrap import create_app
+from ptk.domain.errors import ConfigError
 from ptk.domain.execution.model import CommandSpec
 from ptk.drivers.cli.main import cli
 
@@ -121,24 +121,25 @@ def test_report_inputs_are_fresh_and_history_is_immutable(tmp_path):
     assert "first-test" in report.read_text()
 
 
-def test_requirement_true_preserves_earlier_job_settings(write, load):
+def test_requirement_redefinition_is_a_conflict(write, load):
     root = write(
         {
             ".main.ptk.yml": "project: {name: demo}\ntools: {ninja: {version: '>=1'}}\njobs: {go: {requires_tools: {ninja: {version: '>=2'}}, steps: [{ok: {uses: echo}}]}}",
             "local.ptk.yml": "jobs: {go: {requires_tools: [ninja]}}",
         }
     )
-    assert tools_for_jobs(load(root), ["go"]).config.tools["ninja"].version == ">=2"
+    with pytest.raises(ConfigError, match="configuration conflict"):
+        load(root)
 
 
 def test_schema_describes_authored_files():
     schema = ExportSchema().execute()
-    assert "include" in schema["properties"]
-    assert schema["allOf"][0]["else"]["required"] == ["repository"]
+    assert "include" not in schema["properties"]
+    assert "required" not in schema["allOf"][0]["else"]
     assert schema["allOf"][0]["if"]["required"] == ["virtual_monorepo"]
     assert schema["allOf"][0]["then"]["properties"]["repository"] is False
     assert "default" not in schema["properties"]["virtual_monorepo"]
-    assert {"type": "string"} in schema["properties"]["variants"]["anyOf"]
+    assert {"type": "string"} not in schema["properties"]["variants"]["anyOf"]
     assert any(
         s.get("type") == "array"
         for s in schema["$defs"]["JobSpec"]["properties"]["requires_tools"]["anyOf"]

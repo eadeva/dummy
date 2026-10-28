@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.1
+
+- Apply text edits when leaving a field or saving; keep focus, drafts and cursor stable during save replies.
+- Avoid tree redraws during source checks, unsaved YAML typing and unchanged refreshes.
+- Use named steps and values for list rows, semantic icons and stable tree identities.
+- Remove the form navigation sidebar; use the VS Code tree and breadcrumbs.
+
+## 0.5.0
+
+- Use the installed PTK's merged configuration tree, schema, sources and diagnostics.
+- Fix Artifactory event initialization; named step defaults apply only to steps.
+- Route edits to source files or move each change into a new fragment without duplicates.
+- Show independent variant selectors on jobs and repository workflows.
+- Keep validation available during loading errors and offer setup init without a project.
+- Require PTK’s configuration interface for discovery and editing; remove older-CLI and include-format fallbacks.
+
 ## 0.4.0
 
 - Browse configuration files as nested trees and edit their fields in a custom

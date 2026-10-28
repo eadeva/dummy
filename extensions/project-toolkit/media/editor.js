@@ -1,12 +1,13 @@
-/* global acquireVsCodeApi, PtkSchema */
+/* global acquireVsCodeApi, PtkSchema, PtkPresentation */
 "use strict";
 (() => {
   const vscode = acquireVsCodeApi();
   const S = PtkSchema;
+  const P = PtkPresentation;
   const app = document.getElementById("app");
-  let state, schema, selected = [], kind, issue = "", serial = 0, inflight, timer;
+  let state, schema, selected = [], issue = "", serial = 0, inflight, commitRequested = false, rendering = false;
   const queue = new Map();
-  let deferred;
+  let deferred, nextFile = false;
   let parameterDraft = {};
   const stored = vscode.getState() || {};
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -24,7 +25,6 @@
     retries: "Number of additional attempts after a failed step.",
     cwd: "Working directory for the step. PTK template expressions are supported.",
     env: "Environment settings. For a parameter, this names the environment variable used before its default.",
-    include: "Files or patterns merged into this configuration. Edit their source files from the configuration tree.",
   };
   function el(tag, text, attrs = {}) {
     const node = document.createElement(tag);
@@ -53,22 +53,33 @@
   function remember() {
     // Parameter values may be sensitive even if not declared secret. Keep them
     // only in the live webview, never in persisted VS Code webview state.
-    if (state?.mode === "configuration") vscode.setState({ selected, kind });
+    if (state?.mode === "configuration") vscode.setState({ selected });
   }
   function status() {
     const node = document.getElementById("status");
-    if (node) node.textContent = inflight || queue.size ? "Applying edits…" : state.dirty ? "Unsaved changes · Ctrl/Cmd+S to save" : "Saved";
+    const destination = document.getElementById("next-file");
+    if (destination) destination.value = nextFile ? "new" : "current";
+    const validation = document.getElementById("validation-error");
+    if (validation) { validation.textContent = state.validationError || ""; validation.hidden = !state.validationError; }
+    if (node) node.textContent = inflight ? "Saving…" : queue.size ? "Editing · Leave the field or press Ctrl/Cmd+S to save" : state.dirty ? "Unsaved changes · Ctrl/Cmd+S to save" : "Saved";
   }
-  function flush() {
-    clearTimeout(timer);
+  function flush(request = true) {
+    if (request) commitRequested = true;
     if (inflight || !state) return;
-    if (queue.size) {
+    if (!queue.size) {
+      commitRequested = false;
+      if (deferred) { const action = deferred; deferred = undefined; action(); }
+      return;
+    }
+    if (commitRequested) {
+      commitRequested = false;
       const operations = [...queue.values()];
       queue.clear();
-      inflight = { id: ++serial, structural: operations.some(op => op.render || op.op !== "set" || op.value !== null && typeof op.value === "object") };
-      vscode.postMessage({ type: "edit", id: inflight.id, version: state.version, operations });
+      inflight = { id: ++serial, operations, structural: operations.some(op => op.render || op.op !== "set" || op.value !== null && typeof op.value === "object") };
+      vscode.postMessage({ type: "edit", id: inflight.id, version: state.version, operations, newFile: nextFile });
+      nextFile = false;
       status();
-    } else if (deferred) { const action = deferred; deferred = undefined; action(); }
+    }
   }
   function afterEdits(action) {
     const invalid = document.querySelector('[aria-invalid="true"]');
@@ -81,9 +92,7 @@
     queue.set(JSON.stringify(operation.path), operation);
     showIssue("");
     status();
-    clearTimeout(timer);
     if (immediate) flush();
-    else timer = setTimeout(flush, 250);
   }
   function navigate(path) {
     afterEdits(() => {
@@ -100,11 +109,11 @@
       const values = resolved.enum.includes(value) ? resolved.enum : [value, ...resolved.enum];
       for (const option of values) input.append(el("option", String(option), { value: String(option) }));
       input.value = String(value);
-      input.addEventListener("change", () => onValue(resolved.enum.find(value => String(value) === input.value) ?? input.value));
+      input.addEventListener("change", () => { onValue(resolved.enum.find(value => String(value) === input.value) ?? input.value); flush(); });
     } else if (typeof value === "boolean") {
       input = el("input", undefined, { type: "checkbox", id });
       input.checked = value;
-      input.addEventListener("change", () => onValue(input.checked));
+      input.addEventListener("change", () => { onValue(input.checked); flush(); });
     } else if (value === null) {
       input = el("span", "null — choose a type below to set a value", { className: "muted", id });
     } else {
@@ -124,73 +133,88 @@
         input.removeAttribute("aria-invalid");
         onValue(numeric ? Number(input.value) : input.value);
       });
+      input.addEventListener("blur", () => { if (!rendering && !input.hasAttribute("aria-invalid")) flush(); });
     }
     return input;
   }
   function renderConfiguration() {
-    app.replaceChildren();
-    const header = el("header");
-    const toolbar = el("div", undefined, { className: "toolbar" });
-    const heading = el("div");
-    heading.append(el("div", "PTk / Configuration", { className: "brand" }), el("h1", state.filename));
-    const actions = el("div", undefined, { className: "actions" });
-    actions.append(button("Raw YAML", () => afterEdits(() => vscode.postMessage({ type: "raw" }))),
-      button("Save & validate", () => afterEdits(() => vscode.postMessage({ type: "validate" }))),
-      button("Save", () => afterEdits(() => vscode.postMessage({ type: "save" })), ""));
-    toolbar.append(heading, actions);
-    header.append(toolbar, el("p", "", { className: "status", id: "status", role: "status" }));
-    app.append(header);
-    status();
-    if (state.error) {
-      const main = el("main"); notice(main);
-      main.append(el("h2", "This YAML needs attention"), el("p", state.error, { className: "notice error" }), el("p", "Open Raw YAML to fix syntax errors, then switch back using Open PTK Form in the editor title bar."));
-      app.append(main); return;
-    }
-    const layout = el("div", undefined, { className: "layout" });
-    const nav = el("nav", undefined, { "aria-label": "Configuration sections" });
-    nav.append(el("div", "In this file", { className: "caption" }));
-    const all = button("All fields", () => navigate([]));
-    if (!selected.length) all.classList.add("selected"); nav.append(all);
-    for (const key of Object.keys(state.value || {})) {
-      const target = Array.isArray(state.value) ? Number(key) : key;
-      const link = button(String(target), () => navigate([target]));
-      if (selected[0] === target) link.classList.add("selected");
-      nav.append(link);
-    }
-    const fragment = el("div", undefined, { className: "fragment" });
-    fragment.append(el("label", "Schema for this file", { for: "schema-kind", className: "help" }));
-    const kinds = el("select", undefined, { id: "schema-kind" });
-    for (const [id, title] of [["configuration", "PTK configuration"], ["generic", "Unspecified fragment"], ["steps", "Included steps"], ...Object.keys(schema.$defs).map(key => [key, key.replace(/Spec$/, "")])]) kinds.append(el("option", title, { value: id }));
-    kinds.value = kind;
-    kinds.addEventListener("change", () => afterEdits(() => { kind = kinds.value; remember(); renderConfiguration(); }));
-    fragment.append(kinds, el("p", "Optional fields follow PTK’s model. Use a fragment schema for files included inside a field.", { className: "help" }));
-    nav.append(fragment);
-    const main = el("main");
-    notice(main);
-    while (selected.length && (valueAt(selected) === undefined || valueAt(selected) === null || typeof valueAt(selected) !== "object")) selected.pop();
-    const crumbs = el("div", undefined, { className: "crumbs", "aria-label": "Field path" });
-    crumbs.append(button("Configuration", () => navigate([]), "link"));
-    selected.forEach((key, i) => crumbs.append(el("span", "/"), button(String(key), () => navigate(selected.slice(0, i + 1)), "link")));
-    main.append(crumbs, el("h2", String(selected.at(-1) ?? "Configuration")));
-    const value = valueAt(selected);
-    const rootSchema = kind === "generic" ? {} : S.rootSchema(schema, kind);
-    const spec = S.at(rootSchema, state.value, selected, schema);
-    const resolved = S.effective(spec, value, schema);
-    if (resolved.description) main.append(el("p", resolved.description, { className: "help" }));
-    if (state.locked.some(prefix => prefix.length <= selected.length && prefix.every((key, i) => key === selected[i]))) {
-      main.append(el("p", "This value uses an include, alias or complex mapping. Use Raw YAML to edit it.", { className: "notice" }));
-    } else if (value === null || typeof value !== "object") {
-      main.append(el("p", "Select the appropriate fragment schema or use Raw YAML for a scalar document.", { className: "notice" }));
-    } else {
-      const entries = Object.entries(value);
-      if (!entries.length) main.append(el("p", "No fields yet. Add a field below to get started.", { className: "empty" }));
-      entries.forEach(([key, current]) => {
-        const index = Array.isArray(value) ? Number(key) : key;
-        renderField(main, [...selected, index], current, S.child(spec, value, index, schema), (resolved.required || []).includes(key), Array.isArray(value) ? value.length : undefined, !Array.isArray(value) && !resolved.properties?.[key] && resolved.additionalProperties !== false);
+    rendering = true;
+    try {
+      const active = document.activeElement;
+      const focus = active?.id ? { id: active.id, start: active.selectionStart, end: active.selectionEnd,
+        value: active.value, invalid: active.getAttribute("aria-invalid"),
+        draft: [...queue.values()].some(op => `field-${JSON.stringify(op.path)}` === active.id) } : undefined;
+      const scroll = [window.scrollX, window.scrollY];
+      app.replaceChildren();
+      const header = el("header");
+      const toolbar = el("div", undefined, { className: "toolbar" });
+      const heading = el("div");
+      heading.append(el("div", "PTk / Configuration", { className: "brand" }), el("h1", state.filename));
+      const actions = el("div", undefined, { className: "actions" });
+      actions.append(button("Raw YAML", () => afterEdits(() => vscode.postMessage({ type: "raw" }))),
+        button("Save & validate", () => afterEdits(() => vscode.postMessage({ type: "validate" }))),
+        button("Save", () => afterEdits(() => vscode.postMessage({ type: "save" })), ""));
+      if (state.logical) {
+        const destination = el("select", undefined, { "aria-label": "File for next change", id: "next-file" });
+        destination.append(el("option", "Next change: existing source", { value: "current" }), el("option", "Next change: new file…", { value: "new" }));
+        destination.value = nextFile ? "new" : "current";
+        destination.addEventListener("change", () => { nextFile = destination.value === "new"; });
+        actions.prepend(destination);
+      }
+      toolbar.append(heading, actions);
+      header.append(toolbar, el("p", "", { className: "status", id: "status", role: "status" }));
+      app.append(header);
+      status();
+      if (state.error) {
+        const main = el("main"); notice(main);
+        main.append(el("h2", "This YAML needs attention"), el("p", state.error, { className: "notice error" }), el("p", "Open Raw YAML to fix syntax errors, then switch back using Open PTK Form in the editor title bar."));
+        app.append(main); return;
+      }
+      const layout = el("div", undefined, { className: "layout" });
+      const main = el("main");
+      notice(main);
+      if (state.logical) {
+        const validation = el("p", state.validationError || "", { className: "notice error", role: "alert", id: "validation-error" });
+        validation.hidden = !state.validationError; main.append(validation);
+      }
+      while (selected.length && (valueAt(selected) === undefined || valueAt(selected) === null || typeof valueAt(selected) !== "object")) selected.pop();
+      const crumbs = el("div", undefined, { className: "crumbs", "aria-label": "Field path" });
+      crumbs.append(button("Configuration", () => navigate([]), "link"));
+      selected.forEach((key, i) => {
+        const path = selected.slice(0, i + 1);
+        if (typeof key === "number" && P.namedEntry(valueAt(path), path) === selected[i + 1]) return;
+        crumbs.append(el("span", "/"), button(P.pathLabel(state.value, path), () => navigate(path), "link"));
       });
-      addField(main, value, spec, resolved);
-    }
-    layout.append(nav, main); app.append(layout);
+      main.append(crumbs, el("h2", P.pathLabel(state.value, selected)));
+      const value = valueAt(selected);
+      const spec = S.at(schema, state.value, selected, schema);
+      const resolved = S.effective(spec, value, schema);
+      if (resolved.description) main.append(el("p", resolved.description, { className: "help" }));
+      if (state.locked.some(prefix => prefix.length <= selected.length && prefix.every((key, i) => key === selected[i]))) {
+        main.append(el("p", "This value uses an alias, unsupported tag or complex mapping. Use Raw YAML to edit it.", { className: "notice" }));
+      } else if (value === null || typeof value !== "object") {
+        main.append(el("p", "PTK configuration files must contain a mapping. Use Raw YAML to correct this document.", { className: "notice" }));
+      } else {
+        const entries = Object.entries(value);
+        if (!entries.length) main.append(el("p", "No fields yet. Add a field below to get started.", { className: "empty" }));
+        entries.forEach(([key, current]) => {
+          const index = Array.isArray(value) ? Number(key) : key;
+          renderField(main, [...selected, index], current, S.child(spec, value, index, schema), (resolved.required || []).includes(key), Array.isArray(value) ? value.length : undefined, !Array.isArray(value) && !resolved.properties?.[key] && resolved.additionalProperties !== false);
+        });
+        addField(main, value, spec, resolved);
+      }
+      layout.append(main); app.append(layout);
+      if (focus) {
+        const input = document.getElementById(focus.id);
+        if (input) {
+          if (focus.draft || focus.invalid) input.value = focus.value;
+          if (focus.invalid) input.setAttribute("aria-invalid", focus.invalid);
+          input.focus({ preventScroll: true });
+          if (typeof focus.start === "number" && (["text", "search", "url", "tel", "password"].includes(input.type) || input.tagName === "TEXTAREA")) input.setSelectionRange(focus.start, focus.end);
+        }
+      }
+      window.scrollTo(...scroll);
+    } finally { rendering = false; }
   }
   function renderField(main, path, value, spec, required, listLength, canRename) {
     const key = path.at(-1);
@@ -198,7 +222,7 @@
     const resolved = S.effective(spec, value, schema);
     const field = el("section", undefined, { className: "field", "data-type": S.type(value) });
     const top = el("div", undefined, { className: "field-top" });
-    const name = el("label", typeof key === "number" ? `Item ${key + 1}` : key, { className: "name", for: id });
+    const name = el("label", P.pathLabel(state.value, path), { className: "name", for: id });
     top.append(name, el("span", required ? "required" : S.type(value), { className: "badge" }));
     field.append(top);
     const help = resolved.description || fieldHelp[key];
@@ -212,7 +236,7 @@
     }
     if (value !== null && typeof value === "object") {
       const summary = Array.isArray(value) ? `${value.length} items` : Object.keys(value).join(", ") || "Empty object";
-      field.append(el("p", summary, { className: "help" }), button("Edit fields →", () => navigate(path)));
+      field.append(el("p", summary, { className: "help" }), button("Edit fields →", () => navigate(P.namedEntry(value, path) ? [...path, P.namedEntry(value, path)] : path)));
     } else {
       field.append(control(value, spec, next => change({ op: "set", path, value: next }), id));
     }
@@ -358,11 +382,18 @@
     if (message.schema) schema = message.schema;
     if (message.mode === "parameters") { state = message; renderParameters(); return; }
     const first = !state;
-    const own = inflight && message.ack === inflight.id;
+    if (message.reason && inflight) return;
+    const own = inflight && message.ack === inflight.id || ["saved", "validated"].includes(message.reason);
     const structural = inflight?.structural;
+    const submitted = inflight?.operations || [];
     if (!own && inflight && message.version === state.version) return;
     if (!own && (queue.size || inflight) || message.issue) {
-      queue.clear(); clearTimeout(timer); deferred = undefined;
+      if (own && message.issue) {
+        const drafts = [...queue.values()];
+        queue.clear();
+        for (const operation of [...submitted, ...drafts]) queue.set(JSON.stringify(operation.path), operation);
+      }
+      commitRequested = false; deferred = undefined;
       issue = message.issue || "The document changed outside this form. Review the refreshed fields before editing again.";
     } else if (message.issue === undefined) issue = "";
     inflight = undefined;
@@ -376,12 +407,11 @@
       }
     }
     if (first) {
-      kind = stored.kind || S.infer(state.value, state.filename);
       selected = message.selection?.length ? message.selection : stored.selected || [];
     }
-    if (schema && (!own || structural || message.issue)) renderConfiguration();
+    if (schema && (state.error || !own || structural || message.issue)) renderConfiguration();
     else status();
-    flush();
+    flush(false);
   });
   document.addEventListener("keydown", event => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s" && state?.mode === "configuration") {

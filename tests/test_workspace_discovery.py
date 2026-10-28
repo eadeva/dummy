@@ -156,7 +156,7 @@ def test_discovery_metadata_is_strict_and_does_not_load_includes(
 def test_discovery_flag_cannot_come_from_includes_or_overlays(tmp_path, layer):
     repository(tmp_path, "demo")
     (tmp_path / layer).write_text("virtual_monorepo: false\n")
-    with pytest.raises(PtkError, match="must be defined in the entry file"):
+    with pytest.raises(PtkError, match="must be defined only in .main.ptk.yml"):
         create_app().load_project.execute(tmp_path)
 
 

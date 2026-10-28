@@ -84,7 +84,7 @@ src/ptk/
 | `environment` | isolation rules: variables and PATH entries kept, added, removed |
 | `tools` | tools with version range, check command, install sources per OS |
 | `credentials` | named credentials with provider chain |
-| `variants` | product line: components, features, variants (inline or file reference) |
+| `variants` | product line: components, features, variants |
 | `jobs` | CLI commands: params, required tools, steps |
 | `configs` | shared base configs and project overlays (pre-commit, ruff, clang-*) |
 | `logging` | console style, run directory, retention |
@@ -94,18 +94,18 @@ src/ptk/
 ### 2.2 Loading pipeline
 
 ```
-.main.ptk.yml               ptk_version, project, include, main settings
-  → include: [...]            merged in order (files or globs)
-  → cx.ptk.yml              applied automatically in CI
-  → local.ptk.yml           personal overrides (git-ignored)
-  → --set key=value           command line
+.main.ptk.yml               project marker and repository metadata
+  → all *.ptk.yml / *.ptk.yaml fragments throughout the repository
+      cx.ptk.yml             CI-only additions
+      local.ptk.yml          personal additions (git-ignored)
+  → merge disjoint fields    duplicate scalar/list definitions are errors
+  → --set key=value          explicit command-line overrides
   → validate (pydantic, extra=forbid, suggestions)
   → run preparation          substitute all selected steps before execution
 ```
 
-- **Merge rules:** mappings merge deeply, lists replace.
-  Tags: `!replace` (replace whole mapping), `!append` (append to list),
-  `!include file.yaml` (insert a file at this point).
+- **Composition rules:** mappings combine disjoint fields; scalars and lists each
+  have one source. Every fragment contains its full schema path.
 - **Provenance:** every value knows file and line → `ptk setup config show --sources`,
   errors as `.main.ptk.yml:42: jobs.build.params.jobs: expected int`.
 - **Substitution** (one syntax, unknown names are errors):
@@ -134,8 +134,11 @@ src/ptk/
 ```yaml
 schema_version: 1
 project: {name: demo, default_job: build}
-include: [ptk/jobs/*.yaml]
-variants: ptk/variants.yaml
+repository: {alias: demo, config_path: ptk}
+variants:
+  default: debug
+  variants:
+    debug: {}
 
 vars:
   build_dir: build/${vh.variant}
@@ -685,8 +688,8 @@ Former top-level commands remain hidden compatibility aliases.
 
 ## Confirmed scope and shared defaults
 
-- CX means GitHub Actions/workflows. `cx.ptk.yml` is the automatic workflow
-  overlay; maintainers can force mode with `--ci` / `--no-ci`. No legacy filename is required.
+- CX means GitHub Actions/workflows. `cx.ptk.yml` is a CI-only configuration
+  fragment; maintainers can force mode with `--ci` / `--no-ci`. No legacy filename is required.
 - Legacy migration is not a completion requirement. `execute_if`, legacy
   `ENV_ISOLATION`, `*_cx`, `variant_overrides` and `DEFAULT_PARAMETERS_CX` do not
   create further legacy obligations. The legacy converter and both CLI spellings have been removed.

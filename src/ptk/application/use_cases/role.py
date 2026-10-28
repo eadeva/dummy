@@ -25,7 +25,11 @@ MAINTAINER_COMMANDS = frozenset(
 
 
 def command_allowed(path: str, role: Role, policies: dict[str, str]) -> bool:
-    if role == "maintainer":
+    if role == "maintainer" or path in {
+        "setup",
+        "setup.config",
+        "setup.config.validate",
+    }:
         return True
     parts = path.split(".")
     return all(

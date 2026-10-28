@@ -4,10 +4,11 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 const model = require("./config-model");
 const { validateParameters } = require("./parameters");
-const schema = require("../media/config-schema.json");
+const projectEdits = require("./project-edits");
+const fs = require("node:fs/promises");
 const viewType = "project-toolkit.configuration";
 
-function createEditors(vscode, context, { changed = () => {}, validate = async () => {} } = {}) {
+function createEditors(vscode, context, { changed = () => {}, validate = async () => {}, project: reloadProject, configuration = () => undefined } = {}) {
   const panels = new Map();
   const selections = new Map();
   const media = vscode.Uri.joinPath(context.extensionUri, "media");
@@ -17,7 +18,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
   function html(webview) {
     const nonce = crypto.randomBytes(18).toString("base64");
     const resource = name => webview.asWebviewUri(vscode.Uri.joinPath(media, name));
-    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';"><link rel="stylesheet" href="${resource("editor.css")}"><title>Project Toolkit</title></head><body><div id="app"></div><script nonce="${nonce}" src="${resource("schema.js")}"></script><script nonce="${nonce}" src="${resource("editor.js")}"></script></body></html>`;
+    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';"><link rel="stylesheet" href="${resource("editor.css")}"><title>Project Toolkit</title></head><body><div id="app"></div><script nonce="${nonce}" src="${resource("schema.js")}"></script><script nonce="${nonce}" src="${resource("presentation.js")}"></script><script nonce="${nonce}" src="${resource("editor.js")}"></script></body></html>`;
   }
   function configure(panel) {
     panel.webview.options = { enableScripts: true, localResourceRoots: [media] };
@@ -40,10 +41,9 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
       function state(extra = {}) { return post({ type: "state", ...configurationState(document), ...extra }); }
       const updates = vscode.workspace.onDidChangeTextDocument(event => {
         if (event.document.uri.toString() !== key) return;
-        changed();
         if (!applying) state();
       });
-      const saves = vscode.workspace.onDidSaveTextDocument(saved => { if (saved.uri.toString() === key) state(); });
+      const saves = vscode.workspace.onDidSaveTextDocument(saved => { if (saved.uri.toString() === key) { changed(); state({ reason: "saved" }); } });
       const messages = panel.webview.onDidReceiveMessage(message => {
         // Serialize edits, save and raw-editor switches for this document.
         chain = chain.then(async () => {
@@ -53,7 +53,9 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
             if (message.type === "ready") {
               const selection = selections.get(key) || [];
               selections.delete(key);
-              return state({ schema, selection });
+              const installed = await configuration(document.uri);
+              if (!installed?.schema || installed.version !== 1) return state({ error: "No compatible PTK project schema is available. Open the project and refresh PTK, or use Raw YAML.", schema: {}, selection });
+              return state({ schema: installed.schema, selection });
             }
             if (message.type === "edit") {
               if (message.version !== document.version) throw new Error("The YAML changed outside this form. Your edit was not applied; review the refreshed fields and try again.");
@@ -74,7 +76,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
             if (message.type === "save" || message.type === "validate") {
               if (!await document.save()) throw new Error("The configuration could not be saved.");
               if (message.type === "validate") await validate(document.uri);
-              return state();
+              return state({ reason: message.type === "save" ? "saved" : "validated" });
             }
             if (message.type === "raw") return vscode.commands.executeCommand("vscode.openWith", document.uri, "default");
           } catch (error) { await state({ ack: message.id, issue: error.message }); }
@@ -107,30 +109,100 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
     }
   }
 
-  async function children(element) {
-    try {
-      const document = await vscode.workspace.openTextDocument(vscode.Uri.file(element.configFile));
-      const state = model.inspect(document.getText());
-      const at = element.configPath || [];
-      const value = at.reduce((value, key) => value?.[key], state.value);
-      if (state.locked.some(prefix => prefix.length <= at.length && prefix.every((key, i) => key === at[i]))) return [];
-      if (!value || typeof value !== "object") return [];
-      return Object.entries(value).map(([name, value]) => {
-        const key = Array.isArray(at.reduce((value, key) => value?.[key], state.value)) ? Number(name) : name;
-        const configPath = [...at, key];
-        const hasChildren = value !== null && typeof value === "object";
-        const node = { ...element, configPath, kind: "config-field", label: typeof key === "number" ? `Item ${key + 1}` : name,
-          id: JSON.stringify([element.configOwner, element.configFile, configPath]), collapsed: true, hasChildren,
-          description: hasChildren ? Array.isArray(value) ? `${value.length} items` : `${Object.keys(value).length} fields` : value === null ? "null" : String(value).slice(0, 100),
-          icon: hasChildren ? "symbol-namespace" : "symbol-property", children: undefined,
-        };
-        node.command = { command: "project-toolkit.openConfig", title: "Edit configuration field", arguments: [node] };
-        return node;
-      });
-    } catch (error) {
-      return [{ label: "Open Raw YAML to fix this file", description: error.message.split("\n")[0], icon: "warning",
-        command: { command: "vscode.openWith", title: "Open Raw YAML", arguments: [vscode.Uri.file(element.configFile), "default"] } }];
+  async function openProject(owner, selection = []) {
+    trusted();
+    const key = `project:${owner.project.entry_file}`;
+    if (panels.has(key)) {
+      panels.get(key).reveal();
+      return panels.get(key).webview.postMessage({ type: "navigate", selection });
     }
+    let config = owner.project.configuration;
+    if (!config || config.version !== 1) throw new Error("The installed PTK does not support this configuration editor. Update PTK and the extension together.");
+    const panel = vscode.window.createWebviewPanel(viewType, `${owner.project.alias}: Configuration`, vscode.ViewColumn.Active, { retainContextWhenHidden: true });
+    panels.set(key, panel);
+    let version = 1, chain = Promise.resolve(), disposed = false;
+    const state = extra => panel.webview.postMessage({ type: "state", mode: "configuration", logical: true,
+      filename: owner.project.alias, version, value: config.value, schema: config.schema,
+      error: config.value === null ? config.error : undefined, validationError: config.error,
+      locked: config.locked || [], annotations: [], dirty: false, ...extra });
+    async function refresh(extra) {
+      owner = await reloadProject(owner.project.entry_file);
+      config = owner.project.configuration;
+      version++;
+      return state(extra);
+    }
+    async function newFile() {
+      const relative = await vscode.window.showInputBox({ title: "New configuration file", prompt: "Path relative to the repository; this change moves here without leaving a duplicate", value: `${config.write_directory || "config"}/change.ptk.yml` });
+      if (relative === undefined) return;
+      const file = path.resolve(owner.root, relative);
+      const parts = path.relative(owner.root, file).split(path.sep);
+      if (!relative.trim() || path.isAbsolute(relative) || parts.includes("..") || !/\.ptk\.ya?ml$/.test(file) || [".main.ptk.yml", ".gen.version.ptk.yml", "maintainers.ptk.yml", "cx.ptk.yml"].includes(path.basename(file))) throw new Error("Choose a new *.ptk.yml file inside this PTK repository.");
+      if (parts.some(part => (config.ignored_directories || []).includes(part)) || parts.some((part, i) => part === ".github" && parts[i + 1] === "ptk")) throw new Error("PTK does not load configuration from this folder.");
+      for (let directory = path.dirname(file); directory !== owner.root; directory = path.dirname(directory)) {
+        const stat = await fs.lstat(directory).catch(error => { if (error.code !== "ENOENT") throw error; });
+        if (stat?.isSymbolicLink()) throw new Error("Choose a folder without symbolic links.");
+        for (const marker of [".main.ptk.yml", ".git"]) {
+          if (await fs.stat(path.join(directory, marker)).catch(() => undefined)) throw new Error("The destination belongs to another project.");
+        }
+      }
+      if (await fs.lstat(file).catch(error => { if (error.code !== "ENOENT") throw error; })) throw new Error("This file already exists. Choose a new filename.");
+      return file;
+    }
+    const listener = panel.webview.onDidReceiveMessage(message => {
+      chain = chain.then(async () => {
+        if (disposed) return;
+        try {
+          trusted();
+          if (message.type === "ready") return state({ selection });
+          if (message.type === "save") return state({ reason: "saved" });
+          if (message.type === "validate") { await validate(vscode.Uri.file(owner.project.entry_file)); return state({ reason: "validated" }); }
+          if (message.type === "raw") {
+            const selected = await vscode.window.showQuickPick(config.files.map(file => ({ label: path.relative(owner.root, file), file })), { placeHolder: "Open configuration source" });
+            if (selected) return vscode.commands.executeCommand("vscode.openWith", vscode.Uri.file(selected.file), "default");
+            return;
+          }
+          if (message.type !== "edit") return;
+          if (message.version !== version) throw new Error("Configuration changed. Review the refreshed form before editing again.");
+          const before = config;
+          owner = await reloadProject(owner.project.entry_file, { publish: false });
+          config = owner.project.configuration;
+          if (JSON.stringify(before.fingerprints) !== JSON.stringify(config.fingerprints)) throw new Error("A source file changed. Review the refreshed configuration before editing again.");
+          const destination = message.newFile ? await newFile() : undefined;
+          if (message.newFile && !destination) return state({ ack: message.id });
+          const documents = new Map(), texts = new Map();
+          for (const file of config.files) {
+            const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(file));
+            if (doc.isDirty) throw new Error("Save or undo unsaved YAML edits before editing the project form.");
+            if (config.fingerprints?.[file] && crypto.createHash("sha256").update(doc.getText()).digest("hex") !== config.fingerprints[file]) throw new Error("A source changed while loading. Refresh and retry the edit.");
+            documents.set(file, doc); texts.set(file, doc.getText());
+          }
+          const changes = projectEdits.plan({ ...config, entry_file: owner.project.entry_file }, texts, message.operations, destination);
+          if (destination) await vscode.workspace.fs.createDirectory(vscode.Uri.file(path.dirname(destination)));
+          const edit = new vscode.WorkspaceEdit();
+          for (const [file, after] of changes) {
+            const uri = vscode.Uri.file(file), doc = documents.get(file);
+            if (!doc) { edit.createFile(uri, { overwrite: false }); edit.insert(uri, new vscode.Position(0, 0), after); }
+            else {
+              const patch = model.minimalEdit(doc.getText(), after);
+              edit.replace(uri, new vscode.Range(doc.positionAt(patch.start), doc.positionAt(patch.end)), patch.text);
+            }
+          }
+          if (!await vscode.workspace.applyEdit(edit)) throw new Error("VS Code could not apply the configuration edit.");
+          for (const file of changes.keys()) {
+            const doc = documents.get(file) || await vscode.workspace.openTextDocument(vscode.Uri.file(file));
+            if (!await doc.save()) throw new Error("A configuration file could not be saved. Review the open YAML documents.");
+          }
+          return refresh({ ack: message.id });
+        } catch (error) {
+          version++;
+          return state({ ack: message.id, issue: error.message });
+        }
+      }).catch(error => vscode.window.showErrorMessage(`Project Toolkit: ${error.message}`));
+      return chain;
+    });
+    panel.onDidDispose(() => { disposed = true; panels.delete(key); listener.dispose(); });
+    context.subscriptions.push(panel);
+    configure(panel);
   }
 
   function parameters(target, options) {
@@ -159,7 +231,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
       configure(panel);
     });
   }
-  return { open, children, parameters };
+  return { open, openProject, parameters };
 }
 
 module.exports = { createEditors, viewType };

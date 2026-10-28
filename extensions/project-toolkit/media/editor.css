@@ -25,11 +25,7 @@ p { margin: 6px 0; line-height: 1.55; }
 .toolbar { justify-content: space-between; gap: 16px; }
 .actions { justify-content: flex-end; }
 .status { font-size: 12px; color: var(--vscode-descriptionForeground); }
-.layout { display: grid; grid-template-columns: 205px minmax(0, 1fr); min-height: calc(100vh - 125px); }
-nav { background: var(--vscode-sideBar-background, var(--vscode-editor-background)); border-right: 1px solid var(--vscode-panel-border); padding: 20px 14px; }
-nav button { display: block; width: 100%; text-align: left; margin: 3px 0; color: var(--vscode-foreground); background: transparent; overflow-wrap: anywhere; }
-nav button.selected { background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground); }
-nav .caption { margin: 12px 8px 8px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--vscode-descriptionForeground); }
+.layout { min-height: calc(100vh - 125px); }
 main { padding: 24px 28px 40px; min-width: 0; max-width: 1000px; }
 .crumbs { margin-bottom: 20px; }
 .crumbs span { color: var(--vscode-descriptionForeground); }
@@ -55,8 +51,5 @@ main { padding: 24px 28px 40px; min-width: 0; max-width: 1000px; }
 .parameters { max-width: 800px; margin: 0 auto; padding: 24px 28px 90px; }
 .parameters .field { margin: 16px 0; }
 footer { position: sticky; bottom: 0; background: var(--vscode-editor-background); border-top: 1px solid var(--vscode-panel-border); padding: 16px 28px; }
-.fragment { margin-top: 24px; }
-.fragment label { display: block; margin-bottom: 8px; }
-.fragment select { font-size: 12px; }
-@media (max-width: 650px) { .layout { grid-template-columns: 1fr; } nav { border-right: 0; border-bottom: 1px solid var(--vscode-panel-border); padding: 12px 20px; } nav button { display: inline-block; width: auto; } nav .fragment { max-width: 300px; } main, header, .parameters { padding-left: 18px; padding-right: 18px; } }
+@media (max-width: 650px) { main, header, .parameters { padding-left: 18px; padding-right: 18px; } }
 @media (forced-colors: active) { .field, button, input, select { border: 1px solid CanvasText; } }

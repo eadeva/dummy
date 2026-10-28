@@ -56,7 +56,7 @@ function harness(text = "jobs: {}\n") {
     },
     commands: { executeCommand: async (...args) => executed.push(args) },
   };
-  const editors = createEditors(api, context, { changed: () => changed++, validate: async () => validations++ });
+  const editors = createEditors(api, context, { changed: () => changed++, validate: async () => validations++, configuration: () => ({ version: 1, schema: require("../media/config-schema.json") }) });
   return { api, context, document, editors, panels, executed, errors, edits, external,
     changeCount: () => changed, validationCount: () => validations,
     setAccepted: value => { accepted = value; }, setSaved: value => { saved = value; },

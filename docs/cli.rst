@@ -148,7 +148,7 @@ worktrees share Git hook scripts, so installation/removal affects those worktree
 If ``configs.pre-commit.enabled`` is true, the next local job installs hooks again.
 
 These commands do not regenerate configuration or change hook revisions.
-Maintainers change the project overlay and run
+Maintainers change the owning project configuration file and run
 ``ptk setup configs sync pre-commit``; PTK upgrades supply newer base revisions.
 ``ptk setup configs check pre-commit`` checks whether the generated file is current.
 Use ``command_audience: {pre-commit: maintainer}`` to restrict the whole group.
@@ -203,7 +203,7 @@ aliases and paths outside the workspace fail discovery. If a manual marker and
 A repository can explicitly opt out with ``virtual_monorepo: false`` in its
 own entry file; it is then standalone and excluded from the workspace listing.
 Omit the field for automatic membership. Discovery fields must be literal YAML
-in the entry file; includes, overlays and CLI overrides cannot supply or change
+in the entry file; fragments and CLI overrides cannot supply or change
 them. Discovery reads entry metadata without loading unselected repositories'
 includes. Metadata and the member index are cached for one invocation and shared
 by routing, credentials and version dependencies; the next invocation rereads them.
