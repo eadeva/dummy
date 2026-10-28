@@ -819,14 +819,8 @@ def report_open(ctx: click.Context, job: str | None, run_id: str | None) -> None
             / "_history"
             / run_id
         )
-    report, files = service.write(project, summary, ["html"], target)
-    print_report(
-        _state(ctx).app,
-        files[0],
-        root=project.root,
-        ci=project.ci,
-        logs=[step.log_file for step in report.steps],
-    )
+    _report, files = service.write(project, summary, ["html"], target)
+    print_report(files[0])
     if not _state(ctx).app.open_in_browser(files[0]):
         console.print("[dim]no browser available here - open the file above[/]")
 

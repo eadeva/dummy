@@ -106,31 +106,14 @@ Workspace editor commands require membership in the VMR root's own
 membership in each target's list; combined setup checks every member before any
 write. Use ``ptk ALIAS setup vscode`` to update only a repository you maintain.
 
-Browser links in the terminal
----------------------------------
+Report files
+------------
 
-In an interactive local VS Code terminal, job and workflow reports print a
-``browser: http://127.0.0.1:...`` link alongside their file path. Ctrl+click
-(Cmd+click on macOS) opens the rendered report. ``ptk report open`` prints the
-same kind of link. Plain file paths and ``file://`` links normally open in VS
-Code's editor instead.
-
-To use the operating system's default browser in current VS Code versions, add
-this to VS Code's settings::
-
-   "workbench.browser.openLocalhostLinks": false
-
-See the `VS Code browser documentation
-<https://code.visualstudio.com/docs/debugtest/integrated-browser#_use-an-external-browser>`_.
-PTK does not overwrite your editor settings.
-
-The link uses a reusable loopback-only helper for that repository, with a random
-URL token. It serves registered report folders and their log files, without
-directory listings. It survives the CLI command and exits after an hour without
-requests. After expiry, run the report command again for a fresh link. File
-reports remain available permanently. No helper starts on CX, for redirected
-output, or outside VS Code; automatic report opening remains a separate policy.
-Remote VS Code sessions require port forwarding to the machine running PTK.
+Jobs and workflows print the report file path. PTK does not start a local HTTP
+server or print browser URLs. Use **Open Latest Job Report** or
+``ptk report open JOB`` to open a job report explicitly. Configured
+``open_report`` policies continue to open reports after local runs. Remote
+sessions open files on the machine running PTK.
 
 Cleanup actions
 ---------------

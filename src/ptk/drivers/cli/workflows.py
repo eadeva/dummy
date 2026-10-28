@@ -332,7 +332,7 @@ def execute_workflow(ctx, name, *, dry_run=False):
     open_summary = False
     try:
         path = write_workflow_report(result, target)
-        print_report(parent.app, path, root=root, ci=is_ci)
+        print_report(path)
     except OSError as exc:
         err_console.print(f"[yellow]workflow report not written: {escape(str(exc))}[/]")
     else:

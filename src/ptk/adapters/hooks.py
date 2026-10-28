@@ -62,6 +62,48 @@ GIT_PATH_VARIABLES = frozenset(
     }
 )
 
+# Hooks must choose their own project environment. Inheriting these selectors
+# lets a language: system hook (e.g. uv sync) uninstall PTK from the environment
+# that launched it, even though pre-commit itself has a separate interpreter.
+# Keep package indexes, proxies, certificates and caches available.
+PYTHON_ENV_VARIABLES = frozenset(
+    {
+        "VIRTUAL_ENV",
+        "CONDA_PREFIX",
+        "CONDA_DEFAULT_ENV",
+        "PYTHONHOME",
+        "PYTHONPATH",
+        "__PYVENV_LAUNCHER__",
+        "UV_PROJECT_ENVIRONMENT",
+        "UV_PYTHON",
+        "UV_ACTIVE",
+        "UV_SYSTEM_PYTHON",
+        "UV_TARGET",
+        "UV_PREFIX",
+        "PIP_TARGET",
+        "PIP_PREFIX",
+        "PIP_PYTHON",
+        "PIP_USER",
+    }
+)
+
+
+def hook_environment(environ: Mapping[str, str]) -> dict[str, str]:
+    blocked = GIT_PATH_VARIABLES | PYTHON_ENV_VARIABLES
+    env = {k: v for k, v in environ.items() if k.upper() not in blocked}
+    if sys.prefix != sys.base_prefix:
+        # uv tool run and activated environments can put PTK's own interpreter
+        # first on PATH. Do not expose that interpreter to bare python/pip hooks.
+        binary = venv_python(Path(sys.prefix)).parent.resolve()
+        for key, value in env.items():
+            if key.upper() == "PATH":
+                env[key] = os.pathsep.join(
+                    part
+                    for part in value.split(os.pathsep)
+                    if not part or Path(part).resolve() != binary
+                )
+    return env
+
 
 @dataclass(frozen=True)
 class HookTarget:
@@ -77,7 +119,7 @@ class HookTarget:
 class GitHooks:
     def __init__(self, runner: ProcessRunner, environ: Mapping[str, str], *, uv: str):
         self._runner = runner
-        self._env = {k: v for k, v in environ.items() if k not in GIT_PATH_VARIABLES}
+        self._env = hook_environment(environ)
         self._uv = uv
 
     def _call(

@@ -27,7 +27,9 @@ locked npm dependencies, runs extension checks and creates the VSIX under
 ``extensions/project-toolkit``. ``ptk dry-run extension`` previews its steps.
 
 An installed ``ptk`` can run the same jobs without the ``uv run`` prefix.
-Jobs using a Python runtime always select this checkout's uv project.
+Jobs using a Python runtime always select this checkout's uv project, with
+separate environments under ``.ptk/venvs/<job>``. This prevents a job from
+synchronizing the checkout's ``.venv`` while PTK or an editor is using it.
 ``test`` and ``check`` select its ``dev`` dependency group; ``docs`` selects
 ``docs``, installing missing dependencies as needed. Groups remain defined in
 ``pyproject.toml`` rather than duplicated in PTK tool definitions.
@@ -54,6 +56,11 @@ Local jobs/workflows automatically install or repair the hooks. The committed
 Ruff uses the existing ``pyproject.toml`` settings. Run
 ``uv run ptk pre-commit check`` to check the whole checkout. The CI quality
 job runs those hooks and checks that the generated configuration is current.
+PTK-run hooks clear caller Python environment selectors such as ``VIRTUAL_ENV``
+and ``UV_PROJECT_ENVIRONMENT`` and remove PTK's own virtualenv bin directory
+from the hook PATH. This prevents inherited settings from redirecting a hook's
+``uv sync`` into PTK's installation. Index, proxy, certificate and cache settings
+are retained. Hooks should declare their required runtime/dependencies.
 After changing the overlay, a maintainer runs
 ``ptk setup configs sync pre-commit`` and commits both files.
 

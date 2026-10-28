@@ -63,8 +63,8 @@ workspace node. Set `projectToolkit.discoveryTimeout` (seconds) for slow project
   never enter secret values into the extension's option prompts.
 - Use **Open Latest Job Report**, **Validate Configuration** and **Open
   Configuration File** from the command palette. Available operations follow
-  PTK's maintainer permissions. Reports use PTK's terminal/browser links; remote
-  sessions may require port forwarding.
+  PTK's maintainer permissions. Report files and explicit opening use the machine
+  running PTK; no local browser-link server is started.
 
 Multiple VS Code folders and VMR member repositories are supported. The extension
 refreshes after PTK YAML and VMR project-list changes; **Refresh Projects** forces

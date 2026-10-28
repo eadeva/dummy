@@ -273,6 +273,21 @@ files. ``ptk pre-commit validate`` checks the hook configuration. These commands
 honor a custom ``configs.pre-commit.output`` and also work when automatic
 installation is disabled. See :doc:`cli` for file/ref selection and exit codes.
 
+PTK's pre-commit commands remove inherited Python environment selectors such as
+``VIRTUAL_ENV``, ``UV_PROJECT_ENVIRONMENT``, ``UV_PYTHON`` and pip/uv installation
+targets. They also remove PTK's own virtual-environment bin directory from the
+hook PATH. A ``language: system`` hook must select its project environment
+explicitly (for example, ``uv run --project .``); it must not synchronize PTK's
+installation. Package-index, proxy, certificate and cache settings are retained.
+The dedicated pre-commit interpreter does not by itself isolate the environments
+used by hook subprocesses. Hooks launched directly by Git or pre-commit retain
+that launcher's environment; explicit paths in hook commands remain the author's
+responsibility.
+
+If a previous hook removed PTK, pull the fixed checkout and rerun
+``install/install.ps1`` on Windows or ``sh install/install.sh`` on Linux.
+Then check ``ptk --version`` and refresh the Project Toolkit extension.
+
 Automatic installation prevents forgotten setup. It cannot prevent deliberate
 local bypass such as ``git commit --no-verify``. Run ``ptk pre-commit check`` in CI
 and require that check through GitHub branch protection/rulesets.

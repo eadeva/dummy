@@ -4,6 +4,7 @@ import shutil
 from pathlib import Path
 
 from ..domain.errors import PtkError
+from .process_options import captured_process_options
 
 
 def validate_directory(path: Path, root: Path, protected=()) -> None:
@@ -42,6 +43,7 @@ def validate_directory(path: Path, root: Path, protected=()) -> None:
             ],
             capture_output=True,
             check=False,
+            **captured_process_options(),
         )
     except OSError:
         result = None

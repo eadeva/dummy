@@ -412,13 +412,7 @@ def write_reports(
     html = next((f for f in files if f.suffix == ".html"), None)
     shown = html or (files[0] if files else None)
     if shown is not None:
-        print_report(
-            state.app,
-            shown,
-            root=project.root,
-            ci=project.ci,
-            logs=[step.log_file for step in report.steps],
-        )
+        print_report(shown)
     for problem in report.problems:
         err_console.print(f"[yellow]report: {escape(problem)}[/]")
     if html is not None and (

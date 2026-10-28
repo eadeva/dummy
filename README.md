@@ -300,8 +300,8 @@ links to HTML reports; JSON files remain available for automation.
 
 If a job and workflow share a name, local interactive calls ask which to run;
 CX selects the job. Use `ptk run NAME` or `ptk workflow run NAME` to select
-explicitly. Interactive VS Code terminals also print browser URLs for job and
-workflow reports; see [browser links](docs/editor.rst).
+explicitly. Reports print their file paths; use `ptk report open JOB` to open
+a job report explicitly. No local browser-link server is started.
 
 See [workflows](docs/workflows.rst) and `examples/workflows` for nested groups,
 VMR ownership, failure handling and reports. The later `ptk setup init --workflows`
@@ -389,9 +389,9 @@ Python environment. Package metadata uses the same Git-managed PTK versioning
 configuration as jobs. Untagged/shallow checkouts use the development fallback
 in `versioning.ptk.yml`; source distributions retain their resolved version. The default job is `test`.
 
-Dedicated uv environments for `check`, `docs` and `package` under `.ptk/venvs/<job>`
-let docs run alongside the sequential check/test/package branch. `test` uses the
-normal project environment. Packaging also builds a separate documentation archive.
+Dedicated uv environments for `test`, `check`, `docs` and `package` under `.ptk/venvs/<job>`
+let docs run alongside the sequential check/test/package branch without modifying
+the environment running PTK. Packaging also builds a separate documentation archive.
 
 The `dev` group includes pinned CMake for generator integration tests. uv selects
 the project environment's CMake ahead of host PATH entries, so the test job

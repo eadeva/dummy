@@ -8,6 +8,7 @@ import subprocess
 
 from ...domain.credentials import SecretKey
 from ...domain.errors import PtkError
+from ..process_options import captured_process_options
 
 TIMEOUT = 60
 
@@ -35,6 +36,7 @@ class GopassProvider:
             text=True,
             timeout=TIMEOUT,
             check=False,
+            **captured_process_options(),
         )
 
     def get(self, key: SecretKey) -> str | None:

@@ -842,8 +842,8 @@ locally, select the job on CX, and require explicit commands for non-interactive
 callers. Editor tasks always select jobs/workflows explicitly. Report titles use
 Job - or Workflow -. Workflow tables link only HTML child reports, retaining JSON
 artifacts. A selected workflow summary suppresses child auto-opening; otherwise
-child policies apply after completion. Interactive VS Code terminals print scoped
-loopback HTTP links, with default-browser settings documented in docs/editor.rst.
+child policies apply after completion. Reports print file paths without starting
+a loopback HTTP helper; existing automatic opening policies are preserved.
 
 ## Date templates and destination-only Artifactory structure
 

@@ -34,6 +34,21 @@ def test_repository_jobs_and_single_component_free_variant():
         assert not any("_COMPONENT_" in key for key in prepared.plan.base_env)
 
 
+def test_repository_python_jobs_do_not_sync_the_cli_environment():
+    app = create_app()
+    project = app.load_project.execute(config_file=ROOT / ".main.ptk.yml", ci=False)
+    environments = set()
+    for name in ("test", "check", "docs", "package"):
+        prepared = app.prepare_run(project).execute(
+            project, RunRequest(job=name, dry_run=True)
+        )
+        command = app.run_job(project)._command(prepared, prepared.plan.steps[0], None)
+        target = Path(command.env["UV_PROJECT_ENVIRONMENT"]).resolve()
+        assert target == (ROOT / ".ptk" / "venvs" / name).resolve()
+        assert target not in environments
+        environments.add(target)
+
+
 @pytest.mark.parametrize("run", [["python", "-m", "sphinx"], ["build_docs.py"]])
 def test_project_dependency_groups_reach_uv_before_the_command(tmp_path, run):
     project = tmp_path / "project with spaces"

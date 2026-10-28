@@ -14,6 +14,7 @@ from collections.abc import Callable
 
 from ..application.ports import CancelToken, ProcessOutcome
 from ..domain.execution.model import CommandSpec
+from .process_options import captured_process_options
 
 WINDOWS = sys.platform.startswith("win")
 GRACE_SECONDS = 5.0
@@ -37,12 +38,10 @@ class SubprocessRunner:
             "stdout": subprocess.PIPE,
             "stderr": subprocess.STDOUT,
         }
-        if WINDOWS:
-            kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
-        else:
-            kwargs["start_new_session"] = (
-                True  # own process group -> kill the whole tree
-            )
+        # Keep captured output in the existing PTK/VS Code terminal. A process
+        # group alone does not suppress a Windows console when the parent is
+        # console-free (for example VS Code discovery or a background helper).
+        kwargs.update(captured_process_options(new_group=True))
         if command.shell is not None:
             args: str | list[str] = command.shell
             kwargs["shell"] = True
@@ -108,6 +107,7 @@ def _kill_tree(proc: subprocess.Popen) -> None:
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             check=False,
+            **captured_process_options(),
         )
         return
     try:

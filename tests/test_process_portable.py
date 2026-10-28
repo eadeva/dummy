@@ -4,6 +4,7 @@ import os
 import shutil
 import sys
 import threading
+from types import SimpleNamespace
 
 import pytest
 
@@ -11,6 +12,72 @@ from ptk.adapters.process import SubprocessRunner
 from ptk.domain.config.model import StepSpec
 from ptk.domain.execution.commands import build_command
 from ptk.domain.execution.model import CommandSpec, PlannedStep
+
+
+def test_captured_windows_launch_hides_console_and_keeps_process_group(
+    tmp_path, monkeypatch
+):
+    import io
+    import subprocess
+
+    from ptk.adapters import process_options
+
+    monkeypatch.setattr(process_options, "WINDOWS", True)
+    for name, value in {
+        "CREATE_NO_WINDOW": 0x08000000,
+        "CREATE_NEW_PROCESS_GROUP": 0x200,
+        "STARTF_USESHOWWINDOW": 1,
+        "SW_HIDE": 0,
+    }.items():
+        monkeypatch.setattr(subprocess, name, value, raising=False)
+    monkeypatch.setattr(
+        subprocess,
+        "STARTUPINFO",
+        lambda: SimpleNamespace(dwFlags=0, wShowWindow=1),
+        raising=False,
+    )
+    launches = []
+
+    def popen(args, **kwargs):
+        launches.append(kwargs)
+        return SimpleNamespace(
+            stdout=io.BytesIO(b"captured\n"), poll=lambda: 0, wait=lambda: 0
+        )
+
+    monkeypatch.setattr(subprocess, "Popen", popen)
+    lines = []
+    result = SubprocessRunner().run(
+        CommandSpec(
+            argv=[sys.executable, "-c", "pass"], cwd=str(tmp_path), env=dict(os.environ)
+        ),
+        lines.append,
+    )
+    assert result.exit_code == 0 and lines == ["captured"]
+    assert launches[0]["creationflags"] == 0x08000200
+    assert launches[0]["startupinfo"].dwFlags & 1
+    assert launches[0]["startupinfo"].wShowWindow == 0
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="native Windows console APIs")
+@pytest.mark.parametrize("shell", [False, True])
+def test_windows_captured_process_has_no_console(tmp_path, shell):
+    import subprocess
+
+    argv = [
+        sys.executable,
+        "-c",
+        "import ctypes; print(ctypes.windll.kernel32.GetConsoleWindow()); print(ctypes.windll.kernel32.GetConsoleCP())",
+    ]
+    command = CommandSpec(
+        shell=subprocess.list2cmdline(argv) if shell else None,
+        argv=None if shell else argv,
+        cwd=str(tmp_path),
+        env=dict(os.environ),
+    )
+    lines = []
+    result = SubprocessRunner().run(command, lines.append)
+    assert result.exit_code == 0, (result, lines)
+    assert lines == ["0", "0"]
 
 
 def test_process_environment_and_exit(tmp_path):

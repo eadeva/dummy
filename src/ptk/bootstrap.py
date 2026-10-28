@@ -439,11 +439,6 @@ class App:
 
         return help_html.open_in_browser(path)
 
-    def report_url(self, path: Path, *, root: Path, logs=()) -> str:
-        from .adapters.reporting.viewer import report_url
-
-        return report_url(path, root, logs)
-
     def log_observers(self, prepared: PreparedRun) -> list[RunObserver]:
         from .adapters.logging.files import FileLogObserver
         from .domain.logging import file_level
