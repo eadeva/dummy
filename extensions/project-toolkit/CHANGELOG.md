@@ -1,3 +1,5 @@
+# Changelog
+
 ## 0.5.0
 
 - Use the installed PTK's merged configuration tree, schema, sources and diagnostics.
@@ -5,9 +7,7 @@
 - Route edits to source files or move each change into a new fragment without duplicates.
 - Show independent variant selectors on jobs and repository workflows.
 - Keep validation available during loading errors and offer setup init without a project.
-- Requires the new PTK configuration interface for logical editing; basic task discovery retains a fallback for older CLIs.
-
-# Changelog
+- Require PTK’s configuration interface for discovery and editing; remove older-CLI and include-format fallbacks.
 
 ## 0.4.0
 

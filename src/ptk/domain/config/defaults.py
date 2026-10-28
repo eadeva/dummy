@@ -35,7 +35,7 @@ def apply_defaults(tree: t.Node) -> t.Node:
         return tree
     tools = t.get(tree, ("requires_tools",))
     defaults = t.get(tree, ("param_defaults",))
-    result = tree
+    result = t.merge(None, tree)
     for name, job in jobs.value.items():
         if not job.is_map:
             continue
@@ -60,13 +60,11 @@ def apply_defaults(tree: t.Node) -> t.Node:
             )
         effective = t.merge(tools, own_tools) if own_tools is not None else tools
         if effective is not None:
-            result = t.merge(
-                result,
-                t.overlay_for(
-                    ("jobs", name, "requires_tools"),
-                    t.Node(effective.value, effective.loc, op="replace"),
-                ),
-            )
+            # This is the already-resolved model default. Keep its ordering and
+            # sources without merging it a second time into the authored value.
+            result_job = t.get(result, ("jobs", name))
+            assert result_job is not None
+            result_job.value["requires_tools"] = effective
         params = job.value.get("params")
         if (
             params is None

@@ -143,3 +143,23 @@ def test_editor_json_preserves_unsupported_scalar_types_as_locked_values(write):
     assert config["value"]["vars"]["big"] == "9007199254740993"
     assert ["vars", "big"] in config["locked"]
     assert ["vars", "date"] in config["locked"]
+
+
+@pytest.mark.parametrize(
+    "snippet, message",
+    [
+        ("include: [missing.ptk.yml]", "unknown key 'include'"),
+        ("variants: variants.ptk.yml", "variants"),
+        ("tools: !include tools.ptk.yml", "unknown tag !include"),
+        ("vars: !append [one]", "unknown tag !append"),
+        ("vars: !replace {a: 1}", "unknown tag !replace"),
+    ],
+)
+def test_configuration_uses_normal_schema_and_yaml_validation(
+    write, load, snippet, message
+):
+    root = write(
+        {".main.ptk.yml": "project: {name: demo}\n", "fragment.ptk.yml": snippet}
+    )
+    with pytest.raises(ConfigError, match=message):
+        load(root)

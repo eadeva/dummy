@@ -42,7 +42,7 @@ test("actual PTK inventory, preview, job parameters and variant inspection agree
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   project(root, "demo");
   const before = fs.readdirSync(root, { recursive: true });
-  const doc = core.parseInventory(invoke(root, ["describe", "--json"]));
+  const doc = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));
   const target = core.availableTargets([{ inventory: doc }]).find(target => target.kind === "job");
   assert.match(invoke(root, core.argsFor(target, { variant: "large", report: true })), /Info:.*job.*hasn't run yet/s);
   const workflow = core.availableTargets([{ inventory: doc }]).find(target => target.kind === "workflow");
@@ -81,7 +81,7 @@ test("actual VMR discovery supports member jobs and workspace workflow previews"
   fs.writeFileSync(entry, JSON.stringify(config));
   fs.writeFileSync(path.join(root, ".main.ptk.yml"), "virtual_monorepo: true\nmembers: [a, b]\n");
   fs.writeFileSync(path.join(root, "workflow.ptk.yml"), "workflows:\n  verify:\n    steps:\n    - build: {repo: alpha, job: build}\n");
-  const doc = core.parseInventory(invoke(root, ["describe", "--json"]));
+  const doc = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));
   assert.equal(doc.mode, "workspace");
   const targets = core.availableTargets([{ inventory: doc }]);
   const builtins = core.availableBuiltins([{ inventory: doc }]);
@@ -104,7 +104,7 @@ test("actual cleanup controls remove only the chosen job variant", { skip: !pyth
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk clean extension "));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   project(root, "demo");
-  const doc = core.parseInventory(invoke(root, ["describe", "--json"]));
+  const doc = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));
   const target = core.availableTargets([{ inventory: doc }]).find(t => t.kind === "job");
   for (const variant of ["small", "large"]) for (const folder of ["_bin", "_builds", "_logs", "_reports"]) {
     const dir = path.join(root, folder, variant, "build");
@@ -181,7 +181,7 @@ test("configuration form round-trips PTK YAML scalar types and creates valid job
   const edited = model.edit(fs.readFileSync(entry, "utf8"), [{ op: "add", path: ["jobs", "new-job"], value: S.initial(schema.$defs.JobSpec, schema) }]);
   fs.writeFileSync(entry, edited);
   invoke(root, ["setup", "config", "validate"]);
-  assert.ok(core.parseInventory(invoke(root, ["describe", "--json"])).projects[0].jobs.some(job => job.name === "new-job"));
+  assert.ok(core.parseInventory(invoke(root, ["describe", "--json", "--configuration"])).projects[0].jobs.some(job => job.name === "new-job"));
 });
 
 test("runtime schema drives event editing and new files reload through PTK", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {

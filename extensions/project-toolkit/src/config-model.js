@@ -32,8 +32,7 @@ function parse(text) {
   return doc;
 }
 
-// Read authored nodes, not resolved includes or expanded aliases. Editing a file
-// must never copy an included file's values into the including document.
+// Read authored nodes without expanding aliases, preserving source spelling.
 function inspect(text) {
   const doc = parse(text);
   const locked = [];
@@ -45,7 +44,7 @@ function inspect(text) {
     }
     if (node?.tag) {
       annotations.push({ path, text: node.tag });
-      if (!["!append", "!replace"].includes(node.tag) && !node.tag.startsWith("tag:yaml.org,2002:")) locked.push(path);
+      if (!node.tag.startsWith("tag:yaml.org,2002:")) locked.push(path);
     }
     if (YAML.isMap(node)) {
       const value = Object.create(null);
@@ -110,7 +109,7 @@ function edit(text, operations) {
     if (!path.length) throw new Error("Use individual fields or Raw YAML to change the document root.");
     const state = inspect(doc.toString());
     if (state.locked.some(prefix => prefix.length <= path.length && prefix.every((key, i) => key === path[i]))) {
-      throw new Error("This field is an alias, include or complex YAML value. Use Raw YAML to edit it.");
+      throw new Error("This field is an alias, unsupported tag or complex YAML value. Use Raw YAML to edit it.");
     }
     if (!doc.contents && op === "add" && path.length === 1) doc.contents = doc.createNode({});
     const parent = doc.getIn(path.slice(0, -1), true);

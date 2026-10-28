@@ -160,9 +160,8 @@ excluding generated/dependency folders, symlinks and nested project boundaries.
 `repository.config_path` remains the default authoring folder. `cx.ptk.yml` is
 CI-only; maintainer identities are loaded separately. Files merge disjoint map
 fields; duplicate scalar/list definitions raise an error with both locations.
-`include`, `!include`, `!append`, `!replace` and variant filename shorthand are
-removed. Use full schema paths in every file. Explicit CLI `--set` still applies
-a runtime override. See [migration details](docs/configuration.rst).
+Use full schema paths in every file. Explicit CLI `--set` applies a runtime
+override. See [configuration authoring](docs/configuration.rst).
 
 * every value remembers its file and line: `ptk setup config show --sources`
 * unknown keys, unknown names in conditions and `${...}` references are errors

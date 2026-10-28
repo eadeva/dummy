@@ -83,7 +83,6 @@ function harness(t, docs = [inventory()], trusted = true) {
     async parameters(target, options) { formRequests.push({ target, options }); return forms.shift()?.(target, options); },
     async open(uri, path = []) { opened.push({ uri, path }); },
     async openProject(owner, path = []) { opened.push({ owner, path }); },
-    async children(element) { return [{ label: "Test field", configPath: [...element.configPath, "jobs"] }]; },
   }); });
   t.after(() => context.subscriptions.forEach(item => item.dispose()));
   const command = (name, element) => commands.get(`project-toolkit.${name}`)(element);
@@ -456,18 +455,16 @@ test("built-in execution rechecks workspace trust and refreshed command permissi
   assert.equal(h.tasks.length, 0);
 });
 
-test("VMR root built-ins omit member configuration and older CLIs retain CLI help", async t => {
+test("VMR root built-ins omit member configuration and member help selects its repository", async t => {
   const doc = inventory();
   doc.mode = "workspace";
   doc.commands = builtinCommands();
-  delete doc.projects[0].commands;
   const h = harness(t, [doc]);
   await h.controller.ready();
   await h.command("runBuiltin", { kind: "builtin", root: doc.root, name: "setup creds list" });
   assert.deepEqual(h.tasks[0].execution.args, ["setup", "creds", "list"]);
   const project = h.controller.provider.getChildren()[0].children[0];
   const commands = project.children.find(node => node.label === "Built-in commands").children;
-  assert.ok(commands.some(node => /Update PTK/.test(node.label)));
   await h.command("showHelp", commands[0]);
   assert.deepEqual(h.tasks[1].execution.args, ["--config", doc.projects[0].entry_file, "--help"]);
 });
@@ -594,4 +591,13 @@ test("initial invalid project exposes diagnostics and validation without prior i
   assert.equal(node.description, "configuration error");
   await h.command("validate", node);
   assert.equal(h.tasks[0].definition.kind, "validate");
+});
+
+
+test("variant selection uses only the per-target setting", async t => {
+  const h = harness(t);
+  h.state.set(`variant:${h.target().project.entry_file}`, "large");
+  await h.controller.ready();
+  await h.command("run", h.target());
+  assert.deepEqual(h.tasks[0].execution.args.slice(2), ["--variant", "small", "run", "build"]);
 });

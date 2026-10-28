@@ -11,7 +11,7 @@ from ptk.domain.errors import ConfigError
 
 @pytest.fixture(autouse=True, params=["SafeLoader", "CSafeLoader"])
 def parser_backend(request, monkeypatch):
-    """Includes, tags, anchors and diagnostics must work with either backend."""
+    """YAML nodes, anchors and diagnostics must work with either backend."""
     parser = getattr(yaml, request.param, None)
     if parser is None:
         pytest.skip("PyYAML C extension unavailable")
@@ -24,33 +24,9 @@ def read(root: Path, name: str = "fragment.ptk.yml"):
 
 
 @pytest.mark.parametrize(
-    "snippet",
-    [
-        "include: [parts/*.ptk.yml]",
-        "tools: !include tools.ptk.yml",
-        "list: !append [one]",
-        "vars: !replace {a: 1}",
-        "variants: variants.ptk.yml",
-    ],
-)
-def test_removed_composition_syntax_reports_migration(write, snippet):
-    root = write({"fragment.ptk.yml": snippet})
-    with pytest.raises(ConfigError, match="no longer supported"):
-        read(root)
-
-
-@pytest.mark.parametrize(
     "files, message",
     [
         ({"fragment.ptk.yml": "a: 1\na: 2"}, "duplicate key 'a'"),
-        (
-            {
-                "fragment.ptk.yml": "include: [x.ptk.yml]",
-                "x.ptk.yml": "include: [fragment.ptk.yml]",
-            },
-            "no longer supported",
-        ),
-        ({"fragment.ptk.yml": "include: [missing.ptk.yml]"}, "no longer supported"),
         ({"fragment.ptk.yml": "a: !foo 1"}, "unknown tag !foo"),
         ({"fragment.ptk.yml": "a: [1"}, "invalid YAML"),
         ({"fragment.ptk.yml": "- 1"}, "top level must be a mapping"),

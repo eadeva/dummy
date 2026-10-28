@@ -1,26 +1,22 @@
 """Located configuration tree and merge rules (pure, no I/O).
 
 Every value of a loaded configuration is a ``Node`` that remembers where it
-came from. Merging layers keeps those locations, so any final value can be
+came from. Combining fields keeps those locations, so any final value can be
 traced to ``file:line`` (``ptk setup config show --sources``) and validation errors
 point to the right place.
 
-Merge rules
------------
-* mapping + mapping  -> merged key by key (deep)
-* anything else      -> the overlay replaces the base (lists are replaced)
-* ``!replace``       -> the overlay replaces the base even for mappings
-* ``!append``        -> the overlay list is appended to the base list
+File composition uses merge_unique: mappings combine disjoint keys and any
+repeated scalar or list is an error. Model defaults and explicit CLI overrides
+use merge: mappings combine deeply and other values replace the base.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any
 
 from ..errors import ConfigError, Location, Problem
 
-Op = Literal["replace", "append"] | None
 Path = tuple[str | int, ...]
 
 
@@ -28,7 +24,6 @@ Path = tuple[str | int, ...]
 class Node:
     value: Any  # dict[str, Node] | list[Node] | scalar
     loc: Location | None = None
-    op: Op = None
     key_locs: dict[str, Location] = field(
         default_factory=dict
     )  # locations of mapping keys
@@ -56,19 +51,13 @@ def from_plain(value: Any, loc: Location | None = None) -> Node:
 
 
 def merge(base: Node | None, overlay: Node, _path: Path = ()) -> Node:
-    if base is None or overlay.op == "replace":
-        return _strip_ops(overlay)
+    if base is None:
+        return _copy_node(overlay)
     requirement = (len(_path) == 2 and _path[0] == "requires_tools") or (
         len(_path) == 4 and _path[0] == "jobs" and _path[2] == "requires_tools"
     )
     if base.is_map and overlay.value is True and requirement:
-        return _strip_ops(base)
-    if overlay.op == "append":
-        if base.is_list and overlay.is_list:
-            return Node(
-                base.value + [_strip_ops(n) for n in overlay.value], overlay.loc
-            )
-        return _strip_ops(overlay)
+        return _copy_node(base)
     if base.is_map and overlay.is_map:
         merged = dict(base.value)
         key_locs = dict(base.key_locs)
@@ -77,7 +66,7 @@ def merge(base: Node | None, overlay: Node, _path: Path = ()) -> Node:
             if key in overlay.key_locs:
                 key_locs[key] = overlay.key_locs[key]
         return Node(merged, overlay.loc or base.loc, key_locs=key_locs)
-    return _strip_ops(overlay)
+    return _copy_node(overlay)
 
 
 def merge_unique(base: Node, incoming: Node, path: Path = ()) -> Node:
@@ -110,15 +99,15 @@ def merge_unique(base: Node, incoming: Node, path: Path = ()) -> Node:
     )
 
 
-def _strip_ops(node: Node) -> Node:
+def _copy_node(node: Node) -> Node:
     if node.is_map:
         return Node(
-            {k: _strip_ops(v) for k, v in node.value.items()},
+            {k: _copy_node(v) for k, v in node.value.items()},
             node.loc,
             key_locs=node.key_locs,
         )
     if node.is_list:
-        return Node([_strip_ops(v) for v in node.value], node.loc)
+        return Node([_copy_node(v) for v in node.value], node.loc)
     return Node(node.value, node.loc)
 
 

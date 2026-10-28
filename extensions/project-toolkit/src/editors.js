@@ -110,32 +110,6 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
     }
   }
 
-  async function children(element) {
-    try {
-      const document = await vscode.workspace.openTextDocument(vscode.Uri.file(element.configFile));
-      const state = model.inspect(document.getText());
-      const at = element.configPath || [];
-      const value = at.reduce((value, key) => value?.[key], state.value);
-      if (state.locked.some(prefix => prefix.length <= at.length && prefix.every((key, i) => key === at[i]))) return [];
-      if (!value || typeof value !== "object") return [];
-      return Object.entries(value).map(([name, value]) => {
-        const key = Array.isArray(at.reduce((value, key) => value?.[key], state.value)) ? Number(name) : name;
-        const configPath = [...at, key];
-        const hasChildren = value !== null && typeof value === "object";
-        const node = { ...element, configPath, kind: "config-field", label: typeof key === "number" ? `Item ${key + 1}` : name,
-          id: JSON.stringify([element.configOwner, element.configFile, configPath]), collapsed: true, hasChildren,
-          description: hasChildren ? Array.isArray(value) ? `${value.length} items` : `${Object.keys(value).length} fields` : value === null ? "null" : String(value).slice(0, 100),
-          icon: hasChildren ? "symbol-namespace" : "symbol-property", children: undefined,
-        };
-        node.command = { command: "project-toolkit.openConfig", title: "Edit configuration field", arguments: [node] };
-        return node;
-      });
-    } catch (error) {
-      return [{ label: "Open Raw YAML to fix this file", description: error.message.split("\n")[0], icon: "warning",
-        command: { command: "vscode.openWith", title: "Open Raw YAML", arguments: [vscode.Uri.file(element.configFile), "default"] } }];
-    }
-  }
-
   async function openProject(owner, selection = []) {
     trusted();
     const key = `project:${owner.project.entry_file}`;
@@ -259,7 +233,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
       configure(panel);
     });
   }
-  return { open, openProject, children, parameters };
+  return { open, openProject, parameters };
 }
 
 module.exports = { createEditors, viewType };

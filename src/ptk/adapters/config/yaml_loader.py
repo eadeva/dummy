@@ -1,8 +1,7 @@
 """Read one located YAML mapping; project discovery lives in FileConfigSource.
 
-Includes and merge directives are rejected. Every file contributes its full
-schema path and the application combines disjoint fields with merge_unique.
-YAML anchors within a document remain supported.
+Every file contributes its full schema path and the application combines disjoint
+fields with merge_unique. YAML anchors within a document remain supported.
 """
 
 from __future__ import annotations
@@ -46,8 +45,6 @@ class YamlConfigReader:
         self,
         path: Path,
         *,
-        _stack: tuple[Path, ...] = (),
-        require_mapping: bool = True,
         metadata_only: bool = False,
     ) -> Node:
         path = path.resolve()
@@ -55,9 +52,6 @@ class YamlConfigReader:
             raise ConfigError(
                 [Problem("generated version snapshots are not configuration inputs")]
             )
-        if path in _stack:
-            chain = " -> ".join(_display(p, self.display_root) for p in (*_stack, path))
-            raise ConfigError([Problem(f"include cycle: {chain}")])
         try:
             data = path.read_bytes()
             text = data.decode("utf-8")
@@ -82,8 +76,6 @@ class YamlConfigReader:
             loader.dispose()
         if node is None:
             return Node({}, Location(_display(path, self.display_root), 1))
-        stack = (*_stack, path)
-        base_file = path
         if path.name == ".main.ptk.yml":
             flags = (
                 [v for k, v in node.value if k.value == "virtual_monorepo"]
@@ -110,9 +102,9 @@ class YamlConfigReader:
                             )
                         ]
                     )
-                flag = self._construct(flags[0], path, loader, stack)
+                flag = self._construct(flags[0], path, loader)
             if flag is not None and flag.value:
-                # Workspace markers have no includes or project configuration.
+                # Workspace markers contain only discovery metadata.
                 unknown = [
                     k
                     for k, _ in node.value
@@ -128,13 +120,13 @@ class YamlConfigReader:
                             for k in unknown
                         ]
                     )
-                tree = self._literal_metadata(node, path, loader, stack)
+                tree = self._literal_metadata(node, path, loader)
                 try:
                     WorkspaceSpec.model_validate(to_plain(tree))
                 except ValidationError as exc:
                     raise ConfigError([Problem(str(exc), location=tree.loc)]) from None
                 return tree
-            # Read discovery metadata before resolving any include (including tags).
+            # Validate repository metadata before reading project fields.
             entries = (
                 [v for k, v in node.value if k.value == "repository"]
                 if isinstance(node, yaml.MappingNode)
@@ -149,7 +141,7 @@ class YamlConfigReader:
                         )
                     ]
                 )
-            metadata = self._literal_metadata(entries[0], path, loader, stack)
+            metadata = self._literal_metadata(entries[0], path, loader)
             try:
                 spec = RepositorySpec.model_validate(to_plain(metadata))
             except ValidationError as exc:
@@ -180,23 +172,10 @@ class YamlConfigReader:
                 if flag is not None:
                     values["virtual_monorepo"] = flag
                 return Node(values, self._loc(node, path))
-        tree = self._construct(node, base_file, loader, stack)
+        tree = self._construct(node, path, loader)
         if not tree.is_map:
-            if require_mapping:
-                raise ConfigError(
-                    [Problem("top level must be a mapping", location=tree.loc)]
-                )
-            return tree
-        if "include" in tree.value or isinstance(
-            tree.value.get("variants", Node(None)).value, str
-        ):
             raise ConfigError(
-                [
-                    Problem(
-                        "includes are no longer supported: remove include and give each *.ptk.yml file its full schema path (for example variants: {variants: {...}})",
-                        location=tree.loc,
-                    )
-                ]
+                [Problem("top level must be a mapping", location=tree.loc)]
             )
         return normalize_requirements(tree)
 
@@ -207,10 +186,8 @@ class YamlConfigReader:
             self._display_paths[path] = _display(path, self.display_root)
         return Location(self._display_paths[path], node.start_mark.line + 1)
 
-    def _literal_metadata(
-        self, node: yaml.Node, path: Path, loader: _Loader, stack: tuple[Path, ...]
-    ) -> Node:
-        """Discovery cannot read includes or execute merge directives."""
+    def _literal_metadata(self, node: yaml.Node, path: Path, loader: _Loader) -> Node:
+        """Discovery metadata must use literal YAML values."""
 
         def check(item: yaml.Node, ancestors: frozenset[int]) -> None:
             if id(item) in ancestors or not item.tag.startswith("tag:yaml.org,2002:"):
@@ -232,35 +209,22 @@ class YamlConfigReader:
                 check(child, ancestors | {id(item)})
 
         check(node, frozenset())
-        return self._construct(node, path, loader, stack)
+        return self._construct(node, path, loader)
 
-    def _construct(
-        self, node: yaml.Node, path: Path, loader: _Loader, stack: tuple[Path, ...]
-    ) -> Node:
+    def _construct(self, node: yaml.Node, path: Path, loader: _Loader) -> Node:
         if id(node) in self._active_nodes:
             raise ConfigError(
                 [Problem("cyclic YAML alias", location=self._loc(node, path))]
             )
         self._active_nodes.add(id(node))
         try:
-            return self._construct_value(node, path, loader, stack)
+            return self._construct_value(node, path, loader)
         finally:
             self._active_nodes.remove(id(node))
 
-    def _construct_value(
-        self, node: yaml.Node, path: Path, loader: _Loader, stack: tuple[Path, ...]
-    ) -> Node:
+    def _construct_value(self, node: yaml.Node, path: Path, loader: _Loader) -> Node:
         loc = self._loc(node, path)
         tag = node.tag
-        if tag in ("!include", "!replace", "!append"):
-            raise ConfigError(
-                [
-                    Problem(
-                        f"{tag} is no longer supported: configuration files are discovered automatically and cannot overwrite values",
-                        location=loc,
-                    )
-                ]
-            )
         if tag.startswith("!"):
             raise ConfigError(
                 [
@@ -270,11 +234,9 @@ class YamlConfigReader:
                     )
                 ]
             )
-        return self._construct_untagged(node, path, loader, stack)
+        return self._construct_untagged(node, path, loader)
 
-    def _construct_untagged(
-        self, node: yaml.Node, path: Path, loader: _Loader, stack: tuple[Path, ...]
-    ) -> Node:
+    def _construct_untagged(self, node: yaml.Node, path: Path, loader: _Loader) -> Node:
         loc = self._loc(node, path)
         if isinstance(node, yaml.MappingNode):
             explicit = sum(
@@ -310,13 +272,11 @@ class YamlConfigReader:
                             ]
                         )
                     explicit_keys.add(key)
-                values[key] = self._construct(value_node, path, loader, stack)
+                values[key] = self._construct(value_node, path, loader)
                 key_locs[key] = self._loc(key_node, path)
             return Node(values, loc, key_locs=key_locs)
         if isinstance(node, yaml.SequenceNode):
-            return Node(
-                [self._construct(v, path, loader, stack) for v in node.value], loc
-            )
+            return Node([self._construct(v, path, loader) for v in node.value], loc)
         if isinstance(node, yaml.ScalarNode) and node.tag.startswith(
             "tag:yaml.org,2002:"
         ):

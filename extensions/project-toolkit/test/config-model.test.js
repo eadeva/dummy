@@ -8,28 +8,24 @@ const schema = require("../media/config-schema.json");
 const { validateParameters } = require("../src/parameters");
 
 const fixture = `# Project comment
-include: [jobs/*.ptk.yml] # keep includes
 vars: &shared
   greeting: 'hello' # greeting comment
 copy: *shared
 jobs:
   build:
-    steps: !append
+    steps:
       # step comment
       - hello: {run: echo hello}
-external: !include other.ptk.yml
-replace: !replace {old: true}
 `;
 
-test("field edits preserve comments, anchors, aliases, include paths and merge tags", () => {
+test("field edits preserve comments, anchors and aliases", () => {
   const result = model.edit(fixture, [{ op: "set", path: ["vars", "greeting"], value: "world" },
     { op: "add", path: ["jobs", "build", "open_report"], value: "on_errors" }]);
-  for (const expected of ["# Project comment", "# keep includes", "# greeting comment", "# step comment", "&shared", "*shared", "!append", "!include other.ptk.yml", "!replace", "jobs/*.ptk.yml"]) assert.ok(result.includes(expected), expected);
+  for (const expected of ["# Project comment", "# greeting comment", "# step comment", "&shared", "*shared"]) assert.ok(result.includes(expected), expected);
   const doc = YAML.parseDocument(result);
   assert.equal(doc.getIn(["vars", "greeting"]), "world");
   assert.equal(doc.getIn(["jobs", "build", "open_report"]), "on_errors");
   assert.throws(() => model.edit(result, [{ op: "set", path: ["copy", "greeting"], value: "bad" }]), /alias/);
-  assert.throws(() => model.edit(result, [{ op: "set", path: ["external"], value: "bad" }]), /include/);
 });
 
 test("new jobs use model fields and produce authored named steps", () => {
@@ -70,9 +66,6 @@ test("list insertion, movement and deletion preserve step comments; edits preser
 
 test("empty YAML and fragments can be edited without synthesizing a project", () => {
   assert.deepEqual(YAML.parse(model.edit("# empty\n", [{ op: "add", path: ["jobs"], value: {} }])), { jobs: {} });
-  assert.equal(S.infer({ default: "debug", variants: {} }), "ProductLineSpec");
-  assert.equal(S.infer([{ test: "echo test" }]), "steps");
-  assert.equal(S.infer({ jobs: {} }), "configuration");
   const text = model.edit("- first: echo hi\n", [{ op: "add", path: [1], value: { second: "echo there" } }]);
   assert.equal(YAML.parse(text).length, 2);
 });
@@ -107,4 +100,12 @@ test("renaming a job preserves its comments and does not replace an existing job
   assert.ok(result.includes("# job comment"));
   assert.deepEqual(Object.keys(YAML.parse(result).jobs), ["build", "other"]);
   assert.throws(() => model.edit(text, [{ op: "rename", path: ["jobs", "old"], name: "other" }]), /already exists/);
+});
+
+
+test("custom YAML tags have no editable merge behavior", () => {
+  for (const tag of ["!append", "!replace", "!custom"]) {
+    const text = `vars: ${tag} {value: 1}\n`;
+    assert.throws(() => model.edit(text, [{ op: "set", path: ["vars", "value"], value: 2 }]), /unsupported tag/);
+  }
 });

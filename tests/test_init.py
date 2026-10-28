@@ -197,7 +197,7 @@ def test_init_preflights_all_files(tmp_path):
     assert (folder / "tools.ptk.yml").read_text() == "keep me"
 
 
-def test_scaffold_nested_includes_variants_and_ci(tmp_path):
+def test_scaffold_discovered_fragments_variants_and_ci(tmp_path):
     from ptk.application.use_cases.variants import VariantService
     from ptk.bootstrap import create_app
 
@@ -217,7 +217,7 @@ def test_scaffold_nested_includes_variants_and_ci(tmp_path):
         assert variants.resolve("release").values["DEBUG"] is False
         assert project.config.tools == {}
         assert project.config.credentials == {}
-    # New jobs are discovered through the jobs glob without editing the index.
+    # New jobs are discovered without editing any existing configuration file.
     (tmp_path / "ptk/jobs/check.ptk.yml").write_text(
         "jobs:\n  check:\n    steps:\n      - check: {uses: echo, with: {message: discovered}}\n"
     )

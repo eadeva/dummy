@@ -123,8 +123,7 @@ function createController(vscode, context, editorFactory = createEditors) {
   }
 
   const variantKey = target => `variant:${target.project.entry_file}:${target.kind}:${target.name}`;
-  const variantFor = target => core.selectedVariant(target.project, context.workspaceState.get(variantKey(target))
-    ?? context.workspaceState.get(`variant:${target.project.entry_file}`));
+  const variantFor = target => core.selectedVariant(target.project, context.workspaceState.get(variantKey(target)));
   const title = target => `${target.project?.alias || path.basename(target.root)} / ${target.kind} / ${target.name}`;
 
   function builtinTree(owner, commands) {
@@ -136,7 +135,7 @@ function createController(vscode, context, editorFactory = createEditors) {
         .map(spec => ({ ...spec, children: visible(spec.children) }))
         .filter(spec => spec.runnable || spec.children.length);
     }
-    const treeCommands = visible(commands || []);
+    const treeCommands = visible(commands);
     const targets = core.builtinTargets(owner, treeCommands);
     const nodes = new Map(targets.map(target => [target.name, {
       ...target, label: target.spec.name, tooltip: target.spec.help,
@@ -151,7 +150,6 @@ function createController(vscode, context, editorFactory = createEditors) {
     help.icon = "question";
     help.command = { command: "project-toolkit.showHelp", title: "Show CLI help", arguments: [targets[0]] };
     const children = [help, ...treeCommands.map(spec => nodes.get(spec.path.join(" ")))];
-    if (!commands) children.push({ label: "Update PTK to browse built-in commands", icon: "info" });
     return { label: "Built-in commands", children, icon: "terminal" };
   }
 
@@ -162,9 +160,6 @@ function createController(vscode, context, editorFactory = createEditors) {
 
   function configurationNode(common) {
     const config = common.project.configuration;
-    if (!config || config.version !== 1) return { label: "Configuration", icon: "warning", children: [
-      { label: "Update PTK to use the configuration editor", icon: "info" },
-    ] };
     const sources = new Map(config.sources.map(source => [JSON.stringify(source.path), source]));
     function field(value, configPath, label) {
       const source = sources.get(JSON.stringify(configPath));
@@ -216,7 +211,6 @@ function createController(vscode, context, editorFactory = createEditors) {
   const provider = {
     onDidChangeTreeData: changed.event,
     getChildren(element) {
-      if (element?.configFile) return editors.children(element);
       if (element) return element.children || [];
       if (loading && !records.length) return [{ label: "Loading PTK configuration…", icon: "sync" }];
       return records.map(record => {
@@ -471,7 +465,6 @@ function createController(vscode, context, editorFactory = createEditors) {
   command("init", () => initializeProject());
   command("openConfig", async element => {
     trusted();
-    if (element?.configFile) return editors.open(vscode.Uri.file(element.configFile), element.configPath || []);
     const owner = element?.project ? element : await chooseProject(element);
     if (owner) return editors.openProject(owner, element?.configPath || []);
   });

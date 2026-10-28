@@ -8,8 +8,8 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
 1. Install PTK from the same checkout/version as this extension. The CLI must
    support `ptk describe --json` (inventory schema version 1).
 2. In VS Code, run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.4.0.vsix`. You can also use
-   `code --install-extension project-toolkit-0.4.0.vsix`.
+   `project-toolkit-0.5.0.vsix`. You can also use
+   `code --install-extension project-toolkit-0.5.0.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -102,9 +102,6 @@ for files reported by PTK as configuration sources. Discovery requests are seria
 and repeated requests are coalesced. A broken VMR member is shown with its error while healthy
 members remain usable.
 The command tree comes from PTK's inventory, including its role restrictions.
-If **Update PTK to browse built-in commands** appears, update the CLI from this
-checkout and refresh. Job actions and CLI help still work with older inventories.
-
 Jobs with no required non-secret parameters and local workflows also appear in
 **Tasks: Run Task**. Saved `project-toolkit` tasks retain their `variant`, `params`
 and `preview` fields. Supply required parameters in `params`, or launch through
@@ -124,8 +121,8 @@ open at their schema path. The installed PTK supplies the authored values,
 schema, source locations and loading/validation errors through
 `describe --json --configuration`. The extension has no configuration discovery
 or merge implementation and does not substitute a bundled schema for the runtime.
-Older PTK versions can still supply the task tree; the logical editor reports
-when its versioned configuration interface is unavailable.
+PTK and the extension must both support this configuration interface. Discovery
+reports an error if the installed PTK does not provide it.
 
 The project form saves changes automatically and reloads them through PTK.
 Ordinary edits go back to their recorded source. Choose **Next change: new file…**
@@ -164,7 +161,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.4.0.vsix`. Use `ptk dry-run extension`
+`extensions/project-toolkit/project-toolkit-0.5.0.vsix`. Use `ptk dry-run extension`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:

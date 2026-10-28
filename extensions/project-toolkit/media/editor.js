@@ -4,7 +4,7 @@
   const vscode = acquireVsCodeApi();
   const S = PtkSchema;
   const app = document.getElementById("app");
-  let state, schema, selected = [], kind, issue = "", serial = 0, inflight, timer;
+  let state, schema, selected = [], issue = "", serial = 0, inflight, timer;
   const queue = new Map();
   let deferred, nextFile = false;
   let parameterDraft = {};
@@ -24,7 +24,6 @@
     retries: "Number of additional attempts after a failed step.",
     cwd: "Working directory for the step. PTK template expressions are supported.",
     env: "Environment settings. For a parameter, this names the environment variable used before its default.",
-    include: "Files or patterns merged into this configuration. Edit their source files from the configuration tree.",
   };
   function el(tag, text, attrs = {}) {
     const node = document.createElement(tag);
@@ -53,7 +52,7 @@
   function remember() {
     // Parameter values may be sensitive even if not declared secret. Keep them
     // only in the live webview, never in persisted VS Code webview state.
-    if (state?.mode === "configuration") vscode.setState({ selected, kind });
+    if (state?.mode === "configuration") vscode.setState({ selected });
   }
   function status() {
     const node = document.getElementById("status");
@@ -169,14 +168,6 @@
       if (selected[0] === target) link.classList.add("selected");
       nav.append(link);
     }
-    const fragment = el("div", undefined, { className: "fragment" });
-    fragment.append(el("label", "Schema for this file", { for: "schema-kind", className: "help" }));
-    const kinds = el("select", undefined, { id: "schema-kind" });
-    for (const [id, title] of [["configuration", "PTK configuration"], ["generic", "Unspecified fragment"], ["steps", "Included steps"], ...Object.keys(schema.$defs).map(key => [key, key.replace(/Spec$/, "")])]) kinds.append(el("option", title, { value: id }));
-    kinds.value = kind;
-    kinds.addEventListener("change", () => afterEdits(() => { kind = kinds.value; remember(); renderConfiguration(); }));
-    fragment.append(kinds, el("p", "Optional fields follow PTK’s model. Use a fragment schema for files included inside a field.", { className: "help" }));
-    if (!state.logical) nav.append(fragment);
     const main = el("main");
     notice(main);
     if (state.logical) {
@@ -189,14 +180,13 @@
     selected.forEach((key, i) => crumbs.append(el("span", "/"), button(String(key), () => navigate(selected.slice(0, i + 1)), "link")));
     main.append(crumbs, el("h2", String(selected.at(-1) ?? "Configuration")));
     const value = valueAt(selected);
-    const rootSchema = kind === "generic" ? {} : S.rootSchema(schema, kind);
-    const spec = S.at(rootSchema, state.value, selected, schema);
+    const spec = S.at(schema, state.value, selected, schema);
     const resolved = S.effective(spec, value, schema);
     if (resolved.description) main.append(el("p", resolved.description, { className: "help" }));
     if (state.locked.some(prefix => prefix.length <= selected.length && prefix.every((key, i) => key === selected[i]))) {
-      main.append(el("p", "This value uses an include, alias or complex mapping. Use Raw YAML to edit it.", { className: "notice" }));
+      main.append(el("p", "This value uses an alias, unsupported tag or complex mapping. Use Raw YAML to edit it.", { className: "notice" }));
     } else if (value === null || typeof value !== "object") {
-      main.append(el("p", "Select the appropriate fragment schema or use Raw YAML for a scalar document.", { className: "notice" }));
+      main.append(el("p", "PTK configuration files must contain a mapping. Use Raw YAML to correct this document.", { className: "notice" }));
     } else {
       const entries = Object.entries(value);
       if (!entries.length) main.append(el("p", "No fields yet. Add a field below to get started.", { className: "empty" }));
@@ -392,7 +382,6 @@
       }
     }
     if (first) {
-      kind = state.logical ? "configuration" : stored.kind || S.infer(state.value, state.filename);
       selected = message.selection?.length ? message.selection : stored.selected || [];
     }
     if (schema && (state.error || !own || structural || message.issue)) renderConfiguration();

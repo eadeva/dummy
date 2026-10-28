@@ -43,32 +43,14 @@ Python caches, ``dist``, conventional build/log/report/output folders, and manag
 are never configuration inputs. Maintainer identities retain their separate
 loading and validation rules.
 
-Migration from includes
-~~~~~~~~~~~~~~~~~~~~~~~
-
-Remove ``include``, ``!include``, ``!append`` and ``!replace``. They now produce a
-migration error. Replace ``variants: path/to/file.yml`` with a discovered file
-that starts at the schema root::
-
-   # Any folder/my-variant.ptk.yml
-   variants:
-     variants:
-       debug:
-         features: {DEBUG: true}
-
-Former field-only fragments must gain their parent keys. Former step-list files
-must contain ``jobs: {job-name: {steps: [...]}}``. Resolve old override layers by
-keeping each final field in one file; move an existing definition instead of
-copying it. Use ``ptk setup config validate`` after migration.
-
 Project discovery still searches upwards and stops at a Git repository boundary.
 The filename remains exactly ``.main.ptk.yml``. Maintainers may use ``--no-ci``
 to inspect local behavior independently of the host.
 
 A manual VMR has a separate workspace-root ``.main.ptk.yml`` with
 ``virtual_monorepo: true`` and an optional ``members: [nested/repository, other]``
-list of exact relative paths. This marker has no ``repository``, includes or
-project settings. Without ``members``, ptk checks direct child directories only;
+list of exact relative paths. This marker has no ``repository`` or project
+settings. Without ``members``, ptk checks direct child directories only;
 each participating project still declares its own alias and configuration path.
 Git-repo workspaces instead use ``.repo/project.list`` and need no PTK marker.
 
@@ -82,9 +64,9 @@ and how commands behave from workspace roots and member directories.
 Unknown fields fail validation; ``ptk setup config show --sources`` identifies their
 source files and lines.
 
-A ``variants`` string names a separate variant file. Other schema fields use
-the types in :doc:`reference`. ``ptk_version`` is a version requirement; this
-repository's development version needs a range such as ``>=0.1.0.dev0,<0.2``.
+Every file uses the root schema and the field types in :doc:`reference`.
+``ptk_version`` is a version requirement; this repository's development version
+needs a range such as ``>=0.1.0.dev0,<0.2``.
 
 Date and time substitutions
 ---------------------------

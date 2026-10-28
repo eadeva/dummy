@@ -1,4 +1,5 @@
-# GitHub Actions/workflows overlay, automatically loaded in CI.
+# CI-only fragment, discovered automatically alongside the other PTK files.
+# Each field is defined once; CI files cannot overwrite other fragments.
 # CI uses the same test/check/docs jobs as developer machines.
 environment:
   set:

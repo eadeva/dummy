@@ -34,7 +34,7 @@ function builtinCommands() {
 
 function inventory(root = path.resolve("test project")) {
   return {
-    schema_version: 1, mode: "repository", root, ci: false, workflows: [],
+    schema_version: 1, mode: "repository", root, ci: false, workflows: [], commands: [],
     projects: [{
       alias: "demo", name: "Demo", root, entry_file: path.join(root, ".main.ptk.yml"),
       config_files: [path.join(root, ".main.ptk.yml")],

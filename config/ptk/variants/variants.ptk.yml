@@ -1,3 +1,4 @@
+# Full schema path, as in every discovered PTK fragment.
 variants:
   # PTK has one development configuration and no product components or features.
   default: default

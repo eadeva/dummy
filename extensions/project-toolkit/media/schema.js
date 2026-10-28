@@ -47,15 +47,5 @@
     if (["number", "integer"].includes(chosen.type)) return chosen.minimum ?? (chosen.exclusiveMinimum !== undefined ? chosen.exclusiveMinimum + 1 : 0);
     return chosen.type === "null" ? null : "";
   }
-  function infer(value, filename = "") {
-    if (Array.isArray(value)) return "steps";
-    if (value && ("components" in value || "constraints" in value || "default" in value && "variants" in value)) return "ProductLineSpec";
-    return "configuration";
-  }
-  function rootSchema(schema, kind) {
-    if (kind === "configuration") return schema;
-    if (kind === "steps") return { type: "array", items: { $ref: "#/$defs/StepEntry" } };
-    return { $ref: `#/$defs/${kind}` };
-  }
-  return { type, resolve, choices, effective, child, at, initial, infer, rootSchema };
+  return { type, resolve, choices, effective, child, at, initial };
 });
