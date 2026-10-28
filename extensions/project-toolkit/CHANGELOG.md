@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.1
+
+- Replace the Activity Bar toolbox with the custom wizard and PTk lettering
+  on its hat. The SVG follows the active theme's Activity Bar colour.
+- Colour tree icons by category using the active VS Code theme: green jobs,
+  purple workflows, amber variants, gold configuration and blue repositories
+  and commands. Add category icons to the group headings.
+- Mark the selected variant with a green checkmark as well as its text label.
+
 ## 0.2.1
 
 - Rename Preview to Dry Run in command titles, tooltips, task labels and messages

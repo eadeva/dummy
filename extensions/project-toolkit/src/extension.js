@@ -3,6 +3,18 @@
 const path = require("node:path");
 const core = require("./core");
 
+// Native theme colours keep the tree readable in light, dark and high contrast
+// themes. Labels and icon shapes carry the same meaning without relying on colour.
+const iconColors = {
+  "root-folder": "charts.blue", repo: "charts.blue",
+  tools: "charts.green", "git-merge": "charts.purple",
+  "symbol-enum": "charts.orange", "pass-filled": "charts.green",
+  "settings-gear": "charts.yellow", "file-code": "charts.yellow",
+  terminal: "charts.blue", folder: "charts.blue",
+  question: "charts.purple", info: "charts.blue", check: "charts.green",
+  error: "errorForeground", warning: "list.warningForeground",
+};
+
 // VS Code is injected so command dispatch and trust boundaries can be tested
 // without pretending a mock is a graphical extension-host acceptance test.
 function createController(vscode, context) {
@@ -101,11 +113,15 @@ function createController(vscode, context) {
         description: kind === "workflow" ? (common.ci ? "dry-run only on CI" : "local") : (spec.default ? "default" : ""),
         icon: kind === "job" ? "tools" : "git-merge",
       }));
-      if (children.length) groups.push({ label: kind === "job" ? "Jobs" : "Workflows", children });
+      if (children.length) groups.push({
+        label: kind === "job" ? "Jobs" : "Workflows",
+        icon: kind === "job" ? "tools" : "git-merge", children,
+      });
     }
-    if (variants.length) groups.push({ label: "Variants", children: variants.map(spec => ({
+    if (variants.length) groups.push({ label: "Variants", icon: "symbol-enum", children: variants.map(spec => ({
       ...common, kind: "variant", name: spec.name, label: spec.name, tooltip: spec.description,
-      description: variantFor(project) === spec.name ? "selected" : "", contextValue: "variant", icon: "symbol-enum",
+      description: variantFor(project) === spec.name ? "selected" : "", contextValue: "variant",
+      icon: variantFor(project) === spec.name ? "pass-filled" : "symbol-enum",
       command: { command: "project-toolkit.selectVariant", title: "Select variant", arguments: [{ ...common, name: spec.name }] },
     })) });
     if (project.capabilities.validate) groups.push({
@@ -113,7 +129,7 @@ function createController(vscode, context) {
       command: { command: "project-toolkit.validate", title: "Validate", arguments: [common] },
     });
     groups.push(builtinTree(common, project.commands));
-    groups.push({ label: "Configuration", children: project.config_files.map(file => ({
+    groups.push({ label: "Configuration", icon: "settings-gear", children: project.config_files.map(file => ({
       label: path.relative(project.root, file), icon: "file-code", tooltip: file,
       command: { command: "vscode.open", title: "Open configuration", arguments: [vscode.Uri.file(file)] },
     })) });
@@ -128,7 +144,7 @@ function createController(vscode, context) {
       return records.map(record => {
         if (record.error) return { label: record.folder.name, description: "PTK unavailable", tooltip: record.error, icon: "warning" };
         const children = record.inventory.projects.map(project => projectNode(project, record));
-        if (record.inventory.workflows.length) children.unshift({ label: "Workspace workflows", children: record.inventory.workflows.map(spec => ({
+        if (record.inventory.workflows.length) children.unshift({ label: "Workspace workflows", icon: "git-merge", children: record.inventory.workflows.map(spec => ({
           kind: "workflow", name: spec.name, spec, root: record.inventory.root, folder: record.folder, ci: record.inventory.ci,
           label: spec.name, tooltip: spec.help, icon: "git-merge", contextValue: "workflow",
         })) });
@@ -145,7 +161,9 @@ function createController(vscode, context) {
       item.tooltip = element.tooltip;
       item.contextValue = element.contextValue;
       item.command = element.command;
-      if (element.icon) item.iconPath = new vscode.ThemeIcon(element.icon);
+      if (element.icon) item.iconPath = new vscode.ThemeIcon(
+        element.icon, iconColors[element.icon] ? new vscode.ThemeColor(iconColors[element.icon]) : undefined
+      );
       return item;
     },
   };

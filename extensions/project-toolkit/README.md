@@ -8,8 +8,8 @@ sidebar, help, variant selection, parameter prompts, configuration and reports.
 1. Install PTK from the same checkout/version as this extension. The CLI must
    support `ptk describe --json` (inventory schema version 1).
 2. In VS Code, run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.2.1.vsix`. You can also use
-   `code --install-extension project-toolkit-0.2.1.vsix`.
+   `project-toolkit-0.3.1.vsix`. You can also use
+   `code --install-extension project-toolkit-0.3.1.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -33,6 +33,12 @@ project. Discovery errors appear in **Output > Project Toolkit** and on the
 workspace node. Set `projectToolkit.discoveryTimeout` (seconds) for slow projects.
 
 ## Use
+
+Find PTK by its custom wizard icon, with **PTk** on the hat. The project tree
+uses theme colours to distinguish green jobs, purple workflows, orange variants,
+gold configuration files and blue repositories and commands. The selected variant
+has a green checkmark and a **selected** label. Colours follow your VS Code theme;
+labels and icon shapes also identify each category.
 
 - Expand **Jobs** and hover over a job to see four icons: **Run**, **Dry Run**,
   **Run Job with Parameters** (gear) and **Show Help** (question mark). Each icon
@@ -97,7 +103,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.2.1.vsix`. Use `ptk dry-run extension`
+`extensions/project-toolkit/project-toolkit-0.3.1.vsix`. Use `ptk dry-run extension`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:

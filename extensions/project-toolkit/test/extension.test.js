@@ -35,7 +35,7 @@ function harness(t, docs = [inventory()], trusted = true) {
   const api = {
     EventEmitter, Task, ProcessExecution,
     TreeItem: class { constructor(label, state) { Object.assign(this, { label, state }); } },
-    ThemeIcon: class {}, TreeItemCollapsibleState: { Expanded: 2, Collapsed: 1, None: 0 },
+    ThemeIcon: class {}, ThemeColor: class {}, TreeItemCollapsibleState: { Expanded: 2, Collapsed: 1, None: 0 },
     TaskRevealKind: { Always: 1 }, TaskPanelKind: { Dedicated: 2 },
     Uri: { file: fsPath => ({ scheme: "file", fsPath }) },
     window: {
