@@ -146,6 +146,39 @@ values, while job execution uses PTK's fully resolved configuration.
 
 ## Build and verify
 
+### Keep the form schema in sync
+
+`media/config-schema.json` is generated, not maintained by hand. After changing
+PTK's Pydantic models, run from the repository root:
+
+```sh
+uv sync
+uv run python scripts/generate_config_schema.py
+uv run python scripts/generate_config_schema.py --check
+```
+
+The generator reuses `ExportSchema`, the CLI's authored-YAML schema export.
+It preserves named step/workflow mappings, field aliases such as `with`,
+includes, shorthand unions, optional fragment fields and workspace rules.
+The initial 38-definition bundle matched this export completely, already
+guarded by `test_extension_form_schema_matches_canonical_model_schema` in the
+Python suite; that regression now uses this generator's check mode.
+The only form-specific addition is JSON defaults evaluated from Pydantic
+`default_factory` fields (including reporting formats and credential providers).
+Factories must be deterministic and independent of input data; generation fails
+for input-dependent factories or unrepresentable defaults. The development
+dependencies pin Pydantic for reproducibility; regenerate when upgrading it.
+
+`--check` compares the complete parsed schema, ignores JSON formatting/key order,
+prints a diff and fails on drift without changing files. The Python regression
+suite and the Linux/Windows extension CI jobs enforce this before packaging.
+New optional fields, definitions, types and defaults flow into the form through
+the schema; no JavaScript field list needs updating. Optional fields remain
+absent until selected. YAML editing and final semantic validation still use
+the existing editor and PTK CLI.
+
+### Package the extension
+
 With Node.js 22 or newer and npm installed, run from the PTK repository root:
 
 ```sh

@@ -12,6 +12,7 @@ import yaml
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import Version
 from pydantic import BaseModel, ValidationError
+from pydantic.json_schema import GenerateJsonSchema
 
 from ...domain.config import rules as config_rules
 from ...domain.config import tree as t
@@ -350,8 +351,12 @@ class ShowConfig:
 class ExportSchema:
     """JSON Schema of the configuration, with steps in their written form."""
 
-    def execute(self) -> dict[str, Any]:
-        schema = PtkConfig.model_json_schema(by_alias=True)
+    def execute(
+        self, *, schema_generator: type[GenerateJsonSchema] = GenerateJsonSchema
+    ) -> dict[str, Any]:
+        schema = PtkConfig.model_json_schema(
+            by_alias=True, schema_generator=schema_generator
+        )
         defs = schema.get("$defs", {})
         step = defs.get("StepSpec")
         if step:
@@ -420,7 +425,7 @@ class ExportSchema:
         schema["properties"]["repository"] = {"$ref": "#/$defs/RepositorySpec"}
         # Authored omission means automatic discovery, not explicit standalone.
         schema["properties"]["virtual_monorepo"].pop("default", None)
-        workspace = WorkspaceSpec.model_json_schema()
+        workspace = WorkspaceSpec.model_json_schema(schema_generator=schema_generator)
         schema["properties"]["members"] = workspace["properties"]["members"]
         schema["allOf"] = [
             {

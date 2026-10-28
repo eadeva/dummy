@@ -25,6 +25,7 @@ ptk = "ptk.drivers.cli.main:main"
 
 [dependency-groups]
 dev = [
+  "pydantic==2.14.1",  # Reproducible editor schema; regenerate when upgrading.
   "pytest>=8",
   "ruff>=0.6",
   "pre-commit>=4,<5",  # Real Git hook installation/execution regression tests.

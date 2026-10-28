@@ -42,6 +42,28 @@ test("new jobs use model fields and produce authored named steps", () => {
   assert.equal(S.effective(nullable, [], schema).type, "array");
 });
 
+test("every bundled model field is reachable and defaults retain their JSON types", () => {
+  for (const definition of [schema, ...Object.values(schema.$defs)]) {
+    for (const [key, field] of Object.entries(definition.properties || {})) {
+      const child = S.child(definition, {}, key, schema);
+      assert.deepEqual(child, field, `${definition.title}.${key}`);
+      if (Object.hasOwn(field, "default") && field.default !== null) {
+        assert.deepEqual(S.initial(child, schema), field.default, `${definition.title}.${key}`);
+      }
+    }
+  }
+  assert.deepEqual(S.initial(schema.$defs.ReportingSpec.properties.formats, schema), ["json", "html"]);
+  assert.deepEqual(S.initial(schema.$defs.CredentialSpec.properties.providers, schema), ["env", "keyring", "gopass", "vault", "prompt"]);
+  assert.deepEqual(S.initial(schema.$defs.ToolbaseSource.properties.bin, schema), ["."]);
+  // Defaults on a selected union branch and literal-only fields also apply.
+  assert.equal(S.initial({ anyOf: [{ type: "integer", default: 9 }, { type: "null" }] }, schema), 9);
+  assert.equal(S.initial({ type: "integer", const: 1 }, schema), 1);
+  const formats = S.initial(schema.$defs.ReportingSpec.properties.formats, schema);
+  formats.push("changed");
+  assert.deepEqual(schema.$defs.ReportingSpec.properties.formats.default, ["json", "html"]);
+  assert.deepEqual(S.initial(schema, schema), {}); // No eager optional fields.
+});
+
 test("edits reject stale paths, duplicate keys, multiple documents and unsafe payloads", () => {
   assert.throws(() => model.inspect("x: 1\nx: 2\n"), /unique/);
   assert.throws(() => model.inspect("---\nx: 1\n---\ny: 2\n"), /multiple documents/);

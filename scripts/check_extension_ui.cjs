@@ -12,7 +12,7 @@ const theme = `:root{--vscode-foreground:#d4d7df;--vscode-editor-background:#181
   const browser = await chromium.launch({ headless: true, executablePath: process.env.PTK_CHROMIUM, args: ["--no-sandbox", "--disable-dev-shm-usage"] });
   try {
     const errors = [];
-    async function connect(panel) {
+    async function connect(panel, schemaOverride) {
       const page = await browser.newPage({ viewport: { width: 1150, height: 900 } });
       page.on("pageerror", error => errors.push(error.message));
       await page.route("http://ptk.test/**", async route => {
@@ -26,7 +26,8 @@ const theme = `:root{--vscode-foreground:#d4d7df;--vscode-editor-background:#181
         let stored;
         window.acquireVsCodeApi = () => ({ postMessage: message => window.ptkHost(message), getState: () => stored, setState: value => { stored = value; } });
       });
-      panel.onPost = message => page.evaluate(data => window.dispatchEvent(new MessageEvent("message", { data })), message);
+      panel.onPost = message => page.evaluate(data => window.dispatchEvent(new MessageEvent("message", { data })),
+        message.schema && schemaOverride ? { ...message, schema: schemaOverride } : message);
       await page.goto("http://ptk.test/index.html");
       return page;
     }
@@ -66,6 +67,40 @@ const theme = `:root{--vscode-foreground:#d4d7df;--vscode-editor-background:#181
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
     await page.close();
 
+    // Exercise the generated factory defaults and future optional fields through
+    // the actual form controls, without adding a JavaScript field allowlist.
+    const futureSchema = structuredClone(require("../extensions/project-toolkit/media/config-schema.json"));
+    Object.assign(futureSchema.properties, {
+      future_enabled: { type: "boolean", default: true },
+      future_count: { type: "integer", default: 7 },
+      future_ratio: { anyOf: [{ type: "number" }, { type: "null" }], default: 0.25 },
+      future_mode: { type: "string", enum: ["debug", "release"], default: "release" },
+    });
+    const future = harness("# Optional fields stay absent\n{}\n");
+    const futurePanel = await future.resolve();
+    const f = await connect(futurePanel, futureSchema);
+    await f.getByRole("heading", { name: "Configuration", exact: true }).waitFor();
+    assert.deepEqual(YAML.parse(future.document.getText()), {});
+    for (const key of ["future_enabled", "future_count", "future_ratio", "future_mode", "reporting"]) {
+      await f.getByRole("combobox", { name: "Optional field", exact: true }).selectOption(key);
+      await f.getByRole("button", { name: "Add field", exact: true }).click();
+      await f.locator("section.field").filter({ has: f.getByText(key, { exact: true }) }).waitFor();
+    }
+    assert.equal(await f.getByLabel("future_enabled", { exact: true }).isChecked(), true);
+    assert.equal(await f.getByLabel("future_count", { exact: true }).getAttribute("type"), "number");
+    assert.equal(await f.getByLabel("future_ratio", { exact: true }).inputValue(), "0.25");
+    assert.equal(await f.getByLabel("future_mode", { exact: true }).inputValue(), "release");
+    assert.deepEqual(YAML.parse(future.document.getText()), {
+      future_enabled: true, future_count: 7, future_ratio: 0.25, future_mode: "release",
+      reporting: { formats: ["json", "html"], dir: null },
+    });
+    await f.getByRole("combobox", { name: "future_ratio value type", exact: true }).selectOption("null");
+    await f.getByRole("button", { name: "Save", exact: true }).click();
+    await f.getByText("Saved", { exact: true }).waitFor();
+    assert.equal(YAML.parse(future.document.getText()).future_ratio, null);
+    assert.ok(future.document.getText().includes("# Optional fields stay absent"));
+    await f.close();
+
     const params = [
       { name: "output", type: "path", required: true, help: "Folder for the build output" },
       { name: "verbose", type: "bool", default: true, help: "Include diagnostic output" },
@@ -91,6 +126,6 @@ const theme = `:root{--vscode-foreground:#d4d7df;--vscode-editor-background:#181
     await p.getByRole("button", { name: "Dry run", exact: true }).click();
     assert.deepEqual(await result, { preview: true, params: { output: "folder with spaces;$(literal)", verbose: "false", mode: "release" } });
     assert.deepEqual(errors, []);
-    console.log("Extension webviews: add job/model fields, preserve comments, edit/save/raw/undo, narrow layout, parameter defaults/choices/checkboxes/literal values and dry run passed.");
+    console.log("Extension webviews: add job/model fields, future optional types and factory defaults, preserve comments, edit/save/raw/undo, narrow layout, parameter defaults/choices/checkboxes/literal values and dry run passed.");
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

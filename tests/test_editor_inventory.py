@@ -198,12 +198,8 @@ def test_parameter_forms_receive_authored_defaults_without_resolving_environment
 
 
 def test_extension_form_schema_matches_canonical_model_schema():
-    from pathlib import Path
+    from scripts.generate_config_schema import main
 
-    from ptk.application.use_cases.project import ExportSchema
-
-    file = (
-        Path(__file__).parents[1]
-        / "extensions/project-toolkit/media/config-schema.json"
-    )
-    assert json.loads(file.read_text()) == ExportSchema().execute()
+    # Retain the full-model check, including the form's factory defaults, and
+    # report the exact diff and regeneration command if the bundle is stale.
+    assert main(["--check"]) == 0

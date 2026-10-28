@@ -36,6 +36,8 @@
     // represents the default null. Defaults never populate unselected fields.
     if (Object.hasOwn(schema, "default") && schema.default !== null) return structuredClone(schema.default);
     const chosen = choices(schema, root).find(part => part.type !== "null") || schema;
+    if (Object.hasOwn(chosen, "default") && chosen.default !== null) return structuredClone(chosen.default);
+    if (Object.hasOwn(chosen, "const")) return structuredClone(chosen.const);
     if (chosen.enum) return chosen.enum[0];
     if (chosen.type === "object") {
       const value = {};

@@ -26,6 +26,7 @@
           "additionalProperties": {
             "type": "string"
           },
+          "default": {},
           "title": "Properties"
         },
         "select": {
@@ -116,6 +117,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/JobDestination"
           },
+          "default": {},
           "title": "Jobs",
           "type": "object"
         }
@@ -163,6 +165,7 @@
           "type": "string"
         },
         "requires_components": {
+          "default": [],
           "items": {
             "type": "string"
           },
@@ -173,6 +176,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/FeatureSpec"
           },
+          "default": {},
           "title": "Features",
           "type": "object"
         }
@@ -220,6 +224,9 @@
           "type": "string"
         },
         "fields": {
+          "default": [
+            "token"
+          ],
           "items": {
             "type": "string"
           },
@@ -227,6 +234,13 @@
           "type": "array"
         },
         "providers": {
+          "default": [
+            "env",
+            "keyring",
+            "gopass",
+            "vault",
+            "prompt"
+          ],
           "items": {
             "type": "string"
           },
@@ -237,6 +251,7 @@
           "additionalProperties": {
             "type": "string"
           },
+          "default": {},
           "title": "Env",
           "type": "object"
         },
@@ -324,6 +339,7 @@
           "type": "boolean"
         },
         "keep": {
+          "default": [],
           "items": {
             "type": "string"
           },
@@ -334,10 +350,12 @@
           "additionalProperties": {
             "type": "string"
           },
+          "default": {},
           "title": "Set",
           "type": "object"
         },
         "unset": {
+          "default": [],
           "items": {
             "type": "string"
           },
@@ -345,6 +363,7 @@
           "type": "array"
         },
         "path_prepend": {
+          "default": [],
           "items": {
             "type": "string"
           },
@@ -352,6 +371,7 @@
           "type": "array"
         },
         "path_append": {
+          "default": [],
           "items": {
             "type": "string"
           },
@@ -497,6 +517,7 @@
           "title": "Depends On"
         },
         "requires": {
+          "default": [],
           "items": {
             "type": "string"
           },
@@ -504,6 +525,7 @@
           "type": "array"
         },
         "conflicts": {
+          "default": [],
           "items": {
             "type": "string"
           },
@@ -559,6 +581,7 @@
           "type": "boolean"
         },
         "only_variants": {
+          "default": [],
           "items": {
             "type": "string"
           },
@@ -566,6 +589,7 @@
           "type": "array"
         },
         "omit_variants": {
+          "default": [],
           "items": {
             "type": "string"
           },
@@ -592,6 +616,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/VersionDependency"
           },
+          "default": {},
           "title": "Version Dependencies",
           "type": "object"
         },
@@ -624,6 +649,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/ParamSpec"
           },
+          "default": {},
           "title": "Params",
           "type": "object"
         },
@@ -640,6 +666,7 @@
                   }
                 ]
               },
+              "default": {},
               "title": "Requires Tools",
               "type": "object"
             },
@@ -655,6 +682,7 @@
           "additionalProperties": {
             "type": "string"
           },
+          "default": {},
           "title": "Env",
           "type": "object"
         },
@@ -840,6 +868,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/ComponentSpec"
           },
+          "default": {},
           "title": "Components",
           "type": "object"
         },
@@ -847,10 +876,12 @@
           "additionalProperties": {
             "$ref": "#/$defs/VariantSpec"
           },
+          "default": {},
           "title": "Variants",
           "type": "object"
         },
         "constraints": {
+          "default": [],
           "items": {
             "$ref": "#/$defs/Constraint"
           },
@@ -858,7 +889,11 @@
           "type": "array"
         },
         "env": {
-          "$ref": "#/$defs/VariantEnvSpec"
+          "$ref": "#/$defs/VariantEnvSpec",
+          "default": {
+            "prefix": "VH_",
+            "legacy_bo": false
+          }
         }
       },
       "title": "ProductLineSpec",
@@ -911,6 +946,7 @@
           "title": "Uvx"
         },
         "with": {
+          "default": [],
           "items": {
             "type": "string"
           },
@@ -941,6 +977,7 @@
           "title": "Project"
         },
         "groups": {
+          "default": [],
           "items": {
             "type": "string"
           },
@@ -968,6 +1005,10 @@
       "additionalProperties": false,
       "properties": {
         "formats": {
+          "default": [
+            "json",
+            "html"
+          ],
           "items": {
             "type": "string"
           },
@@ -1065,6 +1106,7 @@
             "additionalProperties": true,
             "type": "object"
           },
+          "default": {},
           "title": "Installers",
           "type": "object"
         },
@@ -1231,6 +1273,9 @@
           "type": "string"
         },
         "bin": {
+          "default": [
+            "."
+          ],
           "items": {
             "type": "string"
           },
@@ -1270,6 +1315,7 @@
           "additionalProperties": {
             "type": "string"
           },
+          "default": {},
           "title": "Repo Variants",
           "type": "object"
         },
@@ -1284,6 +1330,7 @@
           "type": "boolean"
         },
         "extends": {
+          "default": [],
           "items": {
             "type": "string"
           },
@@ -1291,6 +1338,7 @@
           "type": "array"
         },
         "aliases": {
+          "default": [],
           "items": {
             "type": "string"
           },
@@ -1326,11 +1374,13 @@
               }
             ]
           },
+          "default": {},
           "title": "Features",
           "type": "object"
         },
         "data": {
           "additionalProperties": true,
+          "default": {},
           "title": "Data",
           "type": "object"
         }
@@ -1342,6 +1392,7 @@
       "additionalProperties": false,
       "properties": {
         "requirements": {
+          "default": [],
           "items": {
             "type": "string"
           },
@@ -1349,6 +1400,7 @@
           "type": "array"
         },
         "packages": {
+          "default": [],
           "items": {
             "type": "string"
           },
@@ -1408,6 +1460,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/VersionSource"
           },
+          "default": {},
           "title": "Components",
           "type": "object"
         }
@@ -1586,6 +1639,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/VersionSource"
           },
+          "default": {},
           "title": "Components",
           "type": "object"
         },
@@ -1593,6 +1647,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/VersionOverride"
           },
+          "default": {},
           "title": "Variants",
           "type": "object"
         },
@@ -1600,6 +1655,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/VersionDependency"
           },
+          "default": {},
           "title": "Dependencies",
           "type": "object"
         }
@@ -1676,6 +1732,7 @@
           "type": "boolean"
         },
         "only_variants": {
+          "default": [],
           "items": {
             "type": "string"
           },
@@ -1683,6 +1740,7 @@
           "type": "array"
         },
         "omit_variants": {
+          "default": [],
           "items": {
             "type": "string"
           },
@@ -1733,6 +1791,7 @@
         },
         "with": {
           "additionalProperties": true,
+          "default": {},
           "title": "With",
           "type": "object"
         },
@@ -1813,6 +1872,7 @@
           "additionalProperties": {
             "type": "string"
           },
+          "default": {},
           "title": "Env",
           "type": "object"
         },
@@ -1820,6 +1880,7 @@
           "additionalProperties": {
             "type": "string"
           },
+          "default": {},
           "title": "Secrets",
           "type": "object"
         },
@@ -1902,6 +1963,7 @@
         },
         "params": {
           "additionalProperties": true,
+          "default": {},
           "title": "Params",
           "type": "object"
         },
@@ -1969,6 +2031,7 @@
       "additionalProperties": {
         "$ref": "#/$defs/WorkflowSpec"
       },
+      "default": {},
       "title": "Workflows",
       "type": "object"
     },
@@ -2003,11 +2066,13 @@
     },
     "vars": {
       "additionalProperties": true,
+      "default": {},
       "title": "Vars",
       "type": "object"
     },
     "param_defaults": {
       "additionalProperties": true,
+      "default": {},
       "title": "Param Defaults",
       "type": "object"
     },
@@ -2024,6 +2089,7 @@
               }
             ]
           },
+          "default": {},
           "title": "Requires Tools",
           "type": "object"
         },
@@ -2036,12 +2102,22 @@
       ]
     },
     "environment": {
-      "$ref": "#/$defs/EnvironmentSpec"
+      "$ref": "#/$defs/EnvironmentSpec",
+      "default": {
+        "isolate": true,
+        "inherit_path": false,
+        "keep": [],
+        "set": {},
+        "unset": [],
+        "path_prepend": [],
+        "path_append": []
+      }
     },
     "tools": {
       "additionalProperties": {
         "$ref": "#/$defs/ToolSpec"
       },
+      "default": {},
       "title": "Tools",
       "type": "object"
     },
@@ -2049,6 +2125,7 @@
       "additionalProperties": {
         "$ref": "#/$defs/CredentialSpec"
       },
+      "default": {},
       "title": "Credentials",
       "type": "object"
     },
@@ -2081,6 +2158,7 @@
       "additionalProperties": {
         "$ref": "#/$defs/JobSpec"
       },
+      "default": {},
       "title": "Jobs",
       "type": "object"
     },
@@ -2088,6 +2166,7 @@
       "additionalProperties": {
         "$ref": "#/$defs/SharedConfigSpec"
       },
+      "default": {},
       "propertyNames": {
         "enum": [
           "pre-commit",
@@ -2101,15 +2180,34 @@
       "type": "object"
     },
     "layout": {
-      "$ref": "#/$defs/LayoutSpec"
+      "$ref": "#/$defs/LayoutSpec",
+      "default": {
+        "root": ".",
+        "builds": "_builds",
+        "bin": "_bin",
+        "logs": "_logs",
+        "reports": "_reports"
+      }
     },
     "logging": {
-      "$ref": "#/$defs/LoggingSpec"
+      "$ref": "#/$defs/LoggingSpec",
+      "default": {
+        "level": "info",
+        "keep_history": 10
+      }
     },
     "reporting": {
-      "$ref": "#/$defs/ReportingSpec"
+      "$ref": "#/$defs/ReportingSpec",
+      "default": {
+        "formats": [
+          "json",
+          "html"
+        ],
+        "dir": null
+      }
     },
     "plugins": {
+      "default": [],
       "items": {
         "type": "string"
       },
@@ -2124,6 +2222,7 @@
         ],
         "type": "string"
       },
+      "default": {},
       "propertyNames": {
         "enum": [
           "setup",
