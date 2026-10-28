@@ -33,7 +33,7 @@ dev = [
 ]
 
 docs = ["sphinx==9.1.0"]
-release = ["build>=1.2", "hatchling>=1.24", "twine>=6", "pip>=24"]
+release = ["build>=1.2", "hatchling>=1.24", "editables>=0.3", "twine>=6", "pip>=24"]
 
 [tool.hatch.build.hooks.custom]
 path = "hatch_build.py"
@@ -59,6 +59,13 @@ cache-keys = [
   {file = "pyproject.toml"}, {file = ".main.ptk.yml"},
   {file = "config/ptk/**/*.ptk.yml"}, {file = "hatch_*.py"},
   {file = "src/ptk/package_version.py"}, {file = "PKG-INFO"},
+  {file = "src/ptk/**/*.py"},
+  {file = "extensions/project-toolkit/package*.json"},
+  {file = "extensions/project-toolkit/src/**"},
+  {file = "extensions/project-toolkit/media/**"},
+  {file = "extensions/project-toolkit/test/**"},
+  {file = "extensions/project-toolkit/README.md"},
+  {file = "extensions/project-toolkit/.vscodeignore"},
   {git = {commit = true, tags = true}},
 ]
 

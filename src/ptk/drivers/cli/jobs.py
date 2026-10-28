@@ -624,9 +624,9 @@ class ProjectGroup(AccessGroup):
     def resolve_command(self, ctx: click.Context, args: list[str]) -> Any:
         name = args[0] if args else None
         if (
-            name in self._workflows(ctx)
+            name not in self.commands
+            and name in self._workflows(ctx)
             and name in self._jobs(ctx)
-            and name not in self.commands
         ):
             state = state_of(ctx)
             job = self._jobs(ctx)[name]

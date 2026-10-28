@@ -3,6 +3,8 @@
 #
 #   curl -LsSf <url>/install.sh | sh
 #   PTK_SOURCE="git+https://github.com/<org>/ptk@v0.1.0" sh install.sh
+#   sh install.sh --no-extension     install the CLI without changing VS Code
+#   sh install.sh --force-extension  reinstall/downgrade the bundled extension
 #
 # Environment:
 #   PTK_SOURCE   what 'uv tool install' installs (default: this checkout, otherwise ptk from your index)
@@ -11,6 +13,16 @@
 set -eu
 
 say() { printf 'ptk-install: %s\n' "$*"; }
+
+no_extension=0
+force_extension=0
+for option in "$@"; do
+    case "$option" in
+        --no-extension) no_extension=1 ;;
+        --force-extension) force_extension=1 ;;
+        *) say "unknown option: $option (use --no-extension or --force-extension)"; exit 2 ;;
+    esac
+done
 
 if ! command -v uv >/dev/null 2>&1; then
     if [ -x "$HOME/.local/bin/uv" ]; then
@@ -37,6 +49,7 @@ if [ -z "$source" ]; then
         checkout=$(CDPATH= cd -- "$script_dir/.." && pwd)
         if [ -f "$checkout/pyproject.toml" ] && [ -d "$checkout/src/ptk" ]; then
             source="$checkout"
+            force_extension=1
         fi
     fi
 fi
@@ -51,6 +64,21 @@ say "installing/updating $source"
 # Reinstall even when the package version is unchanged; refresh resolution too.
 uv tool install --force --reinstall --upgrade --python 3.12 "$source"
 uv tool update-shell >/dev/null 2>&1 || true
+
+if [ "$no_extension" = 0 ]; then
+    tool_bin=$(uv tool dir --bin)
+    # Git Bash receives a Windows path from the native uv executable.
+    if command -v cygpath >/dev/null 2>&1; then tool_bin=$(cygpath -u "$tool_bin"); fi
+    ptk_executable="$tool_bin/ptk"
+    if [ -f "$tool_bin/ptk.exe" ]; then ptk_executable="$tool_bin/ptk.exe"; fi
+    if [ ! -x "$ptk_executable" ]; then say "PTK installed, but cannot find its executable in $tool_bin"; exit 1; fi
+    set -- setup extension --if-available
+    if [ "$force_extension" = 1 ]; then set -- "$@" --force; fi
+    if ! "$ptk_executable" "$@"; then
+        say 'PTK installed, but extension setup failed; retry: ptk setup extension'
+        exit 1
+    fi
+fi
 
 say "done - open a new terminal, then run: ptk setup doctor"
 say 'enable Bash Tab completion: eval "$(ptk setup completion bash)"'

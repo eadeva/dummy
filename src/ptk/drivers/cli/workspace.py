@@ -40,8 +40,13 @@ class RepositoryGroup(ProjectGroup):
 
 class WorkspaceGroup(ProjectGroup):
     def resolve_command(self, ctx, args):
-        if args[:2] == ["setup", "completion"]:
+        if (
+            len(args) >= 2
+            and args[0] == "setup"
+            and args[1] in {"completion", "extension"}
+        ):
             ctx.meta["vmr_repositories"] = None
+            ctx.meta["host_setup"] = True
             state_of(ctx).completion = True
         # Init resolves its scope itself, including members without PTK config.
         if args[:2] == ["setup", "init"] or args[:1] == ["init"]:

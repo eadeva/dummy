@@ -5,10 +5,26 @@ Project Toolkit extension
 -----------------------------
 
 The ``project-toolkit`` extension in ``extensions/project-toolkit`` provides a
-sidebar for jobs, workflows, built-in commands, variants and configuration files. Install the VSIX
-using VS Code's **Extensions: Install from VSIX...**, then open a trusted PTK
+sidebar for jobs, workflows, built-in commands, variants and configuration files.
+Run ``ptk setup extension`` to install the VSIX bundled with the Python package,
+then open a trusted PTK
 repository or VMR. PTK must be installed on the workspace host and support
 ``ptk describe --json``. The extension requires VS Code 1.96 or newer.
+
+Both installers run extension setup automatically when ``code`` is available.
+Use ``install.ps1 -NoExtension`` or ``install.sh --no-extension`` to skip it.
+The setup command works outside projects and with broken configuration, and is
+available to every user. It is separate from maintainer-only ``setup vscode``,
+which writes shared project tasks and skills.
+
+Use ``--code code-insiders`` (or an absolute launcher path) for another VS Code
+installation and ``--profile NAME`` to choose a VS Code profile. The command
+keeps an equal/newer installed extension; ``--force`` explicitly reinstalls or
+downgrades it. A retained newer extension still checks PTK's JSON interface when
+it loads. ``--output PATH`` exports the VSIX without starting VS Code and refuses
+to overwrite existing files. VSIX installations do not automatically follow
+Python upgrades: rerun the installer or ``ptk setup extension`` after upgrading
+PTK. In remote workspaces run setup on the workspace host.
 
 Hover over a job to see Run, Dry Run, **Run Job with Parameters** (gear) and
 **Show Help** (question mark), each with a tooltip. The gear prompts for optional
@@ -63,6 +79,49 @@ Set ``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
 integration tests. CI builds downloadable VSIX artifacts on Linux and Windows;
 Marketplace publication is separate. See the extension README for installation,
 settings and manual smoke-test instructions.
+
+Developing PTK locally
+----------------------
+
+The existing checkout installation still works::
+
+   # PowerShell, at the repository root
+   .\install\install.ps1
+
+   # Bash
+   sh install/install.sh
+
+It rebuilds the wheel and bundled VSIX from this checkout, reinstalls PTK and
+refreshes even a same-version extension. Node.js 22+ and npm are needed for this
+source build. Reload the VS Code window after installation. ``-ForceExtension``
+or ``--force-extension`` requests the same behaviour for explicit ``PTK_SOURCE``
+overrides. The installers' Python source installation still explicitly
+reinstalls the selected source; it is not a general package downgrade guard.
+
+For the fast Python edit/test loop, run ``uv sync`` once, then ``uv run ptk ...``.
+Python edits take effect immediately in the editable environment. In the
+extension settings, use the absolute path to this checkout's
+``.venv/Scripts/ptk.exe`` (Windows) or ``.venv/bin/ptk`` (Linux), so projects
+opened elsewhere also use the development CLI. Run ``uv sync`` again when
+dependencies change.
+
+For extension changes, open ``extensions/project-toolkit`` as a VS Code folder,
+run ``npm ci --include=dev`` once and press F5. The included launch configuration
+builds the extension and starts an Extension Development Host. Open a test
+project there and point it at the development CLI as above. After editing
+JavaScript, run ``npm run build`` and reload the development window.
+
+To install a development build into your normal VS Code instead::
+
+   uv run ptk extension
+   uv run ptk setup extension --vsix extensions/project-toolkit/project-toolkit-0.7.0.vsix --force
+
+Editable installs intentionally contain no built-in VSIX; supply ``--vsix`` for
+this workflow. Full ``uv run ptk package`` builds the release artifacts containing
+the extension. This keeps local testing independent of publishing or version bumps.
+
+Variable insertion
+------------------
 
 Template-capable configuration text inputs offer **Insert variable…** and
 autocomplete when typing ``${``. Search by name, group or description; use

@@ -3,12 +3,14 @@
 #   powershell -ExecutionPolicy Bypass -File install.ps1
 #   $env:PTK_SOURCE = "git+https://github.com/<org>/ptk@v0.1.0"; .\install.ps1
 #   .\install.ps1 -NoCompletion   leave completion and profiles unchanged
+#   .\install.ps1 -NoExtension    install the CLI without changing VS Code
+#   .\install.ps1 -ForceExtension reinstall/downgrade the bundled extension explicitly
 #
 # Environment:
 #   PTK_SOURCE   what 'uv tool install' installs (default: this checkout, otherwise ptk from your index)
 #   PTK_EXTRAS   optional extras, e.g. "keyring" (Windows Credential Manager)
 #   UV_INDEX_URL / UV_EXTRA_INDEX_URL   your package index (standard uv variables)
-param([switch]$NoCompletion)
+param([switch]$NoCompletion, [switch]$NoExtension, [switch]$ForceExtension)
 
 $ErrorActionPreference = "Stop"
 
@@ -27,6 +29,7 @@ if (-not $uv) {
 }
 
 $source = $env:PTK_SOURCE
+$fromCheckout = $false
 if (-not $source) {
     $source = "ptk"
     if ($PSScriptRoot) {
@@ -34,6 +37,7 @@ if (-not $source) {
         if ((Test-Path (Join-Path $checkout "pyproject.toml")) -and
             (Test-Path (Join-Path $checkout "src/ptk") -PathType Container)) {
             $source = $checkout
+            $fromCheckout = $true
         }
     }
 }
@@ -48,14 +52,25 @@ uv tool install --force --reinstall --upgrade --python 3.12 $source
 if ($LASTEXITCODE -ne 0) { throw "uv tool install failed" }
 uv tool update-shell | Out-Null
 
+if (-not $NoCompletion -or -not $NoExtension) {
+    $toolBin = (uv tool dir --bin | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0 -or -not $toolBin) { throw "PTK installed, but cannot locate uv's tool directory" }
+    $ptkExecutable = Join-Path $toolBin "ptk.exe"
+    if (-not (Test-Path -LiteralPath $ptkExecutable -PathType Leaf)) { throw "ptk.exe not found in $toolBin" }
+    $env:Path = $toolBin + [IO.Path]::PathSeparator + $env:Path
+}
+
+if (-not $NoExtension) {
+    # A checkout rebuild must refresh same-version extension code during development.
+    $extensionOptions = @("setup", "extension", "--if-available")
+    if ($ForceExtension -or $fromCheckout) { $extensionOptions += "--force" }
+    & $ptkExecutable @extensionOptions
+    if ($LASTEXITCODE -ne 0) { throw "PTK installed, but extension setup failed; retry: ptk setup extension" }
+}
+
 if (-not $NoCompletion) {
     try {
         # Use the tool just installed, even if an older ptk is active in a venv.
-        $toolBin = (uv tool dir --bin | Out-String).Trim()
-        if ($LASTEXITCODE -ne 0 -or -not $toolBin) { throw "cannot locate uv's tool directory" }
-        $ptkExecutable = Join-Path $toolBin "ptk.exe"
-        if (-not (Test-Path -LiteralPath $ptkExecutable -PathType Leaf)) { throw "ptk.exe not found in $toolBin" }
-        $env:Path = $toolBin + [IO.Path]::PathSeparator + $env:Path
         & $ptkExecutable setup completion powershell --double-tab --install $PROFILE.CurrentUserAllHosts
         if ($LASTEXITCODE -ne 0) { throw "could not update the PowerShell profile" }
         $completionScript = & $ptkExecutable setup completion powershell --double-tab | Out-String

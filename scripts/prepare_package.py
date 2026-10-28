@@ -100,6 +100,23 @@ def smoke(wheel: Path, temporary: Path) -> None:
     )
     project = temporary / "consumer"
     project.mkdir()
+    # Export before project initialization: setup extension is host-level and the
+    # wheel must carry the VSIX without Node.js or access to the source checkout.
+    exported = temporary / "bundled-extension.vsix"
+    run(
+        "-I",
+        "-c",
+        SMOKE,
+        str(installed),
+        "setup",
+        "extension",
+        "--output",
+        str(exported),
+        cwd=project,
+    )
+    with zipfile.ZipFile(exported) as archive:
+        archive.getinfo("extension/package.json")
+        archive.getinfo("extension/dist/extension.js")
     for args in (
         ["setup", "init", "--config-dir", "config/ptk", "--yes"],
         ["setup", "config", "validate"],
@@ -143,6 +160,7 @@ def prepare(output: Path) -> Path:
         if len(wheels) != 1 or len(sdists) != 1:
             raise ValueError("expected exactly one wheel and one source distribution")
         with zipfile.ZipFile(wheels[0]) as wheel:
+            wheel.getinfo("ptk/resources/extension/project-toolkit.vsix")
             metadata = Parser().parsestr(
                 wheel.read(
                     next(

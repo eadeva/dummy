@@ -11,6 +11,24 @@ selects the uv ``release`` and ``docs`` dependency groups and creates::
      SHA256SUMS
      manifest.json
 
+The wheel and source distribution include the tested Project Toolkit VSIX at
+``ptk/resources/extension/project-toolkit.vsix`` (under ``src`` in the sdist).
+Building a release from a checkout requires Node.js 22+ and npm: the build hook
+installs the extension's locked dependencies, runs its checks/tests and compiles
+the VSIX before packaging Python. A missing or failed extension build fails the
+release. Rebuilding a wheel from the sdist reuses the included VSIX and needs no
+Node.js, npm, Git checkout or extension download. Editable builds (``uv sync``)
+skip the VSIX build so Python development stays fast.
+
+Publish the Python distributions to your Artifactory PyPI repository. The
+installer installs PTK, then calls ``ptk setup extension --if-available`` using
+the installed tool's executable. The extension needs no separate publication
+or release manifest. ``ptk setup extension --output project-toolkit.vsix``
+exports it for manual installation. Plain ``uv tool install`` only installs the
+package; call ``ptk setup extension`` afterwards to install/update VS Code too.
+No editor installation runs during wheel building, import or normal CLI startup.
+The installers remain small separate bootstrap scripts.
+
 Nothing is uploaded, tagged or version-bumped. No Artifactory endpoint or
 credentials are needed. The version comes from PTK's project versioning
 configuration in ``config/ptk/versioning.ptk.yml``. It is Git-managed:
@@ -39,7 +57,8 @@ The job builds a source distribution and then the wheel from that archive,
 using the build dependencies supplied by uv. It checks package metadata with
 ``twine check --strict``, installs the wheel without dependency downloads into
 a temporary target, and runs the installed CLI in a separate consumer project.
-That smoke test validates config creation and offline VS Code skill setup;
+That smoke test exports the bundled VSIX before creating a project, validates
+config creation and checks offline VS Code skill setup;
 runtime dependencies come from the job's environment. It builds Sphinx HTML
 with warnings treated as errors and computes SHA-256 checksums for the artifacts.
 

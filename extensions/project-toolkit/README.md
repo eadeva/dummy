@@ -5,9 +5,11 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
 
 ## Install
 
-1. Install PTK from the same checkout/version as this extension. The CLI must
+1. Install PTK using `install/install.ps1` or `install/install.sh`. Both install
+   the extension bundled in the Python package when VS Code is available. The CLI must
    support `ptk describe --json` (inventory schema version 1).
-2. In VS Code, run **Extensions: Install from VSIX...** and select
+2. If PTK was installed directly with uv, run `ptk setup extension` afterwards.
+   Alternatively, in VS Code run **Extensions: Install from VSIX...** and select
    `project-toolkit-0.7.0.vsix`. You can also use
    `code --install-extension project-toolkit-0.7.0.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
@@ -16,6 +18,17 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
 VS Code 1.96 or newer is required. The extension runs on the workspace host;
 for SSH, WSL or Dev Containers, install PTK on that host. The extension is
 distributed as a VSIX, without a Marketplace publication.
+
+`ptk setup extension` works without a project, preserves equal/newer extension
+versions, and accepts `--force` for a deliberate reinstall/downgrade,
+`--profile NAME`, `--code code-insiders`, and `--output PATH` for offline export.
+Rerun it after upgrading the Python package to apply the bundled extension.
+For local Python edits, `uv sync` creates an editable environment; point the
+extension executable at its `.venv/Scripts/ptk.exe` or `.venv/bin/ptk`.
+For extension development, open this folder, run `npm ci --include=dev`, then F5.
+The launch configuration builds the extension and starts a Development Host.
+Rebuild and reload that window after edits. To update normal VS Code, build the
+VSIX and run `uv run ptk setup extension --vsix PATH --force` from the PTK root.
 
 If PTK is not on the extension host's PATH, set **Project Toolkit: Executable**
 to its absolute path. To use a uv-managed project, run `uv sync` in its root once

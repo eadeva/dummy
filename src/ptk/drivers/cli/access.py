@@ -55,6 +55,8 @@ ALIASES = {
 
 
 def allowed(ctx, name):
+    if ctx.meta.get("host_setup") and name in {"setup", "completion", "extension"}:
+        return True
     state = state_of(ctx)
     parts = [name]
     while ctx.parent is not None and not getattr(

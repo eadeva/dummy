@@ -28,6 +28,7 @@ from .completion import jobs as complete_jobs
 from .completion import parameters as complete_parameters
 from .completion import variants as complete_variants
 from .editor import describe
+from .extension import extension_command
 from .hooks import pre_commit_group
 from .jobs import (
     ProjectGroup,
@@ -1241,6 +1242,7 @@ def _group_setup_commands() -> None:
     )
     setup.add_command(setup_command, "install")
     setup.add_command(completion_command)
+    setup.add_command(extension_command)
     setup.add_command(init_command, "init")
     alias = copy.copy(init_command)
     alias.hidden = True

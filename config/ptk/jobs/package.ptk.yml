@@ -1,5 +1,10 @@
 # PTK configuration: this file owns its section or named entity.
-help: Prepare Python distributions and offline documentation for Artifactory
+help: Prepare Python distributions with the VS Code extension and offline documentation
+requires_tools:
+- node
+- npm
+environment:
+  inherit_path: true
 env:
   UV_PROJECT_ENVIRONMENT: ${project.root}/.ptk/venvs/package
 steps:

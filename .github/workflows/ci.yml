@@ -89,5 +89,10 @@ jobs:
           version: '0.13.4'
           python-version: '3.12'
       - run: uv sync --group release --group docs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: extensions/project-toolkit/package-lock.json
       - run: uv run pytest -q tests/test_package_build.py
       - run: uv run ptk package

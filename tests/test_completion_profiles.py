@@ -184,7 +184,7 @@ function uv {
     if ($args[0] -eq 'tool' -and $args[1] -eq 'dir') { $env:TEST_BIN }
     if ($env:TEST_MODE -eq 'failure' -and $args[1] -eq 'install') { $global:LASTEXITCODE = 9 }
 }
-$options = @{}
+$options = @{ NoExtension = $true }
 if ($env:TEST_MODE -eq 'opt-out') { $options.NoCompletion = $true }
 & $env:TEST_INSTALL @options
 if ($env:TEST_MODE -eq 'default') {

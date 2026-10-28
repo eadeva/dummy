@@ -49,11 +49,17 @@ def test_tagged_build_and_frozen_sdist_rebuild(tmp_path):
             "_build",
             "dist",
             "uv.lock",
+            "node_modules",
+            "*.vsix",
             "local.ptk.yml",
             ".gen.version.ptk.yml",
         ),
     )
-    env = {k: v for k, v in os.environ.items() if not k.startswith(("PTK_", "_PTK_"))}
+    env = {
+        k: v
+        for k, v in os.environ.items()
+        if not k.startswith(("PTK_", "_PTK_")) or k.startswith("PTK_TEST_")
+    }
 
     def git(*args):
         subprocess.run(
@@ -92,6 +98,8 @@ def test_tagged_build_and_frozen_sdist_rebuild(tmp_path):
     source = next(extracted.iterdir())
     assert not (source / ".git").exists()
     assert (source / "install/install.sh").is_file()
+    assert (source / "src/ptk/resources/extension/project-toolkit.vsix").is_file()
+    assert not (source / "extensions").exists()  # no Node required by sdist consumers
     rebuilt = tmp_path / "rebuilt"
     subprocess.run(
         [
@@ -104,9 +112,33 @@ def test_tagged_build_and_frozen_sdist_rebuild(tmp_path):
             str(rebuilt),
         ],
         cwd=source,
-        env={**env, "_PTK_BUILD_VERSION": "9.9.9"},
+        env={**env, "_PTK_BUILD_VERSION": "9.9.9", "PATH": ""},
         check=True,
         capture_output=True,
         text=True,
     )
     assert wheel_version(next(rebuilt.glob("*.whl"))) == "4.5.6"
+    with (
+        zipfile.ZipFile(next(dist.glob("*.whl"))) as original,
+        zipfile.ZipFile(next(rebuilt.glob("*.whl"))) as rebuilt_wheel,
+    ):
+        resource = "ptk/resources/extension/project-toolkit.vsix"
+        assert original.read(resource) == rebuilt_wheel.read(resource)
+
+
+def test_editable_build_does_not_need_node(tmp_path):
+    subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "from hatchling.build import build_editable; import sys; build_editable(sys.argv[1])",
+            str(tmp_path),
+        ],
+        cwd=ROOT,
+        env={**os.environ, "PATH": ""},
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    with zipfile.ZipFile(next(tmp_path.glob("*.whl"))) as archive:
+        assert "ptk/resources/extension/project-toolkit.vsix" not in archive.namelist()

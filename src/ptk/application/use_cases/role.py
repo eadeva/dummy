@@ -30,6 +30,7 @@ def command_allowed(path: str, role: Role, policies: dict[str, str]) -> bool:
         "setup.config",
         "setup.config.validate",
         "setup.completion",
+        "setup.extension",
     }:
         return True
     parts = path.split(".")
