@@ -57,7 +57,7 @@ refreshes the tree. Click **PTK unavailable** to see the exact discovery error.
 
 Build from the repository root with ``ptk extension`` or ``uv run ptk extension``.
 The job checks Node.js 22+ and npm, installs the build dependencies, runs the
-checks and writes ``extensions/project-toolkit/project-toolkit-0.3.3.vsix``.
+checks and writes ``extensions/project-toolkit/project-toolkit-0.4.0.vsix``.
 Use ``ptk dry-run extension`` to preview it. Node.js and npm must be on PATH.
 Set ``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
 integration tests. CI builds downloadable VSIX artifacts on Linux and Windows;
@@ -143,3 +143,22 @@ booleans and can combine either with ``preview: true`` to inspect deletion paths
 The built-in command tree exposes ``clean-all`` for repositories and
 ``vmr-clean-all`` at the VMR root. Their confirmation occurs in the focused PTK
 terminal; the Options action also exposes ``--dry-run`` and ``--yes``.
+
+Configuration and parameter forms
+---------------------------------
+
+Expand Configuration to browse authored YAML files as trees. Selecting a field
+opens the PTK Configuration form, where model fields, jobs and nested steps can
+be added or edited. Save uses VS Code's document model; Save & validate runs
+PTK validation. Raw YAML switches to the text editor, and Open PTK Form in the
+editor title bar switches back. Includes are edited in their own files, with
+comments, anchors and merge tags retained. Complex keys and alias references
+remain editable in raw YAML. For fragments, select the relevant model under
+Schema for this file.
+
+The job parameter gear opens a single window with help, default values, text
+fields, checkboxes and choices. Only enabled overrides are passed to PTK;
+environment values and template defaults are resolved by PTK at execution time.
+Required non-secret parameters open this form automatically. Use Run job or Dry
+run to submit it, or Cancel to leave without executing. Secret parameters are
+not exposed in this window.

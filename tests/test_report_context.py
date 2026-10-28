@@ -98,3 +98,11 @@ jobs:
     report = from_summary(summary, [], "another-ptk-version")
     assert report.ptk_version == summary["context"]["ptk_version"]
     assert report.context["versions"]["projects"]["engine"]["value"] == "3.4.5"
+
+
+def test_report_header_uses_available_ptk_version_fallback():
+    report = from_summary({}, [], "0.4.0+checkout")
+    assert "<dt>PTK version</dt><dd>0.4.0+checkout</dd>" in html.render(report)
+    assert "0.4.0+checkout" in exporters.to_markdown(report)
+    recorded = from_summary({"context": {"ptk_version": "0.3.3"}}, [], "0.4.0")
+    assert "<dt>PTK version</dt><dd>0.3.3</dd>" in html.render(recorded)

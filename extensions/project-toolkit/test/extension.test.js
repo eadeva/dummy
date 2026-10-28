@@ -17,6 +17,10 @@ function harness(t, docs = [inventory()], trusted = true) {
   const inputs = [];
   const calls = [];
   const config = {};
+  const forms = [];
+  const formRequests = [];
+  const opened = [];
+  let editorActions;
   const watchers = [];
   const taskEnd = [];
   let outputShown = 0;
@@ -74,11 +78,15 @@ function harness(t, docs = [inventory()], trusted = true) {
     subscriptions: [],
     workspaceState: { get: key => state.get(key), update: async (key, value) => state.set(key, value) },
   };
-  const controller = createController(api, context);
+  const controller = createController(api, context, (_api, _context, actions) => { editorActions = actions; return ({
+    async parameters(target, options) { formRequests.push({ target, options }); return forms.shift()?.(target, options); },
+    async open(uri, path = []) { opened.push({ uri, path }); },
+    async children(element) { return [{ label: "Test field", configPath: [...element.configPath, "jobs"] }]; },
+  }); });
   t.after(() => context.subscriptions.forEach(item => item.dispose()));
   const command = (name, element) => commands.get(`project-toolkit.${name}`)(element);
   const target = (kind = "job", index = 0) => ({ kind, name: "build", project: docs[index].projects[0], root: docs[index].projects[0].root });
-  return { api, controller, command, target, context, state, tasks, errors, logs, picks, inputs, calls, config, watchers, taskEnd, outputShown: () => outputShown };
+  return { api, controller, command, target, context, state, tasks, errors, logs, picks, inputs, calls, config, watchers, taskEnd, outputShown: () => outputShown, forms, formRequests, opened, editorActions };
 }
 
 test("activation discovers projects and runs jobs as processes with global variants", async t => {
@@ -122,7 +130,7 @@ test("parameterized previews stay previews after task restoration", async t => {
   doc.projects[0].jobs[0].params[0].required = true;
   const h = harness(t, [doc]);
   await h.controller.ready();
-  h.inputs.push("folder with spaces;$(untouched)");
+  h.forms.push((_target, options) => ({ params: { output_path: "folder with spaces;$(untouched)" }, preview: options.preview }));
   await h.command("preview", h.target());
   const original = h.tasks[0];
   const restored = await h.api.taskProvider.resolveTask(original);
@@ -148,8 +156,7 @@ test("required parameter cancellation does not execute anything", async t => {
 test("optional typed parameter overrides retain booleans and literal text", async t => {
   const h = harness(t);
   await h.controller.ready();
-  h.picks.push(items => items, items => items.find(item => item === "false"));
-  h.inputs.push("literal 'path'");
+  h.forms.push(() => ({ params: { output_path: "literal 'path'", verbose: "false" }, preview: false }));
   await h.command("runWithParameters", h.target());
   assert.deepEqual(h.tasks[0].execution.args.slice(-4), ["--param", "output_path=literal 'path'", "--param", "verbose=false"]);
   assert.deepEqual((await h.api.taskProvider.resolveTask(h.tasks[0])).execution.args, h.tasks[0].execution.args);
@@ -275,7 +282,7 @@ test("every task entry point uses the non-syncing uv launcher, including help an
   for (const kind of ["job", "workflow"]) {
     for (const command of ["run", "preview", "clean", "reRun", "showHelp", "openReport"]) await h.command(command, h.target(kind));
   }
-  h.picks.push(() => []);
+  h.forms.push(() => ({ params: {}, preview: false }));
   await h.command("runWithParameters", h.target());
   for (const target of core.builtinTargets({ ...h.target(), folder: h.api.workspace.workspaceFolders[0] }, inventory().projects[0].commands)) {
     await h.command("showHelp", target);
@@ -473,4 +480,72 @@ test("clean bypasses required parameters and survives saved-task restoration", a
   await h.command("reRun", h.target("workflow"));
   assert.equal(h.tasks[1].definition.reRun, true);
   assert.deepEqual(h.tasks[1].execution.args.slice(2), ["--variant", "small", "--re-run", "workflow", "run", "build"]);
+});
+
+
+test("configuration files expand lazily and open the form at a field path", async t => {
+  const h = harness(t);
+  await h.controller.ready();
+  const project = h.controller.provider.getChildren()[0].children[0];
+  const files = project.children.find(node => node.label === "Configuration").children;
+  assert.ok(files[0].hasChildren);
+  assert.equal(h.controller.provider.getTreeItem(files[0]).state, 1);
+  assert.equal((await h.controller.provider.getChildren(files[0]))[0].label, "Test field");
+  await h.command("openConfig", { ...files[0], configPath: ["jobs", "build"] });
+  assert.equal(h.opened[0].uri.fsPath, files[0].configFile);
+  assert.deepEqual(h.opened[0].path, ["jobs", "build"]);
+});
+
+test("parameter form can choose a preview and does not override omitted defaults", async t => {
+  const h = harness(t);
+  await h.controller.ready();
+  h.forms.push(() => ({ params: {}, preview: true }));
+  await h.command("runWithParameters", h.target());
+  assert.equal(h.formRequests[0].options.variant, "small");
+  assert.equal(h.tasks[0].definition.preview, true);
+  assert.equal(h.tasks[0].definition.params, undefined);
+  assert.ok(h.tasks[0].execution.args.includes("dry-run"));
+});
+
+test("a job removed while its parameter form is open cannot launch", async t => {
+  const doc = inventory();
+  const h = harness(t, [doc]);
+  await h.controller.ready();
+  h.forms.push(async () => {
+    doc.projects[0].jobs = [];
+    await h.controller.refresh();
+    return { params: {}, preview: false };
+  });
+  await h.command("runWithParameters", h.target());
+  assert.equal(h.tasks.length, 0);
+  assert.match(h.errors[0], /no longer available/);
+});
+
+test("parameters changed while the form is open are validated before launch", async t => {
+  const doc = inventory();
+  const h = harness(t, [doc]);
+  await h.controller.ready();
+  h.forms.push(async () => {
+    doc.projects[0].jobs[0].params[0].required = true;
+    await h.controller.refresh();
+    return { params: {}, preview: false };
+  });
+  await h.command("runWithParameters", h.target());
+  assert.equal(h.tasks.length, 0);
+  assert.match(h.errors[0], /output_path: enter a value/);
+});
+
+
+test("configuration files and validation remain available after an invalid save breaks discovery", async t => {
+  const h = harness(t);
+  await h.controller.ready();
+  const file = h.target().project.config_files[0];
+  core.readInventory = async () => { throw new Error("invalid configuration"); };
+  await h.controller.refresh();
+  await h.controller.refresh();
+  const warning = h.controller.provider.getChildren()[0];
+  assert.ok(warning.children.some(node => node.configFile === file));
+  await h.editorActions.validate({ fsPath: file });
+  assert.deepEqual(h.tasks[0].execution.args.slice(-3), ["setup", "config", "validate"]);
+  assert.equal(h.tasks[0].execution.args[1], h.target().project.entry_file);
 });

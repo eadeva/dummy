@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.4.0
+
+- Browse configuration files as nested trees and edit their fields in a custom
+  editor, with model-backed optional fields, job creation, list ordering and
+  raw YAML switching. Preserve comments, anchors, includes, merge tags and
+  VS Code's text document save/undo behavior.
+- Replace job parameter prompts with a single form for required/optional values,
+  types, choices, defaults, environment names and help. Preserve runtime default
+  resolution and validate again when submitting a form after a refresh.
+- Show the available PTK version consistently in HTML and Markdown reports.
+- Keep configuration files reachable after a failed discovery, and bundle the
+  editor dependencies into the VSIX.
+
 ## 0.3.3
 
 - Use `uv run --no-sync` for discovery and every task entry point, including

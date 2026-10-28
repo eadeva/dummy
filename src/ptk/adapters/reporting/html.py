@@ -190,7 +190,7 @@ def _project_header(report: Report) -> str:
         {
             "Project": report.project,
             "Repository alias": alias,
-            "PTK version": context.get("ptk_version") or "Not recorded",
+            "PTK version": report.ptk_version or "Not recorded",
             "Project version": version,
             "Variant": report.variant,
         }

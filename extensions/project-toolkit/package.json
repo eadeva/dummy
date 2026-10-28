@@ -2,7 +2,7 @@
   "name": "project-toolkit",
   "displayName": "Project Toolkit",
   "description": "Run PTK jobs, workflows and built-in commands, browse help, select variants and open reports.",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "publisher": "eadeva",
   "license": "UNLICENSED",
   "private": true,
@@ -17,7 +17,7 @@
     "url": "https://github.com/eadeva/dummy",
     "directory": "extensions/project-toolkit"
   },
-  "main": "./src/extension.js",
+  "main": "./dist/extension.js",
   "extensionKind": [
     "workspace"
   ],
@@ -143,6 +143,12 @@
         "title": "Clean Outputs and Re-run Job or Workflow",
         "category": "Project Toolkit",
         "icon": "$(debug-restart)"
+      },
+      {
+        "command": "project-toolkit.openConfigForm",
+        "title": "Open PTK Form",
+        "category": "Project Toolkit",
+        "icon": "$(settings-gear)"
       }
     ],
     "menus": {
@@ -208,6 +214,13 @@
           "command": "project-toolkit.reRun",
           "when": "view == project-toolkit.projects && viewItem =~ /^(job|workflow)/",
           "group": "inline@7"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "project-toolkit.openConfigForm",
+          "when": "resourceFilename =~ /\\.ptk\\.ya?ml$/ && isWorkspaceTrusted",
+          "group": "navigation@1"
         }
       ]
     },
@@ -311,15 +324,35 @@
         },
         "when": "processExecutionSupported && isWorkspaceTrusted"
       }
+    ],
+    "customEditors": [
+      {
+        "viewType": "project-toolkit.configuration",
+        "displayName": "PTK Configuration",
+        "selector": [
+          {
+            "filenamePattern": "*.ptk.yml"
+          },
+          {
+            "filenamePattern": "*.ptk.yaml"
+          }
+        ],
+        "priority": "option"
+      }
     ]
   },
   "scripts": {
-    "check": "node --check src/core.js && node --check src/extension.js",
-    "test": "node --test test/core.test.js test/extension.test.js test/integration.test.js",
+    "check": "node --check src/core.js && node --check src/extension.js && node --check src/config-model.js && node --check src/editors.js && node --check src/parameters.js && node --check media/schema.js && node --check media/editor.js",
+    "test": "node --test test/*.test.js",
     "package": "vsce package --no-dependencies --skip-license",
-    "vscode:prepublish": "npm run check && npm test"
+    "vscode:prepublish": "npm run check && npm test && npm run build",
+    "build": "esbuild src/extension.js --bundle --platform=node --target=node20 --external:vscode --outfile=dist/extension.js"
   },
   "devDependencies": {
-    "@vscode/vsce": "4.0.0"
+    "@vscode/vsce": "4.0.0",
+    "esbuild": "0.28.2"
+  },
+  "dependencies": {
+    "yaml": "2.9.1"
   }
 }

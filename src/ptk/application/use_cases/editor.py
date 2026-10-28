@@ -44,6 +44,9 @@ def describe_project(project, role):
                         "required": param.required,
                         "choices": param.choices or [],
                         "help": param.help,
+                        "default": param.default,
+                        "env": param.env,
+                        "default_is_template": param.default_is_template,
                     }
                     for key, param in spec.params.items()
                     if param.type != "secret"

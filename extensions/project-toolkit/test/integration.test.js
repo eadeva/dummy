@@ -161,3 +161,25 @@ test("real uv discovery and version-check launch do not sync or alter installed 
   assert.equal(fs.readFileSync(metadata, "utf8"), before);
   assert.equal(fs.existsSync(path.join(root, "uv.lock")), false);
 });
+
+
+test("configuration form round-trips PTK YAML scalar types and creates valid jobs", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
+  const model = require("../src/config-model");
+  const S = require("../media/schema");
+  const schema = require("../media/config-schema.json");
+  const source = "a: on\nb: off\nc: y\nd: n\ne: 008\nf: 1e3\ng: 1.2e3\nh: -.5\ni: 01:02\nj: 1.0e+20\nk: 1.0e-10\nl: 9007199254740993\nm: 2024-01-01\n";
+  const result = model.edit(source, [
+    { op: "add", path: ["text"], value: "on" },
+    { op: "add", path: ["tiny"], value: 0.0000001 },
+  ]);
+  const check = spawnSync(python, ["-c", "import json,sys,yaml; a,b=json.load(sys.stdin); before=yaml.safe_load(a); after=yaml.safe_load(b); assert after.pop('text') == 'on'; assert after.pop('tiny') == 0.0000001; assert before == after, (before,after); assert {k:type(v) for k,v in before.items()} == {k:type(v) for k,v in after.items()}"], { input: JSON.stringify([source, result]), encoding: "utf8" });
+  assert.equal(check.status, 0, check.stderr);
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk config form "));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  project(root, "form");
+  const entry = path.join(root, ".main.ptk.yml");
+  const edited = model.edit(fs.readFileSync(entry, "utf8"), [{ op: "add", path: ["jobs", "new-job"], value: S.initial(schema.$defs.JobSpec, schema) }]);
+  fs.writeFileSync(entry, edited);
+  invoke(root, ["setup", "config", "validate"]);
+  assert.ok(core.parseInventory(invoke(root, ["describe", "--json"])).projects[0].jobs.some(job => job.name === "new-job"));
+});

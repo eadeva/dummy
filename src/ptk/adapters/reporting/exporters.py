@@ -128,7 +128,7 @@ def to_markdown(report: Report) -> str:
         .get("value", "Not recorded")
     )
     lines += [
-        f"**PTK version:** {_cell(context.get('ptk_version') or 'Not recorded')} · **Project version:** {_cell(version)}",
+        f"**PTK version:** {_cell(report.ptk_version or 'Not recorded')} · **Project version:** {_cell(version)}",
         "",
     ]
     if context.get("variant"):

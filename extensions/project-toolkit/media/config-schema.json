@@ -1,0 +1,2236 @@
+{
+  "$defs": {
+    "ArtifactorySource": {
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "title": "Url",
+          "type": "string"
+        },
+        "repository": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+          "title": "Repository",
+          "type": "string"
+        },
+        "path": {
+          "default": ".",
+          "title": "Path",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Properties"
+        },
+        "select": {
+          "default": "unique",
+          "enum": [
+            "unique",
+            "latest"
+          ],
+          "title": "Select",
+          "type": "string"
+        },
+        "token_env": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Token Env"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[a-fA-F0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sha256"
+        },
+        "extract": {
+          "default": true,
+          "title": "Extract",
+          "type": "boolean"
+        },
+        "bin": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bin"
+        }
+      },
+      "required": [
+        "url",
+        "repository",
+        "name"
+      ],
+      "title": "ArtifactorySource",
+      "type": "object"
+    },
+    "ArtifactoryStructure": {
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "title": "Url",
+          "type": "string"
+        },
+        "repository": {
+          "title": "Repository",
+          "type": "string"
+        },
+        "base_path": {
+          "default": "",
+          "title": "Base Path",
+          "type": "string"
+        },
+        "events": {
+          "additionalProperties": {
+            "$ref": "#/$defs/EventRoute"
+          },
+          "minProperties": 1,
+          "title": "Events",
+          "type": "object"
+        },
+        "jobs": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JobDestination"
+          },
+          "title": "Jobs",
+          "type": "object"
+        }
+      },
+      "required": [
+        "url",
+        "repository",
+        "events"
+      ],
+      "title": "ArtifactoryStructure",
+      "type": "object"
+    },
+    "ChocoSource": {
+      "additionalProperties": false,
+      "properties": {
+        "package": {
+          "title": "Package",
+          "type": "string"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        }
+      },
+      "required": [
+        "package"
+      ],
+      "title": "ChocoSource",
+      "type": "object"
+    },
+    "ComponentSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "requires_components": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Requires Components",
+          "type": "array"
+        },
+        "features": {
+          "additionalProperties": {
+            "$ref": "#/$defs/FeatureSpec"
+          },
+          "title": "Features",
+          "type": "object"
+        }
+      },
+      "title": "ComponentSpec",
+      "type": "object"
+    },
+    "Constraint": {
+      "additionalProperties": false,
+      "properties": {
+        "expr": {
+          "title": "Expr",
+          "type": "string"
+        },
+        "message": {
+          "default": "",
+          "title": "Message",
+          "type": "string"
+        }
+      },
+      "required": [
+        "expr"
+      ],
+      "title": "Constraint",
+      "type": "object"
+    },
+    "CredentialSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "namespace": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Namespace"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Fields",
+          "type": "array"
+        },
+        "providers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Providers",
+          "type": "array"
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Env",
+          "type": "object"
+        },
+        "gopass": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/GopassSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "test": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Test"
+        }
+      },
+      "title": "CredentialSpec",
+      "type": "object"
+    },
+    "DownloadSource": {
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "title": "Url",
+          "type": "string"
+        },
+        "sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sha256"
+        },
+        "extract": {
+          "default": true,
+          "title": "Extract",
+          "type": "boolean"
+        },
+        "bin": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Bin"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "title": "DownloadSource",
+      "type": "object"
+    },
+    "EnvironmentSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "isolate": {
+          "default": true,
+          "title": "Isolate",
+          "type": "boolean"
+        },
+        "inherit_path": {
+          "default": false,
+          "title": "Inherit Path",
+          "type": "boolean"
+        },
+        "keep": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Keep",
+          "type": "array"
+        },
+        "set": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Set",
+          "type": "object"
+        },
+        "unset": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Unset",
+          "type": "array"
+        },
+        "path_prepend": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Path Prepend",
+          "type": "array"
+        },
+        "path_append": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Path Append",
+          "type": "array"
+        }
+      },
+      "title": "EnvironmentSpec",
+      "type": "object"
+    },
+    "EventRoute": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "repository": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Repository"
+        },
+        "branch": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PathRoute"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "tag": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PathRoute"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "EventRoute",
+      "type": "object"
+    },
+    "FeatureSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/FeatureType",
+          "default": "bool"
+        },
+        "help": {
+          "default": "",
+          "title": "Help",
+          "type": "string"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default"
+        },
+        "values": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Values"
+        },
+        "min": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Min"
+        },
+        "max": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Max"
+        },
+        "depends_on": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Depends On"
+        },
+        "requires": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Requires",
+          "type": "array"
+        },
+        "conflicts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conflicts",
+          "type": "array"
+        }
+      },
+      "title": "FeatureSpec",
+      "type": "object"
+    },
+    "FeatureType": {
+      "enum": [
+        "bool",
+        "int",
+        "string",
+        "enum"
+      ],
+      "title": "FeatureType",
+      "type": "string"
+    },
+    "GopassSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "GopassSpec",
+      "type": "object"
+    },
+    "JobDestination": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "default": "",
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "title": "JobDestination",
+      "type": "object"
+    },
+    "JobSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "only_cx": {
+          "default": false,
+          "title": "Only Cx",
+          "type": "boolean"
+        },
+        "only_variants": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Only Variants",
+          "type": "array"
+        },
+        "omit_variants": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Omit Variants",
+          "type": "array"
+        },
+        "open_report": {
+          "anyOf": [
+            {
+              "enum": [
+                "always",
+                "on_errors"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Open Report"
+        },
+        "version_dependencies": {
+          "additionalProperties": {
+            "$ref": "#/$defs/VersionDependency"
+          },
+          "title": "Version Dependencies",
+          "type": "object"
+        },
+        "environment": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EnvironmentSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "help": {
+          "default": "",
+          "title": "Help",
+          "type": "string"
+        },
+        "audience": {
+          "default": "all",
+          "enum": [
+            "all",
+            "maintainer"
+          ],
+          "title": "Audience",
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ParamSpec"
+          },
+          "title": "Params",
+          "type": "object"
+        },
+        "requires_tools": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "boolean"
+                  },
+                  {
+                    "$ref": "#/$defs/ToolSpec"
+                  }
+                ]
+              },
+              "title": "Requires Tools",
+              "type": "object"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Env",
+          "type": "object"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/StepEntry"
+          },
+          "minItems": 1,
+          "title": "Steps",
+          "type": "array"
+        }
+      },
+      "required": [
+        "steps"
+      ],
+      "title": "JobSpec",
+      "type": "object"
+    },
+    "LayoutSpec": {
+      "additionalProperties": false,
+      "description": "Workspace folders: <root>/_builds|_bin|_logs|_reports/<variant>/<job>/<step>.",
+      "properties": {
+        "root": {
+          "default": ".",
+          "title": "Root",
+          "type": "string"
+        },
+        "builds": {
+          "default": "_builds",
+          "title": "Builds",
+          "type": "string"
+        },
+        "bin": {
+          "default": "_bin",
+          "title": "Bin",
+          "type": "string"
+        },
+        "logs": {
+          "default": "_logs",
+          "title": "Logs",
+          "type": "string"
+        },
+        "reports": {
+          "default": "_reports",
+          "title": "Reports",
+          "type": "string"
+        }
+      },
+      "title": "LayoutSpec",
+      "type": "object"
+    },
+    "LoggingSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "default": "info",
+          "enum": [
+            "trace",
+            "debug",
+            "info",
+            "warning",
+            "error"
+          ],
+          "title": "Level",
+          "type": "string"
+        },
+        "keep_history": {
+          "default": 10,
+          "minimum": 0,
+          "title": "Keep History",
+          "type": "integer"
+        }
+      },
+      "title": "LoggingSpec",
+      "type": "object"
+    },
+    "ParamSpec": {
+      "additionalProperties": false,
+      "description": "A job parameter.\n\n``default`` may use ``${env:...}``, ``${vars.x}``, ``${vh.*}`` and\n``${project.*}`` - e.g. a per-variant default ``${vh.data.build_type}``;\nsuch defaults are resolved and type-checked when the job runs.",
+      "properties": {
+        "type": {
+          "default": "str",
+          "enum": [
+            "str",
+            "int",
+            "float",
+            "bool",
+            "choice",
+            "path",
+            "secret",
+            "list"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "default": {
+          "default": null,
+          "title": "Default"
+        },
+        "choices": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Choices"
+        },
+        "help": {
+          "default": "",
+          "title": "Help",
+          "type": "string"
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        },
+        "env": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Env"
+        }
+      },
+      "title": "ParamSpec",
+      "type": "object"
+    },
+    "PathRoute": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "repository": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Repository"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "PathRoute",
+      "type": "object"
+    },
+    "ProductLineSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "default": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default"
+        },
+        "components": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ComponentSpec"
+          },
+          "title": "Components",
+          "type": "object"
+        },
+        "variants": {
+          "additionalProperties": {
+            "$ref": "#/$defs/VariantSpec"
+          },
+          "title": "Variants",
+          "type": "object"
+        },
+        "constraints": {
+          "items": {
+            "$ref": "#/$defs/Constraint"
+          },
+          "title": "Constraints",
+          "type": "array"
+        },
+        "env": {
+          "$ref": "#/$defs/VariantEnvSpec"
+        }
+      },
+      "title": "ProductLineSpec",
+      "type": "object"
+    },
+    "ProjectSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "default_job": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default Job"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "ProjectSpec",
+      "type": "object"
+    },
+    "PythonSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "uvx": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uvx"
+        },
+        "with": {
+          "items": {
+            "type": "string"
+          },
+          "title": "With",
+          "type": "array"
+        },
+        "venv": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VenvSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "project": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Project"
+        },
+        "groups": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Groups",
+          "type": "array"
+        },
+        "interpreter": {
+          "anyOf": [
+            {
+              "const": "cli",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Interpreter"
+        }
+      },
+      "title": "PythonSpec",
+      "type": "object"
+    },
+    "ReportingSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "formats": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Formats",
+          "type": "array"
+        },
+        "dir": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dir"
+        }
+      },
+      "title": "ReportingSpec",
+      "type": "object"
+    },
+    "RepositorySpec": {
+      "additionalProperties": false,
+      "properties": {
+        "alias": {
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "title": "Alias",
+          "type": "string"
+        },
+        "config_path": {
+          "minLength": 1,
+          "title": "Config Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "alias",
+        "config_path"
+      ],
+      "title": "RepositorySpec",
+      "type": "object"
+    },
+    "SharedConfigSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": true,
+          "title": "Enabled",
+          "type": "boolean"
+        },
+        "overlay": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Overlay"
+        },
+        "output": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output"
+        }
+      },
+      "title": "SharedConfigSpec",
+      "type": "object"
+    },
+    "ToolSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "docker": {
+          "default": false,
+          "title": "Docker",
+          "type": "boolean"
+        },
+        "installers": {
+          "additionalProperties": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Installers",
+          "type": "object"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        },
+        "check": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Check"
+        },
+        "version_regex": {
+          "default": "(\\d+\\.\\d+(?:\\.\\d+)?)",
+          "title": "Version Regex",
+          "type": "string"
+        },
+        "choco": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "$ref": "#/$defs/ChocoSource"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Choco"
+        },
+        "toolbase": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ToolbaseSource"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "artifactory": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArtifactorySource"
+            },
+            {
+              "additionalProperties": {
+                "$ref": "#/$defs/ArtifactorySource"
+              },
+              "propertyNames": {
+                "enum": [
+                  "windows",
+                  "linux"
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifactory"
+        },
+        "uv_tool": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uv Tool"
+        },
+        "download": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/DownloadSource"
+            },
+            {
+              "additionalProperties": {
+                "$ref": "#/$defs/DownloadSource"
+              },
+              "propertyNames": {
+                "enum": [
+                  "windows",
+                  "linux"
+                ]
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Download"
+        },
+        "apt": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Apt"
+        },
+        "dnf": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Dnf"
+        }
+      },
+      "title": "ToolSpec",
+      "type": "object"
+    },
+    "ToolbaseSource": {
+      "additionalProperties": false,
+      "properties": {
+        "package": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+          "title": "Package",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+          "title": "Version",
+          "type": "string"
+        },
+        "environment": {
+          "default": "ptk",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+          "title": "Environment",
+          "type": "string"
+        },
+        "bin": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Bin",
+          "type": "array"
+        }
+      },
+      "required": [
+        "package",
+        "version"
+      ],
+      "title": "ToolbaseSource",
+      "type": "object"
+    },
+    "VariantEnvSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "prefix": {
+          "default": "VH_",
+          "title": "Prefix",
+          "type": "string"
+        },
+        "legacy_bo": {
+          "default": false,
+          "title": "Legacy Bo",
+          "type": "boolean"
+        }
+      },
+      "title": "VariantEnvSpec",
+      "type": "object"
+    },
+    "VariantSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "repo_variants": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Repo Variants",
+          "type": "object"
+        },
+        "description": {
+          "default": "",
+          "title": "Description",
+          "type": "string"
+        },
+        "abstract": {
+          "default": false,
+          "title": "Abstract",
+          "type": "boolean"
+        },
+        "extends": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Extends",
+          "type": "array"
+        },
+        "aliases": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Aliases",
+          "type": "array"
+        },
+        "components": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Components"
+        },
+        "features": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "title": "Features",
+          "type": "object"
+        },
+        "data": {
+          "additionalProperties": true,
+          "title": "Data",
+          "type": "object"
+        }
+      },
+      "title": "VariantSpec",
+      "type": "object"
+    },
+    "VenvSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "requirements": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Requirements",
+          "type": "array"
+        },
+        "packages": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Packages",
+          "type": "array"
+        },
+        "python": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Python"
+        }
+      },
+      "title": "VenvSpec",
+      "type": "object"
+    },
+    "VersionDependency": {
+      "additionalProperties": false,
+      "properties": {
+        "variant": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Variant"
+        }
+      },
+      "title": "VersionDependency",
+      "type": "object"
+    },
+    "VersionOverride": {
+      "additionalProperties": false,
+      "properties": {
+        "project": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VersionSource"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "components": {
+          "additionalProperties": {
+            "$ref": "#/$defs/VersionSource"
+          },
+          "title": "Components",
+          "type": "object"
+        }
+      },
+      "title": "VersionOverride",
+      "type": "object"
+    },
+    "VersionSource": {
+      "additionalProperties": false,
+      "properties": {
+        "source": {
+          "default": "inherit",
+          "enum": [
+            "literal",
+            "git",
+            "file",
+            "env",
+            "command",
+            "inherit"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Version"
+        },
+        "match": {
+          "default": "v*",
+          "title": "Match",
+          "type": "string"
+        },
+        "strip_prefix": {
+          "default": "",
+          "title": "Strip Prefix",
+          "type": "string"
+        },
+        "first_parent": {
+          "default": true,
+          "title": "First Parent",
+          "type": "boolean"
+        },
+        "dirty": {
+          "default": "suffix",
+          "enum": [
+            "suffix",
+            "ignore",
+            "error"
+          ],
+          "title": "Dirty",
+          "type": "string"
+        },
+        "allow_shallow": {
+          "default": false,
+          "title": "Allow Shallow",
+          "type": "boolean"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "format": {
+          "default": "text",
+          "enum": [
+            "text",
+            "json",
+            "toml",
+            "yaml"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Key"
+        },
+        "regex": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Regex"
+        },
+        "variable": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Variable"
+        },
+        "command": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Command"
+        },
+        "timeout": {
+          "default": 30,
+          "exclusiveMinimum": 0,
+          "title": "Timeout",
+          "type": "number"
+        },
+        "fallback": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VersionSource"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "title": "VersionSource",
+      "type": "object"
+    },
+    "VersioningSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "project": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VersionSource"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "components": {
+          "additionalProperties": {
+            "$ref": "#/$defs/VersionSource"
+          },
+          "title": "Components",
+          "type": "object"
+        },
+        "variants": {
+          "additionalProperties": {
+            "$ref": "#/$defs/VersionOverride"
+          },
+          "title": "Variants",
+          "type": "object"
+        },
+        "dependencies": {
+          "additionalProperties": {
+            "$ref": "#/$defs/VersionDependency"
+          },
+          "title": "Dependencies",
+          "type": "object"
+        }
+      },
+      "title": "VersioningSpec",
+      "type": "object"
+    },
+    "WorkflowSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "help": {
+          "default": "",
+          "title": "Help",
+          "type": "string"
+        },
+        "audience": {
+          "default": "all",
+          "enum": [
+            "all",
+            "maintainer"
+          ],
+          "title": "Audience",
+          "type": "string"
+        },
+        "open_report": {
+          "anyOf": [
+            {
+              "enum": [
+                "always",
+                "on-errors"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "always",
+          "title": "Open Report"
+        },
+        "parallel": {
+          "default": false,
+          "title": "Parallel",
+          "type": "boolean"
+        },
+        "max_workers": {
+          "default": 4,
+          "maximum": 32,
+          "minimum": 1,
+          "title": "Max Workers",
+          "type": "integer"
+        },
+        "steps": {
+          "items": {
+            "$ref": "#/$defs/WorkflowEntry"
+          },
+          "minItems": 1,
+          "title": "Steps",
+          "type": "array"
+        }
+      },
+      "required": [
+        "steps"
+      ],
+      "title": "WorkflowSpec",
+      "type": "object"
+    },
+    "StepBody": {
+      "additionalProperties": false,
+      "properties": {
+        "only_cx": {
+          "default": false,
+          "title": "Only Cx",
+          "type": "boolean"
+        },
+        "only_variants": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Only Variants",
+          "type": "array"
+        },
+        "omit_variants": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Omit Variants",
+          "type": "array"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        },
+        "run": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Run"
+        },
+        "uses": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uses"
+        },
+        "with": {
+          "additionalProperties": true,
+          "title": "With",
+          "type": "object"
+        },
+        "steps": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/StepEntry"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Steps"
+        },
+        "parallel": {
+          "default": false,
+          "title": "Parallel",
+          "type": "boolean"
+        },
+        "background": {
+          "default": false,
+          "title": "Background",
+          "type": "boolean"
+        },
+        "when": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "When"
+        },
+        "continue_on_error": {
+          "default": false,
+          "title": "Continue On Error",
+          "type": "boolean"
+        },
+        "timeout": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Timeout"
+        },
+        "retries": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Retries",
+          "type": "integer"
+        },
+        "cwd": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cwd"
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Env",
+          "type": "object"
+        },
+        "secrets": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Secrets",
+          "type": "object"
+        },
+        "python": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PythonSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "passthrough": {
+          "default": false,
+          "title": "Passthrough",
+          "type": "boolean"
+        },
+        "report": {
+          "default": true,
+          "title": "Report",
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "title": "Step",
+      "type": "object"
+    },
+    "StepEntry": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "description": "- step-name: {run|uses|steps: ...}  or  - step-name: \"command\"",
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/StepBody"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        ]
+      }
+    },
+    "WorkflowBody": {
+      "additionalProperties": false,
+      "properties": {
+        "job": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Job"
+        },
+        "repo": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Repo"
+        },
+        "params": {
+          "additionalProperties": true,
+          "title": "Params",
+          "type": "object"
+        },
+        "steps": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/WorkflowEntry"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Steps"
+        },
+        "parallel": {
+          "default": false,
+          "title": "Parallel",
+          "type": "boolean"
+        },
+        "continue_on_error": {
+          "default": false,
+          "title": "Continue On Error",
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "title": "WorkflowNode",
+      "type": "object"
+    },
+    "WorkflowEntry": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 1,
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/WorkflowBody"
+          },
+          {
+            "type": "string"
+          }
+        ]
+      }
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "artifactory": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ArtifactoryStructure"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "workflows": {
+      "additionalProperties": {
+        "$ref": "#/$defs/WorkflowSpec"
+      },
+      "title": "Workflows",
+      "type": "object"
+    },
+    "repository": {
+      "$ref": "#/$defs/RepositorySpec"
+    },
+    "virtual_monorepo": {
+      "description": "Entry-only discovery flag: omit for automatic Git membership, false for standalone, true for a workspace marker.",
+      "title": "Virtual Monorepo",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": 1,
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "ptk_version": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Ptk Version"
+    },
+    "project": {
+      "$ref": "#/$defs/ProjectSpec"
+    },
+    "vars": {
+      "additionalProperties": true,
+      "title": "Vars",
+      "type": "object"
+    },
+    "param_defaults": {
+      "additionalProperties": true,
+      "title": "Param Defaults",
+      "type": "object"
+    },
+    "requires_tools": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "$ref": "#/$defs/ToolSpec"
+              }
+            ]
+          },
+          "title": "Requires Tools",
+          "type": "object"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "environment": {
+      "$ref": "#/$defs/EnvironmentSpec"
+    },
+    "tools": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ToolSpec"
+      },
+      "title": "Tools",
+      "type": "object"
+    },
+    "credentials": {
+      "additionalProperties": {
+        "$ref": "#/$defs/CredentialSpec"
+      },
+      "title": "Credentials",
+      "type": "object"
+    },
+    "variants": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ProductLineSpec"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "default": null
+    },
+    "versioning": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VersioningSpec"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "jobs": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JobSpec"
+      },
+      "title": "Jobs",
+      "type": "object"
+    },
+    "configs": {
+      "additionalProperties": {
+        "$ref": "#/$defs/SharedConfigSpec"
+      },
+      "propertyNames": {
+        "enum": [
+          "pre-commit",
+          "ruff",
+          "clang-format",
+          "clang-tidy",
+          "clangd"
+        ]
+      },
+      "title": "Configs",
+      "type": "object"
+    },
+    "layout": {
+      "$ref": "#/$defs/LayoutSpec"
+    },
+    "logging": {
+      "$ref": "#/$defs/LoggingSpec"
+    },
+    "reporting": {
+      "$ref": "#/$defs/ReportingSpec"
+    },
+    "plugins": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Plugins",
+      "type": "array"
+    },
+    "command_audience": {
+      "additionalProperties": {
+        "enum": [
+          "all",
+          "maintainer"
+        ],
+        "type": "string"
+      },
+      "propertyNames": {
+        "enum": [
+          "setup",
+          "setup.config",
+          "setup.configs",
+          "setup.configs.sync",
+          "setup.configs.check",
+          "setup.creds",
+          "setup.vscode",
+          "setup.vscode.tasks",
+          "setup.vscode.skills",
+          "setup.install",
+          "setup.self",
+          "setup.doctor",
+          "setup.init",
+          "variant",
+          "version",
+          "report",
+          "workflow",
+          "artifacts",
+          "pre-commit",
+          "clean-all"
+        ]
+      },
+      "title": "Command Audience",
+      "type": "object"
+    },
+    "include": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      ]
+    },
+    "members": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Exact workspace-relative repository paths; omission checks direct children only.",
+      "title": "Members"
+    }
+  },
+  "required": [],
+  "title": "ptk configuration (*.ptk.yml)",
+  "type": "object",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "virtual_monorepo": {
+            "const": true
+          }
+        },
+        "required": [
+          "virtual_monorepo"
+        ]
+      },
+      "then": {
+        "properties": {
+          "artifactory": false,
+          "workflows": false,
+          "repository": false,
+          "schema_version": false,
+          "ptk_version": false,
+          "project": false,
+          "vars": false,
+          "param_defaults": false,
+          "requires_tools": false,
+          "environment": false,
+          "tools": false,
+          "credentials": false,
+          "variants": false,
+          "versioning": false,
+          "jobs": false,
+          "configs": false,
+          "layout": false,
+          "logging": false,
+          "reporting": false,
+          "plugins": false,
+          "command_audience": false,
+          "include": false
+        }
+      },
+      "else": {
+        "required": [
+          "repository"
+        ],
+        "properties": {
+          "members": false
+        }
+      }
+    }
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -2,6 +2,8 @@
 
 const path = require("node:path");
 const core = require("./core");
+const { createEditors } = require("./editors");
+const { validateParameters } = require("./parameters");
 
 // Native theme colours keep the tree readable in light, dark and high contrast
 // themes. Labels and icon shapes carry the same meaning without relying on colour.
@@ -17,7 +19,7 @@ const iconColors = {
 
 // VS Code is injected so command dispatch and trust boundaries can be tested
 // without pretending a mock is a graphical extension-host acceptance test.
-function createController(vscode, context) {
+function createController(vscode, context, editorFactory = createEditors) {
   let records = [];
   let revision = 0;
   let timer;
@@ -26,6 +28,18 @@ function createController(vscode, context) {
   const changed = new vscode.EventEmitter();
   const output = vscode.window.createOutputChannel("Project Toolkit");
   context.subscriptions.push(changed, output);
+  const editors = editorFactory(vscode, context, {
+    changed: () => changed.fire(),
+    validate: async uri => {
+      const owner = records.flatMap(record => ((record.inventory || record.previous)?.projects || []).map(project => ({ project, folder: record.folder, root: project.root })))
+        .find(owner => owner.project.config_files?.includes(uri.fsPath) || owner.project.entry_file === uri.fsPath);
+      if (!owner) throw new Error("Open a configuration file from the PTK project tree to validate its whole project.");
+      if (owner.project.capabilities?.validate === false) throw new Error("Configuration validation is not available for this project's role.");
+      // Validation must stay available while an invalid edit prevents discovery.
+      // The CLI rechecks the current configuration and permissions when it runs.
+      return vscode.tasks.executeTask(makeTask({ ...owner, kind: "validate", name: "configuration" }));
+    },
+  });
 
   function trusted() {
     if (!vscode.workspace.isTrusted) throw new Error("Trust this workspace before running PTK.");
@@ -63,7 +77,8 @@ function createController(vscode, context) {
         try {
           return { folder, inventory: await core.readInventory(settings(folder), folder.uri.fsPath) };
         } catch (error) {
-          return { folder, error: error.message };
+          const previous = records.find(record => record.folder.uri.fsPath === folder.uri.fsPath);
+          return { folder, error: error.message, previous: previous?.inventory || previous?.previous };
         }
       }));
       if (current !== revision || disposed || !vscode.workspace.isTrusted) return;
@@ -116,9 +131,17 @@ function createController(vscode, context) {
     return { label: "Built-in commands", children, icon: "terminal" };
   }
 
+  function configNode(file, common = {}) {
+    const node = { ...common, kind: "config-file", configFile: file, configPath: [],
+      label: path.relative(common.root || path.dirname(file), file), icon: "file-code", tooltip: file,
+      id: JSON.stringify([file, []]), hasChildren: true, collapsed: true };
+    node.command = { command: "project-toolkit.openConfig", title: "Edit configuration", arguments: [node] };
+    return node;
+  }
+
   function projectNode(project, record) {
     const common = { project, folder: record.folder, root: project.root, ci: record.inventory.ci };
-    if (project.error) return { ...common, label: project.alias, description: "configuration error", tooltip: project.error, icon: "error" };
+    if (project.error) return { ...common, label: project.alias, description: "configuration error", tooltip: project.error, icon: "error", children: [configNode(project.entry_file, common)] };
     const variants = project.variants.filter(v => !v.abstract);
     const groups = [];
     for (const kind of ["job", "workflow"]) {
@@ -144,10 +167,7 @@ function createController(vscode, context) {
       command: { command: "project-toolkit.validate", title: "Validate", arguments: [common] },
     });
     groups.push(builtinTree(common, project.commands));
-    groups.push({ label: "Configuration", icon: "settings-gear", children: project.config_files.map(file => ({
-      label: path.relative(project.root, file), icon: "file-code", tooltip: file,
-      command: { command: "vscode.open", title: "Open configuration", arguments: [vscode.Uri.file(file)] },
-    })) });
+    groups.push({ label: "Configuration", icon: "settings-gear", children: project.config_files.map(file => configNode(file, common)) });
     return { ...common, label: project.alias, description: variantFor(project) || project.name, tooltip: project.root,
       contextValue: variants.length ? "project-variants" : "project", icon: "repo", children: groups };
   }
@@ -155,11 +175,14 @@ function createController(vscode, context) {
   const provider = {
     onDidChangeTreeData: changed.event,
     getChildren(element) {
+      if (element?.configFile) return editors.children(element);
       if (element) return element.children || [];
       return records.map(record => {
         if (record.error) return {
           label: record.folder.name, description: "PTK unavailable", tooltip: `${record.error}\nClick to show the discovery error.`, icon: "warning",
           command: { command: "project-toolkit.showOutput", title: "Show PTK Discovery Error" },
+          children: (record.previous?.projects || []).flatMap(project =>
+            (project.config_files || [project.entry_file]).map(file => configNode(file, { root: project.root }))),
         };
         const children = record.inventory.projects.map(project => projectNode(project, record));
         if (record.inventory.workflows.length) children.unshift({ label: "Workspace workflows", icon: "git-merge", children: record.inventory.workflows.map(spec => ({
@@ -172,7 +195,7 @@ function createController(vscode, context) {
       });
     },
     getTreeItem(element) {
-      const item = new vscode.TreeItem(element.label, element.children
+      const item = new vscode.TreeItem(element.label, element.children || element.hasChildren
         ? element.collapsed ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.Expanded
         : vscode.TreeItemCollapsibleState.None);
       item.id = element.id;
@@ -247,25 +270,6 @@ function createController(vscode, context) {
     return selected.name;
   }
 
-  async function parameters(target, editOptional) {
-    const specs = target.spec.params || [];
-    const selected = new Set(specs.filter(p => p.required).map(p => p.name));
-    if (editOptional) {
-      const picked = await vscode.window.showQuickPick(specs.map(p => ({ label: p.name, description: p.help, picked: p.required })), { canPickMany: true, placeHolder: "Parameters to override; required parameters are always prompted" });
-      if (!picked) return;
-      for (const item of picked) selected.add(item.label);
-    }
-    const values = {};
-    for (const spec of specs.filter(p => selected.has(p.name))) {
-      const choices = spec.type === "bool" ? ["true", "false"] : spec.choices;
-      const value = choices.length ? await vscode.window.showQuickPick(choices, { placeHolder: spec.name })
-        : await vscode.window.showInputBox({ title: `${target.name}: ${spec.name}`, prompt: spec.help || `Value (${spec.type})` });
-      if (value === undefined) return;
-      values[spec.name] = value;
-    }
-    return values;
-  }
-
   async function builtinParameters(target, editOptional) {
     const specs = target.spec.params;
     const selected = new Set(specs.filter(param => param.required).map(param => param.name));
@@ -333,10 +337,18 @@ function createController(vscode, context) {
         variant = await selectVariant(target);
         if (!variant) return;
       }
-      if (target.kind === "job" && !cleanup.clean) params = await parameters(target, editOptional);
-      if (params === undefined) return;
+      if (target.kind === "job" && !cleanup.clean && (editOptional || (target.spec.params || []).some(spec => spec.required))) {
+        const result = await editors.parameters(target, { preview, variant, ...cleanup });
+        if (!result) return;
+        params = result.params;
+        preview = result.preview;
+      }
     }
-    return vscode.tasks.executeTask(makeTask(target, { preview, variant, params, ...cleanup }));
+    // A form may remain open while discovery, permissions or the configuration changes.
+    const current = await chooseTarget(target);
+    if (current.kind === "job" && !cleanup.clean) validateParameters(current.spec.params || [], params);
+    if (variant && current.project && !current.project.variants.some(item => item.name === variant && !item.abstract)) throw new Error("This variant is no longer available. Refresh projects and choose a variant.");
+    return vscode.tasks.executeTask(makeTask(current, { preview, variant, params, ...cleanup }));
   }
 
   function command(name, callback) {
@@ -388,17 +400,25 @@ function createController(vscode, context) {
     if (owner) return vscode.tasks.executeTask(makeTask({ ...owner, kind: "validate", name: "configuration" }));
   });
   command("openConfig", async element => {
+    trusted();
+    if (element?.configFile) return editors.open(vscode.Uri.file(element.configFile), element.configPath || []);
     const owner = await chooseProject(element);
     if (!owner) return;
     const picked = await vscode.window.showQuickPick(owner.project.config_files.map(file => ({ label: path.relative(owner.root, file), file })), { placeHolder: "Configuration file" });
-    if (picked) return vscode.commands.executeCommand("vscode.open", vscode.Uri.file(picked.file));
+    if (picked) return editors.open(vscode.Uri.file(picked.file));
+  });
+
+  command("openConfigForm", async uri => {
+    trusted();
+    uri = uri || vscode.window.activeTextEditor?.document.uri;
+    if (uri?.scheme === "file") return editors.open(uri);
   });
 
   context.subscriptions.push(vscode.tasks.registerTaskProvider("project-toolkit", {
     async provideTasks() {
       if (!vscode.workspace.isTrusted) return [];
       await pending;
-      return core.availableTargets(records).filter(t => !(t.kind === "workflow" && t.ci) && !(t.spec.params || []).some(p => p.required))
+      return core.availableTargets(records).filter(t => !(t.kind === "workflow" && t.ci) && !(t.spec.params || []).some(p => p.required && !p.env))
         .map(t => makeTask(t, { variant: t.project ? variantFor(t.project) : undefined }));
     },
     async resolveTask(task) {
@@ -408,7 +428,7 @@ function createController(vscode, context) {
       const targets = d.kind === "builtin" ? core.availableBuiltins(records) : core.availableTargets(records);
       const target = targets.find(t => t.kind === d.kind && t.name === d.name && t.root === d.root);
       if (!target || d.report && !core.canOpenReport(target) || target.ci && target.kind === "workflow" && !d.preview && !d.help && !d.report) return;
-      if (!d.report && !d.help && !(d.kind === "job" && d.clean === true) && (target.spec.params || []).some(p => p.required && !Object.hasOwn(d.kind === "builtin" ? d.inputs || {} : d.params || {}, p.name))) {
+      if (!d.report && !d.help && !(d.kind === "job" && d.clean === true) && (target.spec.params || []).some(p => p.required && !p.env && !Object.hasOwn(d.kind === "builtin" ? d.inputs || {} : d.params || {}, p.name))) {
         const action = d.kind === "builtin" ? "Run Command with Options" : "Run Job with Parameters";
         output.appendLine(`Use Project Toolkit: ${action} to supply required parameters for ${target.name}.`);
         return;

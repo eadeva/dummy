@@ -46,6 +46,8 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: uv run python scripts/report_preview.py .ptk/report-preview.html
       - run: node scripts/check_report_ui.cjs .ptk/report-preview.html
+      - run: npm ci --prefix extensions/project-toolkit --include=dev
+      - run: node scripts/check_extension_ui.cjs
   vscode-extension:
     strategy:
       fail-fast: false

@@ -158,3 +158,52 @@ def test_command_metadata_does_not_resolve_defaults_or_invoke_callbacks(
     assert fmt["choices"] == ["yaml", "json"]
     assert "SECRET_DEFAULT" not in result.output
     assert snapshot(tmp_path) == before
+
+
+def test_parameter_forms_receive_authored_defaults_without_resolving_environment(
+    tmp_path,
+):
+    entry = setup(tmp_path)
+    data = yaml.safe_load(entry.read_text())
+    data["jobs"]["go"]["params"].update(
+        {
+            "dynamic": {
+                "default": "${env:EXAMPLE_TOKEN}",
+                "help": "Resolved at runtime",
+            },
+            "env_value": {"env": "EXAMPLE_TOKEN", "default": "fallback"},
+            "flag": {"type": "bool", "default": False},
+            "items": {"type": "list", "default": ["one", "two"]},
+            "private": {"type": "secret", "env": "EXAMPLE_TOKEN"},
+        }
+    )
+    entry.write_text(yaml.safe_dump(data))
+    before = snapshot(tmp_path)
+    result = CliRunner(env={"EXAMPLE_TOKEN": "NEVER_EXPOSE_THIS"}).invoke(
+        cli, ["-C", str(entry), "describe", "--json"]
+    )
+    assert result.exit_code == 0, result.output
+    params = {
+        param["name"]: param
+        for param in json.loads(result.output)["projects"][0]["jobs"][0]["params"]
+    }
+    assert params["dynamic"]["default"] == "${env:EXAMPLE_TOKEN}"
+    assert params["dynamic"]["default_is_template"] is True
+    assert params["env_value"]["env"] == "EXAMPLE_TOKEN"
+    assert params["env_value"]["default"] == "fallback"
+    assert params["flag"]["default"] is False
+    assert params["items"]["default"] == ["one", "two"]
+    assert "private" not in params and "NEVER_EXPOSE_THIS" not in result.output
+    assert snapshot(tmp_path) == before
+
+
+def test_extension_form_schema_matches_canonical_model_schema():
+    from pathlib import Path
+
+    from ptk.application.use_cases.project import ExportSchema
+
+    file = (
+        Path(__file__).parents[1]
+        / "extensions/project-toolkit/media/config-schema.json"
+    )
+    assert json.loads(file.read_text()) == ExportSchema().execute()
