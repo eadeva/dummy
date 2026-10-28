@@ -20,6 +20,7 @@ from ...application.use_cases.role import command_allowed, visible
 from ...bootstrap import create_app
 from ...domain.errors import PtkError
 from .access import AccessGroup, denied_command
+from .completion import workflows as complete_workflows
 from .jobs import write_reports
 from .report_links import print_report
 from .state import CliState, console, err_console, guarded, state_of
@@ -56,6 +57,7 @@ def catalog(ctx):
                 overrides=parent.overrides,
                 ci=parent.ci,
                 verbose=parent.verbose,
+                completion=parent.completion,
             )
             owners[alias] = owner
             for name, spec in owner.project().config.workflows.items():
@@ -137,7 +139,7 @@ def authored(spec):
 
 
 @workflow_group.command("show")
-@click.argument("name")
+@click.argument("name", shell_complete=complete_workflows)
 @click.pass_context
 @guarded
 def show_workflow(ctx, name):
@@ -161,7 +163,7 @@ def report_directory(root, name, project=None):
 
 
 @workflow_group.command("report")
-@click.argument("name")
+@click.argument("name", shell_complete=complete_workflows)
 @click.option(
     "--if-exists",
     is_flag=True,
@@ -411,7 +413,7 @@ def execute_workflow(ctx, name, *, dry_run=False):
 
 
 @workflow_group.command("run")
-@click.argument("name")
+@click.argument("name", shell_complete=complete_workflows)
 @click.pass_context
 @guarded
 def run_workflow(ctx, name):
@@ -419,7 +421,7 @@ def run_workflow(ctx, name):
 
 
 @workflow_group.command("dry-run")
-@click.argument("name")
+@click.argument("name", shell_complete=complete_workflows)
 @click.pass_context
 @guarded
 def preview_workflow(ctx, name):

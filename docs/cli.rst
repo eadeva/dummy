@@ -18,6 +18,8 @@ order, omitting empty groups. At a VMR root, Repositories replaces Jobs.
      - Purpose
    * - ``ptk setup init [DIRECTORY]``
      - Initialize missing VMR configs, or create one project at DIRECTORY
+   * - ``ptk setup completion powershell|bash|zsh|fish``
+     - Generate shell Tab completion, even outside a PTK project
    * - ``ptk setup config show|validate|schema``
      - Inspect, validate and export project configuration
    * - ``ptk setup configs sync|check``
@@ -62,6 +64,61 @@ and ``vscode`` commands remain callable aliases, hidden from help and completion
 Legacy ``ptk setup --job JOB --dry-run`` also remains supported. Bare
 ``ptk setup`` now shows help; use ``ptk setup install`` to install all configured
 tools. Do not combine legacy installation options with a setup subcommand.
+
+Terminal Tab completion
+-----------------------
+
+Completion works with the installed ``ptk`` executable, independently of any
+editor. Enable it once in your current shell. In PowerShell::
+
+   ptk setup completion powershell --double-tab | Out-String | Invoke-Expression
+
+Add that same line to your ``$PROFILE`` to enable it in future terminals.
+``--double-tab`` uses PSReadLine's ``Complete`` binding: Tab completes the unique
+prefix; another Tab lists the remaining matches. This changes Tab for **all
+commands** in that shell. Omit the flag to keep your current key bindings
+(Windows PowerShell normally cycles matches with Tab). PSReadLine must be
+available for the double-Tab binding; the PTK completer itself does not require it.
+The registration script does not edit your profile automatically.
+
+For Bash (4.4 or later), enable completion with::
+
+   eval "$(ptk setup completion bash)"
+
+Put that line in ``~/.bashrc`` for future terminals. Bash normally lists multiple
+matches on the second Tab. For Zsh, after your usual ``compinit`` initialization::
+
+   eval "$(ptk setup completion zsh)"
+
+For Fish::
+
+   ptk setup completion fish | source
+
+You can save a generated script with ``--output PATH`` and source that file from
+your shell profile instead. Its directory must already exist. Zsh and Fish use
+their configured completion key bindings and display styles.
+
+Examples (``<Tab>`` means press the key)::
+
+   ptk <Tab><Tab>                   # available commands, jobs and workflows
+   ptk build --<Tab><Tab>           # options for the configured build job
+   ptk build --build-type <Tab>     # declared choice values
+   ptk --variant <Tab><Tab>         # concrete variants and aliases
+   ptk build --from <Tab><Tab>      # top-level step names
+   ptk workflow run <Tab><Tab>      # available workflow names
+
+Job names also complete after ``run``, report commands and ``--job`` options.
+VMR completion includes repository aliases and repository-qualified workflows.
+Suggestions respect command visibility and the current project configuration;
+hidden aliases and maintainer-only commands remain hidden from ordinary users.
+Type ``-`` to request option names. Choice and path parameters use native shell
+completion; free-text and secret values are not guessed.
+
+Each completion request starts a short-lived PTK process and reads the required
+configuration. It does not execute jobs, initialize plugins, resolve Git/version
+variables, read credential values or install tools. Configuration is read again
+on the next request, so edits appear without a separate refresh. With missing or
+invalid project configuration, built-in commands still complete.
 
 Global options and variant inspection
 -------------------------------------

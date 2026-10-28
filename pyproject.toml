@@ -9,6 +9,7 @@ description = "ptk (project tool kit): a configuration-driven project CLI with v
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+  "click>=8.5",  # Native PowerShell completion, also Bash/Zsh/Fish.
   "pydantic>=2.6",
   "PyYAML>=6.0",
   "packaging>=23",

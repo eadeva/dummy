@@ -27,6 +27,7 @@ from ...domain.config.model import JobSpec, ParamSpec
 from ...domain.errors import PtkError
 from ...domain.suggest import did_you_mean
 from .access import AccessGroup, denied_command
+from .completion import steps as complete_steps
 from .report_links import print_report
 from .state import console, err_console, guarded, report_error, state_of
 
@@ -130,10 +131,16 @@ def common_options(*, dry_run: bool) -> list[click.Parameter]:
             help="Compatibility alias for declared job parameter values.",
         ),
         click.Option(
-            ["--from", "start"], metavar="STEP", help="Start at this top-level step."
+            ["--from", "start"],
+            metavar="STEP",
+            help="Start at this top-level step.",
+            shell_complete=complete_steps,
         ),
         click.Option(
-            ["--to", "end"], metavar="STEP", help="Stop after this top-level step."
+            ["--to", "end"],
+            metavar="STEP",
+            help="Stop after this top-level step.",
+            shell_complete=complete_steps,
         ),
         click.Option(
             ["--params", "params_path"],
@@ -624,7 +631,8 @@ class ProjectGroup(AccessGroup):
             state = state_of(ctx)
             job = self._jobs(ctx)[name]
             if (
-                not state.project().ci
+                not ctx.resilient_parsing
+                and not state.project().ci
                 and (job.audience == "all" or state.role() == "maintainer")
                 and not any(arg in ("-h", "--help") for arg in args[1:])
             ):
@@ -644,7 +652,12 @@ class ProjectGroup(AccessGroup):
                         workflow_command(name, self._workflows(ctx)[name]),
                         args[1:],
                     )
-        if name and not name.startswith("-") and self.get_command(ctx, name) is None:
+        if (
+            not ctx.resilient_parsing
+            and name
+            and not name.startswith("-")
+            and self.get_command(ctx, name) is None
+        ):
             ctx.fail(
                 f"No such command '{name}'{did_you_mean(name, self.list_commands(ctx))}."
             )

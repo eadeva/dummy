@@ -46,3 +46,5 @@ if ($LASTEXITCODE -ne 0) { throw "uv tool install failed" }
 uv tool update-shell | Out-Null
 
 Say "done - open a new terminal, then run: ptk setup doctor"
+Say 'enable Tab completion: ptk setup completion powershell --double-tab | Out-String | Invoke-Expression'
+Say 'add that line to $PROFILE for future terminals (double-Tab listing applies to all commands)'

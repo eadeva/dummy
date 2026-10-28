@@ -53,3 +53,5 @@ uv tool install --force --reinstall --upgrade --python 3.12 "$source"
 uv tool update-shell >/dev/null 2>&1 || true
 
 say "done - open a new terminal, then run: ptk setup doctor"
+say 'enable Bash Tab completion: eval "$(ptk setup completion bash)"'
+say 'for other shells: ptk setup completion --help'

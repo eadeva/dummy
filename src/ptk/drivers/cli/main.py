@@ -23,6 +23,10 @@ from ... import __version__
 from ...domain.errors import ConfigError, PtkError, RunNotFoundError
 from .access import AccessGroup, MaintainerOption, can_switch_ci, require
 from .artifacts import artifacts_group
+from .completion import completion_command
+from .completion import jobs as complete_jobs
+from .completion import parameters as complete_parameters
+from .completion import variants as complete_variants
 from .editor import describe
 from .hooks import pre_commit_group
 from .jobs import (
@@ -93,6 +97,7 @@ click.rich_click.SHOW_ARGUMENTS = True
 @click.option(
     "-V",
     "--variant",
+    shell_complete=complete_variants,
     help="Variant name/alias (comma-separated for jobs). Used by jobs, variant show, versions, reports and artifact destinations. Workflows map the owner variant to repository variants. Ignored by setup, config, pre-commit and help.",
 )
 @click.option(
@@ -296,7 +301,7 @@ def variant_list(ctx: click.Context, names: bool) -> None:
 
 
 @variant_group.command("show")
-@click.argument("name", required=False)
+@click.argument("name", required=False, shell_complete=complete_variants)
 @click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
 @click.option(
     "--all", "show_all", is_flag=True, help="Include features of inactive components."
@@ -348,7 +353,7 @@ def _print_issues(resolved) -> None:
 
 
 @variant_group.command("explain")
-@click.argument("name")
+@click.argument("name", shell_complete=complete_variants)
 @click.argument("feature")
 @click.pass_context
 @guarded
@@ -359,7 +364,7 @@ def variant_explain(ctx: click.Context, name: str, feature: str) -> None:
 
 
 @variant_group.command("check")
-@click.argument("names", nargs=-1)
+@click.argument("names", nargs=-1, shell_complete=complete_variants)
 @click.option("--strict", is_flag=True, help="Treat warnings as errors.")
 @click.pass_context
 @guarded
@@ -382,11 +387,12 @@ def variant_check(ctx: click.Context, names: tuple[str, ...], strict: bool) -> N
 
 
 @cli.command("run")
-@click.argument("job", required=False)
+@click.argument("job", required=False, shell_complete=complete_jobs)
 @click.option(
     "-p",
     "--param",
     "params",
+    shell_complete=complete_parameters,
     multiple=True,
     metavar="NAME=VALUE",
     help="Set a job parameter (unset ones use their configured default).",
@@ -585,6 +591,7 @@ def creds_setup(ctx: click.Context, create_vault: bool) -> None:
     "--job",
     "jobs",
     multiple=True,
+    shell_complete=complete_jobs,
     metavar="JOB",
     help="Only the tools of these jobs (default: all configured tools).",
 )
@@ -762,7 +769,7 @@ def _report_target(ctx: click.Context, job: str | None) -> tuple[Any, str]:
 
 
 @report_group.command("export")
-@click.argument("job", required=False)
+@click.argument("job", required=False, shell_complete=complete_jobs)
 @click.option(
     "--run", "run_id", metavar="RUN_ID", help="An older run kept in the log history."
 )
@@ -801,7 +808,7 @@ def report_export(
 
 
 @report_group.command("open")
-@click.argument("job", required=False)
+@click.argument("job", required=False, shell_complete=complete_jobs)
 @click.option(
     "--if-exists", is_flag=True, help="Print an informational message if no run exists."
 )
@@ -1233,6 +1240,7 @@ def _group_setup_commands() -> None:
         "Legacy 'ptk setup --job A' remains supported.",
     )
     setup.add_command(setup_command, "install")
+    setup.add_command(completion_command)
     setup.add_command(init_command, "init")
     alias = copy.copy(init_command)
     alias.hidden = True

@@ -85,6 +85,7 @@ def build_commands(root, entries):
                     overrides=parent.overrides,
                     ci=parent.ci,
                     verbose=parent.verbose,
+                    completion=parent.completion,
                 ),
             )
 
@@ -113,6 +114,7 @@ def build_commands(root, entries):
         help="Initialize missing configs; shared credentials, validation and diagnostics. Install tools under a repository.",
     )
     setup.add_command(originals["setup"].commands["init"])
+    setup.add_command(originals["setup"].commands["completion"])
     config = click.RichGroup(
         "config", help="Inspect and validate all repository configurations."
     )

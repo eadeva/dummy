@@ -31,6 +31,7 @@ class RepositoryGroup(ProjectGroup):
             variant=parent_state.variant,
             clean=parent_state.clean,
             re_run=parent_state.re_run,
+            completion=parent_state.completion,
         )
         if parent_state.ci is not None and extra["obj"].role() != "maintainer":
             raise click.ClickException("--ci/--no-ci is a maintainer-only option")
@@ -39,6 +40,9 @@ class RepositoryGroup(ProjectGroup):
 
 class WorkspaceGroup(ProjectGroup):
     def resolve_command(self, ctx, args):
+        if args[:2] == ["setup", "completion"]:
+            ctx.meta["vmr_repositories"] = None
+            state_of(ctx).completion = True
         # Init resolves its scope itself, including members without PTK config.
         if args[:2] == ["setup", "init"] or args[:1] == ["init"]:
             ctx.meta["vmr_repositories"] = None
@@ -61,9 +65,15 @@ class WorkspaceGroup(ProjectGroup):
                     discovery.repositories(root) if root else None
                 )
             except (PtkError, OSError) as exc:
+                if ctx.resilient_parsing:
+                    ctx.meta["vmr_repositories"] = None
+                    return None
                 raise click.ClickException(str(exc)) from None
         repos = ctx.meta["vmr_repositories"]
         if repos is not None and RESERVED.intersection(repos):
+            if ctx.resilient_parsing:
+                ctx.meta["vmr_repositories"] = None
+                return None
             raise click.ClickException(
                 "repository alias conflicts with a workspace command: "
                 + ", ".join(sorted(RESERVED.intersection(repos)))
@@ -75,11 +85,16 @@ class WorkspaceGroup(ProjectGroup):
         if repos is not None:
             from .workflows import workspace_shortcuts
 
-            workflows = {
-                name
-                for name, command in workspace_shortcuts(ctx).items()
-                if not command.hidden
-            }
+            try:
+                workflows = {
+                    name
+                    for name, command in workspace_shortcuts(ctx).items()
+                    if not command.hidden
+                }
+            except (PtkError, click.ClickException, OSError):
+                if not ctx.resilient_parsing:
+                    raise
+                workflows = set()
             return sorted(set(repos) | RESERVED | workflows)
         return (
             sorted(set(repos) | RESERVED)

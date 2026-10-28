@@ -7,6 +7,7 @@ import rich_click as click
 
 from ...domain.errors import PtkError
 from .access import AccessGroup
+from .completion import jobs as complete_jobs
 from .state import guarded, state_of
 
 
@@ -16,7 +17,9 @@ def artifacts_group():
 
 
 @artifacts_group.command("destination")
-@click.option("--job", required=True, help="Producing PTK job.")
+@click.option(
+    "--job", required=True, shell_complete=complete_jobs, help="Producing PTK job."
+)
 @click.option("--event", help="Override GITHUB_EVENT_NAME for a local preview.")
 @click.option(
     "--at", help="Reuse a timezone-aware ISO timestamp, e.g. 2026-10-26T15:07:00+01:00."
