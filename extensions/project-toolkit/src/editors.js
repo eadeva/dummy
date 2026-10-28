@@ -18,7 +18,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
   function html(webview) {
     const nonce = crypto.randomBytes(18).toString("base64");
     const resource = name => webview.asWebviewUri(vscode.Uri.joinPath(media, name));
-    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';"><link rel="stylesheet" href="${resource("editor.css")}"><title>Project Toolkit</title></head><body><div id="app"></div><script nonce="${nonce}" src="${resource("schema.js")}"></script><script nonce="${nonce}" src="${resource("presentation.js")}"></script><script nonce="${nonce}" src="${resource("editor.js")}"></script></body></html>`;
+    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';"><link rel="stylesheet" href="${resource("editor.css")}"><title>Project Toolkit</title></head><body><div id="app"></div><script nonce="${nonce}" src="${resource("schema.js")}"></script><script nonce="${nonce}" src="${resource("presentation.js")}"></script><script nonce="${nonce}" src="${resource("variables.js")}"></script><script nonce="${nonce}" src="${resource("editor.js")}"></script></body></html>`;
   }
   function configure(panel) {
     panel.webview.options = { enableScripts: true, localResourceRoots: [media] };
@@ -37,9 +37,10 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
       let applying = false;
       let disposed = false;
       let configurationValue;
+      let variables, pathBindings;
       let chain = Promise.resolve();
       const post = message => !disposed && panel.webview.postMessage(message);
-      function state(extra = {}) { return post({ type: "state", ...configurationState(document), configurationValue, ...extra }); }
+      function state(extra = {}) { return post({ type: "state", ...configurationState(document), configurationValue, variables, pathBindings, ...extra }); }
       const updates = vscode.workspace.onDidChangeTextDocument(event => {
         if (event.document.uri.toString() !== key) return;
         if (!applying) state();
@@ -58,6 +59,8 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
               if (!installed?.schema || installed.version !== 2) return state({ error: "No compatible PTK project schema is available. Open the project and refresh PTK, or use Raw YAML.", schema: {}, selection });
               const schema = projectEdits.schemaForFile(installed, document.uri.fsPath);
               configurationValue = installed.value;
+              variables = installed.variables;
+              pathBindings = projectEdits.bindingsForFile(installed, document.uri.fsPath);
               return state({ schema: schema || {}, ...(schema ? {} : { error: "This file is not part of PTK’s configuration layout. Use Raw YAML." }), selection });
             }
             if (message.type === "edit") {
@@ -126,6 +129,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
     let version = 1, chain = Promise.resolve(), disposed = false;
     const state = extra => panel.webview.postMessage({ type: "state", mode: "configuration", logical: true,
       filename: owner.project.alias, version, value: config.value, schema: config.schema,
+      variables: config.variables,
       error: config.value === null ? config.error : undefined, validationError: config.error,
       locked: config.locked || [], annotations: [], dirty: false, ...extra });
     async function refresh(extra) {

@@ -24,7 +24,12 @@ from typing import Any
 from ...domain import layout as lay
 from ...domain.config.dates import date_values
 from ...domain.config.model import JobSpec
-from ...domain.config.substitution import Scope, SubstitutionError, to_text
+from ...domain.config.substitution import (
+    LazyNamespace,
+    Scope,
+    SubstitutionError,
+    to_text,
+)
 from ...domain.errors import PtkError
 from ...domain.execution import environment as envs
 from ...domain.execution.commands import PythonRuntime, build_command
@@ -43,6 +48,7 @@ from ...domain.variants.model import ResolvedVariant
 from ...domain.versioning import variables as version_variables
 from ..ports import (
     CancelToken,
+    GitMetadata,
     HostEnvironment,
     ProcessRunner,
     PythonEnvManager,
@@ -108,6 +114,7 @@ class PrepareRun:
         tools: ToolService | None = None,
         versions=None,
         ptk_version: str = "",
+        git: GitMetadata | None = None,
     ):
         self._host = host
         self._secrets = secrets
@@ -115,6 +122,7 @@ class PrepareRun:
         self._tools = tools
         self._versions = versions
         self._ptk_version = ptk_version
+        self._git = git
 
     def execute(self, project: Project, request: RunRequest) -> PreparedRun:
         config = project.config
@@ -122,6 +130,15 @@ class PrepareRun:
         if instant.tzinfo is None:
             instant = instant.astimezone()
         dates = date_values(instant)
+
+        def read_git():
+            if self._git is None:
+                raise PtkError(
+                    "Git metadata is not available in this execution context."
+                )
+            return self._git.discover(project.root)
+
+        git = LazyNamespace(read_git)
         if request.job is None:
             if config.project.default_job is None:
                 names = ", ".join(config.jobs) or "none configured"
@@ -215,6 +232,7 @@ class PrepareRun:
                     "project": project_ns,
                     "version": version_scope,
                     "date": dates,
+                    "git": git,
                 },
             )(template)
 
@@ -292,6 +310,7 @@ class PrepareRun:
                     "run": run_ns,
                     "version": version_scope,
                     "date": dates,
+                    "git": git,
                 },
             )
 

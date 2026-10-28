@@ -1,4 +1,4 @@
-/* global acquireVsCodeApi, PtkSchema, PtkPresentation */
+/* global acquireVsCodeApi, PtkSchema, PtkPresentation, PtkVariables */
 "use strict";
 (() => {
   const vscode = acquireVsCodeApi();
@@ -9,6 +9,7 @@
   const queue = new Map();
   const deferred = [], uiDrafts = new Map();
   let pointerActive = false, renderPending = false;
+  let variablePicker;
   let parameterDraft = {};
   const stored = vscode.getState() || {};
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -84,6 +85,7 @@
     }
   }
   function afterEdits(action) {
+    variablePicker?.close();
     const invalid = document.querySelector('[data-number-invalid="true"]');
     if (invalid) { showIssue("Enter a valid number before continuing."); invalid.focus(); return; }
     document.activeElement?.blur();
@@ -136,14 +138,16 @@
         input.removeAttribute("data-number-invalid");
         onValue(numeric ? Number(input.value) : input.value);
       });
-      input.addEventListener("blur", () => { if (!rendering && !input.hasAttribute("data-number-invalid")) flush(); });
+      input.addEventListener("blur", event => {
+        if (!rendering && !input.hasAttribute("data-number-invalid") && variablePicker?.input !== input && !event.relatedTarget?.closest(".variable-tools")) flush();
+      });
     }
     return input;
   }
   function renderConfiguration() {
     // Keep the target button alive through pointerup/click if a save reply
     // arrives mid-click. Replacing it here silently loses the user's action.
-    if (pointerActive) { renderPending = true; return; }
+    if (pointerActive || variablePicker) { renderPending = true; return; }
     renderPending = false;
     rendering = true;
     try {
@@ -252,6 +256,7 @@
       if (required) input.setAttribute("aria-required", "true");
       input.addEventListener("input", markEmpty); input.addEventListener("change", markEmpty);
       markEmpty(); field.append(input, hint);
+      if (typeof value === "string" && (input.tagName === "TEXTAREA" || input.type === "text")) variableControl(field, input, path);
     }
     const actions = el("div", undefined, { className: "field-actions" });
     let types = [...new Set(S.choices(spec, schema).map(item => item.type).filter(Boolean))];
@@ -283,6 +288,101 @@
     }
     actions.append(button("Remove", () => afterEdits(() => change({ op: "remove", path }, true)), "danger small"));
     field.append(actions); main.append(field);
+  }
+  function variableControl(field, input, path) {
+    const entries = PtkVariables.available(state, schema, path, S);
+    if (!entries.length) return;
+    const tools = el("div", undefined, { className: "variable-tools" });
+    const popup = el("div", undefined, { className: "variable-picker", hidden: "", role: "region", "aria-label": "Insert variable" });
+    const search = el("input", undefined, { type: "search", placeholder: "Search variables…", "aria-label": "Search variables", autocomplete: "off" });
+    const results = el("div", undefined, { className: "variable-results", role: "listbox", id: `${input.id}-variables`, "aria-label": "Variables" });
+    const summary = el("p", undefined, { className: "help", role: "status" });
+    const close = (focus = false) => {
+      if (variablePicker?.input !== input) return;
+      popup.hidden = true; variablePicker = undefined;
+      input.setAttribute("aria-expanded", "false"); input.removeAttribute("aria-activedescendant");
+      search.removeAttribute("aria-activedescendant");
+      if (focus) input.focus({ preventScroll: true });
+      if (renderPending && !pointerActive) renderConfiguration();
+    };
+    let range, matches = [], active = 0, automatic = false, inserting = false;
+    function highlight() {
+      [...results.children].forEach((node, i) => node.setAttribute("aria-selected", String(i === active)));
+      const current = results.children[active], target = automatic ? input : search;
+      if (current) { target.setAttribute("aria-activedescendant", current.id); current.scrollIntoView({ block: "nearest" }); }
+      else target.removeAttribute("aria-activedescendant");
+    }
+    function insert(entry) {
+      const text = "${" + entry.reference + "}";
+      input.setRangeText(text, range.start, range.end, "end");
+      // Queue locally, exactly like typing. Insertion never reloads PTK.
+      inserting = true; input.dispatchEvent(new Event("input", { bubbles: true })); inserting = false;
+      if (entry.placeholder) {
+        const start = range.start + 2 + entry.reference.indexOf(entry.placeholder);
+        input.setSelectionRange(start, start + entry.placeholder.length);
+      }
+      close(true);
+    }
+    function show(query) {
+      matches = PtkVariables.filter(entries, query); active = 0;
+      results.replaceChildren();
+      for (const [index, entry] of matches.entries()) {
+        const option = button("", () => insert(entry), "variable-option");
+        option.id = `${results.id}-${index}`; option.setAttribute("role", "option"); option.tabIndex = -1;
+        option.append(el("span", "${" + entry.reference + "}", { className: "variable-name" }),
+          el("span", entry.group, { className: "badge" }),
+          el("span", [entry.description, entry.availability].filter(Boolean).join(" "), { className: "help" }));
+        option.addEventListener("pointerdown", event => event.preventDefault());
+        results.append(option);
+      }
+      summary.textContent = matches.length ? `${matches.length} variables · ↑/↓ select · Enter inserts · Esc closes` : "No matching variables.";
+      highlight();
+    }
+    function open(auto = false) {
+      if (variablePicker?.input !== input) variablePicker?.close();
+      automatic = auto;
+      range = PtkVariables.token(input.value, input.selectionStart) || { start: input.selectionStart, end: input.selectionEnd, query: "" };
+      popup.hidden = false; search.hidden = auto;
+      variablePicker = { input, close, field };
+      input.setAttribute("aria-expanded", "true");
+      search.value = auto ? range.query : "";
+      show(search.value);
+      if (!auto) search.focus();
+    }
+    const launch = button("Insert variable…", () => open(), "secondary small");
+    launch.addEventListener("pointerdown", event => event.preventDefault());
+    launch.addEventListener("blur", event => { if (popup.hidden && !field.contains(event.relatedTarget)) flush(); });
+    function keys(event) {
+      if (popup.hidden) return;
+      if (["ArrowDown", "ArrowUp"].includes(event.key)) {
+        event.preventDefault(); active = matches.length ? (active + (event.key === "ArrowDown" ? 1 : -1) + matches.length) % matches.length : 0; highlight();
+      } else if (event.key === "Enter" && matches[active]) { event.preventDefault(); insert(matches[active]); }
+      else if (event.key === "Escape") { event.preventDefault(); close(true); }
+      else if (event.key === "Tab") { close(); flush(); }
+    }
+    input.addEventListener("keydown", keys); search.addEventListener("keydown", keys);
+    input.addEventListener("input", () => {
+      if (inserting) return;
+      if (PtkVariables.token(input.value, input.selectionStart)) open(true);
+      else close();
+    });
+    search.addEventListener("input", () => show(search.value));
+    const moved = () => {
+      if (variablePicker?.input === input && automatic) {
+        if (PtkVariables.token(input.value, input.selectionStart)) open(true);
+        else close();
+      }
+    };
+    input.addEventListener("click", moved);
+    input.addEventListener("keyup", event => { if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) moved(); });
+    field.addEventListener("focusout", event => {
+      if (variablePicker?.input === input && event.relatedTarget && !field.contains(event.relatedTarget)) { close(); flush(); }
+    });
+    search.setAttribute("aria-controls", results.id); input.setAttribute("aria-controls", results.id);
+    input.setAttribute("aria-autocomplete", "list");
+    popup.append(search, results, summary, button("Close", () => close(true), "secondary small"));
+    tools.append(launch, el("span", "or type ${", { className: "help" }));
+    field.append(tools, popup);
   }
   function addField(main, value, spec, resolved) {
     const containerPath = [...selected];
@@ -445,7 +545,10 @@
     else status();
     flush(false);
   });
-  document.addEventListener("pointerdown", event => { if (app.contains(event.target)) pointerActive = true; });
+  document.addEventListener("pointerdown", event => {
+    if (app.contains(event.target)) pointerActive = true;
+    if (variablePicker && !variablePicker.field.contains(event.target)) { variablePicker.close(); flush(); }
+  });
   const finishPointer = () => setTimeout(() => {
     pointerActive = false;
     if (renderPending) renderConfiguration();

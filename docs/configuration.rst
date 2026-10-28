@@ -107,6 +107,54 @@ owning file when needed and uses the correct section schema for raw-file forms.
 The root schema from ``ptk setup config schema`` describes the assembled model;
 individual file schemas are exposed in the configuration inventory.
 
+Git substitutions
+-----------------
+
+Runtime templates support Git metadata independently of versioning configuration::
+
+   # config/ptk/jobs/package.ptk.yml
+   steps:
+   - package:
+       uses: echo
+       with:
+         message: "Source ${git.branch} at ${git.short_commit}"
+
+Available fields:
+
+* ``git.commit``: full source commit hash. In GitHub pull request workflows this
+  is ``pull_request.head.sha`` from the local event payload, including
+  ``pull_request_target``. It is not GitHub's synthetic merge or base commit.
+* ``git.short_commit``: the first 12 hexadecimal characters of ``git.commit``.
+* ``git.checkout_commit`` and ``git.short_checkout_commit``: the actual local
+  ``HEAD``, full and 12-character forms. This identifies the merged code being
+  tested when CI checks out a synthetic merge.
+* ``git.branch``: the PR head branch for pull request events, otherwise the local
+  branch or matching GitHub branch-event name. An unlabelled detached HEAD has
+  an empty branch name. Use this field instead of ``project.current_branch``,
+  which is not defined.
+* ``git.tags``: sorted exact tags on the source commit. Annotated and lightweight
+  tags are supported. With no exact tag, the value is an empty list.
+* ``git.tag``: the triggering tag for a matching GitHub tag event, otherwise the
+  first sorted exact tag. With no tag it is an empty string, not an error and
+  not the nearest ancestor tag used by Git version discovery.
+* ``git.dirty``: whether the checkout has tracked modifications, including
+  staged changes. Untracked files do not affect it.
+
+These values resolve during job preparation (including dry runs) or Artifactory
+destination resolution and are reused throughout that operation. No Git process
+is started until a template uses ``git.*``. Tag queries and working-tree status
+are separately lazy and cached: using only ``git.short_commit`` does not scan
+the working tree or enumerate tags. No network request, fetch or repository
+mutation occurs. The next run reads fresh metadata.
+
+Only locally available tags are considered, except for the matching tag event's
+own tag. A shallow checkout can therefore have no known tag. If a PR head object
+is not present locally, its hash and branch still come from the event and its
+tag list is empty. Missing or invalid PR head metadata produces an explicit
+error; PTK never substitutes the merge/base hash for it. GitHub context is scoped
+to the workflow repository, not unrelated VMR members. Projects without a Git
+checkout still work unless they request Git variables.
+
 Date and time substitutions
 ---------------------------
 
@@ -221,6 +269,16 @@ Use ``${vars.name}``, ``${params.name}``, ``${env:NAME}``,
 ``${vh.features.FEATURE}``, ``${vh.data.name}``, and run paths such as
 ``${run.build_dir}``. Escape literal substitutions with ``$${...}``.
 Unknown references are errors. The run paths are per step where applicable.
+
+The configuration editor offers **Insert variable…** and completion after
+``${`` in template-capable text fields. Its catalogue and field capabilities
+come from the installed PTK via ``describe --json --configuration``. That
+catalogue contains names, descriptions, context restrictions and availability
+notes, never resolved environment or credential values. Literal fields such as
+project names, plugin names and file discovery paths do not offer interpolation.
+Job parameter defaults exclude ``params.*`` and ``run.*``. Credential and secret
+parameter references are offered only in step environment values; ``github.*``
+is restricted to Artifactory destination templates.
 
 ``when`` uses the safe expression evaluator, not Python execution. Feature names,
 ``COMPONENT_*`` flags, ``variant``, ``os``, ``ci`` and supported namespaces can

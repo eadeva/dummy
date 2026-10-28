@@ -57,12 +57,21 @@ refreshes the tree. Click **PTK unavailable** to see the exact discovery error.
 
 Build from the repository root with ``ptk extension`` or ``uv run ptk extension``.
 The job checks Node.js 22+ and npm, installs the build dependencies, runs the
-checks and writes ``extensions/project-toolkit/project-toolkit-0.4.0.vsix``.
+checks and writes ``extensions/project-toolkit/project-toolkit-0.7.0.vsix``.
 Use ``ptk dry-run extension`` to preview it. Node.js and npm must be on PATH.
 Set ``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
 integration tests. CI builds downloadable VSIX artifacts on Linux and Windows;
 Marketplace publication is separate. See the extension README for installation,
 settings and manual smoke-test instructions.
+
+Template-capable configuration text inputs offer **Insert variable…** and
+autocomplete when typing ``${``. Search by name, group or description; use
+arrow keys and Enter to select, or Escape to close. Insertion preserves the
+surrounding text, cursor and unsaved draft and does not reload configuration.
+The installed PTK supplies the catalogue, field capabilities and current job's
+parameter names. Runtime availability is described rather than evaluated in
+the editor. Environment and credential values are never previewed.
+Update PTK and extension 0.7.0 together to use this feature.
 
 Generated tasks and offline resources
 -----------------------------------------

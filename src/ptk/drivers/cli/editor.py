@@ -102,6 +102,7 @@ def describe(ctx, as_json, configuration):
                         loader.editor_files,
                         str(exc),
                         loader.fingerprints,
+                        environment_names=state.app.host.variables.keys(),
                     )
                 }
                 if configuration
@@ -155,7 +156,10 @@ def describe(ctx, as_json, configuration):
             )
             try:
                 project = describe_project(
-                    state.project(), state.role(), configuration=configuration
+                    state.project(),
+                    state.role(),
+                    configuration=configuration,
+                    environment_names=state.app.host.variables.keys(),
                 )
                 group = command_ctx.command.get_command(command_ctx, alias)
                 with click.Context(
@@ -172,7 +176,12 @@ def describe(ctx, as_json, configuration):
         try:
             project = parent.project()
             root, role = project.root, parent.role()
-            item = describe_project(project, role, configuration=configuration)
+            item = describe_project(
+                project,
+                role,
+                configuration=configuration,
+                environment_names=parent.app.host.variables.keys(),
+            )
             item["commands"] = describe_commands(command_ctx)
             projects.append(item)
         except PtkError as exc:

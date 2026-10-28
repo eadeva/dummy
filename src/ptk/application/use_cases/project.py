@@ -594,4 +594,7 @@ class ExportSchema:
         ]
         schema["title"] = "ptk configuration (*.ptk.yml)"
         schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
+        from ...domain.config.template_variables import annotate_schema
+
+        annotate_schema(schema)
         return schema

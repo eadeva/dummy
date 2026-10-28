@@ -19,24 +19,13 @@ from ..variants.model import ProductLineSpec
 from .dates import valid_date_field
 from .model import JobSpec, PtkConfig, StepSpec
 from .substitution import iter_references, split_reference
+from .template_variables import GIT_FIELDS, PROJECT_KEYS, RUN_KEYS, VH_KEYS
 from .tree import Path
 
 PathProblem = tuple[Path, str]
 
 WHEN_FLAT_NAMES = {"variant", "os", "ci"}
 WHEN_NAMESPACES = {"params", "vars", "env", "vh"}
-PROJECT_KEYS = {"name", "root", "description", "alias"}
-RUN_KEYS = {
-    "id",
-    "job",
-    "variant",
-    "step",
-    "build_dir",
-    "bin_dir",
-    "log_dir",
-    "reports_dir",
-}
-VH_KEYS = {"variant", "aliases", "components", "component_list", "features", "data"}
 
 
 def parse_path(text: str) -> Path:
@@ -303,6 +292,9 @@ def _check_dotted(
     elif in_substitution and ns == "project":
         if first not in PROJECT_KEYS:
             return f"unknown name '{ref}'{did_you_mean(first, PROJECT_KEYS)}"
+    elif in_substitution and ns == "git":
+        if rest not in GIT_FIELDS:
+            return f"unknown name '{ref}'{did_you_mean(rest, GIT_FIELDS)}"
     elif in_substitution and ns == "run":
         if first not in RUN_KEYS:
             return f"unknown name '{ref}'{did_you_mean(first, RUN_KEYS)}"
@@ -317,6 +309,7 @@ def _check_dotted(
             "secret",
             "version",
             "date",
+            "git",
         ]
         return f"unknown namespace '{ns}'{did_you_mean(ns, known)}"
     return None

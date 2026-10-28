@@ -53,6 +53,23 @@ function project(root, alias) {
   });
 }
 
+test("installed PTK supplies the variable catalogue and raw job field capabilities", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk variables "));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  project(root, "demo");
+  const config = JSON.parse(invoke(root, ["describe", "--json", "--configuration"])).projects[0].configuration;
+  const V = require("../media/variables"), S = require("../media/schema"), E = require("../src/project-edits");
+  const file = path.join(root, "jobs/build.ptk.yml");
+  const value = JSON.parse(fs.readFileSync(file, "utf8"));
+  const state = { value, variables: config.variables, pathBindings: E.bindingsForFile(config, file) };
+  const entries = V.available(state, E.schemaForFile(config, file), ["steps", 0, "say", "with", "message"], S);
+  assert.ok(entries.some(entry => entry.reference === "git.short_commit"));
+  assert.ok(entries.some(entry => entry.reference === "params.message"));
+  assert.ok(!entries.some(entry => entry.reference === "params.token"));
+  assert.ok(!entries.some(entry => entry.reference.startsWith("github.")));
+  assert.deepEqual(V.available(state, E.schemaForFile(config, file), ["steps", 0, "say", "uses"], S), []);
+});
+
 test("actual PTK inventory, preview, job parameters and variant inspection agree with extension arguments", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk extension "));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

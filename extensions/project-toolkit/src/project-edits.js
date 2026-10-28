@@ -87,4 +87,13 @@ function schemaForFile(snapshot, file) {
   });
   return document && { ...document.schema, $defs: snapshot.schema.$defs };
 }
-module.exports = { plan, writePath, schemaForFile };
+function bindingsForFile(snapshot, file) {
+  return (snapshot.bindings || []).flatMap(binding => {
+    if (!binding.file.includes("{name}")) return binding.file === file ? [binding] : [];
+    const [start, end] = binding.file.split("{name}");
+    const name = file.slice(start.length, -end.length);
+    return file.startsWith(start) && file.endsWith(end) && /^[A-Za-z][A-Za-z0-9_-]*$/.test(name)
+      ? [{ ...binding, path: binding.path.map(key => key === "*" ? name : key) }] : [];
+  });
+}
+module.exports = { plan, writePath, schemaForFile, bindingsForFile };

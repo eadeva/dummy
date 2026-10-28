@@ -49,6 +49,14 @@ main { padding: 24px 28px 40px; min-width: 0; max-width: 1000px; }
 .add .row > input, .add .row > select { flex: 1; min-width: 80px; }
 .add .row > button { flex-shrink: 0; }
 .empty { padding: 24px 0; color: var(--vscode-descriptionForeground); }
+.variable-tools { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+.variable-picker { margin-top: 10px; padding: 10px; border: 1px solid var(--vscode-focusBorder); border-radius: 5px; background: var(--vscode-editorWidget-background, var(--vscode-editor-background)); }
+.variable-picker[hidden], .variable-picker input[hidden] { display: none; }
+.variable-results { max-height: 280px; overflow-y: auto; margin: 8px 0; }
+.variable-option { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; width: 100%; text-align: left; color: var(--vscode-foreground); background: transparent; padding: 8px; }
+.variable-option[aria-selected=true] { background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground); outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
+.variable-name { font-family: var(--vscode-editor-font-family, monospace); overflow-wrap: anywhere; }
+.variable-option .help { grid-column: 1 / -1; margin: 0; color: inherit; opacity: .85; }
 .notice { margin: 12px 0; padding: 10px 14px; border-left: 3px solid var(--vscode-charts-orange, var(--vscode-focusBorder)); background: var(--vscode-textBlockQuote-background); line-height: 1.5; white-space: pre-wrap; }
 .notice.error { border-left-color: var(--vscode-errorForeground); color: var(--vscode-errorForeground); }
 .notice[hidden] { display: none; }

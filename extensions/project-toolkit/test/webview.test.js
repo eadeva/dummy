@@ -6,6 +6,7 @@ try { ({ chromium } = require(process.env.PTK_TEST_PLAYWRIGHT || "playwright"));
 const options = { skip: !chromium && "Install Playwright or set PTK_TEST_PLAYWRIGHT for real webview tests" };
 const media = path.resolve(__dirname, "../media");
 const schema = require("../media/config-schema.json");
+const variables = require("./variable-fixtures");
 
 async function form(t, value = { vars: { first: "original", second: "other", unused: "remove me" } }, selection = ["vars"]) {
   const browser = await chromium.launch({ headless: true, executablePath: process.env.PTK_TEST_CHROMIUM, args: ["--no-sandbox"] });
@@ -18,11 +19,12 @@ async function form(t, value = { vars: { first: "original", second: "other", unu
     window.acquireVsCodeApi = () => ({ getState: () => ({}), setState() {}, postMessage(message) { window.messages.push(message); } });
   });
   await page.addStyleTag({ path: path.join(media, "editor.css") });
-  for (const file of ["schema.js", "presentation.js", "editor.js"]) await page.addScriptTag({ path: path.join(media, file) });
+  for (const file of ["schema.js", "presentation.js", "variables.js", "editor.js"]) await page.addScriptTag({ path: path.join(media, file) });
   let version = 1;
   async function state(extra = {}) {
     await page.evaluate(message => window.dispatchEvent(new MessageEvent("message", { data: message })), {
       type: "state", mode: "configuration", logical: true, filename: "Demo", schema, value, selection,
+      variables,
       locked: [], annotations: [], version: version++, dirty: false, ...extra,
     });
   }
@@ -194,4 +196,72 @@ test("zero and false are filled values rather than empty fields", options, async
   const h = await form(t, { vars: { count: 0, enabled: false, empty: "" } });
   const empty = h.page.locator(".needs-value label.name");
   assert.deepEqual(await empty.allTextContents(), ["empty"]);
+});
+
+test("variable picker inserts at the caret without saving or losing the draft", options, async t => {
+  const h = await form(t);
+  const input = h.field("first"), section = h.page.locator(".field").filter({ has: input });
+  await input.fill("prefix-/suffix");
+  await input.evaluate(input => input.setSelectionRange(7, 7));
+  await section.getByRole("button", { name: "Insert variable…", exact: true }).click();
+  await section.getByRole("searchbox").fill("git short");
+  await section.locator(".variable-results").getByRole("option").click();
+  assert.equal(await input.inputValue(), "prefix-${git.short_commit}/suffix");
+  assert.equal(await input.evaluate(input => document.activeElement === input), true);
+  assert.equal((await h.edits()).length, 0);
+  await h.field("second").focus();
+  assert.equal((await h.edits()).length, 1);
+  assert.equal((await h.edits())[0].operations[0].value, "prefix-${git.short_commit}/suffix");
+});
+
+test("typing a template completes with the keyboard and escaped templates stay literal", options, async t => {
+  const h = await form(t);
+  const input = h.field("first");
+  await input.fill("out/${git.sh");
+  assert.equal(await h.page.locator(".variable-picker:not([hidden]) .variable-option").count(), 1);
+  await input.press("Enter");
+  assert.equal(await input.inputValue(), "out/${git.short_commit}");
+  assert.equal((await h.edits()).length, 0);
+  await input.fill("$${git.sh");
+  assert.equal(await h.page.locator(".variable-picker:not([hidden])").count(), 0);
+});
+
+test("environment insertion selects the name placeholder and Escape preserves the input", options, async t => {
+  const h = await form(t);
+  const input = h.field("first"), section = h.page.locator(".field").filter({ has: input });
+  await input.fill("${env:NA");
+  await input.press("Enter");
+  assert.equal(await input.inputValue(), "${env:NAME}");
+  assert.equal(await input.evaluate(input => input.value.slice(input.selectionStart, input.selectionEnd)), "NAME");
+  await section.getByRole("button", { name: "Insert variable…", exact: true }).click();
+  await section.getByRole("searchbox").press("Escape");
+  assert.equal(await input.inputValue(), "${env:NAME}");
+  assert.equal((await h.edits()).length, 0);
+});
+
+test("structural acknowledgements wait for the picker and retain the inserted value", options, async t => {
+  const h = await form(t);
+  await h.page.locator(".field").filter({ has: h.field("unused") }).getByRole("button", { name: "Remove", exact: true }).click();
+  const [edit] = await h.edits();
+  const input = h.field("first");
+  await input.fill("${git.sh");
+  delete h.value.vars.unused;
+  await h.state({ ack: edit.id });
+  assert.equal(await input.inputValue(), "${git.sh");
+  await input.press("Enter");
+  assert.equal(await h.field("first").inputValue(), "${git.short_commit}");
+  assert.equal((await h.edits()).length, 1);
+  assert.equal(await h.field("unused").count(), 0);
+});
+
+test("literal fields do not offer variable insertion and keyboard opening does not save", options, async t => {
+  const h = await form(t, { project: { name: "demo" } }, ["project"]);
+  assert.equal(await h.page.getByRole("button", { name: "Insert variable…", exact: true }).count(), 0);
+  await h.state({ value: { vars: { first: "" } }, selection: ["vars"] });
+  await h.page.evaluate(() => window.dispatchEvent(new MessageEvent("message", { data: { type: "navigate", selection: ["vars"] } })));
+  await h.field("first").fill("draft");
+  await h.field("first").press("Tab");
+  await h.page.keyboard.press("Enter");
+  assert.equal(await h.page.getByRole("searchbox").isVisible(), true);
+  assert.equal((await h.edits()).length, 0);
 });

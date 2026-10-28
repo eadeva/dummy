@@ -2,20 +2,21 @@
 
 from ...domain.artifacts import destination
 from ...domain.config.dates import date_values
-from ...domain.config.substitution import Scope
+from ...domain.config.substitution import LazyNamespace, Scope
 from ...domain.errors import PtkError
 from .role import visible
 from .variants import VariantService
 
 
 class ResolveDestination:
-    def __init__(self, versions, github_context, instant, environment):
+    def __init__(self, versions, github_context, instant, environment, git=None):
         self.versions, self.github_context, self.instant = (
             versions,
             github_context,
             instant,
         )
         self.environment = environment
+        self.git = git
 
     def execute(self, project, *, job, variant=None, event=None, role="user", at=None):
         config = project.config
@@ -40,6 +41,14 @@ class ResolveDestination:
         github["event_name"] = event
         alias = config.repository.alias if config.repository else config.project.name
         versions = self.versions.resolve(project, variant, job)
+
+        def read_git():
+            if self.git is None:
+                raise PtkError(
+                    "Git metadata is not available in this execution context."
+                )
+            return self.git.discover(project.root)
+
         scope = Scope(
             env=self.environment,
             vars=config.vars,
@@ -57,6 +66,7 @@ class ResolveDestination:
                 "date": date_values(at or self.instant),
                 "run": {"job": job, "variant": variant or "default"},
                 "github": github,
+                "git": LazyNamespace(read_git),
             },
         )
         try:

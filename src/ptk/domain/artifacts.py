@@ -6,19 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .config.dates import valid_date_field
 from .config.substitution import iter_references, split_reference
-
-GITHUB_FIELDS = {
-    "event_name",
-    "ref_name",
-    "ref_type",
-    "sha",
-    "run_id",
-    "run_attempt",
-    "repository",
-    "event.pull_request.number",
-    "event.release.tag_name",
-    "event.release.prerelease",
-}
+from .config.template_variables import GIT_FIELDS, GITHUB_FIELDS
 
 
 class PathRoute(BaseModel):
@@ -80,6 +68,8 @@ def template_problems(spec, variables):
                     and valid_date_field(rest)
                     or ns == "github"
                     and rest in GITHUB_FIELDS
+                    or ns == "git"
+                    and rest in GIT_FIELDS
                     or ns == "project"
                     and rest in {"alias", "name", "root", "description"}
                     or ns == "run"

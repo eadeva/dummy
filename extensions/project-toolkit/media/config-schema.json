@@ -371,7 +371,8 @@
             "type": "string"
           },
           "title": "Set",
-          "type": "object"
+          "type": "object",
+          "x-ptk-template-context": "environment"
         },
         "unset": {
           "items": {
@@ -385,14 +386,16 @@
             "type": "string"
           },
           "title": "Path Prepend",
-          "type": "array"
+          "type": "array",
+          "x-ptk-template-context": "environment"
         },
         "path_append": {
           "items": {
             "type": "string"
           },
           "title": "Path Append",
-          "type": "array"
+          "type": "array",
+          "x-ptk-template-context": "environment"
         }
       },
       "title": "EnvironmentSpec",
@@ -695,7 +698,8 @@
             "type": "string"
           },
           "title": "Env",
-          "type": "object"
+          "type": "object",
+          "x-ptk-template-context": "job"
         },
         "steps": {
           "items": {
@@ -791,7 +795,8 @@
         },
         "default": {
           "default": null,
-          "title": "Default"
+          "title": "Default",
+          "x-ptk-template-context": "default"
         },
         "choices": {
           "anyOf": [
@@ -1783,7 +1788,8 @@
             }
           ],
           "default": null,
-          "title": "Run"
+          "title": "Run",
+          "x-ptk-template-context": "step"
         },
         "uses": {
           "anyOf": [
@@ -1800,7 +1806,8 @@
         "with": {
           "additionalProperties": true,
           "title": "With",
-          "type": "object"
+          "type": "object",
+          "x-ptk-template-context": "step"
         },
         "steps": {
           "anyOf": [
@@ -1873,14 +1880,16 @@
             }
           ],
           "default": null,
-          "title": "Cwd"
+          "title": "Cwd",
+          "x-ptk-template-context": "step"
         },
         "env": {
           "additionalProperties": {
             "type": "string"
           },
           "title": "Env",
-          "type": "object"
+          "type": "object",
+          "x-ptk-template-context": "secret"
         },
         "secrets": {
           "additionalProperties": {
@@ -1935,13 +1944,15 @@
             "$ref": "#/$defs/StepBody"
           },
           {
-            "type": "string"
+            "type": "string",
+            "x-ptk-template-context": "step"
           },
           {
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "x-ptk-template-context": "step"
           }
         ]
       }
@@ -2053,7 +2064,8 @@
           "type": "null"
         }
       ],
-      "default": null
+      "default": null,
+      "x-ptk-template-context": "destination"
     },
     "workflows": {
       "additionalProperties": {
@@ -2094,7 +2106,8 @@
     "vars": {
       "additionalProperties": true,
       "title": "Vars",
-      "type": "object"
+      "type": "object",
+      "x-ptk-template-context": "vars"
     },
     "param_defaults": {
       "additionalProperties": true,

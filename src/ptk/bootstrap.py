@@ -327,7 +327,14 @@ class App:
             tools=self.tools,
             versions=self.versions(),
             ptk_version=__version__,
+            git=self.git_metadata,
         )
+
+    @cached_property
+    def git_metadata(self):
+        from .adapters.git_metadata import GitMetadata
+
+        return GitMetadata(self.runner, self.host)
 
     def artifacts(self) -> ResolveDestination:
         from .adapters.github_context import github_context
@@ -338,6 +345,7 @@ class App:
             lambda: github_context(self.host.variables),
             self.started_at,
             self.host.variables,
+            git=self.git_metadata,
         )
 
     def run_job(self, project: Project) -> RunJob:

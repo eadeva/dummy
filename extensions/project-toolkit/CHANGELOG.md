@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.0
+
+- Add variable insertion and `${` autocomplete using the installed PTK's catalogue and template field capabilities.
+- Filter variables by field context and current job, keep credentials restricted to step environment values and never preview environment or secret values.
+- Preserve drafts, selection and focus during insertion, including outstanding structural save acknowledgements.
+- PTK adds lazy, cached Git variables with PR head identity, separate checkout hashes, 12-character short hashes and exact-tag semantics. No network fetching; tag and dirty checks are independently lazy.
+
 ## 0.6.1
 
 - Wait for superseding watcher refreshes before acknowledging configuration saves.

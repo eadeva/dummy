@@ -75,6 +75,11 @@ class HostEnvironment(Protocol):
         """OS login name locally, triggering actor on GitHub Actions."""
 
 
+class GitMetadata(Protocol):
+    def discover(self, root: Path) -> Mapping[str, object]:
+        """Read source/checkout Git identities without changing the repository."""
+
+
 # --------------------------------------------------------------------------- execution
 
 

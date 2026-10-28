@@ -6,12 +6,15 @@ from pathlib import Path
 
 from ...domain.config import tree as t
 from ...domain.config.layout import editor_layout
+from ...domain.config.template_variables import catalogue
 from .project import ExportSchema
 from .role import command_allowed, visible
 from .variants import VariantService
 
 
-def describe_configuration(tree, root, files, error=None, fingerprints=None):
+def describe_configuration(
+    tree, root, files, error=None, fingerprints=None, environment_names=()
+):
     """Authored model and schema from the installed PTK, never an editor loader."""
     sources = []
     locked = []
@@ -53,6 +56,7 @@ def describe_configuration(tree, root, files, error=None, fingerprints=None):
         "fingerprints": fingerprints or {},
         **editor_layout(root / ".main.ptk.yml", tree, schema),
         "schema": schema,
+        "variables": catalogue(value, environment_names),
         "value": value,
         "locked": locked,
         "sources": sources,
@@ -61,7 +65,7 @@ def describe_configuration(tree, root, files, error=None, fingerprints=None):
     }
 
 
-def describe_project(project, role, *, configuration=False):
+def describe_project(project, role, *, configuration=False, environment_names=()):
     """Expose only permitted operations and authored, non-secret parameter metadata."""
     config = project.config
     capabilities = {
@@ -90,6 +94,7 @@ def describe_project(project, role, *, configuration=False):
                     project.root,
                     project.files,
                     fingerprints=project.fingerprints,
+                    environment_names=environment_names,
                 )
             }
             if configuration

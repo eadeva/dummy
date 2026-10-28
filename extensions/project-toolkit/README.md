@@ -8,8 +8,8 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
 1. Install PTK from the same checkout/version as this extension. The CLI must
    support `ptk describe --json` (inventory schema version 1).
 2. In VS Code, run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.6.1.vsix`. You can also use
-   `code --install-extension project-toolkit-0.6.1.vsix`.
+   `project-toolkit-0.7.0.vsix`. You can also use
+   `code --install-extension project-toolkit-0.7.0.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -41,6 +41,23 @@ workspace node. Click a **PTK unavailable** node to show the exact error.
 Set `projectToolkit.discoveryTimeout` (seconds) for slow projects.
 
 ## Use
+
+Template-capable configuration inputs have **Insert variable…** and autocomplete
+after `${`. Search names, groups and descriptions; use arrow keys and Enter to
+insert, or Escape to close. Variables insert at the cursor without saving,
+reloading the form or losing unfinished text. Environment placeholders select
+the name for editing. The installed PTK supplies the catalogue and tells the
+form which fields support templates. Job parameters are scoped to their job;
+credential references are only offered for step environment values. No resolved
+environment or credential values are displayed. Update PTK and extension 0.7.0
+together.
+
+PTK resolves `${git.branch}`, `${git.commit}`, `${git.short_commit}`, `${git.tag}`,
+`${git.tags}` and `${git.dirty}` at runtime. PR commit identity comes from the
+head SHA; `${git.checkout_commit}` and `${git.short_checkout_commit}` expose the
+actual checkout separately. Short hashes have 12 characters. No exact tag means
+an empty string/list. Git lookup is lazy, cached per operation and local only;
+tag and dirty checks run only when requested.
 
 Find PTK by its custom wizard icon, with **PTk** on the hat. The project tree
 uses theme colours to distinguish green jobs, purple workflows, orange variants,
@@ -174,7 +191,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.6.1.vsix`. Use `ptk dry-run extension`
+`extensions/project-toolkit/project-toolkit-0.7.0.vsix`. Use `ptk dry-run extension`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:

@@ -22,6 +22,7 @@ from __future__ import annotations
 import re
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
+from functools import cached_property
 from typing import Any
 
 from ..suggest import did_you_mean
@@ -37,7 +38,28 @@ NAMESPACES = (
     "secret",
     "version",
     "date",
+    "git",
 )
+
+
+class LazyNamespace(Mapping):
+    """Resolve an optional runtime context once, only when a template uses it."""
+
+    def __init__(self, loader):
+        self.loader = loader
+
+    @cached_property
+    def value(self):
+        return self.loader()
+
+    def __getitem__(self, key):
+        return self.value[key]
+
+    def __iter__(self):
+        return iter(self.value)
+
+    def __len__(self):
+        return len(self.value)
 
 
 class SubstitutionError(ValueError):
