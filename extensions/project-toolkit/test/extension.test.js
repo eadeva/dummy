@@ -16,6 +16,10 @@ function harness(t, docs = [inventory()], trusted = true) {
   const picks = [];
   const inputs = [];
   const calls = [];
+  const config = {};
+  const watchers = [];
+  const taskEnd = [];
+  let outputShown = 0;
   const disposable = () => ({ dispose() {} });
   const folder = doc => ({ name: path.basename(doc.root), uri: { scheme: "file", fsPath: doc.root } });
   const folders = docs.map(folder);
@@ -39,7 +43,7 @@ function harness(t, docs = [inventory()], trusted = true) {
     TaskRevealKind: { Always: 1 }, TaskPanelKind: { Dedicated: 2 },
     Uri: { file: fsPath => ({ scheme: "file", fsPath }) },
     window: {
-      createOutputChannel: () => ({ appendLine: line => logs.push(line), dispose() {} }),
+      createOutputChannel: () => ({ appendLine: line => logs.push(line), show() { outputShown++; }, dispose() {} }),
       registerTreeDataProvider: () => disposable(),
       showErrorMessage: async message => errors.push(message),
       showQuickPick: async (items, options) => picks.shift()?.(items, options),
@@ -47,8 +51,13 @@ function harness(t, docs = [inventory()], trusted = true) {
     },
     workspace: {
       isTrusted: trusted, workspaceFolders: folders,
-      getConfiguration: () => ({ get: (_key, fallback) => fallback }),
-      createFileSystemWatcher: () => ({ dispose() {}, onDidCreate: disposable, onDidChange: disposable, onDidDelete: disposable }),
+      getConfiguration: () => ({ get: (key, fallback) => config[key] ?? fallback }),
+      createFileSystemWatcher: pattern => {
+        const callbacks = {};
+        watchers.push({ pattern, callbacks });
+        return Object.fromEntries([['dispose', () => {}], ...['Create', 'Change', 'Delete'].map(kind =>
+          [`onDid${kind}`, callback => { callbacks[kind] = callback; return disposable(); }])]);
+      },
       onDidChangeConfiguration: disposable, onDidChangeWorkspaceFolders: disposable, onDidGrantWorkspaceTrust: disposable,
     },
     commands: {
@@ -58,6 +67,7 @@ function harness(t, docs = [inventory()], trusted = true) {
     tasks: {
       executeTask: async task => { tasks.push(task); return task; },
       registerTaskProvider: (_type, provider) => { api.taskProvider = provider; return disposable(); },
+      onDidEndTaskProcess: callback => { taskEnd.push(callback); return disposable(); },
     },
   };
   const context = {
@@ -68,7 +78,7 @@ function harness(t, docs = [inventory()], trusted = true) {
   t.after(() => context.subscriptions.forEach(item => item.dispose()));
   const command = (name, element) => commands.get(`project-toolkit.${name}`)(element);
   const target = (kind = "job", index = 0) => ({ kind, name: "build", project: docs[index].projects[0], root: docs[index].projects[0].root });
-  return { api, controller, command, target, context, state, tasks, errors, logs, picks, inputs, calls };
+  return { api, controller, command, target, context, state, tasks, errors, logs, picks, inputs, calls, config, watchers, taskEnd, outputShown: () => outputShown };
 }
 
 test("activation discovers projects and runs jobs as processes with global variants", async t => {
@@ -205,20 +215,86 @@ test("workspace workflows use the workspace root without a member config", async
   assert.deepEqual(h.tasks[0].execution.args, ["workflow", "dry-run", "all"]);
 });
 
-test("the newest refresh wins when discovery completes out of order", async t => {
+test("refreshes are serialized and intermediate requests are coalesced", async t => {
   const h = harness(t);
   await h.controller.ready();
   let finishOld;
   h.api.workspace.workspaceFolders[0].name = "workspace";
   core.readInventory = () => new Promise(resolve => { finishOld = resolve; });
   const first = h.controller.refresh();
+  await Promise.resolve();
   const latest = inventory();
   latest.projects[0].alias = "latest";
-  core.readInventory = async () => latest;
-  await h.controller.refresh();
+  let nextCalls = 0;
+  core.readInventory = async () => { nextCalls++; return latest; };
+  const second = h.controller.refresh();
+  const third = h.controller.refresh();
+  assert.equal(nextCalls, 0);
   finishOld(inventory());
-  await first;
+  await Promise.all([first, second, third]);
+  assert.equal(nextCalls, 1);
   assert.equal(h.controller.provider.getChildren()[0].children[0].label, "latest");
+});
+
+test("installed configuration copies do not refresh discovery and task completion recovers errors", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const h = harness(t);
+  await h.controller.ready();
+  const root = h.target().root;
+  const watcher = h.watchers[0].callbacks;
+  for (const directory of [".venv/Lib/site-packages/ptk/resources", ".ptk/venvs/test", "custom-env/Lib/site-packages/ptk", "_reports", "node_modules"]) {
+    for (const callback of Object.values(watcher)) callback({ fsPath: path.join(root, directory, "example/.main.ptk.yml") });
+  }
+  t.mock.timers.tick(1000);
+  await h.controller.ready();
+  assert.equal(h.calls.length, 1);
+  watcher.Change({ fsPath: h.target().project.entry_file });
+  t.mock.timers.tick(350);
+  await h.controller.ready();
+  assert.equal(h.calls.length, 2);
+  core.readInventory = async () => { throw new Error("Python environment temporarily unavailable"); };
+  await h.controller.refresh();
+  const warning = h.controller.provider.getChildren()[0];
+  assert.equal(warning.command.command, "project-toolkit.showOutput");
+  await h.command("showOutput");
+  assert.equal(h.outputShown(), 1);
+  assert.match(h.logs.at(-1), /temporarily unavailable/);
+  core.readInventory = async () => inventory();
+  for (const callback of h.taskEnd) callback({ execution: { task: { definition: { type: "project-toolkit", kind: "builtin" } } } });
+  t.mock.timers.tick(350);
+  await h.controller.ready();
+  assert.equal(h.controller.provider.getChildren()[0].children[0].label, "demo");
+  assert.equal(h.tasks.length, 0);
+});
+
+test("every task entry point uses the non-syncing uv launcher, including help and restored tasks", async t => {
+  const h = harness(t);
+  h.config.executable = "C:\\tools\\uv.EXE";
+  h.config.arguments = ["run", "ptk"];
+  await h.controller.ready();
+  for (const kind of ["job", "workflow"]) {
+    for (const command of ["run", "preview", "clean", "reRun", "showHelp", "openReport"]) await h.command(command, h.target(kind));
+  }
+  h.picks.push(() => []);
+  await h.command("runWithParameters", h.target());
+  for (const target of core.builtinTargets({ ...h.target(), folder: h.api.workspace.workspaceFolders[0] }, inventory().projects[0].commands)) {
+    await h.command("showHelp", target);
+  }
+  await h.command("runBuiltin", { ...h.target("builtin"), name: "version check" });
+  h.picks.push(() => []);
+  await h.command("runBuiltinWithParameters", { ...h.target("builtin"), name: "version check" });
+  for (const task of h.tasks) {
+    assert.deepEqual(task.execution.args.slice(0, 3), ["run", "--no-sync", "ptk"]);
+    assert.equal(task.execution.options.env, undefined); // Do not leak UV_NO_SYNC into job steps.
+    const restored = await h.api.taskProvider.resolveTask(task);
+    assert.deepEqual(restored.execution.args, task.execution.args);
+  }
+  await h.command("showVariant", { ...h.target(), name: "large" });
+  await h.command("validate", h.target());
+  for (const task of [...h.tasks, ...await h.api.taskProvider.provideTasks()]) {
+    assert.deepEqual(task.execution.args.slice(0, 3), ["run", "--no-sync", "ptk"]);
+  }
+  assert.deepEqual(h.errors, []);
 });
 
 test("job actions expose icons with tooltip titles in the sidebar", () => {
@@ -242,7 +318,7 @@ test("tree omits duplicate run and report commands in repositories and workspace
   const project = root.children.find(node => node.project);
   for (const owner of [root, project]) {
     const builtins = owner.children.find(node => node.label === "Built-in commands");
-    assert.deepEqual(builtins.children.map(node => node.label), ["CLI help", "help", "workflow", "setup"]);
+    assert.deepEqual(builtins.children.map(node => node.label), ["CLI help", "help", "version", "workflow", "setup"]);
     assert.deepEqual(builtins.children.find(node => node.label === "workflow").children.map(node => node.label), ["list", "show"]);
   }
   for (const label of ["Jobs", "Workflows"]) {

@@ -54,15 +54,19 @@ function createController(vscode, context) {
       changed.fire();
       return Promise.resolve();
     }
-    const folders = (vscode.workspace.workspaceFolders || []).filter(folder => folder.uri.scheme === "file");
-    pending = Promise.all(folders.map(async folder => {
-      try {
-        return { folder, inventory: await core.readInventory(settings(folder), folder.uri.fsPath) };
-      } catch (error) {
-        return { folder, error: error.message };
-      }
-    })).then(result => {
-      if (current !== revision || disposed) return;
+    // Coalesce refreshes and wait for the previous process instead of starting
+    // overlapping CLI instances while files are being installed or generated.
+    pending = pending.then(async () => {
+      if (current !== revision || disposed || !vscode.workspace.isTrusted) return;
+      const folders = (vscode.workspace.workspaceFolders || []).filter(folder => folder.uri.scheme === "file");
+      const result = await Promise.all(folders.map(async folder => {
+        try {
+          return { folder, inventory: await core.readInventory(settings(folder), folder.uri.fsPath) };
+        } catch (error) {
+          return { folder, error: error.message };
+        }
+      }));
+      if (current !== revision || disposed || !vscode.workspace.isTrusted) return;
       records = result;
       for (const record of records) {
         if (record.error) output.appendLine(`${record.folder.name}: ${record.error}`);
@@ -73,7 +77,9 @@ function createController(vscode, context) {
   }
 
   function schedule(uri) {
-    if (uri && path.basename(uri.fsPath) === ".gen.version.ptk.yml") return;
+    if (uri && core.ignoreConfigEvent(uri.fsPath,
+      (vscode.workspace.workspaceFolders || []).map(folder => folder.uri.fsPath),
+      records.flatMap(record => (record.inventory?.projects || []).flatMap(project => project.config_files || [])))) return;
     clearTimeout(timer);
     timer = setTimeout(refresh, 350);
   }
@@ -151,7 +157,10 @@ function createController(vscode, context) {
     getChildren(element) {
       if (element) return element.children || [];
       return records.map(record => {
-        if (record.error) return { label: record.folder.name, description: "PTK unavailable", tooltip: record.error, icon: "warning" };
+        if (record.error) return {
+          label: record.folder.name, description: "PTK unavailable", tooltip: `${record.error}\nClick to show the discovery error.`, icon: "warning",
+          command: { command: "project-toolkit.showOutput", title: "Show PTK Discovery Error" },
+        };
         const children = record.inventory.projects.map(project => projectNode(project, record));
         if (record.inventory.workflows.length) children.unshift({ label: "Workspace workflows", icon: "git-merge", children: record.inventory.workflows.map(spec => ({
           kind: "workflow", name: spec.name, spec, root: record.inventory.root, folder: record.folder, ci: record.inventory.ci,
@@ -308,7 +317,7 @@ function createController(vscode, context) {
     if (options.report !== undefined) definition.report = options.report;
     if (options.inputs && Object.keys(options.inputs).length) definition.inputs = options.inputs;
     const task = new vscode.Task(definition, target.folder, `${options.report ? "Report " : options.help ? "Help " : options.preview ? "Dry Run " : options.clean ? "Clean " : options.reRun ? "Re-run " : ""}${title(target)}`, "project-toolkit",
-      new vscode.ProcessExecution(config.executable, [...config.arguments, ...core.argsFor(target, options)], { cwd: target.root }), []);
+      new vscode.ProcessExecution(config.executable, core.launchArgs(config, core.argsFor(target, options)), { cwd: target.root }), []);
     task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Dedicated, clear: false, focus: target.kind === "builtin" && !options.help };
     return task;
   }
@@ -340,6 +349,7 @@ function createController(vscode, context) {
   }
 
   command("refresh", refresh);
+  command("showOutput", () => output.show(true));
   command("run", element => run(element));
   command("preview", element => run(element, true));
   command("clean", element => run(element, false, false, { clean: true }));
@@ -404,7 +414,7 @@ function createController(vscode, context) {
         return;
       }
       const resolved = makeTask(target, {
-        variant: target.project ? d.variant || variantFor(target.project) : undefined,
+        variant: target.project && !d.help ? d.variant || variantFor(target.project) : undefined,
         preview: d.preview, params: d.params, help: d.help, inputs: d.inputs, clean: d.clean, reRun: d.reRun, report: d.report,
       });
       resolved.definition = task.definition;
@@ -420,6 +430,9 @@ function createController(vscode, context) {
   context.subscriptions.push(watcher, watcher.onDidCreate(schedule), watcher.onDidChange(schedule), watcher.onDidDelete(schedule));
   const repoWatcher = vscode.workspace.createFileSystemWatcher("**/.repo/project.list");
   context.subscriptions.push(repoWatcher, repoWatcher.onDidChange(schedule), repoWatcher.onDidCreate(schedule), repoWatcher.onDidDelete(schedule));
+  context.subscriptions.push(vscode.tasks.onDidEndTaskProcess(event => {
+    if (event.execution.task.definition.type === "project-toolkit") schedule();
+  }));
   context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => { if (event.affectsConfiguration("projectToolkit")) schedule(); }),
     vscode.workspace.onDidChangeWorkspaceFolders(() => schedule()), vscode.workspace.onDidGrantWorkspaceTrust(refresh),
     { dispose() { disposed = true; revision++; clearTimeout(timer); } });

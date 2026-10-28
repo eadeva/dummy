@@ -154,3 +154,27 @@ test("cleanup flags precede commands and workflow variants are forwarded", () =>
   assert.throws(() => core.argsFor(job, { clean: true, reRun: true }), /Choose/);
   assert.deepEqual(core.argsFor(job, { clean: true, help: true }).slice(2), ["build", "--help"]);
 });
+
+test("uv launch arguments prevent implicit syncing on POSIX and Windows without changing explicit commands", () => {
+  for (const executable of ["uv", "/tools/uv", "C:\\tools with spaces\\uv.EXE"]) {
+    const settings = { executable, arguments: ["run", "--project", "folder with spaces", "ptk"] };
+    assert.deepEqual(core.launchArgs(settings, ["version", "check"]), ["run", "--no-sync", "--project", "folder with spaces", "ptk", "version", "check"]);
+    assert.deepEqual(settings.arguments, ["run", "--project", "folder with spaces", "ptk"]);
+    assert.deepEqual(core.launchArgs({ executable, arguments: ["run", "--no-sync", "ptk"] }, ["describe", "--json"]), ["run", "--no-sync", "ptk", "describe", "--json"]);
+  }
+  assert.deepEqual(core.launchArgs({ executable: "ptk", arguments: [] }, ["version", "check"]), ["version", "check"]);
+  assert.deepEqual(core.launchArgs({ executable: "uv", arguments: ["tool", "run", "ptk"] }, ["--help"]), ["tool", "run", "ptk", "--help"]);
+});
+
+test("watch filtering ignores installed resources but respects explicitly included configuration", () => {
+  for (const [paths, root] of [[path, path.resolve("project")], [path.win32, "C:\\git\\project"]]) {
+    const generated = paths.join(root, "config", ".gen.version.ptk.yml");
+    assert.equal(core.ignoreConfigEvent(generated, [root], [generated]), true);
+    for (const folder of [".venv", ".ptk", "custom-env/Lib/site-packages", "dist", ".github/ptk"]) {
+      const file = paths.join(root, ...folder.split("/"), "example.ptk.yml");
+      assert.equal(core.ignoreConfigEvent(file, [root]), true);
+      assert.equal(core.ignoreConfigEvent(file, [root], [file]), false);
+    }
+    assert.equal(core.ignoreConfigEvent(paths.join(root, "config", "jobs", "new.ptk.yml"), [root]), false);
+  }
+});

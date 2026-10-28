@@ -122,3 +122,42 @@ test("actual cleanup controls remove only the chosen job variant", { skip: !pyth
   invoke(root, core.argsFor(cleanAll, { inputs: { yes: ["true"] } }));
   assert.equal(fs.existsSync(path.join(root, "_bin")), false);
 });
+
+test("real uv discovery and version-check launch do not sync or alter installed metadata", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, async t => {
+  const uv = "uv";
+  const version = spawnSync(uv, ["--version"], { encoding: "utf8", timeout: 10000 });
+  if (version.error?.code === "ENOENT") { t.skip("uv is not installed"); return; }
+  assert.equal(version.status, 0, version.stderr);
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk uv launch "));
+  const venv = path.join(root, ".venv");
+  const previous = process.env.UV_PROJECT_ENVIRONMENT;
+  process.env.UV_PROJECT_ENVIRONMENT = venv;
+  t.after(() => {
+    if (previous === undefined) delete process.env.UV_PROJECT_ENVIRONMENT;
+    else process.env.UV_PROJECT_ENVIRONMENT = previous;
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+  const created = spawnSync(uv, ["venv", "--python", python, venv], { encoding: "utf8", timeout: 30000 });
+  assert.equal(created.status, 0, created.stderr);
+  const interpreter = path.join(venv, process.platform === "win32" ? "Scripts/python.exe" : "bin/python");
+  const site = spawnSync(interpreter, ["-c", "import sysconfig; print(sysconfig.get_path('purelib'))"], { encoding: "utf8", timeout: 10000 }).stdout.trim();
+  const metadata = path.join(site, "ptk_launch_canary-1.0.dist-info", "METADATA");
+  fs.mkdirSync(path.dirname(metadata), { recursive: true });
+  fs.writeFileSync(metadata, "Metadata-Version: 2.1\nName: ptk-launch-canary\nVersion: 1.0\n");
+  const before = fs.readFileSync(metadata, "utf8"); // Deliberately has no RECORD, like the reported damaged environment.
+  fs.writeFileSync(path.join(root, "pyproject.toml"), '[project]\nname = "ptk-launch-fixture"\nversion = "1.0"\nrequires-python = ">=3.12"\ndependencies = ["ptk-never-install-this-fixture==0.0.0"]\n[tool.uv]\npackage = false\n');
+  const unsafelySynced = spawnSync(uv, ["run", "--offline", "--project", root, "python", "-c", "print('command started')"],
+    { cwd: root, env: { ...process.env, UV_NO_SYNC: "0" }, encoding: "utf8", timeout: 30000 });
+  assert.notEqual(unsafelySynced.status, 0);
+  assert.doesNotMatch(unsafelySynced.stdout, /command started/);
+  const doc = require("./fixtures").inventory(root);
+  const script = `import json,sys; print(json.dumps(json.loads(${JSON.stringify(JSON.stringify(doc))})) if sys.argv[-2:] == ['describe', '--json'] else 'Version sources and resolved names are valid.')`;
+  const settings = { executable: uv, arguments: ["run", "--offline", "--project", root, "python", "-c", script, "--"], timeout: 10 };
+  assert.deepEqual(await core.readInventory(settings, root), doc);
+  const checked = spawnSync(uv, core.launchArgs(settings, ["version", "check"]), { cwd: root, encoding: "utf8", timeout: 10000 });
+  assert.equal(checked.status, 0, checked.stderr);
+  assert.match(checked.stdout, /Version sources and resolved names are valid/);
+  assert.doesNotMatch(checked.stderr, /Uninstalled|Installed|RECORD/);
+  assert.equal(fs.readFileSync(metadata, "utf8"), before);
+  assert.equal(fs.existsSync(path.join(root, "uv.lock")), false);
+});

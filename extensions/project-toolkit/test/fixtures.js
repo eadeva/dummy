@@ -13,6 +13,7 @@ function builtinCommands() {
   });
   return [
     command(["help"]),
+    command(["version"], [], [command(["version", "check"])]),
     command(["run"]),
     command(["dry-run"]),
     command(["report"], [], [command(["report", "open"]), command(["report", "export"])]),

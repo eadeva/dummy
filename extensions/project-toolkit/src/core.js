@@ -51,9 +51,36 @@ function parseInventory(text) {
   return doc;
 }
 
+function launchArgs(settings, args) {
+  const prefix = [...settings.arguments];
+  // Never let starting the editor's CLI synchronize/reinstall its own runtime.
+  // Use an argument, not UV_NO_SYNC, so child job runtimes can still sync normally.
+  const executable = settings.executable.split(/[\\/]/).at(-1).toLowerCase();
+  if (["uv", "uv.exe"].includes(executable) && prefix[0] === "run" && !prefix.includes("--no-sync")) {
+    prefix.splice(1, 0, "--no-sync");
+  }
+  return [...prefix, ...args];
+}
+
+function ignoreConfigEvent(file, roots, configFiles = []) {
+  const paths = /^[A-Za-z]:[\\/]|^\\\\/.test(file) ? path.win32 : path;
+  const normalize = value => paths === path.win32 ? paths.resolve(value).toLowerCase() : paths.resolve(value);
+  if (paths.basename(file).toLowerCase() === ".gen.version.ptk.yml") return true;
+  // Explicit includes win over conventional output/environment directory names.
+  if (configFiles.some(config => normalize(config) === normalize(file))) return false;
+  const runtimeDirs = new Set([".venv", "venv", ".ptk", ".git", "node_modules", "site-packages", "__pycache__", "_builds", "_bin", "_logs", "_reports", "dist"]);
+  return roots.some(root => {
+    const relative = paths.relative(root, file);
+    if (relative === ".." || relative.startsWith(`..${paths.sep}`) || paths.isAbsolute(relative)) return false;
+    const parts = relative.toLowerCase().split(paths.sep);
+    return parts.slice(0, -1).some(part => runtimeDirs.has(part)) ||
+      parts.some((part, index) => part === ".github" && parts[index + 1] === "ptk");
+  });
+}
+
 function readInventory(settings, cwd) {
   return new Promise((resolve, reject) => {
-    execFile(settings.executable, [...settings.arguments, "describe", "--json"], {
+    execFile(settings.executable, launchArgs(settings, ["describe", "--json"]), {
       cwd, timeout: settings.timeout * 1000, maxBuffer: 8 * 1024 * 1024,
       windowsHide: true, encoding: "utf8", shell: false,
     }, (error, stdout, stderr) => {
@@ -218,4 +245,4 @@ function canOpenReport(target) {
   return builtinTargets({}, commands).some(command => command.name === name && command.spec.runnable);
 }
 
-module.exports = { parseInventory, readInventory, selectedVariant, argsFor, availableTargets, availableBuiltins, builtinTargets, canOpenReport };
+module.exports = { parseInventory, readInventory, selectedVariant, argsFor, availableTargets, availableBuiltins, builtinTargets, canOpenReport, launchArgs, ignoreConfigEvent };

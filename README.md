@@ -61,7 +61,7 @@ Install the VSIX through **Extensions: Install from VSIX...**. Build it from the
 repository root with `ptk extension` (or `uv run ptk extension`), or download
 the VSIX artifact from the branch's CI run. The job requires Node.js 22+ and npm,
 installs the build dependencies, runs the checks and writes
-`extensions/project-toolkit/project-toolkit-0.3.2.vsix`.
+`extensions/project-toolkit/project-toolkit-0.3.3.vsix`.
 PTK must be installed on the workspace host. See
 [editor documentation](docs/editor.rst) for setup and permissions.
 

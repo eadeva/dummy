@@ -8,8 +8,8 @@ sidebar, help, variant selection, parameter prompts, configuration and reports.
 1. Install PTK from the same checkout/version as this extension. The CLI must
    support `ptk describe --json` (inventory schema version 1).
 2. In VS Code, run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.3.2.vsix`. You can also use
-   `code --install-extension project-toolkit-0.3.2.vsix`.
+   `project-toolkit-0.3.3.vsix`. You can also use
+   `code --install-extension project-toolkit-0.3.3.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -18,19 +18,27 @@ for SSH, WSL or Dev Containers, install PTK on that host. The extension is
 distributed as a VSIX, without a Marketplace publication.
 
 If PTK is not on the extension host's PATH, set **Project Toolkit: Executable**
-to its absolute path. To use a uv-managed project, configure:
+to its absolute path. To use a uv-managed project, run `uv sync` in its root once
+to prepare the environment, then configure:
 
 ```json
 {
   "projectToolkit.executable": "uv",
-  "projectToolkit.arguments": ["run", "ptk"]
+  "projectToolkit.arguments": ["run", "--no-sync", "ptk"]
 }
 ```
+
+The extension adds `--no-sync` to existing `uv`/`uv.exe` settings beginning with
+`run`, for both discovery and tasks. This prevents a version check, tree refresh,
+help request or other command from reinstalling the environment that runs PTK.
+Run `uv sync` explicitly after changing dependencies. Job steps can still prepare
+their own Python runtimes normally; the extension does not set `UV_NO_SYNC`.
 
 The executable setting is a program name or path, with each argument entered
 separately. With a VMR, use an installed PTK executable if its root has no uv
 project. Discovery errors appear in **Output > Project Toolkit** and on the
-workspace node. Set `projectToolkit.discoveryTimeout` (seconds) for slow projects.
+workspace node. Click a **PTK unavailable** node to show the exact error.
+Set `projectToolkit.discoveryTimeout` (seconds) for slow projects.
 
 ## Use
 
@@ -83,8 +91,11 @@ including their workflow equivalents. These operations are available directly
 on jobs/workflows. Other built-in commands and CLI help remain available.
 
 Multiple VS Code folders and VMR member repositories are supported. The extension
-refreshes after PTK YAML and VMR project-list changes; **Refresh Projects** forces
-another discovery. A broken VMR member is shown with its error while healthy
+refreshes after PTK YAML and VMR project-list changes and after PTK tasks finish;
+**Refresh Projects** forces another discovery. Configuration copies inside
+virtual environments, installed packages and generated output are ignored, except
+for files explicitly included by a project. Discovery requests are serialized
+and repeated requests are coalesced. A broken VMR member is shown with its error while healthy
 members remain usable.
 The command tree comes from PTK's inventory, including its role restrictions.
 If **Update PTK to browse built-in commands** appears, update the CLI from this
@@ -113,7 +124,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.3.2.vsix`. Use `ptk dry-run extension`
+`extensions/project-toolkit/project-toolkit-0.3.3.vsix`. Use `ptk dry-run extension`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:

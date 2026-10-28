@@ -43,13 +43,21 @@ extension requires workspace trust.
 
 Set ``projectToolkit.executable`` to a program or absolute path and
 ``projectToolkit.arguments`` to separate prefix arguments. For uv, use executable
-``uv`` and arguments ``["run", "ptk"]``. Use an installed PTK executable at VMR
+``uv`` and arguments ``["run", "--no-sync", "ptk"]``. Use an installed PTK executable at VMR
 roots without a uv project. SSH/WSL/container sessions run PTK on their workspace
 host. Increase ``projectToolkit.discoveryTimeout`` for slow discovery.
 
+For a uv-managed project, prepare or update its environment with an explicit
+``uv sync``. The extension inserts ``--no-sync`` into existing ``uv run`` settings
+for discovery and all tasks, so launching a command does not reinstall PTK or
+its dependencies. Child job runtimes can still synchronize their own environments.
+Installed configuration copies in virtual environments and generated output do
+not trigger discovery. Refresh requests are serialized, and PTK task completion
+refreshes the tree. Click **PTK unavailable** to see the exact discovery error.
+
 Build from the repository root with ``ptk extension`` or ``uv run ptk extension``.
 The job checks Node.js 22+ and npm, installs the build dependencies, runs the
-checks and writes ``extensions/project-toolkit/project-toolkit-0.3.2.vsix``.
+checks and writes ``extensions/project-toolkit/project-toolkit-0.3.3.vsix``.
 Use ``ptk dry-run extension`` to preview it. Node.js and npm must be on PATH.
 Set ``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
 integration tests. CI builds downloadable VSIX artifacts on Linux and Windows;

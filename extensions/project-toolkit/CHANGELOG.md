@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.3
+
+- Use `uv run --no-sync` for discovery and every task entry point, including
+  built-ins, help, reports and restored tasks. Launching PTK no longer updates
+  its Python environment. Run `uv sync` explicitly when dependencies change.
+- Ignore configuration copies in virtual environments, installed packages,
+  generated output and bundled reference files. Explicitly included config
+  files still refresh the tree.
+- Serialize/coalesce discovery requests and refresh after PTK tasks finish.
+  Click an unavailable workspace to see its exact discovery error in Output.
+- Preserve variant-free help requests when rerunning tasks.
+
 ## 0.3.2
 
 - Remove duplicate run, dry-run and report branches from the built-in command
