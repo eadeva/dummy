@@ -1,11 +1,4 @@
+# PTK configuration: this file owns its section or named entity.
 repository:
   alias: example
   config_path: config
-project:
-  name: Authoring example
-  default_job: build
-param_defaults:
-  jobs: 4
-environment:
-  isolate: true
-  inherit_path: false

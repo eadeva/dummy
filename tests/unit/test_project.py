@@ -2,57 +2,49 @@ import pytest
 
 from ptk.domain.errors import ConfigError
 from tests.conftest import MINIMAL
+from tests.project_files import project_files
 
 
-def test_layers_ci_local_and_overrides(write, load):
-    root = write(
-        {
-            ".main.ptk.yml": MINIMAL + "vars: {where: main, a: 1}\n",
-            "cx.ptk.yml": "vars: {ci: true}",
-            "local.ptk.yml": "vars: {b: 2}",
-        }
-    )
+def test_conventional_documents_and_explicit_overrides(write, load):
+    root = write(project_files(MINIMAL + "vars: {where: project, a: 1}\n"))
     project = load(root)
-    assert project.config.vars == {"where": "main", "a": 1, "b": 2}
-    assert project.layers == [".main.ptk.yml", "local.ptk.yml"]
+    assert project.config.vars == {"where": "project", "a": 1}
+    assert project.layers == [".main.ptk.yml", "jobs/build.ptk.yml", "project.ptk.yml"]
     ci = load(
         root,
         environ={"GITHUB_ACTIONS": "true"},
         overrides=["vars.where=cli", "vars.n=5"],
     )
     assert ci.ci and ci.config.vars["where"] == "cli" and ci.config.vars["n"] == 5
-    assert ci.layers[:3] == [".main.ptk.yml", "cx.ptk.yml", "local.ptk.yml"]
+    assert ci.layers[:3] == project.layers
 
 
 def test_found_from_subdirectory(write, load):
-    root = write({".main.ptk.yml": MINIMAL, "src/deep/x.txt": ""})
+    root = write(project_files(MINIMAL, {"src/deep/x.txt": ""}))
     assert load(root / "src" / "deep").root == root
 
 
 def test_unknown_keys_with_suggestions_and_lines(write, load):
     root = write(
-        {
-            ".main.ptk.yml": """
+        project_files("""
         project: {name: demo}
         jobs:
           build:
             stpes: []
-    """
-        }
+    """)
     )
     with pytest.raises(ConfigError) as exc:
         load(root)
     text = str(exc.value)
     assert (
-        ".main.ptk.yml:4: jobs.build.stpes: unknown key 'stpes' (did you mean 'steps'?)"
+        "jobs/build.ptk.yml:1: stpes: unknown key 'stpes' (did you mean 'steps'?)"
         in text
     )
 
 
 def test_semantic_errors(write, load):
     root = write(
-        {
-            ".main.ptk.yml": """
+        project_files("""
         project: {name: demo, default_job: biuld}
         vars: {x: "${vars.y}"}
         jobs:
@@ -62,8 +54,7 @@ def test_semantic_errors(write, load):
             steps:
               - compile: {run: "make -j${params.job}", when: "params.jobs > 1 and FOO"}
               - leak: {run: "curl -H ${secret:repo.token}"}
-    """
-        }
+    """)
     )
     with pytest.raises(ConfigError) as exc:
         load(root)
@@ -81,20 +72,17 @@ def test_semantic_errors(write, load):
 
 
 def test_version_check(write, load):
-    root = write({".main.ptk.yml": "ptk_version: '>=99'\n" + MINIMAL})
+    root = write(project_files("ptk_version: '>=99'\n" + MINIMAL))
     with pytest.raises(ConfigError, match="needs ptk >=99"):
         load(root)
-    root2 = write({".main.ptk.yml": "ptk_version: 'not a range'\n" + MINIMAL})
+    root2 = write(project_files("ptk_version: 'not a range'\n" + MINIMAL))
     with pytest.raises(ConfigError, match="invalid version range"):
         load(root2)
 
 
 def test_maintainers_file(write, load):
     root = write(
-        {
-            ".main.ptk.yml": MINIMAL,
-            "maintainers.ptk.yml": "maintainers: [alice, bob]",
-        }
+        project_files(MINIMAL, {"maintainers.ptk.yml": "maintainers: [alice, bob]"})
     )
     assert load(root).maintainers.maintainers == ["alice", "bob"]
     write({"maintainers.ptk.yml": "maintainers: [{name: nobody}]"})
@@ -107,7 +95,7 @@ def test_maintainers_file(write, load):
 )
 def test_invalid_maintainer_ids_have_file_provenance(write, load, value):
     root = write(
-        {".main.ptk.yml": MINIMAL, "maintainers.ptk.yml": f"maintainers: {value}"}
+        project_files(MINIMAL, {"maintainers.ptk.yml": f"maintainers: {value}"})
     )
     with pytest.raises(ConfigError, match="maintainers.ptk.yml"):
         load(root)

@@ -147,14 +147,20 @@ terminal; the Options action also exposes ``--dry-run`` and ``--yes``.
 Configuration and parameter forms
 ---------------------------------
 
-Expand Configuration to browse authored YAML files as trees. Selecting a field
-opens the PTK Configuration form, where model fields, jobs and nested steps can
-be added or edited. Save uses VS Code's document model; Save & validate runs
-PTK validation. Raw YAML switches to the text editor, and Open PTK Form in the
-editor title bar switches back. Includes are edited in their own files, with
-comments, anchors and merge tags retained. Complex keys and alias references
-remain editable in raw YAML. For fragments, select the relevant model under
-Schema for this file.
+Configuration is a logical schema tree. Components appear with their features,
+dependencies and source directory. The installed PTK supplies schemas, file ownership,
+source locations and errors. New entities create their conventional file; component
+features go beside their code. Raw-file forms use the appropriate document schema.
+
+Text and numbers remain local while typing. Leaving a field, saving or navigating
+commits the edit; save replies preserve focus, cursor and unfinished input.
+The form uses the VS Code tree and breadcrumbs for navigation. List rows show
+names or values. There is no duplicate navigation sidebar or destination picker.
+Fingerprints reject stale edits, and dirty YAML must be saved first.
+
+Loading errors appear in the tree and Problems panel. Validate Configuration stays
+available even without a project, when it offers ``ptk setup init``. Use Raw YAML
+for aliases or values that the form cannot safely represent.
 
 The job parameter gear opens a single window with help, default values, text
 fields, checkboxes and choices. Only enabled overrides are passed to PTK;

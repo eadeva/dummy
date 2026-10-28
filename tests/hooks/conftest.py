@@ -11,6 +11,7 @@ from click.testing import CliRunner
 
 from ptk.adapters.hooks import GIT_PATH_VARIABLES, GitHooks
 from ptk.drivers.cli.main import cli
+from tests.project_files import write_project
 
 
 def git(root, *args, check=True):
@@ -38,39 +39,29 @@ def repository(root, *, alias="app", enabled=True, output=None):
     spec = {"enabled": enabled}
     if output:
         spec["output"] = output
-    (root / ".main.ptk.yml").write_text(
-        yaml.safe_dump(
-            {
-                "repository": {"alias": alias, "config_path": "config"},
-            }
-        ),
-        encoding="utf-8",
-    )
-    (root / "config").mkdir(exist_ok=True)
-    (root / "config/project.ptk.yml").write_text(
-        yaml.safe_dump(
-            {
-                "project": {"name": alias},
-                "configs": {"pre-commit": spec},
-                "jobs": {
-                    "build": {
-                        "open_report": None,
-                        "steps": [
-                            {
-                                "run": {
-                                    "run": [
-                                        sys.executable,
-                                        "-c",
-                                        "from pathlib import Path; Path('job-ran').touch()",
-                                    ],
-                                }
+    write_project(
+        root / ".main.ptk.yml",
+        {
+            "repository": {"alias": alias, "config_path": "config"},
+            "project": {"name": alias},
+            "configs": {"pre-commit": spec},
+            "jobs": {
+                "build": {
+                    "open_report": None,
+                    "steps": [
+                        {
+                            "run": {
+                                "run": [
+                                    sys.executable,
+                                    "-c",
+                                    "from pathlib import Path; Path('job-ran').touch()",
+                                ]
                             }
-                        ],
-                    }
-                },
-            }
-        ),
-        encoding="utf-8",
+                        }
+                    ],
+                }
+            },
+        },
     )
     config = root / (output or ".pre-commit-config.yaml")
     config.parent.mkdir(parents=True, exist_ok=True)

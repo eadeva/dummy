@@ -12,38 +12,32 @@ from ptk.bootstrap import create_app
 from ptk.domain.errors import PtkError
 from ptk.drivers.cli.main import cli
 from tests.conftest import grant_maintainer
+from tests.project_files import read_project, write_project
 
 
 def repository(root, alias, *, config_path="config"):
     root.mkdir(parents=True, exist_ok=True)
     (root / config_path).mkdir(parents=True, exist_ok=True)
     main = root / ".main.ptk.yml"
-    main.write_text(
-        yaml.safe_dump(
-            {
-                "repository": {"alias": alias, "config_path": config_path},
-                "project": {"name": alias, "default_job": "build"},
-            }
-        )
-    )
-    (root / config_path / "jobs.ptk.yml").write_text(
-        yaml.safe_dump(
-            {
-                "vars": {"value": alias},
-                "jobs": {
-                    "build": {
-                        "steps": [
-                            {
-                                "hello": {
-                                    "uses": "echo",
-                                    "with": {"message": "${vars.value}"},
-                                }
+    write_project(
+        main,
+        {
+            "repository": {"alias": alias, "config_path": config_path},
+            "project": {"name": alias, "default_job": "build"},
+            "vars": {"value": alias},
+            "jobs": {
+                "build": {
+                    "steps": [
+                        {
+                            "hello": {
+                                "uses": "echo",
+                                "with": {"message": "${vars.value}"},
                             }
-                        ]
-                    }
-                },
-            }
-        )
+                        }
+                    ]
+                }
+            },
+        },
     )
     return main
 
@@ -66,44 +60,34 @@ def workspace(tmp_path):
 def test_config_default_directory_execution_root_and_discovery(tmp_path, monkeypatch):
     main = repository(tmp_path, "firmware", config_path="tooling/ptk")
     config = main.parent / "tooling/ptk"
-    (config / "tools.ptk.yml").write_text("tools: {ninja: {version: '>=1'}}")
-    (config / "build.tools.ptk.yml").write_text(
-        "jobs: {build: {requires_tools: {ninja: true}}}"
-    )
-    (config / "cx.ptk.yml").write_text("vars: {ci: cx}")
-    (config / "local.ptk.yml").write_text("vars: {local: local}")
+    data = read_project(main)
+    data["tools"] = {"ninja": {"version": ">=1"}}
+    data["jobs"]["build"]["requires_tools"] = {"ninja": True}
+    write_project(main, data)
     (config / "maintainers.ptk.yml").write_text("maintainers: [alice]")
-    (tmp_path / "local.ptk.yml").write_text("vars: {outside_config_dir: discovered}")
+    (tmp_path / "local.ptk.yml").write_text("vars: {outside_config_dir: ignored}")
     p = create_app(environ={}).load_project.execute(config, ci=True)
     assert p.root == tmp_path and p.config_root == config
     assert p.config.vars["value"] == "firmware"
-    assert p.config.vars["outside_config_dir"] == "discovered"
+    assert "outside_config_dir" not in p.config.vars
     assert p.config.jobs["build"].required_tool_names == ["ninja"]
     assert p.maintainers is not None
     # The generated command executes relative to repo root, not config dir.
-    (config / "jobs.ptk.yml").write_text(
+    (config / "jobs/build.ptk.yml").write_text(
         yaml.safe_dump(
             {
-                "jobs": {
-                    "build": {
-                        "steps": [
-                            {
-                                "copy": {
-                                    "uses": "files.copy",
-                                    "with": {
-                                        "files": ["input.txt"],
-                                        "to": "out",
-                                    },
-                                }
-                            }
-                        ]
+                "steps": [
+                    {
+                        "copy": {
+                            "uses": "files.copy",
+                            "with": {"files": ["input.txt"], "to": "out"},
+                        }
                     }
-                }
+                ]
             }
         )
     )
     (tmp_path / "input.txt").write_text("repo-root")
-    (config / "build.tools.ptk.yml").unlink()
     monkeypatch.chdir(config)
     result = CliRunner().invoke(cli, ["build"])
     assert result.exit_code == 0, result.output
@@ -137,9 +121,9 @@ def test_vmr_cli_isolates_repositories_and_preserves_commands(tmp_path, monkeypa
 def test_vmr_permissions_are_per_repository(tmp_path, monkeypatch):
     a, _b = workspace(tmp_path)
     grant_maintainer(a.parent)
-    data = yaml.safe_load(a.read_text())
+    data = read_project(a)
     data["command_audience"] = {"setup.config": "maintainer"}
-    a.write_text(yaml.safe_dump(data))
+    write_project(a, yaml.safe_dump(data))
     monkeypatch.chdir(tmp_path)
     runner = CliRunner(env={"PTK_ROLE": "user"})
     result = runner.invoke(cli, ["firmware", "setup", "config", "validate"])
@@ -180,9 +164,9 @@ def test_no_legacy_discovery_or_parent_repo_leak(tmp_path):
 
 def test_vmr_alias_conflicts_and_member_containment(tmp_path):
     _a, b = workspace(tmp_path)
-    data = yaml.safe_load(b.read_text())
+    data = read_project(b)
     data["repository"]["alias"] = "firmware"
-    b.write_text(yaml.safe_dump(data))
+    write_project(b, yaml.safe_dump(data))
     with pytest.raises(PtkError, match="duplicate repository alias"):
         repositories(tmp_path)
     (tmp_path / ".repo/project.list").write_text("../outside\n")
@@ -220,17 +204,17 @@ def test_symlink_git_and_unindexed_workspaces(tmp_path):
     assert repositories(root) == {"a": main}
 
 
-def test_nested_discovery_and_source_locations(tmp_path):
+def test_nested_files_are_not_loaded_and_sources_use_owned_documents(tmp_path):
     main = repository(tmp_path, "demo")
     (tmp_path / "config/parts").mkdir()
-    (tmp_path / "config/jobs.ptk.yml").write_text("{}\n")
+
     (tmp_path / "config/parts/values.ptk.yml").write_text("vars: {value: fragment}\n")
-    data = yaml.safe_load(main.read_text())
+    data = read_project(main)
     data["project"].pop("default_job")
-    main.write_text(yaml.safe_dump(data))
+    write_project(main, yaml.safe_dump(data))
     project = create_app(environ={}).load_project.execute(tmp_path)
-    assert project.config.vars["value"] == "fragment"
-    assert "config/parts/values.ptk.yml:1" in str(project.location(("vars", "value")))
+    assert project.config.vars["value"] == "demo"
+    assert "config/project.ptk.yml" in str(project.location(("vars", "value")))
     with pytest.raises(PtkError, match="cannot be overridden"):
         create_app(environ={}).load_project.execute(
             tmp_path, overrides=["repository.config_path=.."]
@@ -242,9 +226,9 @@ def test_vmr_help_tasks_and_read_only_variants(tmp_path, monkeypatch):
 
     a, _b = workspace(tmp_path)
     grant_maintainer(a.parent)
-    data = yaml.safe_load(a.read_text())
+    data = read_project(a)
     data["variants"] = {"variants": {"debug": {}, "release": {}}}
-    a.write_text(yaml.safe_dump(data))
+    write_project(a, yaml.safe_dump(data))
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
     result = runner.invoke(cli, ["firmware", "help", "--no-open"])
@@ -269,7 +253,7 @@ def test_unselected_repository_missing_job_does_not_block_command(
     tmp_path, monkeypatch
 ):
     _a, b = workspace(tmp_path)
-    (b.parent / "config/jobs.ptk.yml").unlink()
+    (b.parent / "config/jobs/build.ptk.yml").unlink()
     monkeypatch.chdir(tmp_path)
     result = CliRunner().invoke(cli, ["firmware", "build"])
     assert result.exit_code == 0, result.output
@@ -302,12 +286,12 @@ def test_shared_credentials_merge_conflicts_and_namespace(tmp_path, monkeypatch)
 
     a, b = workspace(tmp_path)
     for file in (a, b):
-        data = yaml.safe_load(file.read_text())
+        data = read_project(file)
         data["credentials"] = {
             "shared": {"providers": ["vault"]},
             "different": {"providers": ["vault"], "description": file.parent.name},
         }
-        file.write_text(yaml.safe_dump(data))
+        write_project(file, data)
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("PTK_VAULT_FILE", str(tmp_path / "vault.json"))
     monkeypatch.setenv("PTK_VAULT_PASSWORD", "synthetic-password")

@@ -1,0 +1,4 @@
+# PTK configuration: this file owns its section or named entity.
+pre-commit:
+  enabled: true
+  overlay: config/ptk/configs/pre-commit.overlay.yaml

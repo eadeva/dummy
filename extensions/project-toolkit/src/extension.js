@@ -179,7 +179,7 @@ function createController(vscode, context, editorFactory = createEditors) {
         tooltip: source ? `${source.file}:${source.line}` : "Not configured",
         description: value === undefined ? "not configured" : object || typeof configPath.at(-1) === "number" ? "" : String(value),
       };
-      if (object) node.children = Object.entries(value).map(([key, child]) => field(child, [...configPath, Array.isArray(value) ? Number(key) : key], Array.isArray(value) ? presentation.listLabel(child, [...configPath, Number(key)]) : key));
+      if (object) node.children = Object.entries(value).filter(([key]) => !(key === "components" && configPath.length === 1 && ["project", "variants"].includes(configPath[0]))).map(([key, child]) => field(child, [...configPath, Array.isArray(value) ? Number(key) : key], Array.isArray(value) ? presentation.listLabel(child, [...configPath, Number(key)]) : key));
       node.command = { command: "project-toolkit.openConfig", title: "Edit configuration", arguments: [node] };
       return node;
     }
@@ -187,6 +187,14 @@ function createController(vscode, context, editorFactory = createEditors) {
     const keys = [...new Set([...Object.keys(config.schema.properties || {}).filter(key => key !== "members"), ...Object.keys(value)])];
     const node = field(value, [], "Configuration");
     node.children = keys.map(key => field(value[key], [key], key));
+    const components = field(value.project?.components || {}, ["project", "components"], "Components");
+    components.icon = "package";
+    components.children = Object.keys(value.project?.components || {}).map(name => {
+      const component = field(value.variants?.components?.[name] || {}, ["variants", "components", name], name);
+      component.children = [field(value.project.components[name].path, ["project", "components", name, "path"], "Directory"), ...(component.children || [])];
+      return component;
+    });
+    node.children.push(components);
     return node;
   }
 

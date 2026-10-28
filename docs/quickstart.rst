@@ -25,19 +25,17 @@ repositories. The root
 ``.main.ptk.yml`` contains only repository metadata.
 The chosen directory contains ``project.ptk.yml`` for project settings, plus:
 
-* ``jobs/hello.ptk.yml`` and ``jobs/build.ptk.yml``: two independent jobs.
-  PTK discovers additional job files anywhere in the repository.
-* ``variants/variants.ptk.yml``: component/feature model and default selection;
-  ``debug.ptk.yml`` and ``release.ptk.yml`` contribute their full ``variants`` paths.
-* ``tools/tools.ptk.yml`` and ``versioning/versioning.ptk.yml``.
-* ``environment/environment.ptk.yml`` and ``credentials/credentials.ptk.yml``.
-* ``configs/configs.ptk.yml`` for shared formatter/linter settings.
+* ``jobs/hello.ptk.yml`` and ``jobs/build.ptk.yml`` for runnable jobs.
+* ``project.variants.ptk.yml`` and ``variants/debug.ptk.yml`` / ``variants/release.ptk.yml``.
+* ``tools.ptk.yml``, ``versioning.ptk.yml``, ``credentials.ptk.yml`` and ``configs.ptk.yml``.
+* ``folder_structure.ptk.yml`` and ``workflows/verify.ptk.yml``.
+* ``maintainers.ptk.yml`` for the independent identity list.
 
-``maintainers.ptk.yml`` stays at the configuration root as an independent identity
-list. ``cx.ptk.yml`` is CI-only. Other fragments are discovered recursively;
-no include index is needed. Optional settings contain commented field examples and usage
-notes, including managed tools, credential providers, Git versions and job
-requirements; no secret values or tool installations are needed.
+The example core component is registered at ``components/core``. Its
+``component.variants.ptk.yml`` lives there beside the future build definition.
+Project settings include the shared environment. Files contain their section
+bodies; filenames provide job, workflow and variant identities. Optional files
+can be omitted. No secrets, tools or Git tags are needed for the starter.
 
 The starter has debug/release variants and a literal ``0.1.0`` version, so it
 runs without tools, credentials or Git tags. ``hello`` demonstrates parameters
@@ -89,6 +87,9 @@ Read the configuration and workload
 -----------------------------------
 
 .. literalinclude:: ../examples/quickstart/.main.ptk.yml
+   :language: yaml
+
+.. literalinclude:: ../examples/quickstart/config/ptk/jobs/build.ptk.yml
    :language: yaml
 
 .. literalinclude:: ../examples/quickstart/demo.py

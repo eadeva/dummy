@@ -11,14 +11,23 @@ from typing import Any
 import yaml
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import Version
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, RootModel, ValidationError
 
 from ...domain.config import rules as config_rules
 from ...domain.config import tree as t
 from ...domain.config.defaults import apply_defaults, normalize_requirements
+from ...domain.config.layout import (
+    ENTITY_DIRECTORIES,
+    Document,
+    MainDocument,
+    ProjectDocument,
+    VariantSettingsDocument,
+    documents,
+)
 from ...domain.config.model import MaintainersSpec, PtkConfig, WorkspaceSpec
 from ...domain.config.schema_walk import unknown_keys
 from ...domain.errors import ConfigError, Location, Problem
+from ...domain.variants.model import COMPONENT_RE
 from ..ports import MAINTAINERS_FILE, ConfigSource, HostEnvironment
 
 _UNION_TAG = re.compile(
@@ -158,7 +167,7 @@ class LoadProject:
         self.editor_main = main
         self.editor_tree = None
         is_ci = self._host.is_ci() if ci is None else ci
-        self.editor_files = self._source.discover(main, ci=is_ci)
+        self.editor_files = [main]
         main_tree = self._source.read(main)
         marker = t.get(main_tree, ("virtual_monorepo",))
         if marker is not None and marker.value is True:
@@ -170,27 +179,109 @@ class LoadProject:
                     )
                 ]
             )
+        self.editor_tree = main_tree
+        self._validate_document(MainDocument, main_tree)
         metadata = t.get(main_tree, ("repository", "config_path"))
-        config_root = (root / metadata.value).resolve() if metadata else root
-        is_ci = self._host.is_ci() if ci is None else ci
+        config_path = metadata.value
+        config_root = root / config_path
+        project_file = config_root / "project.ptk.yml"
+        if not self._source.exists(project_file):
+            raise ConfigError(
+                [
+                    Problem(
+                        "project.ptk.yml is required and must define name",
+                        location=Location(str(project_file)),
+                    )
+                ]
+            )
+        self.editor_files.append(project_file)
+        project_tree = self._source.read(project_file)
+        project_tree = normalize_requirements(project_tree)
+        self._validate_document(ProjectDocument, project_tree)
+        registrations = t.get(project_tree, ("components",))
+        components = t.to_plain(registrations) if registrations else {}
+        component_files = {}
+        for name, spec in components.items():
+            if not COMPONENT_RE.fullmatch(name):
+                raise ConfigError(
+                    [
+                        Problem(
+                            f"component name {name!r} must be lower_snake_case",
+                            location=t.locate(project_tree, ("components", name)),
+                        )
+                    ]
+                )
+            file = self._source.component_file(main, spec["path"])
+            if file in component_files:
+                raise ConfigError(
+                    [
+                        Problem(
+                            f"component directory is already registered as {component_files[file]!r}",
+                            location=t.locate(project_tree, ("components", name)),
+                        )
+                    ]
+                )
+            component_files[file] = name
+        self.editor_files = self._source.discover(
+            main, config_path, tuple(component_files)
+        )
+        self.editor_files.extend(
+            file for file in component_files if self._source.exists(file)
+        )
+        docs = documents(main, config_path, components)
+        by_file = {doc.file: doc for doc in docs}
         tree = main_tree
         layers = [main.name]
-        for file in self.editor_files:
+        for file in [
+            *self.editor_files,
+            *(file for file in component_files if file not in self.editor_files),
+        ]:
             if file == main:
                 continue
-            fragment = self._source.read(file)
-            for key in ("repository", "virtual_monorepo"):
-                if key in fragment.value:
+            doc = by_file.get(file)
+            if doc is None:
+                prefix = ENTITY_DIRECTORIES[file.parent.name]
+                name = file.name.removesuffix(".ptk.yml")
+                if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_-]*", name):
                     raise ConfigError(
                         [
                             Problem(
-                                f"{key} must be defined only in .main.ptk.yml",
-                                key,
-                                fragment.value[key].loc,
+                                "entity filenames must start with a letter and contain only letters, digits, '_' or '-'",
+                                location=Location(str(file)),
                             )
                         ]
                     )
-            tree = t.merge_unique(tree, fragment)
+                doc = Document(file, prefix=(*prefix, name))
+            fragment = (
+                project_tree
+                if file == project_file
+                else (
+                    self._source.read(file)
+                    if self._source.exists(file)
+                    else t.Node({}, Location(str(file), 1))
+                )
+            )
+            # Normalize the documented tool-list shorthand after mounting a job.
+            assembled = (
+                normalize_requirements(doc.assemble(fragment))
+                if doc.prefix is not None
+                else None
+            )
+            if doc.prefix is not None:
+                fragment = t.get(assembled, doc.prefix)
+                self.editor_tree = t.merge_unique(tree, assembled)
+                annotation = self._document_type(doc.prefix)
+                self._validate_document(RootModel[annotation], fragment)
+            else:
+                self._validate_document(
+                    ProjectDocument
+                    if file == project_file
+                    else VariantSettingsDocument,
+                    fragment,
+                )
+                assembled = doc.assemble(fragment)
+            tree = t.merge_unique(tree, assembled)
+            self.editor_tree = tree
             layers.append(str(file.relative_to(root)))
         authored_tree = tree
         self.editor_tree = authored_tree
@@ -259,6 +350,42 @@ class LoadProject:
         )
         project.maintainers = self.maintainers(config_root)
         return project
+
+    @staticmethod
+    def _validate_document(model, node):
+        annotation = (
+            model.model_fields["root"].annotation
+            if getattr(model, "__pydantic_root_model__", False)
+            else model
+        )
+        problems = unknown_keys(annotation, node)
+        problems += validation_problems(model, node, skip_unknown=bool(problems))
+        if problems:
+            raise ConfigError(problems)
+
+    @staticmethod
+    def _document_type(prefix):
+        from typing import get_args
+
+        from ...domain.config.model import JobSpec
+        from ...domain.variants.model import ComponentSpec, VariantSpec
+        from ...domain.workflows import WorkflowSpec
+
+        if prefix[0] == "jobs":
+            return JobSpec
+        if prefix[0] == "workflows":
+            return WorkflowSpec
+        if prefix[:2] == ("variants", "variants"):
+            return VariantSpec
+        if prefix[:2] == ("variants", "components"):
+            return ComponentSpec
+        annotation = PtkConfig.model_fields[prefix[0]].annotation
+        args = get_args(annotation)
+        return (
+            next((arg for arg in args if arg is not type(None)), annotation)
+            if type(None) in args
+            else annotation
+        )
 
     def maintainers(self, config_root: Path) -> MaintainersSpec | None:
         """Load the independent identity list, also usable at a VMR root."""

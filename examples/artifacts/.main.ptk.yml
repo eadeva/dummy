@@ -1,3 +1,4 @@
+# PTK configuration: this file owns its section or named entity.
 repository:
   alias: ptk
   config_path: config

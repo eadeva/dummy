@@ -102,7 +102,7 @@ def vmr_clean_all(ctx, yes, dry_run):
             ),
             files=[
                 root / ".main.ptk.yml",
-                root / "workflow.ptk.yml",
+                root / "workflows",
                 *entries.values(),
             ],
         )

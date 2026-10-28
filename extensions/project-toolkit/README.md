@@ -133,18 +133,17 @@ focus and the cursor; unchanged inventories do not redraw the tree.
 Use the VS Code tree for navigation. The form has no second navigation sidebar;
 breadcrumbs show the current field path. List rows show step names or their values
 instead of item numbers, and named steps open their fields directly.
-Ordinary edits go back to their recorded source. Choose **Next change: new file…**
-to place a change in a new fragment. Existing definitions are removed from their
-old files in the same VS Code workspace edit, so no overwrite conflict is left
-behind. Lists stay together in one file. Repository metadata stays in
-`.main.ptk.yml`. Source fingerprints reject stale edits, and unsaved YAML documents
-must be saved or undone before using the project form.
+Edits go to the owning document supplied by PTK. Adding a job, workflow or variant
+creates its conventional file. Components are registered in project settings;
+their features and dependencies live in `component.variants.ptk.yml` beside their
+code. Renaming an entity moves its file, and deleting it removes its file.
+Source fingerprints reject stale edits, and unsaved YAML documents must be saved
+or undone before using the project form.
 
 **Raw YAML** opens a source chooser. The optional file editor retains normal
-VS Code save/undo behavior and gets its schema from the installed PTK too.
-Simple source edits preserve comments and scalar spelling; moving a section
-or replacing a split object can normalize its YAML formatting. Use Raw YAML
-for aliases or complex values that the form cannot safely edit.
+VS Code save/undo behavior and uses PTK's schema for that specific document.
+Simple source edits preserve comments and scalar spelling. Use Raw YAML for
+aliases or complex values that the form cannot safely edit.
 
 Loading errors appear in the tree and Problems panel, with links to their source.
 The **Validate Configuration** toolbar action is always available. A workspace

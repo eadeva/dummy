@@ -10,6 +10,7 @@ from ptk.domain.variants.generators import GENERATORS
 from ptk.domain.variants.model import ProductLineSpec
 from ptk.domain.variants.rules import resolve
 from ptk.drivers.cli.main import cli
+from tests.project_files import write_project
 
 
 def variant():
@@ -86,7 +87,8 @@ def test_cmake_consumes_generated_values(tmp_path):
 
 def test_builtin_generation_copy_clean_and_configs(tmp_path):
     config = tmp_path / ".main.ptk.yml"
-    config.write_text(
+    write_project(
+        config,
         yaml.safe_dump(
             {
                 "repository": {"alias": "demo", "config_path": "."},
@@ -123,7 +125,7 @@ def test_builtin_generation_copy_clean_and_configs(tmp_path):
                     }
                 },
             }
-        )
+        ),
     )
     result = CliRunner().invoke(cli, ["-C", str(config), "-V", "demo", "go"])
     assert result.exit_code == 0, result.output

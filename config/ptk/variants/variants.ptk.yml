@@ -1,7 +1,0 @@
-# Full schema path, as in every discovered PTK fragment.
-variants:
-  # PTK has one development configuration and no product components or features.
-  default: default
-  variants:
-    default:
-      description: Test, check and document the PTK Python project

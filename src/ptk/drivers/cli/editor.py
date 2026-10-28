@@ -139,8 +139,8 @@ def describe(ctx, as_json, configuration):
 
         root = parent.app.workspace.root(Path.cwd())
         role = parent.app.workspace_role(root)
-        path = root / "workflow.ptk.yml"
-        if path.is_file():
+        path = root / "workflows"
+        if path.is_dir():
             workflows = [
                 {"name": name, "help": spec.help}
                 for name, spec in read_workflows(path).workflows.items()

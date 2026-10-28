@@ -1,0 +1,15 @@
+# PTK configuration: this file owns its section or named entity.
+extends: base
+aliases:
+- '1'
+- a_high
+components:
+- core
+- display
+- navigation
+- camera
+features:
+  DISPLAY_SIZE: 12
+  TOUCH: true
+  NAV_3D: true
+  NIGHT_VISION: true

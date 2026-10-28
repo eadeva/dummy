@@ -1,0 +1,9 @@
+# PTK configuration: this file owns its section or named entity.
+project:
+  source: git
+  match: v*
+  strip_prefix: v
+  dirty: suffix
+  fallback:
+    source: literal
+    version: 0.1.0.dev0

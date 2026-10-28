@@ -1,3 +1,5 @@
+from tests.project_files import read_project, write_project, write_workflows
+
 """Workflow report policies include child failures and keep execution exit codes."""
 
 import sys
@@ -6,6 +8,7 @@ import pytest
 import yaml
 from click.testing import CliRunner
 from pydantic import ValidationError
+from tests.project_files import project_files
 
 from ptk.adapters import help_html
 from ptk.application.use_cases.workflow import RunWorkflow, WorkflowResult
@@ -51,8 +54,8 @@ def invoke(write):
         if policy != "default":
             workflow["open_report"] = policy
         root = write(
-            {
-                ".main.ptk.yml": yaml.safe_dump(
+            project_files(
+                yaml.safe_dump(
                     {
                         "project": {"name": "report-open"},
                         "jobs": {
@@ -65,8 +68,8 @@ def invoke(write):
                         },
                     }
                 ),
-                "workflow.ptk.yml": yaml.safe_dump({"workflows": {"verify": workflow}}),
-            }
+                {"workflows/verify.ptk.yml": yaml.safe_dump(workflow)},
+            )
         )
         env = {
             "PTK_ROLE": "user",
@@ -235,9 +238,11 @@ def test_workspace_report_respects_owner_and_member_report_policy(
     (tmp_path / ".main.ptk.yml").write_text(
         "virtual_monorepo: true\nmembers: [a]\n", encoding="utf-8"
     )
-    (tmp_path / "workflow.ptk.yml").write_text(
-        "workflows: {verify: {steps: [{build: {repo: alpha, job: build}}]}}\n",
-        encoding="utf-8",
+    write_workflows(
+        (tmp_path / "workflow.ptk.yml").parent / "workflows",
+        yaml.safe_load(
+            "workflows: {verify: {steps: [{build: {repo: alpha, job: build}}]}}\n"
+        )["workflows"],
     )
     monkeypatch.chdir(tmp_path)
     runner = CliRunner(env={"PTK_ROLE": "user", "PTK_CI": "0"})
@@ -253,10 +258,10 @@ def test_workspace_report_respects_owner_and_member_report_policy(
         )
         assert result.exit_code == 0, result.output
     assert opened_reports == reports
-    config = tmp_path / "a/config/project.ptk.yml"
-    data = yaml.safe_load(config.read_text())
+    config = tmp_path / "a/.main.ptk.yml"
+    data = read_project(config)
     data["command_audience"] = {"workflow": "maintainer"}
-    config.write_text(yaml.safe_dump(data), encoding="utf-8")
+    write_project(config, data)
     denied = runner.invoke(cli, ["workflow", "report", "--if-exists", "alpha/verify"])
     assert denied.exit_code != 0 and "maintainer-only" in denied.output
     assert opened_reports == reports

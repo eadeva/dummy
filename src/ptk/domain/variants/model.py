@@ -155,9 +155,20 @@ class FeatureSpec(_Strict):
         return self.validate_value(text)
 
 
+class Constraint(_Strict):
+    expr: str
+    message: str = ""
+
+    @model_validator(mode="before")
+    @classmethod
+    def _from_str(cls, v: Any) -> Any:
+        return {"expr": v} if isinstance(v, str) else v
+
+
 class ComponentSpec(_Strict):
     description: str = ""
     requires_components: list[str] = Field(default_factory=list)
+    constraints: list[Constraint] = Field(default_factory=list)
     features: dict[str, FeatureSpec] = Field(default_factory=dict)
 
     @field_validator("features", mode="before")
@@ -174,16 +185,6 @@ class ComponentSpec(_Strict):
             if name.startswith(COMPONENT_PREFIX) or name in RESERVED:
                 raise ValueError(f"feature name {name!r} is reserved")
         return v
-
-
-class Constraint(_Strict):
-    expr: str
-    message: str = ""
-
-    @model_validator(mode="before")
-    @classmethod
-    def _from_str(cls, v: Any) -> Any:
-        return {"expr": v} if isinstance(v, str) else v
 
 
 class VariantSpec(_Strict):

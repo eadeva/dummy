@@ -1,6 +1,3 @@
-# OS login IDs locally; triggering GitHub login IDs on Actions.
-# Add your local login here if it differs from your GitHub login.
+# PTK configuration: this file owns its section or named entity.
 maintainers:
-  - eadeva
-# Configuration editors are maintainer-only by default.
-# Set audience: maintainer on jobs/workflows to restrict those too.
+- eadeva

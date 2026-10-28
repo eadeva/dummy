@@ -6,6 +6,7 @@ from click.testing import CliRunner
 
 from ptk.drivers.cli.main import cli
 from tests.conftest import DEMO
+from tests.project_files import project_files
 
 CONFIG = ["--config", str(DEMO / ".main.ptk.yml")]
 
@@ -28,7 +29,7 @@ def test_config_validate_and_show():
         "help": "Parallel jobs",
     }
     sources = run("config", "show", "project", "--sources")
-    assert ".main.ptk.yml:7" in sources.output
+    assert "config/ptk/project.ptk.yml:2" in sources.output
 
 
 def test_set_override():
@@ -118,14 +119,12 @@ def test_run_errors_are_clean():
 
 def test_run_executes_and_returns_exit_code(write):
     root = write(
-        {
-            ".main.ptk.yml": """
+        project_files("""
         project: {name: t}
         jobs:
           ok: {steps: [{hi: "echo hi-there"}]}
           bad: {steps: [{fail: "exit 4"}]}
-        """
-        }
+        """)
     )
     config = ["--config", str(root / ".main.ptk.yml")]
     ok = CliRunner(env={"PTK_CI": "0"}).invoke(

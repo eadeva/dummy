@@ -47,7 +47,7 @@ include = [
   "/.pre-commit-config.yaml",
   "/hatch_build.py", "/hatch_metadata.py", "/install",
 ]
-exclude = ["**/__pycache__", "**/*.pyc", "**/.ptk", "**/.venv", "**/_build", "**/_builds", "**/_bin", "**/_logs", "**/_reports", "**/local.ptk.yml", "**/.gen.version.ptk.yml"]
+exclude = ["**/__pycache__", "**/*.pyc", "**/.ptk", "**/.venv", "**/_build", "**/_builds", "**/_bin", "**/_logs", "**/_reports", "**/.gen.version.ptk.yml"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ptk"]

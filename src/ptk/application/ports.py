@@ -25,8 +25,6 @@ if TYPE_CHECKING:
     from ..domain.versioning import VersionSource
 
 MAIN_FILE = ".main.ptk.yml"
-CX_FILE = "cx.ptk.yml"
-LOCAL_FILE = "local.ptk.yml"
 MAINTAINERS_FILE = "maintainers.ptk.yml"
 
 
@@ -36,8 +34,14 @@ class ConfigSource(Protocol):
     def find_main(self, start: Path) -> Path:
         """Locate ``.main.ptk.yml`` in ``start`` or a parent directory."""
 
-    def discover(self, main: Path, *, ci: bool = False) -> list[Path]:
-        """Return repository configuration files, including the entry marker."""
+    def discover(
+        self, main: Path, config_path: str, components: tuple[Path, ...] = ()
+    ) -> list[Path]:
+        """Return known configuration documents in the declared directory."""
+        ...
+
+    def component_file(self, main: Path, relative: str) -> Path:
+        """Resolve and check an explicitly registered component directory."""
         ...
 
     def read(self, file: Path) -> Node:

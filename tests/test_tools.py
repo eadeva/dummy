@@ -19,6 +19,7 @@ from ptk.domain.errors import PtkError
 from ptk.domain.tools import check_version, install_methods, parse_version, satisfies
 from ptk.drivers.cli.main import cli
 from tests.conftest import grant_maintainer
+from tests.project_files import project_files, read_project, write_project
 
 posix_only = pytest.mark.skipif(sys.platform.startswith("win"), reason="POSIX shell")
 
@@ -148,7 +149,7 @@ jobs:
 @pytest.fixture
 def project(write, tmp_path):
     url, sha = make_tool_archive(tmp_path)
-    root = write({".main.ptk.yml": PROJECT.format(url=url, sha=sha)})
+    root = write(project_files(PROJECT.format(url=url, sha=sha)))
     env = {
         "PTK_DOCKER": "0",  # Exercise host installation independently of the test runner.
         "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
@@ -166,9 +167,10 @@ def project(write, tmp_path):
 
     invoke.root = root
     invoke.tools = tmp_path / "tools"
-    invoke.write_sha = lambda sha: (root / ".main.ptk.yml").write_text(
+    invoke.write_sha = lambda sha: write_project(
+        root / ".main.ptk.yml",
         PROJECT.format(url=url, sha=sha)
-        + "\nrepository: {alias: demo, config_path: .}\n"
+        + "\nrepository: {alias: demo, config_path: .}\n",
     )
     return invoke
 
@@ -229,8 +231,12 @@ def test_doctor_reports_tool_problems(project):
 
 @posix_only
 def test_self_setup(project):
-    (project.root / ".main.ptk.yml").write_text(
-        (project.root / ".main.ptk.yml").read_text() + "configs: {clang-format: {}}\n"
+    write_project(
+        project.root / ".main.ptk.yml",
+        {
+            **read_project(project.root / ".main.ptk.yml"),
+            "configs": {"clang-format": {}},
+        },
     )
     grant_maintainer(project.root)
     result = project("self-setup", role="")
@@ -243,24 +249,20 @@ def test_per_os_download_is_validated(write, load):
     from ptk.domain.errors import ConfigError
 
     root = write(
-        {
-            ".main.ptk.yml": """
+        project_files("""
         project: {name: t}
         tools:
           a: {download: {linux: {urll: "x"}}}
-        """
-        }
+        """)
     )
     with pytest.raises(ConfigError, match="unknown key 'urll'"):
         load(root)
     root = write(
-        {
-            ".main.ptk.yml": """
+        project_files("""
         project: {name: t}
         tools:
           a: {download: {linux: {url: "file:///x"}, windows: {url: "file:///y"}}}
-        """
-        }
+        """)
     )
     assert load(root).config.tools["a"].download["windows"].url == "file:///y"
 
@@ -301,7 +303,7 @@ def test_job_versions_coexist_and_path_contains_only_selected_tools(
             for name, spec in definitions.items()
         },
     }
-    root = write({".main.ptk.yml": yaml.safe_dump(data)})
+    root = write(project_files(yaml.safe_dump(data)))
     env = {
         "PTK_DOCKER": "0",  # Exercise host installation independently of the test runner.
         "PATH": os.environ.get("PATH", ""),
@@ -329,7 +331,7 @@ def test_job_versions_coexist_and_path_contains_only_selected_tools(
     data["jobs"]["one"]["steps"][0]["version"]["env"] = {
         "PATH": second_paths[0] + ":/usr/bin:/bin"
     }
-    write({".main.ptk.yml": yaml.safe_dump(data)})
+    write(project_files(yaml.safe_dump(data)))
     result = CliRunner(env={"PTK_CI": "0", **env}).invoke(
         cli, ["-C", str(root / ".main.ptk.yml"), "one"]
     )

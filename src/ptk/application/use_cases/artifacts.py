@@ -20,7 +20,7 @@ class ResolveDestination:
     def execute(self, project, *, job, variant=None, event=None, role="user", at=None):
         config = project.config
         if config.artifactory is None:
-            raise PtkError("no artifactory_structure.ptk.yaml configuration found")
+            raise PtkError("no artifactory_paths.ptk.yml configuration found")
         selected = config.jobs.get(job)
         if selected is None:
             raise PtkError(f"unknown job {job!r}")

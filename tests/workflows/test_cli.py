@@ -1,3 +1,5 @@
+from tests.project_files import write_workflows
+
 """Workflow execution with real portable jobs and bounded VMR discovery."""
 
 import json
@@ -8,6 +10,7 @@ import pytest
 import yaml
 from click.testing import CliRunner
 from tests.conftest import grant_maintainer
+from tests.project_files import read_project, write_project
 
 from ptk.drivers.cli.main import cli
 
@@ -19,23 +22,14 @@ def command(code):
 def repository(root, alias="app", *, jobs=None, workflows=None, extra=None):
     folder = root / "config"
     folder.mkdir(parents=True)
-    (root / ".main.ptk.yml").write_text(
-        yaml.safe_dump(
-            {
-                "repository": {"alias": alias, "config_path": "config"},
-            }
-        ),
-        encoding="utf-8",
-    )
     config = {
+        "repository": {"alias": alias, "config_path": "config"},
         "project": {"name": alias},
         "jobs": jobs or {"build": command("print('hello')")},
+        "workflows": workflows or {},
+        **(extra or {}),
     }
-    config.update(extra or {})
-    (folder / "project.ptk.yml").write_text(yaml.safe_dump(config), encoding="utf-8")
-    (folder / "workflow.ptk.yml").write_text(
-        yaml.safe_dump({"workflows": workflows or {}}), encoding="utf-8"
-    )
+    write_project(root / ".main.ptk.yml", config)
     return root
 
 
@@ -189,17 +183,21 @@ def test_reject_parallel_output_and_uv_environment_collisions(tmp_path):
     assert result.exit_code != 0 and "parallel workflow branches share" in result.output
     a = command("pass")
     a["steps"][0]["run"]["python"] = {"project": "."}
-    (root / "config/project.ptk.yml").write_text(
-        yaml.safe_dump({"project": {"name": "app"}, "jobs": {"a": a, "b": a}})
+    write_project(
+        root / ".main.ptk.yml",
+        {**read_project(root / ".main.ptk.yml"), "jobs": {"a": a, "b": a}},
     )
-    (root / "config/workflow.ptk.yml").write_text(
-        yaml.safe_dump(
-            {
-                "workflows": {
-                    "bad": {"parallel": True, "steps": [{"one": "a"}, {"two": "b"}]}
+    write_workflows(
+        (root / "config/workflow.ptk.yml").parent / "workflows",
+        yaml.safe_load(
+            yaml.safe_dump(
+                {
+                    "workflows": {
+                        "bad": {"parallel": True, "steps": [{"one": "a"}, {"two": "b"}]}
+                    }
                 }
-            }
-        )
+            )
+        )["workflows"],
     )
     result = invoke(root, "workflow", "dry-run", "bad")
     assert result.exit_code != 0 and "uv project environment" in result.output
@@ -221,20 +219,23 @@ def test_vmr_targets_keep_environment_and_reports_and_have_editor_tasks(
             workflows={"local": {"steps": [{"build": "build"}]}},
             extra={"environment": {"set": {"IDENTITY": alias}}},
         )
-    (root / "workflow.ptk.yml").write_text(
-        yaml.safe_dump(
-            {
-                "workflows": {
-                    "all": {
-                        "parallel": True,
-                        "steps": [
-                            {"a": {"repo": "a", "job": "build"}},
-                            {"b": {"repo": "b", "job": "build"}},
-                        ],
+    write_workflows(
+        (root / "workflow.ptk.yml").parent / "workflows",
+        yaml.safe_load(
+            yaml.safe_dump(
+                {
+                    "workflows": {
+                        "all": {
+                            "parallel": True,
+                            "steps": [
+                                {"a": {"repo": "a", "job": "build"}},
+                                {"b": {"repo": "b", "job": "build"}},
+                            ],
+                        }
                     }
                 }
-            }
-        )
+            )
+        )["workflows"],
     )
     monkeypatch.chdir(root)
     for target in (root, root / "a", root / "b"):
@@ -291,9 +292,8 @@ def test_parallel_python_calls_use_their_resolved_venv_paths(tmp_path, level):
     assert preview.exit_code == 0, preview.output
     target = jobs["b"] if level == "job" else jobs["b"]["steps"][0]["run"]
     target["env"]["UV_PROJECT_ENVIRONMENT"] = "${project.root}/.ptk/venvs/b/../a"
-    (root / "config/project.ptk.yml").write_text(
-        yaml.safe_dump({"project": {"name": "app"}, "jobs": jobs}),
-        encoding="utf-8",
+    write_project(
+        root / ".main.ptk.yml", {**read_project(root / ".main.ptk.yml"), "jobs": jobs}
     )
     collision = invoke(root, "workflow", "dry-run", "verify")
     assert collision.exit_code == 2 and "uv project environment" in collision.output
@@ -301,16 +301,19 @@ def test_parallel_python_calls_use_their_resolved_venv_paths(tmp_path, level):
 
 def test_source_locations_and_workflow_name_validation(tmp_path):
     root = repository(tmp_path)
-    file = root / "config/workflow.ptk.yml"
-    file.write_text(
-        "workflows:\n  verify:\n    steps:\n      - build: {acton: build}\n"
-    )
+    folder = root / "config/workflows"
+    folder.mkdir(exist_ok=True)
+    file = folder / "verify.ptk.yml"
+    file.write_text("steps:\n  - build: {acton: build}\n")
     result = invoke(root, "setup", "config", "validate")
     assert result.exit_code != 0
-    assert "workflow.ptk.yml:4" in result.output and "acton" in result.output
-    file.write_text("workflows: {bad/name: {steps: [{build: build}]}}")
+    assert "verify.ptk.yml:2" in result.output and "acton" in result.output
+    file.unlink()
+    nested = folder / "bad/name.ptk.yml"
+    nested.parent.mkdir()
+    nested.write_text("steps: [{build: build}]")
     result = invoke(root, "workflow", "list")
-    assert result.exit_code != 0 and "invalid workflow name" in result.output
+    assert result.exit_code != 0 and "directly in this directory" in result.output
 
 
 @pytest.mark.parametrize("body", ["build", {"job": "build"}])

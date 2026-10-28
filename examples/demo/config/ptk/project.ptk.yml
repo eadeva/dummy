@@ -1,0 +1,15 @@
+# PTK configuration: this file owns its section or named entity.
+name: demo
+description: Infotainment demo for ptk
+default_job: build
+vars:
+  preset: ${vh.variant}
+components:
+  core:
+    path: components/core
+  display:
+    path: components/display
+  navigation:
+    path: components/navigation
+  camera:
+    path: components/camera

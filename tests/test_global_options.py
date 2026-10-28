@@ -9,6 +9,7 @@ from click.testing import CliRunner
 
 from ptk.drivers.cli.main import cli
 from tests.conftest import grant_maintainer
+from tests.project_files import read_project, write_project
 from tests.test_variant_commands import setup
 from tests.test_workspace import workspace
 
@@ -39,7 +40,6 @@ def test_ci_switch_hidden_and_denied_for_user(tmp_path, mode):
 def test_maintainer_can_switch_and_visibility_does_not_leak(tmp_path):
     config = setup(tmp_path)
     grant_maintainer(tmp_path)
-    (tmp_path / "cx.ptk.yml").write_text("vars: {selected_layer: cx}\n")
     base = ["-C", str(config)]
     runner = CliRunner(env={"PTK_ROLE": "", "PTK_CI": "0"})
     assert "--ci" in runner.invoke(cli, [*base, "--help"]).output
@@ -123,9 +123,9 @@ def test_vmr_ci_switch_uses_selected_repository_role(tmp_path, monkeypatch):
 
 def test_global_variant_reaches_vmr_member(tmp_path, monkeypatch):
     a, _ = workspace(tmp_path)
-    data = yaml.safe_load(a.read_text())
+    data = read_project(a)
     data["variants"] = {"default": "one", "variants": {"one": {}, "two": {}}}
-    a.write_text(yaml.safe_dump(data))
+    write_project(a, yaml.safe_dump(data))
     monkeypatch.chdir(tmp_path)
     result = CliRunner(env={"PTK_CI": "0"}).invoke(
         cli, ["-V", "two", "firmware", "variant", "show", "--json"]

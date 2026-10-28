@@ -1,20 +1,20 @@
-# Run the full suite: ptk test
-# Select tests/options: ptk test -- tests/test_init.py -q
-# JUnit output is collected in PTK's per-run test report, including failing runs.
-jobs:
-  test:
-    help: Run PTK's pytest suite and collect JUnit results
-    open_report: always
-    env:
-      # Never synchronize the environment that is running PTK or the editor.
-      UV_PROJECT_ENVIRONMENT: "${project.root}/.ptk/venvs/test"
-    environment:
-      # Integration tests intentionally probe host-installed Git, shells and uv.
-      # Python, pytest and CMake come from this checkout's uv project, ahead of PATH.
-      inherit_path: true
-    steps:
-      - pytest:
-          python: {project: ., groups: [dev]}
-          run: [python, -m, pytest, "--junitxml=${run.reports_dir}/pytest.xml"]
-          passthrough: true
-          timeout: 900
+# PTK configuration: this file owns its section or named entity.
+help: Run PTK's pytest suite and collect JUnit results
+open_report: always
+env:
+  UV_PROJECT_ENVIRONMENT: ${project.root}/.ptk/venvs/test
+environment:
+  inherit_path: true
+steps:
+- pytest:
+    python:
+      project: .
+      groups:
+      - dev
+    run:
+    - python
+    - -m
+    - pytest
+    - --junitxml=${run.reports_dir}/pytest.xml
+    passthrough: true
+    timeout: 900

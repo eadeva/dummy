@@ -20,6 +20,7 @@ from ptk.domain.reporting.model import (
     test_metrics as metrics,
 )
 from ptk.domain.reporting.summary import run_summary
+from tests.project_files import project_files
 
 
 def test_test_counts_include_errors_but_not_skips_in_executed():
@@ -61,8 +62,8 @@ def test_test_counts_include_errors_but_not_skips_in_executed():
 
 def test_run_captures_variant_versions_tools_and_survives_config_changes(write, load):
     root = write(
-        {
-            ".main.ptk.yml": """
+        project_files(
+            """
 project: {name: example}
 repository: {alias: engine, config_path: .}
 versioning:
@@ -82,7 +83,7 @@ jobs:
     steps:
       - hello: {run: [PYTHON, -c, 'print("hello")']}
 """.replace("PYTHON", json.dumps(sys.executable))
-        }
+        )
     )
     app = create_app(environ={"PTK_DOCKER": "1"})
     project = load(root)

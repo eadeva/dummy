@@ -9,6 +9,7 @@ from click.testing import CliRunner
 
 from ptk.bootstrap import create_app
 from ptk.drivers.cli.main import cli
+from tests.project_files import write_project
 
 AT = "2026-10-26T15:07:00+01:00"
 
@@ -16,14 +17,8 @@ AT = "2026-10-26T15:07:00+01:00"
 def make_project(root, alias="demo", extra=None):
     config = root / "config"
     config.mkdir(parents=True)
-    (root / ".main.ptk.yml").write_text(
-        yaml.safe_dump(
-            {
-                "repository": {"alias": alias, "config_path": "config"},
-            }
-        )
-    )
     data = {
+        "repository": {"alias": alias, "config_path": "config"},
         "project": {"name": alias},
         "versioning": {"project": {"source": "literal", "version": "1.2.3"}},
         "variants": {"default": "debug", "variants": {"debug": {}, "release": {}}},
@@ -33,7 +28,7 @@ def make_project(root, alias="demo", extra=None):
         },
         **(extra or {}),
     }
-    (config / "project.ptk.yml").write_text(yaml.safe_dump(data))
+    write_project(root / ".main.ptk.yml", data)
     structure = {
         "url": "https://example.invalid/artifactory",
         "repository": "generic-ci-local",
@@ -58,9 +53,7 @@ def make_project(root, alias="demo", extra=None):
         },
         "jobs": {"package": {"path": "packages/${run.variant}"}},
     }
-    (config / "artifactory_structure.ptk.yaml").write_text(
-        yaml.safe_dump({"artifactory": structure})
-    )
+    (config / "artifactory_paths.ptk.yml").write_text(yaml.safe_dump(structure))
     return root
 
 
@@ -140,11 +133,10 @@ def test_pr_payload_github_outputs_omitted_job_suffix_and_overlays(tmp_path):
     event_file.write_text(
         json.dumps({"pull_request": {"number": 42}, "token": "do-not-expose"})
     )
-    source = root / "config/artifactory_structure.ptk.yaml"
+    source = root / "config/artifactory_paths.ptk.yml"
     structure = yaml.safe_load(source.read_text())
-    del structure["artifactory"]["base_path"]
+    structure["base_path"] = "local"
     source.write_text(yaml.safe_dump(structure))
-    (root / "config/local.ptk.yml").write_text("artifactory: {base_path: local}\n")
     result = invoke(
         root,
         "--job",
@@ -181,12 +173,12 @@ def test_invalid_resolution_fails_without_uploading(tmp_path, args, env, message
 
 def test_unknown_fields_and_template_typos_include_file_provenance(tmp_path):
     root = make_project(tmp_path)
-    path = root / "config/artifactory_structure.ptk.yaml"
+    path = root / "config/artifactory_paths.ptk.yml"
     path.write_text(path.read_text().replace("date.timestamp", "date.timestmp"))
     result = invoke(root)
     assert result.exit_code != 0
     assert (
-        "artifactory_structure.ptk.yaml" in result.output
+        "artifactory_paths.ptk.yml" in result.output
         and "date.timestmp" in result.output
     )
     path.write_text(

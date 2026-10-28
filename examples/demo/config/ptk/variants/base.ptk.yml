@@ -1,0 +1,9 @@
+# PTK configuration: this file owns its section or named entity.
+abstract: true
+components:
+- core
+- display
+features:
+  LOG_LEVEL: WARN
+data:
+  toolchain: arm-gcc

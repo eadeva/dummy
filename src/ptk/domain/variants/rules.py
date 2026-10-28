@@ -59,6 +59,8 @@ def validate(line: ProductLineSpec) -> list[tuple[str, str]]:
                         f"unknown component '{req}'{did_you_mean(req, line.components)}",
                     )
                 )
+        for i, constraint in enumerate(comp.constraints):
+            check(constraint.expr, f"{base}.constraints[{i}].expr")
         for fname, spec in comp.features.items():
             fpath = f"{base}.features.{fname}"
             if spec.depends_on:
@@ -292,7 +294,10 @@ def resolve(line: ProductLineSpec, name: str) -> ResolvedVariant:
         for expr in spec.conflicts:
             if expressions.evaluate(expr, symbols):
                 issues.append(_err(f"'{feature}' conflicts with '{expr}'", feature))
-    for constraint in line.constraints:
+    constraints = list(line.constraints)
+    for component in active_set:
+        constraints.extend(line.components[component].constraints)
+    for constraint in constraints:
         if not expressions.evaluate(constraint.expr, symbols):
             issues.append(
                 _err(constraint.message or f"constraint violated: {constraint.expr}")

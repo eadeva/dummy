@@ -21,9 +21,25 @@ function invoke(cwd, args) {
   return result.stdout;
 }
 
+function writeProject(root, config) {
+  const documents = {
+    ".main.ptk.yml": { repository: config.repository },
+    "project.ptk.yml": config.project,
+    "project.variants.ptk.yml": { default: config.variants?.default },
+  };
+  for (const [group, values] of Object.entries({ jobs: config.jobs, workflows: config.workflows, variants: config.variants?.variants })) {
+    for (const [name, value] of Object.entries(values || {})) documents[`${group}/${name}.ptk.yml`] = value;
+  }
+  for (const [file, value] of Object.entries(documents)) {
+    const target = path.join(root, file);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, JSON.stringify(value));
+  }
+}
+
 function project(root, alias) {
   fs.mkdirSync(root, { recursive: true });
-  fs.writeFileSync(path.join(root, ".main.ptk.yml"), JSON.stringify({
+  writeProject(root, {
     repository: { alias, config_path: "." }, project: { name: alias, default_job: "build" },
     variants: { default: "small", variants: { small: {}, large: {} } },
     jobs: { build: {
@@ -34,7 +50,7 @@ function project(root, alias) {
       steps: [{ say: { uses: "echo", with: { message: "${params.message} ${params.verbose} ${params.tags}" } } }],
     } },
     workflows: { verify: { steps: [{ build: "build" }] } },
-  }));
+  });
 }
 
 test("actual PTK inventory, preview, job parameters and variant inspection agree with extension arguments", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
@@ -76,11 +92,11 @@ test("actual VMR discovery supports member jobs and workspace workflow previews"
   project(path.join(root, "a"), "alpha");
   project(path.join(root, "b"), "beta");
   const entry = path.join(root, "a/.main.ptk.yml");
-  const config = JSON.parse(fs.readFileSync(entry, "utf8"));
-  delete config.variants;
-  fs.writeFileSync(entry, JSON.stringify(config));
+  fs.unlinkSync(path.join(root, "a/project.variants.ptk.yml"));
+  for (const name of ["small", "large"]) fs.unlinkSync(path.join(root, `a/variants/${name}.ptk.yml`));
   fs.writeFileSync(path.join(root, ".main.ptk.yml"), "virtual_monorepo: true\nmembers: [a, b]\n");
-  fs.writeFileSync(path.join(root, "workflow.ptk.yml"), "workflows:\n  verify:\n    steps:\n    - build: {repo: alpha, job: build}\n");
+  fs.mkdirSync(path.join(root, "workflows"));
+  fs.writeFileSync(path.join(root, "workflows/verify.ptk.yml"), "steps:\n- build: {repo: alpha, job: build}\n");
   const doc = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));
   assert.equal(doc.mode, "workspace");
   const targets = core.availableTargets([{ inventory: doc }]);
@@ -178,37 +194,39 @@ test("configuration form round-trips PTK YAML scalar types and creates valid job
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   project(root, "form");
   const entry = path.join(root, ".main.ptk.yml");
-  const edited = model.edit(fs.readFileSync(entry, "utf8"), [{ op: "add", path: ["jobs", "new-job"], value: S.initial(schema.$defs.JobSpec, schema) }]);
-  fs.writeFileSync(entry, edited);
+  const config = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"])).projects[0].configuration;
+  const docs = new Map(config.files.map(file => [file, fs.readFileSync(file, "utf8")]));
+  const changes = require("../src/project-edits").plan(config, docs, [{ op: "add", path: ["jobs", "new-job"], value: S.initial(schema.$defs.JobSpec, schema) }]);
+  for (const [file, text] of changes) fs.writeFileSync(file, text);
   invoke(root, ["setup", "config", "validate"]);
   assert.ok(core.parseInventory(invoke(root, ["describe", "--json", "--configuration"])).projects[0].jobs.some(job => job.name === "new-job"));
 });
 
-test("runtime schema drives event editing and new files reload through PTK", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
+test("runtime schema routes events to their fixed owning file", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
   const { plan } = require("../src/project-edits");
   const S = require("../media/schema");
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk composed form "));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   project(root, "composed");
-  fs.writeFileSync(path.join(root, "events.ptk.yml"), "artifactory:\n  url: https://example.invalid\n  repository: packages\n  events:\n    push: {path: branches}\n");
+  fs.writeFileSync(path.join(root, "artifactory_paths.ptk.yml"), "url: https://example.invalid\nrepository: packages\nevents:\n  push: {path: branches}\n");
   const read = () => core.parseInventory(invoke(root, ["describe", "--json", "--configuration"])).projects[0].configuration;
   let config = read();
   const event = S.initial(config.schema.$defs.EventRoute, config.schema);
   assert.deepEqual(event, { path: "" });
-  function apply(operations, filename) {
+  function apply(operations) {
     const docs = new Map(config.files.map(file => [file, fs.readFileSync(file, "utf8")]));
-    for (const [file, text] of plan(config, docs, operations, path.join(root, filename))) fs.writeFileSync(file, text);
+    for (const [file, text] of plan(config, docs, operations)) fs.writeFileSync(file, text);
     invoke(root, ["setup", "config", "validate"]);
     config = read();
   }
-  apply([{ op: "add", path: ["artifactory", "events", "release"], value: event }], "release.ptk.yml");
-  apply([{ op: "set", path: ["artifactory", "events", "push", "path"], value: "new-branches" }], "push.ptk.yml");
+  apply([{ op: "add", path: ["artifactory", "events", "release"], value: event }]);
+  apply([{ op: "set", path: ["artifactory", "events", "push", "path"], value: "new-branches" }]);
   assert.equal(config.value.artifactory.events.push.path, "new-branches");
   assert.deepEqual(config.value.artifactory.events.release, { path: "" });
-  assert.equal(config.sources.find(source => JSON.stringify(source.path) === JSON.stringify(["artifactory", "events", "push", "path"])).file, path.join(root, "push.ptk.yml"));
+  assert.equal(config.sources.find(source => JSON.stringify(source.path) === JSON.stringify(["artifactory", "events", "push", "path"])).file, path.join(root, "artifactory_paths.ptk.yml"));
 });
 
-test("project form applies and saves a multi-file edit then detects stale sources", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, async t => {
+test("project form saves to the owning file then detects stale sources", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, async t => {
   const { createEditors } = require("../src/editors");
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk live form "));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -251,15 +269,44 @@ test("project form applies and saves a multi-file edit then detects stale source
   const editors = createEditors(api, { subscriptions: [], extensionUri: uri(path.join(repo, "extensions/project-toolkit")) }, { project: async () => describe() });
   await editors.openProject(describe(), ["jobs", "build", "params"]);
   await receive({ type: "ready" });
-  await receive({ type: "edit", id: 1, version: messages.at(-1).version, newFile: true,
+  await receive({ type: "edit", id: 1, version: messages.at(-1).version,
     operations: [{ op: "set", path: ["jobs", "build", "params", "message", "default"], value: "updated" }] });
   assert.equal(messages.at(-1).issue, undefined);
   assert.equal(messages.at(-1).value.jobs.build.params.message.default, "updated");
-  assert.ok(fs.existsSync(path.join(root, "config/parameters.ptk.yml")));
+  assert.ok(fs.existsSync(path.join(root, "jobs/build.ptk.yml")));
+  assert.equal(fs.existsSync(path.join(root, "config/parameters.ptk.yml")), false);
   invoke(root, ["setup", "config", "validate"]);
   fs.appendFileSync(entry, "\n# external change\n");
   await receive({ type: "edit", id: 2, version: messages.at(-1).version,
     operations: [{ op: "set", path: ["jobs", "build", "params", "message", "default"], value: "should not apply" }] });
   assert.match(messages.at(-1).issue, /source file changed/i);
   assert.equal(describe().project.configuration.value.jobs.build.params.message.default, "updated");
+});
+
+test("registered component edits create a local document and entity renames round-trip", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
+  const { plan } = require("../src/project-edits");
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk component form "));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  project(root, "components");
+  const read = () => core.parseInventory(invoke(root, ["describe", "--json", "--configuration"])).projects[0].configuration;
+  let config = read();
+  function apply(operations) {
+    const docs = new Map(config.files.map(file => [file, fs.readFileSync(file, "utf8")]));
+    for (const [file, text] of plan(config, docs, operations)) {
+      if (text === null) fs.unlinkSync(file);
+      else { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, text); }
+    }
+    invoke(root, ["setup", "config", "validate"]);
+    config = read();
+  }
+  apply([{ op: "add", path: ["project", "components"], value: { networking: { path: "src/networking" } } }]);
+  apply([{ op: "add", path: ["variants", "components", "networking", "features"], value: { TLS: { type: "bool", default: true } } }]);
+  assert.ok(fs.existsSync(path.join(root, "src/networking/component.variants.ptk.yml")));
+  assert.equal(config.value.variants.components.networking.features.TLS.default, true);
+  apply([{ op: "add", path: ["jobs", "check"], value: { steps: [{ inspect: { uses: "echo" } }] } }]);
+  apply([{ op: "rename", path: ["jobs", "check"], name: "inspect" }]);
+  assert.equal(fs.existsSync(path.join(root, "jobs/check.ptk.yml")), false);
+  assert.ok(fs.existsSync(path.join(root, "jobs/inspect.ptk.yml")));
+  apply([{ op: "remove", path: ["jobs", "inspect"] }]);
+  assert.equal(fs.existsSync(path.join(root, "jobs/inspect.ptk.yml")), false);
 });

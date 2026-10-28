@@ -1,7 +1,7 @@
 """Read one located YAML mapping; project discovery lives in FileConfigSource.
 
-Every file contributes its full schema path and the application combines disjoint
-fields with merge_unique. YAML anchors within a document remain supported.
+The application mounts each document at its conventional model path.
+YAML anchors within a document remain supported.
 """
 
 from __future__ import annotations
@@ -12,7 +12,6 @@ from pathlib import Path
 import yaml
 from pydantic import ValidationError
 
-from ...domain.config.defaults import normalize_requirements
 from ...domain.config.model import RepositorySpec, WorkspaceSpec
 from ...domain.config.tree import Node, to_plain
 from ...domain.errors import ConfigError, Location, Problem
@@ -177,7 +176,7 @@ class YamlConfigReader:
             raise ConfigError(
                 [Problem("top level must be a mapping", location=tree.loc)]
             )
-        return normalize_requirements(tree)
+        return tree
 
     # ------------------------------------------------------------------ construction
 

@@ -9,11 +9,12 @@ from rich.text import Text
 
 from ptk.drivers.cli.main import cli
 from tests.conftest import grant_maintainer
+from tests.project_files import project_files
 
 
 @pytest.fixture
 def invoke(write):
-    root = write({".main.ptk.yml": "project: {name: demo}\n"})
+    root = write(project_files("project: {name: demo}\n"))
 
     grant_maintainer(root)
 

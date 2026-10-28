@@ -7,7 +7,9 @@ Loading installed plugins
 Install your extension in the same Python environment as PTK and list its
 **distribution name** in the project. Discovery does not install anything::
 
-   plugins: [company-ptk-extension]
+   # config/ptk/project.ptk.yml
+   plugins:
+   - company-ptk-extension
 
 Only selected distributions are imported. Missing packages/entry points,
 non-callable handlers and duplicate or reserved names are errors. Plugins run
@@ -104,6 +106,7 @@ Built-in command visibility
 
 Use canonical dotted paths, for example::
 
+   # config/ptk/project.ptk.yml
    command_audience:
      setup.creds: maintainer
      setup.install: maintainer

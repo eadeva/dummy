@@ -1,3 +1,5 @@
+from tests.project_files import write_workflows
+
 """The editor consumes PTK's permissions/discovery, never a second YAML parser."""
 
 import json
@@ -8,6 +10,7 @@ from click.testing import CliRunner
 
 from ptk.drivers.cli.main import cli
 from tests.conftest import grant_maintainer
+from tests.project_files import read_project, write_project
 from tests.test_command_access import snapshot
 from tests.test_variant_commands import setup
 from tests.test_workspace import workspace
@@ -23,7 +26,7 @@ def command_paths(commands):
 
 def test_inventory_is_read_only_filters_roles_and_omits_secret_values(tmp_path):
     entry = setup(tmp_path)
-    data = yaml.safe_load(entry.read_text())
+    data = read_project(entry)
     data["jobs"]["secret-job"] = {
         "audience": "maintainer",
         "steps": [{"echo": "echo private"}],
@@ -34,7 +37,7 @@ def test_inventory_is_read_only_filters_roles_and_omits_secret_values(tmp_path):
         "release": {"audience": "maintainer", "steps": [{"go": "go"}]},
     }
     data["vars"] = {"internal": "PRIVATE_CONFIG_VALUE"}
-    entry.write_text(yaml.safe_dump(data))
+    write_project(entry, yaml.safe_dump(data))
     grant_maintainer(tmp_path)
     before = snapshot(tmp_path)
     base = ["-C", str(entry), "describe", "--json"]
@@ -68,7 +71,7 @@ def test_inventory_is_read_only_filters_roles_and_omits_secret_values(tmp_path):
 
 def test_inventory_respects_group_policies(tmp_path):
     entry = setup(tmp_path)
-    data = yaml.safe_load(entry.read_text())
+    data = read_project(entry)
     data["command_audience"] = {
         "variant": "maintainer",
         "report": "maintainer",
@@ -76,7 +79,7 @@ def test_inventory_respects_group_policies(tmp_path):
         "setup.config": "maintainer",
     }
     data["workflows"] = {"verify": {"steps": [{"go": "go"}]}}
-    entry.write_text(yaml.safe_dump(data))
+    write_project(entry, yaml.safe_dump(data))
     result = CliRunner(env={"PTK_ROLE": "user"}).invoke(
         cli, ["-C", str(entry), "describe", "--json"]
     )
@@ -100,8 +103,11 @@ def test_vmr_inventory_retains_healthy_members_when_one_is_invalid(
     tmp_path, monkeypatch
 ):
     _a, b = workspace(tmp_path)
-    (tmp_path / "workflow.ptk.yml").write_text(
-        "workflows: {verify: {steps: [{build: {repo: firmware, job: build}}]}}\n"
+    write_workflows(
+        (tmp_path / "workflow.ptk.yml").parent / "workflows",
+        yaml.safe_load(
+            "workflows: {verify: {steps: [{build: {repo: firmware, job: build}}]}}\n"
+        )["workflows"],
     )
     b.write_text(
         "not: a valid project\nrepository: {alias: bootloader, config_path: config}\n"
@@ -168,7 +174,7 @@ def test_parameter_forms_receive_authored_defaults_without_resolving_environment
     tmp_path,
 ):
     entry = setup(tmp_path)
-    data = yaml.safe_load(entry.read_text())
+    data = read_project(entry)
     data["jobs"]["go"]["params"].update(
         {
             "dynamic": {
@@ -181,7 +187,7 @@ def test_parameter_forms_receive_authored_defaults_without_resolving_environment
             "private": {"type": "secret", "env": "EXAMPLE_TOKEN"},
         }
     )
-    entry.write_text(yaml.safe_dump(data))
+    write_project(entry, yaml.safe_dump(data))
     before = snapshot(tmp_path)
     result = CliRunner(env={"EXAMPLE_TOKEN": "NEVER_EXPOSE_THIS"}).invoke(
         cli, ["-C", str(entry), "describe", "--json"]

@@ -1,0 +1,13 @@
+# PTK configuration: this file owns its section or named entity.
+extends: base
+aliases:
+- '2'
+- b_us
+components:
+- core
+- display
+- navigation
+features:
+  MAP_REGION: US
+data:
+  toolchain: arm-clang

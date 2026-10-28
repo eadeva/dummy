@@ -5,7 +5,7 @@ description: Configure PTK project and component version discovery, Git tag patt
 
 # PTK version discovery
 
-1. Read [versioning](../../../docs/versioning.rst), the root repository alias and existing variants. Put maintained rules in `versioning.ptk.yml` under `repository.config_path`, or another discovered *.ptk.yml file using the full versioning schema path.
+1. Read [versioning](../../../docs/versioning.rst), the root repository alias and existing variants. Put maintained rules in `versioning.ptk.yml` under `repository.config_path`, using the versioning body without a root wrapper.
 2. Choose the actual source: Git, a repository file, caller environment, literal or read-only command. For Git, confirm reachable tags, the glob, prefix, history depth and dirty policy. Do not choose the highest tag anywhere in the repository or silently replace a missing source with a fabricated version.
 3. Let components inherit the project version unless independently versioned. Use explicit variant source overrides for existing divergent release lines. For VMR dependencies, name the repository alias and dependent variant deliberately.
 4. Preview the selected job and inspect `ptk version --help` for discovery commands. Generated `.gen.version.ptk.yml` files are output snapshots: ignore them in Git and never include them as maintained configuration. Custom command sources may execute even during previews; keep them read-only.

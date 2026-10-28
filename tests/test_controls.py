@@ -10,18 +10,20 @@ from ptk.bootstrap import create_app
 from ptk.domain.execution.model import Status
 from ptk.domain.reporting.summary import run_summary
 from ptk.drivers.cli.main import cli
+from tests.project_files import write_project
 
 
 def project(tmp_path, steps, **job):
     file = tmp_path / ".main.ptk.yml"
-    file.write_text(
+    write_project(
+        file,
         yaml.safe_dump(
             {
                 "repository": {"alias": "demo", "config_path": "."},
                 "project": {"name": "controls"},
                 "jobs": {"go": {"steps": steps, **job}},
             }
-        )
+        ),
     )
     app = create_app(environ=dict(os.environ))
     return file, app, app.load_project.execute(tmp_path)

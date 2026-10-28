@@ -274,7 +274,7 @@ ignored snapshot. There are no bump/set/tag commands. In VMR mode use
 Enter it at the terminal prompt or pass ``--config-dir PATH``; there is no
 default. Scripts and ``--yes`` require the option. The path is relative to each
 repository root. Root metadata stays minimal; initial
-configuration fragments live in topic folders under PATH. ``jobs/hello.ptk.yml``
+configuration documents follow the fixed layout under PATH. ``jobs/hello.ptk.yml``
 and ``jobs/build.ptk.yml`` provide separate runnable examples. Optional fields
 are documented in comments. Existing files are never overwritten.
 
@@ -375,12 +375,13 @@ For a CMake build job with a passthrough step running ``cmake --build build``, u
 Bazel's ``clean`` is a subcommand, not a ``-clean`` flag. Configure a dedicated
 job, for example::
 
-   jobs:
-     bazel-clean:
-       steps:
-         - clean:
-             run: [bazel, clean]
-             passthrough: true
+   # config/ptk/jobs/bazel-clean.ptk.yml
+   steps:
+   - clean:
+       run:
+       - bazel
+       - clean
+       passthrough: true
 
 Then ``ptk bazel-clean`` invokes native ``bazel clean`` and
 ``ptk bazel-clean -- --expunge`` invokes ``bazel clean --expunge``. Appending

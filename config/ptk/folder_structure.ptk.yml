@@ -1,6 +1,5 @@
-# Output folders for this repository, also used by clean-all.
-layout:
-  builds: _builds
-  bin: _bin
-  logs: _logs
-  reports: _reports
+# PTK configuration: this file owns its section or named entity.
+builds: _builds
+bin: _bin
+logs: _logs
+reports: _reports

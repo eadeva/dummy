@@ -45,8 +45,8 @@ def catalog(ctx):
     owners = {}
     available = {}
     if workspace_mode:
-        document = workspace / "workflow.ptk.yml"
-        if document.is_file():
+        document = workspace / "workflows"
+        if document.is_dir():
             for name, spec in read_workflows(document).workflows.items():
                 available[name] = (None, spec, workspace)
         for alias, entry in entries.items():

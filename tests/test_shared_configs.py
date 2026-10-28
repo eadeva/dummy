@@ -13,6 +13,7 @@ from ptk.domain import shared_configs as sc
 from ptk.domain.errors import ConfigError
 from ptk.drivers.cli.main import cli
 from tests.conftest import grant_maintainer
+from tests.project_files import project_files
 
 
 def test_deep_merge_and_delete():
@@ -101,11 +102,13 @@ jobs: {noop: {steps: [{x: "true"}]}}
 @pytest.fixture
 def invoke(write):
     root = write(
-        {
-            ".main.ptk.yml": PROJECT,
-            "ptk/pc.yaml": "repos:\n  - {repo: https://github.com/pre-commit/mirrors-clang-format, disable: true}\n",
-            "ptk/cf.yaml": "ColumnLimit: 120\n",
-        }
+        project_files(
+            PROJECT,
+            {
+                "ptk/pc.yaml": "repos:\n  - {repo: https://github.com/pre-commit/mirrors-clang-format, disable: true}\n",
+                "ptk/cf.yaml": "ColumnLimit: 120\n",
+            },
+        )
     )
 
     grant_maintainer(root)
@@ -174,7 +177,7 @@ def test_unknown_config_and_missing_overlay(invoke):
 
 def test_ruff_overlay_is_a_config_error(write, load):
     root = write(
-        {".main.ptk.yml": "project: {name: x}\nconfigs: {ruff: {overlay: r.toml}}\n"}
+        project_files("project: {name: x}\nconfigs: {ruff: {overlay: r.toml}}\n")
     )
     with pytest.raises(ConfigError, match="ruff needs no overlay"):
         load(root)

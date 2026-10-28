@@ -1,0 +1,6 @@
+# PTK configuration: this file owns its section or named entity.
+steps:
+- tests:
+    uses: echo
+    with:
+      message: Testing ${env.PROJECT_IDENTITY} (${vh.variant})

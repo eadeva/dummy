@@ -1,3 +1,5 @@
+from tests.project_files import write_workflows
+
 """Maintainer command visibility and denial through real CLI entry points."""
 
 import re
@@ -10,6 +12,7 @@ from rich.text import Text
 
 from ptk.drivers.cli.main import cli
 from tests.conftest import grant_maintainer
+from tests.project_files import read_project, write_project
 from tests.test_workspace import workspace
 
 MUTATIONS = [
@@ -25,7 +28,8 @@ MUTATIONS = [
 
 def project(root, **extra):
     path = root / ".main.ptk.yml"
-    path.write_text(
+    write_project(
+        path,
         yaml.safe_dump(
             {
                 "repository": {"alias": "demo", "config_path": "."},
@@ -34,7 +38,7 @@ def project(root, **extra):
                 "variants": {"variants": {"default": {}}},
                 **extra,
             }
-        )
+        ),
     )
     return path
 
@@ -213,15 +217,16 @@ def test_vmr_workspace_workflow_needs_its_own_list_and_member_roles(
     tmp_path, monkeypatch
 ):
     a, _ = workspace(tmp_path)
-    fragment = a.parent / "config/jobs.ptk.yml"
-    data = yaml.safe_load(fragment.read_text())
+    fragment = a
+    data = read_project(fragment)
     data["jobs"]["build"]["audience"] = "maintainer"
-    fragment.write_text(yaml.safe_dump(data))
-    entry = yaml.safe_load(a.read_text())
-    entry["project"].pop("default_job")
-    a.write_text(yaml.safe_dump(entry))
-    (tmp_path / "workflow.ptk.yml").write_text(
-        "workflows:\n  restricted:\n    audience: maintainer\n    steps:\n      - build: {repo: firmware, job: build}\n"
+    data["project"].pop("default_job")
+    write_project(fragment, data)
+    write_workflows(
+        (tmp_path / "workflow.ptk.yml").parent / "workflows",
+        yaml.safe_load(
+            "workflows:\n  restricted:\n    audience: maintainer\n    steps:\n      - build: {repo: firmware, job: build}\n"
+        )["workflows"],
     )
     monkeypatch.chdir(tmp_path)
     runner = CliRunner(env={"PTK_ROLE": "", "PTK_CI": "0"})

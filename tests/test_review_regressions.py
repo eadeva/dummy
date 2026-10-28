@@ -1,3 +1,5 @@
+from tests.project_files import write_project
+
 """Observable failures found in the full-project review."""
 
 import json
@@ -17,6 +19,7 @@ from ptk.bootstrap import create_app
 from ptk.domain.errors import ConfigError
 from ptk.domain.execution.model import CommandSpec
 from ptk.drivers.cli.main import cli
+from tests.project_files import project_files
 
 
 def test_vault_updates_from_two_clients_preserve_both(tmp_path):
@@ -78,7 +81,8 @@ def test_report_inputs_are_fresh_and_history_is_immutable(tmp_path):
         'import os,sys\nfrom pathlib import Path\nif sys.argv[1] != "none":\n Path(os.environ["PTK_STEP_REPORTS_DIR"],"test.xml").write_text("<testsuite><testcase name=\\""+sys.argv[1]+"\\"/></testsuite>")'
     )
     main = tmp_path / ".main.ptk.yml"
-    main.write_text(
+    write_project(
+        main,
         yaml.safe_dump(
             {
                 "repository": {"alias": "demo", "config_path": "."},
@@ -101,7 +105,7 @@ def test_report_inputs_are_fresh_and_history_is_immutable(tmp_path):
                     }
                 },
             }
-        )
+        ),
     )
     runner = CliRunner()
     base = ["-C", str(main)]
@@ -123,12 +127,12 @@ def test_report_inputs_are_fresh_and_history_is_immutable(tmp_path):
 
 def test_requirement_redefinition_is_a_conflict(write, load):
     root = write(
-        {
-            ".main.ptk.yml": "project: {name: demo}\ntools: {ninja: {version: '>=1'}}\njobs: {go: {requires_tools: {ninja: {version: '>=2'}}, steps: [{ok: {uses: echo}}]}}",
-            "local.ptk.yml": "jobs: {go: {requires_tools: [ninja]}}",
-        }
+        project_files(
+            "project: {name: demo}\ntools: {ninja: {version: '>=1'}}\njobs: {go: {requires_tools: {ninja: {version: '>=2'}}, steps: [{ok: {uses: echo}}]}}",
+            {"local.ptk.yml": "jobs: {go: {requires_tools: [ninja]}}"},
+        )
     )
-    with pytest.raises(ConfigError, match="configuration conflict"):
+    with pytest.raises(ConfigError, match="unexpected configuration filename"):
         load(root)
 
 
@@ -177,9 +181,9 @@ def test_login_identity_does_not_query_git(tmp_path, monkeypatch):
 def test_isolated_job_environment_does_not_inherit_secrets(write, load, monkeypatch):
     monkeypatch.setenv("UNRELATED_TOKEN", "must-not-inherit")
     root = write(
-        {
-            ".main.ptk.yml": "project: {name: demo}\nenvironment: {keep: [KEPT]}\njobs: {go: {steps: [{ok: {uses: echo}}]}}"
-        }
+        project_files(
+            "project: {name: demo}\nenvironment: {keep: [KEPT]}\njobs: {go: {steps: [{ok: {uses: echo}}]}}"
+        )
     )
     from ptk.application.use_cases.run import RunRequest
 

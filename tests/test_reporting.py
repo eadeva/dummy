@@ -15,6 +15,7 @@ from ptk.adapters import help_html
 from ptk.adapters.reporting import exporters, html, importers
 from ptk.domain.reporting.model import from_summary
 from ptk.drivers.cli.main import cli
+from tests.project_files import project_files
 
 pytestmark = pytest.mark.skipif(sys.platform.startswith("win"), reason="POSIX shell")
 HOST = {
@@ -193,7 +194,7 @@ jobs:
 
 @pytest.fixture
 def project(write, tmp_path):
-    root = write({".main.ptk.yml": PROJECT, "tools/tidy.sarif": json.dumps(SARIF)})
+    root = write(project_files(PROJECT, {"tools/tidy.sarif": json.dumps(SARIF)}))
     summary = tmp_path / "gh-summary.md"
     env = {**HOST, "JUNIT": JUNIT, "GITHUB_STEP_SUMMARY": str(summary)}
 
@@ -233,12 +234,10 @@ def test_reports_after_run(project):
 
 def test_report_import_without_match_fails(write):
     root = write(
-        {
-            ".main.ptk.yml": """
+        project_files("""
         project: {name: x}
         jobs: {go: {steps: [{grab: {uses: report.import, with: {files: [no/*.xml]}}}]}}
-        """
-        }
+        """)
     )
     result = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
         cli, ["--config", str(root / ".main.ptk.yml"), "go"], catch_exceptions=False
@@ -271,13 +270,11 @@ def test_report_export_and_history(project, monkeypatch):
 
 def test_reporting_disabled(write):
     root = write(
-        {
-            ".main.ptk.yml": """
+        project_files("""
         project: {name: x}
         reporting: {formats: []}
         jobs: {go: {steps: [{a: "echo hi"}]}}
-        """
-        }
+        """)
     )
     result = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
         cli, ["--config", str(root / ".main.ptk.yml"), "go"], catch_exceptions=False

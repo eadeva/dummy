@@ -9,13 +9,11 @@ Configured version sources are discovered normally, including command sources.
 Configuration
 -------------
 
-Place ``artifactory_structure.ptk.yaml`` directly in ``repository.config_path``.
-This exact filename is discovered automatically as a defaults layer; explicit
-includes, CX/local overlays and CLI overrides retain normal precedence. An
-explicitly included file is applied once at its include position. Other files
-can declare the same ``artifactory:`` section through explicit includes.
+Place ``artifactory_paths.ptk.yml`` directly in ``repository.config_path``.
+It contains the destination body without an ``artifactory`` wrapper and owns all
+artifact routes. Explicit CLI overrides remain available for inspection.
 
-.. literalinclude:: ../examples/artifacts/config/artifactory_structure.ptk.yaml
+.. literalinclude:: ../examples/artifacts/config/artifactory_paths.ptk.yml
    :language: yaml
 
 The destination is ``url / repository / base_path / event.path / job.path``.

@@ -1,12 +1,17 @@
-# Build and validate release artifacts locally. This job never uploads anything.
-# The script consumes PTK_VERSION_PTK from this run's Git-managed version snapshot.
-jobs:
-  package:
-    help: Prepare Python distributions and offline documentation for Artifactory
-    env:
-      UV_PROJECT_ENVIRONMENT: "${project.root}/.ptk/venvs/package"
-    steps:
-      - prepare:
-          python: {project: ., groups: [release, docs]}
-          run: [python, scripts/prepare_package.py, --output, "${run.bin_dir}"]
-          timeout: 900
+# PTK configuration: this file owns its section or named entity.
+help: Prepare Python distributions and offline documentation for Artifactory
+env:
+  UV_PROJECT_ENVIRONMENT: ${project.root}/.ptk/venvs/package
+steps:
+- prepare:
+    python:
+      project: .
+      groups:
+      - release
+      - docs
+    run:
+    - python
+    - scripts/prepare_package.py
+    - --output
+    - ${run.bin_dir}
+    timeout: 900

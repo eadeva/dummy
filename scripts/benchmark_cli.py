@@ -23,24 +23,23 @@ def write_project(root: Path, alias: str, *, jobs: int = 12) -> None:
     config = root / "config"
     config.mkdir(parents=True)
     (root / ".main.ptk.yml").write_text(
-        f"repository: {{alias: {alias}, config_path: config}}\ninclude: '*.ptk.yml'\n",
-        encoding="utf-8",
+        f"repository: {{alias: {alias}, config_path: config}}\n", encoding="utf-8"
     )
-    (config / "project.ptk.yml").write_text(
-        f"project: {{name: {alias}}}\nvariants: {{variants: {{debug: {{}}, release: {{}}}}}}\n",
-        encoding="utf-8",
-    )
+    (config / "project.ptk.yml").write_text(f"name: {alias}\n", encoding="utf-8")
+    for directory in ("jobs", "variants", "workflows"):
+        (config / directory).mkdir()
+    for name in ("debug", "release"):
+        (config / "variants" / f"{name}.ptk.yml").write_text("{}\n", encoding="utf-8")
     for i in range(jobs):
-        (config / f"job-{i}.ptk.yml").write_text(
-            f"jobs:\n  job-{i}:\n    help: Benchmark job {i}\n"
-            "    params: {mode: {default: debug}, count: {type: int, default: 2}}\n"
-            "    steps:\n      - inspect: {uses: echo, with: {message: '${params.mode}'}}\n"
-            "      - finish: {uses: echo, with: {message: done}}\n",
+        (config / "jobs" / f"job-{i}.ptk.yml").write_text(
+            f"help: Benchmark job {i}\n"
+            "params: {mode: {default: debug}, count: {type: int, default: 2}}\n"
+            "steps:\n  - inspect: {uses: echo, with: {message: '${params.mode}'}}\n"
+            "  - finish: {uses: echo, with: {message: done}}\n",
             encoding="utf-8",
         )
-    (config / "workflow.ptk.yml").write_text(
-        "workflows:\n  verify:\n    steps: [{check: {job: job-0}}, {test: {job: job-1}}]\n",
-        encoding="utf-8",
+    (config / "workflows/verify.ptk.yml").write_text(
+        "steps: [{check: {job: job-0}}, {test: {job: job-1}}]\n", encoding="utf-8"
     )
 
 
@@ -55,7 +54,7 @@ def scenarios(temporary: Path, repo: Path, sizes: list[int]):
     broken = temporary / "broken"
     broken.mkdir()
     (broken / ".main.ptk.yml").write_text(
-        "repository: {alias: broken, config_path: .}\ninclude: missing.ptk.yml\n",
+        "repository: {alias: broken, config_path: .}\nunknown: true\n",
         encoding="utf-8",
     )
     yield "broken-project-help", broken, ["--help"]

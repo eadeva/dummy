@@ -12,6 +12,7 @@ from ptk.adapters.process import SubprocessRunner
 from ptk.domain.config.model import StepSpec
 from ptk.domain.execution.commands import build_command
 from ptk.domain.execution.model import CommandSpec, PlannedStep
+from tests.project_files import write_project
 
 
 def test_captured_windows_launch_hides_console_and_keeps_process_group(
@@ -176,12 +177,12 @@ def test_cli_redirected_legacy_encoding_does_not_abort_job(tmp_path):
     import subprocess
 
     config = tmp_path / ".main.ptk.yml"
-    config.write_text(
+    write_project(
+        config,
         "repository: {alias: demo, config_path: .}\n"
         "project: {name: demo}\n"
         "jobs:\n  hello:\n    steps:\n"
         "      - greet: {uses: echo, with: {message: 'caf\u00e9 \U0001f9ea'}}\n",
-        encoding="utf-8",
     )
     result = subprocess.run(
         [sys.executable, "-m", "ptk.drivers.cli.main", "-C", str(config), "hello"],

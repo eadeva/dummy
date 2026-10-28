@@ -14,6 +14,7 @@ from ptk.adapters.vscode_file import strip_jsonc
 from ptk.domain import vscode
 from ptk.drivers.cli.main import cli
 from tests.conftest import grant_maintainer
+from tests.project_files import project_files
 
 HOST = {
     "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
@@ -43,7 +44,7 @@ jobs:
 
 @pytest.fixture
 def invoke(write):
-    root = write({".main.ptk.yml": PROJECT})
+    root = write(project_files(PROJECT))
     grant_maintainer(root)
 
     def _invoke(*args: str, role: str = "user"):
@@ -123,7 +124,7 @@ def test_maintainer_jobs_hidden_and_refused_for_users(invoke):
 
 
 def test_broken_config_still_shows_help(write):
-    root = write({".main.ptk.yml": "project: {name: t}\njobs: {build: {stepz: []}}\n"})
+    root = write(project_files("project: {name: t}\njobs: {build: {stepz: []}}\n"))
     base = ["--config", str(root / ".main.ptk.yml")]
     help_out = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
         cli, [*base, "--help"], catch_exceptions=False

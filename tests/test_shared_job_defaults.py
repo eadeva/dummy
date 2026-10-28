@@ -1,8 +1,10 @@
 import pytest
+import yaml
 
 from ptk.application.use_cases.tools import tools_for_jobs
 from ptk.domain.config.model import PtkConfig
 from ptk.domain.errors import ConfigError
+from tests.project_files import project_files
 
 MAIN = """
 project: {name: shared}
@@ -17,27 +19,26 @@ jobs:
 """
 
 
+def configured(write, *, build=None, **settings):
+    model = yaml.safe_load(MAIN)
+    model.update(settings)
+    model["jobs"]["build"].update(build or {})
+    return write(project_files(yaml.safe_dump(model)))
+
+
 def test_per_tool_override_disable_and_preserve_unmentioned(write, load):
-    root = write(
-        {
-            ".main.ptk.yml": MAIN,
-            "tools.ptk.yml": """
-tools:
-  cmake: {version: '>=3', check: cmake --version, choco: cmake}
-  git: {check: git --version}
-  ninja: {check: ninja --version}
-requires_tools: [cmake, git]
-param_defaults: {jobs: 8, own: 99, undeclared: 20}
-""",
-            "build.tools.ptk.yml": """
-jobs:
-  build:
-    requires_tools:
-      cmake: {version: '>=4'}
-      git: false
-      ninja: true
-""",
-        }
+    root = configured(
+        write,
+        tools={
+            "cmake": {"version": ">=3", "check": "cmake --version", "choco": "cmake"},
+            "git": {"check": "git --version"},
+            "ninja": {"check": "ninja --version"},
+        },
+        requires_tools=["cmake", "git"],
+        param_defaults={"jobs": 8, "own": 99, "undeclared": 20},
+        build={
+            "requires_tools": {"cmake": {"version": ">=4"}, "git": False, "ninja": True}
+        },
     )
     p = load(root)
     assert p.config.jobs["build"].required_tool_names == ["cmake", "ninja"]
@@ -52,47 +53,40 @@ jobs:
     assert "undeclared" not in p.config.jobs["build"].params
     assert (
         p.location(("jobs", "build", "params", "jobs", "default")).file
-        == "tools.ptk.yml"
+        == "project.ptk.yml"
     )
-    assert p.layers == [".main.ptk.yml", "build.tools.ptk.yml", "tools.ptk.yml"]
+    assert len(p.layers) == len(set(p.layers)) == 5
 
 
-def test_cx_overrides_and_requirement_layers_merge_by_tool(write, load):
-    root = write(
-        {
-            ".main.ptk.yml": MAIN
-            + "\ntools: {a: {}, b: {}, c: {}}\nrequires_tools: [a]\n",
-            "build.tools.ptk.yml": "jobs: {build: {requires_tools: [b]}}",
-            "cx.ptk.yml": "jobs: {build: {requires_tools: {c: true, a: false}}}",
-            "local.ptk.yml": "param_defaults: {jobs: 16}",
-        }
+def test_explicit_requirement_override_merges_with_shared_defaults(write, load):
+    root = configured(
+        write,
+        tools={"a": {}, "b": {}, "c": {}},
+        requires_tools=["a"],
+        build={"requires_tools": ["b"]},
+        param_defaults={"jobs": 16},
     )
-    local = load(root)
-    assert local.config.jobs["build"].required_tool_names == ["a", "b"]
-    cx = load(root, environ={"GITHUB_ACTIONS": "true"})
-    assert cx.config.jobs["build"].required_tool_names == ["b", "c"]
-    assert cx.config.jobs["build"].params["jobs"].default == 16
-    assert "cx.ptk.yml" in cx.layers
-
-
-def test_discovered_file_is_loaded_once(write, load):
-    root = write(
-        {
-            ".main.ptk.yml": MAIN,
-            "tools.ptk.yml": "vars: {items: [one]}\nparam_defaults: {jobs: 4}",
-        }
+    assert load(root).config.jobs["build"].required_tool_names == ["a", "b"]
+    p = load(
+        root,
+        overrides=[
+            "jobs.build.requires_tools.c=true",
+            "jobs.build.requires_tools.a=false",
+        ],
     )
-    p = load(root)
+    assert p.config.jobs["build"].required_tool_names == ["b", "c"]
+    assert p.config.jobs["build"].params["jobs"].default == 16
+
+
+def test_each_conventional_document_is_loaded_once(write, load):
+    p = load(configured(write, vars={"items": ["one"]}, param_defaults={"jobs": 4}))
     assert p.config.vars["items"] == ["one"]
-    assert p.layers == [".main.ptk.yml", "tools.ptk.yml"]
+    assert len(p.files) == len(set(p.files)) == 4
 
 
 def test_global_default_validated_for_each_parameter(write, load):
-    root = write(
-        {".main.ptk.yml": MAIN, "tools.ptk.yml": "param_defaults: {jobs: wrong}"}
-    )
-    with pytest.raises(ConfigError, match="tools.ptk.yml"):
-        load(root)
+    with pytest.raises(ConfigError, match="project.ptk.yml"):
+        load(configured(write, param_defaults={"jobs": "wrong"}))
 
 
 def test_required_and_explicit_null_do_not_inherit_defaults():
@@ -145,12 +139,11 @@ def test_tool_checks_and_install_selection_use_job_settings(write, load):
         def which(self, name, path=None):
             return name
 
-    root = write(
-        {
-            ".main.ptk.yml": MAIN,
-            "tools.ptk.yml": 'tools: {cmake: {version: ">=3", uv_tool: cmake}, git: {}}\nrequires_tools: [cmake, git]',
-            "build.tools.ptk.yml": 'jobs: {build: {requires_tools: {cmake: {version: ">=4"}, git: false}}}',
-        }
+    root = configured(
+        write,
+        tools={"cmake": {"version": ">=3", "uv_tool": "cmake"}, "git": {}},
+        requires_tools=["cmake", "git"],
+        build={"requires_tools": {"cmake": {"version": ">=4"}, "git": False}},
     )
     p = load(root)
     app = create_app(environ={}, runner=Runner())

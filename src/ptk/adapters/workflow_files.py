@@ -9,17 +9,37 @@ from pathlib import Path
 
 from ..application.use_cases.project import validation_problems
 from ..domain.config.tree import to_plain
-from ..domain.errors import ConfigError
-from ..domain.workflows import WorkflowFile
+from ..domain.errors import ConfigError, Location, Problem
+from ..domain.workflows import WorkflowFile, WorkflowSpec
+from .config.discovery import checked_path
 from .config.yaml_loader import YamlConfigReader
 
 
-def read_workflows(path: Path) -> WorkflowFile:
-    tree = YamlConfigReader().read(path)
-    problems = validation_problems(WorkflowFile, tree, skip_unknown=False)
-    if problems:
-        raise ConfigError(problems)
-    return WorkflowFile.model_validate(to_plain(tree))
+def read_workflows(folder: Path) -> WorkflowFile:
+    """Workspace orchestration uses one section-scoped file per workflow."""
+    workflows = {}
+    if not folder.exists():
+        return WorkflowFile(workflows={})
+    checked_path(folder.parent, folder.name)
+    for path in sorted(folder.iterdir()):
+        checked_path(folder.parent, str(path.relative_to(folder.parent)))
+        if not path.is_file() or not path.name.endswith(".ptk.yml"):
+            raise ConfigError(
+                [
+                    Problem(
+                        "expected <workflow>.ptk.yml directly in workflows/",
+                        location=Location(str(path)),
+                    )
+                ]
+            )
+        tree = YamlConfigReader().read(path)
+        problems = validation_problems(WorkflowSpec, tree, skip_unknown=False)
+        if problems:
+            raise ConfigError(problems)
+        workflows[path.name.removesuffix(".ptk.yml")] = WorkflowSpec.model_validate(
+            to_plain(tree)
+        )
+    return WorkflowFile(workflows=workflows)
 
 
 def write_workflow_report(result, target: Path) -> Path:

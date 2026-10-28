@@ -10,6 +10,7 @@ from ptk.adapters.plugins import PluginInstaller, load_plugins
 from ptk.domain.errors import PtkError
 from ptk.domain.tools import InstallMethod
 from ptk.drivers.cli.main import cli
+from tests.project_files import write_project
 
 
 def test_installed_plugin_distribution_end_to_end(tmp_path, monkeypatch):
@@ -72,7 +73,8 @@ def test_installed_plugin_distribution_end_to_end(tmp_path, monkeypatch):
     root = tmp_path / "project"
     root.mkdir()
     config = root / ".main.ptk.yml"
-    config.write_text(
+    write_project(
+        config,
         yaml.safe_dump(
             {
                 "repository": {"alias": "demo", "config_path": "."},
@@ -100,7 +102,7 @@ def test_installed_plugin_distribution_end_to_end(tmp_path, monkeypatch):
                     }
                 },
             }
-        )
+        ),
     )
     result = CliRunner().invoke(cli, ["-C", str(config), "-V", "one", "go"])
     assert result.exit_code == 0, result.output

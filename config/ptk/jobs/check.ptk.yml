@@ -1,16 +1,28 @@
-# Read-only quality checks: ptk check
-# Formatting changes remain explicit: uv run ruff format.
-jobs:
-  check:
-    help: Check PTK's lint rules and formatting
-    env:
-      UV_PROJECT_ENVIRONMENT: "${project.root}/.ptk/venvs/check"
-    steps:
-      - lint:
-          python: {project: ., groups: [dev]}
-          run: [python, -m, ruff, check]
-          timeout: 120
-      - format:
-          python: {project: ., groups: [dev]}
-          run: [python, -m, ruff, format, --check]
-          timeout: 120
+# PTK configuration: this file owns its section or named entity.
+help: Check PTK's lint rules and formatting
+env:
+  UV_PROJECT_ENVIRONMENT: ${project.root}/.ptk/venvs/check
+steps:
+- lint:
+    python:
+      project: .
+      groups:
+      - dev
+    run:
+    - python
+    - -m
+    - ruff
+    - check
+    timeout: 120
+- format:
+    python:
+      project: .
+      groups:
+      - dev
+    run:
+    - python
+    - -m
+    - ruff
+    - format
+    - --check
+    timeout: 120

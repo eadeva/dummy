@@ -1,8 +1,8 @@
 # ptk — Implementation Plan
 
 > **ptk** (*project tool kit*): a generic, configuration-driven project CLI.
-> Configuration files use `.ptk.yml` (with `artifactory_structure.ptk.yaml` as a conventional exception): entry point `.main.ptk.yml` (ptk version + main fields),
-> fragments `*.ptk.yml`, layers `cx.ptk.yml` and `local.ptk.yml`, and `maintainers.ptk.yml`.
+> Configuration files use `.ptk.yml`: entry point `.main.ptk.yml` (ptk version + main fields),
+> conventional section and entity documents, component definitions beside code, and `maintainers.ptk.yml`.
 > Workspace folders: `_builds/`, `_bin/`, `_logs/`, `_reports/` (structured by variant / job / step).
 
 One CLI that every project can use: declarative jobs made of steps and step
@@ -48,7 +48,7 @@ src/ptk/
 │                               CheckTools, EnsureTools, SelfSetup,
 │                               SyncSharedConfigs, CheckSharedConfigs, BuildReport
 ├── adapters/
-│   ├── config/                 YAML loader: include, overlays, tags, provenance, substitution
+│   ├── config/                 Conventional document loader, provenance, substitution
 │   ├── process/                subprocess runner (streaming, timeouts, process groups)
 │   ├── python_env/             uv: uvx, cached venvs, uv run, python install
 │   ├── credentials/            env, gopass, vault (AES-GCM), prompt
@@ -79,7 +79,6 @@ src/ptk/
 | Element | Purpose |
 |---------|---------|
 | `project` | name, description, default job, default variant |
-| `include` | further files / globs merged into the configuration |
 | `vars` | reusable values (`${vars.build_dir}`) |
 | `environment` | isolation rules: variables and PATH entries kept, added, removed |
 | `tools` | tools with version range, check command, install sources per OS |
@@ -93,19 +92,14 @@ src/ptk/
 
 ### 2.2 Loading pipeline
 
-```
-.main.ptk.yml               project marker and repository metadata
-  → all *.ptk.yml / *.ptk.yaml fragments throughout the repository
-      cx.ptk.yml             CI-only additions
-      local.ptk.yml          personal additions (git-ignored)
-  → merge disjoint fields    duplicate scalar/list definitions are errors
-  → --set key=value          explicit command-line overrides
-  → validate (pydantic, extra=forbid, suggestions)
-  → run preparation          substitute all selected steps before execution
-```
+1. Read `.main.ptk.yml` and its `repository.config_path`.
+2. Read `project.ptk.yml` and explicit component registrations.
+3. Read known section files and `jobs/`, `workflows/`, `variants/` entity files.
+4. Read `component.variants.ptk.yml` in each registered component directory.
+5. Validate section schemas, assemble ownership paths, apply explicit CLI overrides and model defaults, then validate cross references.
 
-- **Composition rules:** mappings combine disjoint fields; scalars and lists each
-  have one source. Every fragment contains its full schema path.
+No recursive repository scan, includes, implicit overlays or migration fallback.
+
 - **Provenance:** every value knows file and line → `ptk setup config show --sources`,
   errors as `.main.ptk.yml:42: jobs.build.params.jobs: expected int`.
 - **Substitution** (one syntax, unknown names are errors):
@@ -276,7 +270,7 @@ and reports folder `${run.reports_dir}`.
 - Precedence: CLI > params file > declared env var (`env:`) > `default:`.
   Final values and their sources go into the report and `ptk dry-run`.
 - **Defaults** are typed and checked against `choices` when the config loads, and can
-  be changed per layer: `local.ptk.yml` (per developer), `cx.ptk.yml` (CI), `--set`.
+  be changed per layer: explicit `--set` overrides.
 - A default may be a template using `${env:...}`, `${vars.x}`, `${vh.*}` or
   `${project.*}` - e.g. a **per-variant default** `default: "${vh.data.toolchain}"`.
   Templates are resolved and type-checked when the job runs; a default cannot
@@ -544,34 +538,11 @@ so `ptk build --help` documents the project's real options.
 
 ---
 
-## 11. Mapping from the current tool
-
-| Current | ptk |
-|---------|------|
-| `JOBS.<a>.PHASES` / `SETS` / `steps` | `jobs.<a>.steps` (top-level = phases) |
-| `parallel: true` | `parallel: true` |
-| `execute_if` | Dropped from required legacy migration scope by user decision |
-| `only_variants` / `omit_variants` | `when: "variant in [...]"` / `not in` |
-| `variant_overrides` / `*_cx` | `when` blocks, `cx.ptk.yml` overlay |
-| `game_stopper: false` | `continue_on_error: true` |
-| `non_blocking` | `background: true` (scoped finite processes) |
-| `DEFAULT_PARAMETERS(_CX)` | `params` defaults, `cx.ptk.yml` |
-| `-bo name=value` | variant feature override `--feature FEATURE=value` / `--set vh.FEATURE=value` (alias `-bo` kept) |
-| `-mp name=value` | declared `params` / `--set` (alias `-mp` kept) |
-| `shell_run_command`, `custom_script` | `run:` |
-| `ENV_ISOLATION` | Deferred from required legacy migration scope by user decision |
-| `$VAR{...}` / env replacement | `${vars.x}` / `${env:X}` |
-| `variant_matrix` + `variants` | product line with enum features + aliases |
-
-Legacy conversion is not supported; configurations must use the current schema.
-
----
-
 ## 12. Skills (Claude, shipped in `.claude/skills/`)
 
 | Skill | Use when | Content |
 |-------|----------|---------|
-| `ptk-config-authoring` | creating or changing `*.ptk.yml`, includes, overlays, vars | meta-model, merge rules and tags, substitution, `config validate/show --sources`, common mistakes |
+| `ptk-config-authoring` | creating or changing conventional `*.ptk.yml` documents and vars | meta-model, file ownership, substitution, `config validate/show --sources`, common mistakes |
 | `ptk-job-authoring` | adding/changing jobs, steps, step sets, params | step kinds, controls, parallel rules, params + defaults + precedence, `ptk dry-run` before running, `--from/--to`, `audience: maintainer`, regenerating VS Code tasks |
 | `ptk-python-steps` | running Python tools/scripts | uvx vs venv vs project vs cli interpreter, pinning versions, cache, Windows/Linux differences |
 | `ptk-variant-model` | adding features, variants, conditions | variant model, `when:`, explain/check, renaming features across configs |
@@ -609,7 +580,7 @@ formatted with `ruff format`. CI runs `ruff check` and `ruff format --check`.
 
 | # | Deliverable | Done when |
 |---|-------------|-----------|
-| M1 ✅ | Meta-model, loader (include, overlays, tags, provenance), substitution, validation, JSON Schema | invalid configs fail with `file:line` + suggestion; `config show --sources` works |
+| M1 ✅ | Meta-model, loader (conventional documents, provenance), substitution, validation, JSON Schema | invalid configs fail with `file:line` + suggestion; `config show --sources` works |
 | M2 ✅ | Variant core integrated | `when:`, `${vh.*}`, `variant` commands, explain/check |
 | M3 ✅ | Execution engine: steps, sets, parallel, script types, uv Python modes, env per command; `ptk run`, `ptk dry-run`, default job, parameter defaults (incl. per variant); `ptk help` (HTML) with maintainer visibility | demo job runs on Linux; parallel set without shared state |
 | M4 ✅ | Unified logging | `run.log`, step logs, `events.jsonl`, `run.json`, history; levels; masking |
@@ -688,19 +659,15 @@ Former top-level commands remain hidden compatibility aliases.
 
 ## Confirmed scope and shared defaults
 
-- CX means GitHub Actions/workflows. `cx.ptk.yml` is a CI-only configuration
-  fragment; maintainers can force mode with `--ci` / `--no-ci`. No legacy filename is required.
-- Legacy migration is not a completion requirement. `execute_if`, legacy
-  `ENV_ISOLATION`, `*_cx`, `variant_overrides` and `DEFAULT_PARAMETERS_CX` do not
-  create further legacy obligations. The legacy converter and both CLI spellings have been removed.
+- CX means GitHub Actions/workflows. Maintainers can inspect execution mode with
+  `--ci` / `--no-ci`; configuration has no implicit CI/local file overlays.
 - Drop `variant_matrix` as a separate deliverable. Named variants, inheritance,
   feature overrides and multi-variant execution cover the accepted requirement.
 - Shared `param_defaults` applies only to explicitly declared job parameters.
   Explicit job defaults override shared values; required parameters remain
   required. Inherited defaults retain provenance and undergo normal type checks.
-- Automatically load configuration-directory `tools.ptk.yml` and `<job>.tools.ptk.yml`.
-  Explicit includes are not applied a second time. Main/includes override auto
-  files; CX, local and CLI layers follow. See `docs/configuration.rst` for ordering.
+- Shared tools belong in `tools.ptk.yml`; global requirements in `project.ptk.yml`;
+  job requirements in `jobs/<name>.ptk.yml`.
 - **Tool requirements override per tool.** Unmentioned global requirements stay;
   job maps can add a tool, override its settings, or disable a named tool with
   `false`. An empty list does not disable global requirements. Per-job tool
@@ -715,7 +682,7 @@ Former top-level commands remain hidden compatibility aliases.
 
 - Root `.main.ptk.yml` declares `repository.alias` and `repository.config_path`.
   No automatic discovery of the old filename. Configuration and execution roots
-  are separate; includes/automatic files use the configuration directory while
+  are separate; conventional section files use the configuration directory while
   commands and outputs use the repository root.
 - Upward standalone discovery stops at Git boundaries. Explicit `--config`
   selects one project, bypassing VMR grouping.
@@ -729,13 +696,13 @@ Former top-level commands remain hidden compatibility aliases.
   `members` list for nested paths. A project's explicit `virtual_monorepo: false`
   opts out; omission enables automatic discovery. These fields are entry-only.
 - Entry metadata and member indexes are cached per invocation and reused by
-  routing, credentials and version dependencies. Unselected project includes
+  routing, credentials and version dependencies. Unselected project documents
   remain unloaded. Manual members receive workspace context through root routing;
   direct invocation inside an ordinary manual member is standalone.
 - Every participating member needs its own root entry file and unique alias.
   CLI: `ptk <alias> <original command>`, including setup, variants and jobs.
   Global options precede the alias; bare VMR invocation lists repositories.
-- Regression coverage checks path separation, includes/overlays, root boundaries,
+- Regression coverage checks path separation, document ownership, root boundaries,
   aliases, member containment, Git indirection, manual markers, explicit opt-out,
   bounded discovery, cache refresh, per-repository execution and access.
 
@@ -763,7 +730,7 @@ Former top-level commands remain hidden compatibility aliases.
 - Unique ignored .gen.version.ptk.yml snapshots; no version bump/tag mutations.
 - C header, CMake, MSBuild, Python and JSON generation preserves unchanged mtimes.
 - Init asks for a config directory, emits minimal root metadata and complete
-  runnable fragments, preflights existing files and adds missing ignore rules.
+  runnable documents, preflights existing files and adds missing ignore rules.
 - The config folder is required user input with no implicit default: prompt on
   a terminal or require `--config-dir PATH` for scripts/`--yes`. Interpret it
   relative to each repository root and apply one choice across new VMR members.
@@ -780,15 +747,15 @@ Former top-level commands remain hidden compatibility aliases.
 ## Init starter organization
 
 - Separate hello/build job files under jobs/, discovered by a glob.
-- Topic folders for variants (model plus debug/release files), tools, versioning,
-  environment, credentials and shared formatter/linter settings.
+- Known section files plus jobs/, workflows/ and variants/ entity directories.
+- Registered component definitions live beside their source code.
 - Commented optional field examples; starter jobs remain runnable offline.
-- Conventional CX/maintainer entries remain at config root; other files use includes.
+- Maintainer identities stay in maintainers.ptk.yml at the configuration root.
 
 ## PTK self-hosted development commands
 
 - Replaced repository starter jobs with test/check/docs/package, one default variant,
-  and no components; preserved topic-based configuration under config/ptk.
+  and no components; uses conventional configuration under config/ptk.
 - Python project runtimes accept explicit dependency groups, using pyproject.toml
   as the source for pytest/Ruff/Sphinx dependencies.
 - CI exercises the same PTK jobs, with JUnit results and strict Sphinx builds.
@@ -814,7 +781,7 @@ Former top-level commands remain hidden compatibility aliases.
 
 ## Local workflows and current authoring coverage
 
-Implemented local `workflow.ptk.yml` composition of existing jobs, including
+Implemented local `workflows/<name>.ptk.yml` composition of existing jobs, including
 VMR repository-qualified calls, nested sequential/parallel groups, bounded job
 concurrency, preflight, cancellation, per-job isolation and retained child reports.
 The CLI exposes `workflow list/show/dry-run/run`; execution is rejected on CX/CI.
@@ -854,7 +821,7 @@ Implemented invocation-scoped local/UTC date templates with component fields,
 parameter/default/step/environment substitution, workflow/VMR propagation and
 report context metadata. Date resolution does not depend on per-step wall clocks.
 
-Implemented automatic artifactory_structure.ptk.yaml discovery, global/event/job
+Implemented automatic artifactory_paths.ptk.yml discovery, global/event/job
 path composition, push branch/tag routes, preserved branch slashes, repository
 overrides and read-only JSON/GitHub-output/URL resolution. PTK jobs/variants and
 repository versions retain their own context. CLI --at can reuse an explicit

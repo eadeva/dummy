@@ -1,19 +1,5 @@
-# ptk entry point: version, project and the files that make up the configuration
+# PTK configuration: this file owns its section or named entity.
 schema_version: 1
-# Optional: choose a range for the PTK releases your project supports.
-# ptk_version: ">=0.1,<0.2"
-
-project:
-  name: demo
-  description: Infotainment demo for ptk
-  default_job: build
-
-
-
-vars:
-  preset: ${vh.variant}
-
-layout:
-  root: .
-
-repository: {alias: demo, config_path: .}
+repository:
+  alias: demo
+  config_path: config/ptk

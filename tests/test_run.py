@@ -15,6 +15,7 @@ from ptk.application.use_cases.run import Cancelled, RunRequest
 from ptk.bootstrap import create_app
 from ptk.domain.errors import PtkError
 from ptk.domain.execution.model import Status
+from tests.project_files import project_files
 
 pytestmark = pytest.mark.skipif(
     sys.platform.startswith("win"), reason="uses POSIX shell commands"
@@ -78,12 +79,12 @@ print("step", os.environ["PTK_STEP"], "variant", os.environ["PTK_VARIANT"])
 @pytest.fixture
 def project(write):
     root = write(
-        {
-            ".main.ptk.yml": PROJECT.replace("${sys}", sys.executable).replace(
+        project_files(
+            PROJECT.replace("${sys}", sys.executable).replace(
                 "print(os.environ['GREETING']", "print(os.environ.get('GREETING', '-')"
             ),
-            "tools/show.py": SHOW,
-        }
+            {"tools/show.py": SHOW},
+        )
     )
     return root
 
@@ -193,15 +194,13 @@ def test_secret_of_skipped_step_is_not_needed(project):
 
 def test_timeout_and_retries(write):
     root = write(
-        {
-            ".main.ptk.yml": """
+        project_files("""
         project: {name: t}
         jobs:
           go:
             steps:
               - slow: {run: "sleep 5", timeout: 0.3}
-        """
-        }
+        """)
     )
     result, _, _ = run(root)
     slow = by_label(result)["slow"]
@@ -212,15 +211,13 @@ def test_timeout_and_retries(write):
     )
 
     root = write(
-        {
-            ".main.ptk.yml": """
+        project_files("""
         project: {name: t}
         jobs:
           go:
             steps:
               - flaky: {run: "test -f once || (touch once; exit 1)", retries: 2}
-        """
-        }
+        """)
     )
     result, _lines, _ = run(root)
     flaky = by_label(result)["flaky"]
@@ -229,16 +226,14 @@ def test_timeout_and_retries(write):
 
 def test_cancel_kills_process_tree(write):
     root = write(
-        {
-            ".main.ptk.yml": """
+        project_files("""
         project: {name: t}
         jobs:
           go:
             steps:
               - long: {run: "sleep 30 & sleep 30; wait"}
               - next: "echo next"
-        """
-        }
+        """)
     )
     app = create_app(environ=HOST)
     project = app.load_project.execute(root)
@@ -254,15 +249,13 @@ def test_cancel_kills_process_tree(write):
 
 def test_program_not_found(write):
     root = write(
-        {
-            ".main.ptk.yml": """
+        project_files("""
         project: {name: t}
         jobs:
           go:
             steps:
               - missing: [definitely-not-a-program-xyz]
-        """
-        }
+        """)
     )
     result, _, _ = run(root)
     assert "program not found" in by_label(result)["missing"].message
@@ -270,8 +263,7 @@ def test_program_not_found(write):
 
 def test_builtin_steps(write):
     root = write(
-        {
-            ".main.ptk.yml": """
+        project_files("""
         project: {name: t}
         jobs:
           go:
@@ -279,8 +271,7 @@ def test_builtin_steps(write):
             steps:
               - say: {uses: echo, with: {message: "${params.msg} there"}}
               - nope: {uses: files.cpoy}
-        """
-        }
+        """)
     )
     result, lines, _ = run(root)
     assert ("say", "hi there") in lines
@@ -290,8 +281,8 @@ def test_builtin_steps(write):
 @pytest.mark.skipif(UV is None, reason="uv not installed")
 def test_python_venv_and_plain_script(write):
     root = write(
-        {
-            ".main.ptk.yml": """
+        project_files(
+            """
             project: {name: t}
             jobs:
               go:
@@ -304,9 +295,11 @@ def test_python_venv_and_plain_script(write):
                       run: ["python", "-c", "import sys; print(sys.prefix)"]
                       python: {venv: {requirements: tools/req.txt}}
             """,
-            "tools/where.py": "import sys, os\nprint(os.environ.get('VIRTUAL_ENV', 'none'))\n",
-            "tools/req.txt": "# no packages - creating the venv must work offline\n",
-        }
+            {
+                "tools/where.py": "import sys, os\nprint(os.environ.get('VIRTUAL_ENV', 'none'))\n",
+                "tools/req.txt": "# no packages - creating the venv must work offline\n",
+            },
+        )
     )
     result, lines, _ = run(root)
     assert result.status is Status.PASSED, [(r.label, r.message) for r in result.walk()]

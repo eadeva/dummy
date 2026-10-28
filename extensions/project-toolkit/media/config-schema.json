@@ -154,6 +154,22 @@
       "title": "ChocoSource",
       "type": "object"
     },
+    "ComponentRegistration": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "ComponentRegistration",
+      "type": "object",
+      "x-ptk-directory-template": "components/{name}"
+    },
     "ComponentSpec": {
       "additionalProperties": false,
       "properties": {
@@ -167,6 +183,13 @@
             "type": "string"
           },
           "title": "Requires Components",
+          "type": "array"
+        },
+        "constraints": {
+          "items": {
+            "$ref": "#/$defs/Constraint"
+          },
+          "title": "Constraints",
           "type": "array"
         },
         "features": {
@@ -890,6 +913,13 @@
           ],
           "default": null,
           "title": "Default Job"
+        },
+        "components": {
+          "additionalProperties": {
+            "$ref": "#/$defs/ComponentRegistration"
+          },
+          "title": "Components",
+          "type": "object"
         }
       },
       "required": [

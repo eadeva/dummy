@@ -1,8 +1,26 @@
-# Project settings; all *.ptk.yml files are discovered automatically.
-# Add jobs as separate files anywhere in the repository.
-schema_version: 1
-project:
-  name: ptk
-  default_job: test
-# Test dependencies and doc dependencies are declared once in pyproject.toml.
-# Each job runs this checkout, even when the invoking PTK was installed globally.
+# PTK configuration: this file owns its section or named entity.
+name: ptk
+default_job: test
+requires_tools: {}
+environment:
+  isolate: true
+  inherit_path: false
+  keep:
+  - PTK_UV
+  - UV_PYTHON
+  - UV_CACHE_DIR
+  - UV_INDEX_URL
+  - UV_EXTRA_INDEX_URL
+  - HTTP_PROXY
+  - HTTPS_PROXY
+  - NO_PROXY
+  - SSL_CERT_FILE
+  - REQUESTS_CA_BUNDLE
+  - NODE_EXTRA_CA_CERTS
+  - NPM_CONFIG_REGISTRY
+  - NPM_CONFIG_USERCONFIG
+  - NPM_CONFIG_CACHE
+  - npm_config_registry
+  - npm_config_userconfig
+  - npm_config_cache
+  - PTK_TEST_PYTHON

@@ -7,7 +7,7 @@ from pathlib import Path
 from ...application.ports import MAIN_FILE
 from ...domain.config.tree import Node
 from ...domain.errors import ConfigError, Problem
-from .discovery import discover_files
+from .discovery import checked_path, discover_files
 from .yaml_loader import YamlConfigReader
 
 
@@ -44,12 +44,23 @@ class FileConfigSource:
         )
 
     def read(self, file: Path) -> Node:
+        if any(part.is_symlink() for part in (file, *file.parents)):
+            raise ConfigError(
+                [Problem(f"configuration paths cannot contain symbolic links: {file}")]
+            )
         if self._reader is None:
             self._reader = YamlConfigReader(display_root=file.resolve().parent)
         return self._reader.read(file)
 
-    def discover(self, main: Path, *, ci: bool = False) -> list[Path]:
-        return discover_files(main, ci=ci)
+    def discover(
+        self, main: Path, config_path: str, components: tuple[Path, ...] = ()
+    ) -> list[Path]:
+        return discover_files(main, config_path, components)
+
+    def component_file(self, main: Path, relative: str) -> Path:
+        return checked_path(
+            main.parent, str(Path(relative) / "component.variants.ptk.yml")
+        )
 
     def exists(self, file: Path) -> bool:
         return file.is_file()

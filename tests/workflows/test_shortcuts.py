@@ -1,3 +1,6 @@
+import yaml
+from tests.project_files import write_workflows
+
 """Workflow commands and deterministic collision handling for local/CX callers."""
 
 import json
@@ -98,8 +101,11 @@ def test_generated_editor_tasks_resolve_collisions_without_prompting(tmp_path):
 def test_vmr_workspace_and_member_shortcuts(tmp_path, monkeypatch):
     (tmp_path / ".main.ptk.yml").write_text("virtual_monorepo: true\nmembers: [app]\n")
     setup_project(tmp_path / "app")
-    (tmp_path / "workflow.ptk.yml").write_text(
-        "workflows:\n  all:\n    steps:\n      - check: {repo: app, job: other}\n"
+    write_workflows(
+        (tmp_path / "workflow.ptk.yml").parent / "workflows",
+        yaml.safe_load(
+            "workflows:\n  all:\n    steps:\n      - check: {repo: app, job: other}\n"
+        )["workflows"],
     )
     monkeypatch.chdir(tmp_path)
     runner = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"})

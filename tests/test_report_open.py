@@ -12,6 +12,7 @@ from ptk.adapters.reporting.store import FileReportStore
 from ptk.domain.config.model import JobSpec
 from ptk.domain.reporting.model import Contribution, Finding, from_summary
 from ptk.drivers.cli.main import cli
+from tests.project_files import project_files
 
 
 @pytest.fixture
@@ -53,7 +54,7 @@ def invoke(write, monkeypatch):
         }
         if all_variants:
             config["variants"] = {"default": "one", "variants": {"one": {}, "two": {}}}
-        root = write({".main.ptk.yml": yaml.safe_dump(config)})
+        root = write(project_files(yaml.safe_dump(config)))
         args = ["--config", str(root / ".main.ptk.yml")]
         if dry:
             args.append("dry-run")
@@ -178,16 +179,14 @@ def test_explicit_job_report_handles_missing_runs_without_hiding_errors(
     write, monkeypatch
 ):
     root = write(
-        {
-            ".main.ptk.yml": """
+        project_files("""
         project: {name: report-open}
         variants: {default: small, variants: {small: {}, large: {}}}
         reporting: {dir: custom-reports, formats: []}
         jobs:
           build:
             steps: [{hello: {uses: echo, with: {message: hello}}}]
-    """
-        }
+    """)
     )
     opened = []
     monkeypatch.setattr(

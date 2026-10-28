@@ -1,1 +1,4 @@
-repository: {alias: backend, config_path: config}
+# PTK configuration: this file owns its section or named entity.
+repository:
+  alias: backend
+  config_path: config

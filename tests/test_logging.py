@@ -22,6 +22,7 @@ from ptk.domain.logging import (
     runs_to_prune,
 )
 from ptk.drivers.cli.main import cli
+from tests.project_files import project_files
 
 pytestmark = pytest.mark.skipif(sys.platform.startswith("win"), reason="POSIX shell")
 
@@ -48,7 +49,7 @@ jobs:
 
 def project(write, level="info", keep=10):
     text = PROJECT.replace("LEVEL", level).replace("KEEP", str(keep))
-    return write({".main.ptk.yml": text})
+    return write(project_files(text))
 
 
 def run(root: Path, token: str = "t0ps3cret"):

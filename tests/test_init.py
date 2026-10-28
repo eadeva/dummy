@@ -27,8 +27,8 @@ def test_use_case_renders_valid_configuration(tmp_path):
     entry = yaml.safe_load(result.files[".main.ptk.yml"])
     assert set(entry) == {"repository"}
     config = yaml.safe_load(result.files["ptk/project.ptk.yml"])
-    assert config["project"]["name"] == 'My "project": #1'
-    assert config["project"]["default_job"] == "hello"
+    assert config["name"] == 'My "project": #1'
+    assert config["default_job"] == "hello"
     assert files.dry_run
 
 
@@ -50,7 +50,7 @@ def test_new_project_runs(tmp_path, monkeypatch):
         catch_exceptions=False,
     )
     assert result.exit_code == 0, result.output
-    assert "local.ptk.yml" in (target / ".gitignore").read_text()
+    assert ".ptk/" in (target / ".gitignore").read_text()
     from ptk.adapters.host import SystemHost
     from ptk.bootstrap import create_app
 
@@ -73,7 +73,7 @@ def test_dry_run_does_not_create_directory(tmp_path):
         cli, ["setup", "init", str(target), "--config-dir", "ptk", "--dry-run"]
     )
     assert result.exit_code == 0, result.output
-    assert "schema_version: 1" in result.output
+    assert "component.variants.ptk.yml" in result.output
     assert not target.exists()
 
 
@@ -134,15 +134,13 @@ def test_custom_config_directory_and_outputs(tmp_path):
         "project.ptk.yml",
         "jobs/hello.ptk.yml",
         "jobs/build.ptk.yml",
-        "variants/variants.ptk.yml",
+        "project.variants.ptk.yml",
         "variants/debug.ptk.yml",
         "variants/release.ptk.yml",
-        "tools/tools.ptk.yml",
-        "versioning/versioning.ptk.yml",
-        "environment/environment.ptk.yml",
-        "credentials/credentials.ptk.yml",
-        "configs/configs.ptk.yml",
-        "cx.ptk.yml",
+        "tools.ptk.yml",
+        "versioning.ptk.yml",
+        "credentials.ptk.yml",
+        "configs.ptk.yml",
         "maintainers.ptk.yml",
     ):
         assert (folder / name).is_file()
@@ -173,7 +171,7 @@ def test_init_prompts_for_directory(tmp_path, monkeypatch):
             cli, ["setup", "init", str(tmp_path)], input="config/toolkit\n"
         )
     assert result.exit_code == 0, result.output
-    assert (tmp_path / "config/toolkit/versioning/versioning.ptk.yml").exists()
+    assert (tmp_path / "config/toolkit/versioning.ptk.yml").exists()
 
 
 @pytest.mark.parametrize("directory", ["../outside", ".git/config", ".ptk/config"])
@@ -186,7 +184,7 @@ def test_init_rejects_invalid_directory(tmp_path, directory):
 
 
 def test_init_preflights_all_files(tmp_path):
-    folder = tmp_path / "ptk/tools"
+    folder = tmp_path / "ptk"
     folder.mkdir(parents=True)
     (folder / "tools.ptk.yml").write_text("keep me")
     result = CliRunner(env={"PTK_CI": "0"}).invoke(
@@ -211,7 +209,7 @@ def test_scaffold_discovered_fragments_variants_and_ci(tmp_path):
         )
         assert set(project.config.jobs) == {"hello", "build"}
         assert project.config.versioning.project.version == "0.1.0"
-        assert project.config.environment.set.get("PTK_CI") == ("true" if ci else None)
+        assert project.ci is ci
         variants = VariantService(project)
         assert variants.resolve("debug").values["DEBUG"] is True
         assert variants.resolve("release").values["DEBUG"] is False
@@ -219,7 +217,7 @@ def test_scaffold_discovered_fragments_variants_and_ci(tmp_path):
         assert project.config.credentials == {}
     # New jobs are discovered without editing any existing configuration file.
     (tmp_path / "ptk/jobs/check.ptk.yml").write_text(
-        "jobs:\n  check:\n    steps:\n      - check: {uses: echo, with: {message: discovered}}\n"
+        "steps:\n  - check: {uses: echo, with: {message: discovered}}\n"
     )
     result = CliRunner(env={"PTK_CI": "0"}).invoke(
         cli, ["-C", str(tmp_path / ".main.ptk.yml"), "check"]

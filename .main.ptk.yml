@@ -1,4 +1,5 @@
-# Project marker; PTK discovers configuration fragments throughout this repository.
+# PTK configuration: this file owns its section or named entity.
 repository:
   alias: ptk
-  config_path: config/ptk  # Default authoring folder and maintainer-list location.
+  config_path: config/ptk
+schema_version: 1

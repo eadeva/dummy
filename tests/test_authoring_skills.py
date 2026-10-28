@@ -5,6 +5,8 @@ from pathlib import Path
 
 import yaml
 
+from tests.project_files import write_project
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -71,7 +73,8 @@ def test_plugin_starter_installed_entry_point_runs(tmp_path, monkeypatch):
     monkeypatch.syspath_prepend(str(tmp_path))
     monkeypatch.syspath_prepend(str(source))
     config = tmp_path / ".main.ptk.yml"
-    config.write_text(
+    write_project(
+        config,
         yaml.safe_dump(
             {
                 "repository": {"alias": "plugin", "config_path": "."},
@@ -79,7 +82,7 @@ def test_plugin_starter_installed_entry_point_runs(tmp_path, monkeypatch):
                 "plugins": [project["name"]],
                 "jobs": {"check": {"steps": [{"example": {"uses": "example.check"}}]}},
             }
-        )
+        ),
     )
     result = CliRunner().invoke(cli, ["-C", str(config), "check"])
     assert result.exit_code == 0 and "Example check passed" in result.output, (

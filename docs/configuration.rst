@@ -1,72 +1,111 @@
 Authoring configuration
 =======================
 
-Files and discovery
+Files and ownership
 -------------------
 
-Keep ``.main.ptk.yml`` at the repository root. It identifies the project::
+Keep ``.main.ptk.yml`` at the repository root::
 
    repository:
      alias: firmware
-     config_path: tooling/ptk
+     config_path: config/ptk
+   schema_version: 1
 
-The alias starts with a lowercase letter and contains lowercase letters, digits
-and hyphens. ``config_path`` remains an existing relative directory inside the
-repository: it is the default authoring folder and the location of the independent
-``maintainers.ptk.yml`` identity list, not a loading boundary.
+The marker owns repository metadata and optional ``ptk_version`` requirements.
+``config_path`` is an existing relative configuration directory inside the repository.
+PTK loads only the following conventional documents there. Files are optional
+except ``project.ptk.yml``, which must define the project name.
 
-PTK recursively discovers ``*.ptk.yml`` and ``*.ptk.yaml`` throughout the repository.
-Each file contributes fields at their complete schema path, for example::
+.. list-table:: Conventional configuration directory
+   :header-rows: 1
 
-   # src/build/build.ptk.yml
-   jobs:
-     build:
-       steps:
-         - compile: {run: make}
+   * - File
+     - Contents
+   * - ``project.ptk.yml``
+     - Name, description, default job, component directories, variables and shared execution defaults
+   * - ``folder_structure.ptk.yml``
+     - Output layout
+   * - ``artifactory_paths.ptk.yml``
+     - Artifact destination rules
+   * - ``credentials.ptk.yml``
+     - Credential declarations
+   * - ``tools.ptk.yml``
+     - Tool declarations
+   * - ``versioning.ptk.yml``
+     - Version sources and generation rules
+   * - ``configs.ptk.yml``
+     - Shared formatter/linter settings
+   * - ``project.variants.ptk.yml``
+     - Default variant, project constraints and variant environment settings
+   * - ``variants/<name>.ptk.yml``
+     - One named variant
+   * - ``jobs/<name>.ptk.yml``
+     - One named job
+   * - ``workflows/<name>.ptk.yml``
+     - One named workflow
+   * - ``maintainers.ptk.yml``
+     - Independent maintainer identity list
 
-Mappings combine disjoint fields. Every scalar and list has exactly one source;
-duplicate definitions are errors even if their values are identical. Conflicts
-name the schema path and both source files and lines. Lists are atomic and are
-never concatenated or overwritten during file composition. CLI ``--set`` remains
-an explicit runtime override. Shared defaults and variant inheritance still use
-their documented model rules.
+Documents contain their section body; filenames supply entity names::
 
-``cx.ptk.yml`` contributes fields only in CI. ``local.ptk.yml`` is an ordinary
-discovered fragment and should be git-ignored; it cannot overwrite another file.
-``repository`` and ``virtual_monorepo`` belong only in ``.main.ptk.yml``.
-Commands and output paths remain relative to the repository root.
+   # config/ptk/jobs/build.ptk.yml
+   help: Build the project
+   steps:
+     - compile: {run: make}
 
-Discovery does not follow symlinks or enter nested PTK/Git repositories. It skips
-Git metadata, ``.ptk``, virtual environments, ``node_modules``, ``site-packages``,
-Python caches, ``dist``, conventional build/log/report/output folders, and managed
-``.github/ptk`` reference material. Generated ``.gen.version.ptk.yml`` snapshots
-are never configuration inputs. Maintainer identities retain their separate
-loading and validation rules.
+PTK assembles this as ``jobs.build``. There are no includes, file precedence or
+implicit CI/local overlays. An entity cannot be split across files. Unsupported
+``.ptk.yml`` or ``.ptk.yaml`` filenames at the configuration root or in the owned
+entity directories are errors. Entity directories contain files directly, without
+nested configuration folders. Other repository files are not scanned.
+Explicit CLI ``--set`` overrides, shared job defaults and variant inheritance
+retain their model behavior. CI conditions and ``only_cx`` control execution.
 
-Project discovery still searches upwards and stops at a Git repository boundary.
-The filename remains exactly ``.main.ptk.yml``. Maintainers may use ``--no-ci``
-to inspect local behavior independently of the host.
+Components own their feature definitions next to their code. Register their
+repository-relative directories in ``project.ptk.yml``::
 
-A manual VMR has a separate workspace-root ``.main.ptk.yml`` with
-``virtual_monorepo: true`` and an optional ``members: [nested/repository, other]``
-list of exact relative paths. This marker has no ``repository`` or project
-settings. Without ``members``, ptk checks direct child directories only;
-each participating project still declares its own alias and configuration path.
-Git-repo workspaces instead use ``.repo/project.list`` and need no PTK marker.
+   name: firmware
+   default_job: build
+   components:
+     networking: {path: src/networking}
+     diagnostics: {path: src/diagnostics}
 
-In a project entry file, omit ``virtual_monorepo`` for automatic detection or
-set it to ``false`` to remain standalone and opt out of workspace listings.
-The field requires a YAML boolean, and cannot be supplied by fragments, overlays
-or ``--set``. Repository metadata and workspace markers must be literal YAML,
-without include tags or merge directives. See :doc:`cli` for membership rules
-and how commands behave from workspace roots and member directories.
+PTK reads ``src/networking/component.variants.ptk.yml`` next to that component's
+``CMakeLists.txt`` or Bazel module::
 
-Unknown fields fail validation; ``ptk setup config show --sources`` identifies their
-source files and lines.
+   description: Network stack
+   features:
+     TLS: {type: bool}
+   requires_components: [diagnostics]
+   constraints:
+     - {expr: TLS, message: Enable TLS when networking is selected}
 
-Every file uses the root schema and the field types in :doc:`reference`.
-``ptk_version`` is a version requirement; this repository's development version
-needs a range such as ``>=0.1.0.dev0,<0.2``.
+Component files own features, dependencies and local constraints. Project variants
+select components and feature values. Local constraints apply when their component
+is selected; references across components are validated after assembly. Missing
+component files describe an empty component and can be created when features are
+added. A directory can be registered once. Paths must remain inside the repository
+and cannot traverse symbolic links. The registration is literal, not a template.
+
+Every value retains its source file and line. ``ptk setup config validate`` checks
+individual documents and then references across the assembled model;
+``ptk setup config show --sources`` explains effective values. Commands and output
+paths remain relative to the repository root.
+
+Project discovery searches upwards and stops at a Git repository boundary.
+The marker name remains exactly ``.main.ptk.yml``. A manual VMR has a separate
+workspace marker containing ``virtual_monorepo: true`` and optional
+``members: [nested/repository, other]``. Without members, only direct children are
+checked. Git-repo workspaces use ``.repo/project.list``. A project can set
+``virtual_monorepo: false`` in its marker to remain standalone. Discovery metadata
+cannot be overridden through CLI settings. Workspace orchestration uses
+``workflows/<name>.ptk.yml`` at the VMR root; see :doc:`workflows`.
+
+The extension consumes PTK's schemas, document ownership, source locations and
+validation errors through ``describe --json --configuration``. It creates the
+owning file when needed and uses the correct section schema for raw-file forms.
+The root schema from ``ptk setup config schema`` describes the assembled model;
+individual file schemas are exposed in the configuration inventory.
 
 Date and time substitutions
 ---------------------------
@@ -85,14 +124,18 @@ Available fields are ``timestamp`` (minute precision), ``timestamp_seconds``,
 Numeric date components are strings with leading zeros. Combine them for a
 custom format::
 
+   # config/ptk/project.ptk.yml
    vars:
-     archive: "build_${date.timestamp}.zip"
-     day_folder: "${date.year}/${date.month}/${date.day}"
-     utc_stamp: "${date.utc.year}-${date.utc.month}-${date.utc.day}_${date.utc.hour}${date.utc.minute}"
-   jobs:
-     show-date:
-       steps:
-         - show: {uses: echo, with: {message: "${vars.archive}"}}
+     archive: build_${date.timestamp}.zip
+     day_folder: ${date.year}/${date.month}/${date.day}
+     utc_stamp: ${date.utc.year}-${date.utc.month}-${date.utc.day}_${date.utc.hour}${date.utc.minute}
+
+   # config/ptk/jobs/show-date.ptk.yml
+   steps:
+   - show:
+       uses: echo
+       with:
+         message: ${vars.archive}
 
 The captured local and UTC values are recorded under ``context.date`` in run
 reports. A new invocation captures a new instant; a dry run previews its own
@@ -107,39 +150,21 @@ PTK calls executable units **jobs**. Use ``jobs:`` for definitions,
 ``project.default_job`` for the default, and ``job:`` for a workflow call.
 For example::
 
-   project: {name: demo, default_job: check}
-   jobs:
-     check:
-       steps:
-         - greeting: {uses: echo, with: {message: "Running ${run.job}"}}
-   workflows:
-     verify:
-       steps:
-         - checks: {job: check}
+   # config/ptk/project.ptk.yml
+   name: demo
+   default_job: check
 
-Upgrading an existing configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   # config/ptk/jobs/check.ptk.yml
+   steps:
+   - greeting:
+       uses: echo
+       with:
+         message: Running ${run.job}
 
-This is a breaking terminology change; old names are not aliases:
-
-* Replace ``actions:`` with ``jobs:`` and ``default_action`` with ``default_job``.
-* Replace workflow leaf ``action:`` with ``job:``.
-* Replace ``${run.action}`` with ``${run.job}`` and ``PTK_ACTION`` with ``PTK_JOB``.
-* Replace CLI ``--action`` selectors with ``--job`` (tool setup and version commands).
-* Update scripts consuming report/event JSON from the ``action`` key to ``job``.
-  Retained workflow child reports now live under ``jobs/``.
-* Update Python integrations to ``JobSpec``, ``JobPlan``, ``RunJob``,
-  ``RunRequest.job`` and ``App.run_job``.
-* New scaffolds use a ``jobs/`` folder. Existing fragment filenames are arbitrary;
-  keep the ``.ptk.yml`` suffix so automatic discovery continues after a rename.
-* Regenerate editor resources with ``ptk setup vscode``. This updates managed
-  tasks and replaces the unmodified ``ptk-action-authoring`` skill with
-  ``ptk-job-authoring``, preserving locally edited resources.
-
-``ptk build``, ``ptk run build`` and ``ptk dry-run build`` retain their syntax.
-GitHub Actions names and environment variables such as ``GITHUB_ACTIONS`` retain
-their GitHub meaning. Historical reports can be viewed as HTML; previous JSON
-schemas are not adapted by the renamed API.
+   # config/ptk/workflows/verify.ptk.yml
+   steps:
+   - checks:
+       job: check
 
 Job declarations
 ~~~~~~~~~~~~~~~~
@@ -161,12 +186,13 @@ Steps and execution
 
 Steps are an ordered list of single-key mappings, for example::
 
-   jobs:
-     build:
-       steps:
-         - check:
-             run: [check.py]
-             python: {interpreter: cli}
+   # config/ptk/jobs/build.ptk.yml
+   steps:
+   - check:
+       run:
+       - check.py
+       python:
+         interpreter: cli
 
 Each step has exactly one of ``run``, ``uses`` or nested ``steps``.
 Names must be unique within their set. ``parallel`` applies only to sets;
@@ -233,14 +259,12 @@ commit generated files and enforce ``configs check`` in CI. Ruff uses a generate
 Local Git hooks
 ~~~~~~~~~~~~~~~
 
-Enable automatic pre-commit installation in a fragment inside your configuration
+Enable automatic pre-commit installation in ``configs.ptk.yml`` inside your configuration
 folder, for example ``config/ptk/configs/configs.ptk.yml``::
 
-   configs:
-     pre-commit:
-       enabled: true
-       # Optional, relative to the repository root:
-       # overlay: config/ptk/configs/pre-commit.overlay.yaml
+   # config/ptk/configs.ptk.yml
+   pre-commit:
+     enabled: true
 
 A maintainer runs ``ptk setup configs sync pre-commit`` and commits the generated
 ``.pre-commit-config.yaml``. An optional ``output`` changes its location. Ordinary
@@ -343,13 +367,16 @@ the meaning independently of color.
 
 Jobs can open their HTML report automatically after a local run::
 
-   jobs:
-     test:
-       open_report: on_errors  # always | on_errors; omit to disable
-       steps:
-         - pytest:
-             python: {project: .}
-             run: [python, -m, pytest]
+   # config/ptk/jobs/test.ptk.yml
+   open_report: on_errors
+   steps:
+   - pytest:
+       python:
+         project: .
+       run:
+       - python
+       - -m
+       - pytest
 
 ``always`` opens after every executed run. ``on_errors`` opens for failed jobs
 or steps (including tolerated failures), failed/error test cases, error-level
@@ -450,16 +477,12 @@ be forcibly terminated. ``wait`` cooperates with deadlines and Ctrl+C.
 Shared defaults and tool files
 ------------------------------
 
-Tool and job-tool filenames are organizational conventions. PTK discovers all
-``*.ptk.yml`` files recursively and combines their disjoint fields; no filename
-has precedence. Additional tool definitions in job files are shared definitions.
-Put job-specific differences under that job's ``requires_tools``. These differ
-from the global ``tools`` schema path and still use the documented default rules.
-
-``cx.ptk.yml`` is CI-only. GitHub Actions is recognized automatically; maintainers
-can force the mode with ``--ci`` / ``--no-ci``. A file named ``ci.ptk.yml`` is now
-an ordinary fragment and loads in all modes; rename it to ``cx.ptk.yml`` if it is
-intended only for CI. Active files cannot redefine each other's values.
+Declare shared tools in ``tools.ptk.yml``. Put global ``requires_tools`` and
+``param_defaults`` in ``project.ptk.yml``, and job-specific settings in that job's
+file. Each document owns its fields. Shared defaults are applied after loading;
+job requirements can override or disable individual tools without changing shared
+tool definitions. GitHub Actions is recognized automatically; maintainers can
+inspect either execution mode with ``--ci`` / ``--no-ci``.
 
 Global ``param_defaults`` supplies defaults only to parameters that a job
 explicitly declares. Job-specific ``default`` values take precedence. An
@@ -467,30 +490,45 @@ explicit ``default: null`` opts out; ``required: true`` parameters remain requir
 Inherited values are validated against each parameter's type/choices, and
 ``config show --sources`` retains the global value's source location::
 
+   # config/ptk/project.ptk.yml
    param_defaults:
      jobs: 8
-   jobs:
-     build:
-       params:
-         jobs: {type: int}
-       steps:
-         - compile: {run: [cmake, --build, build, -j, "${params.jobs}"]}
+
+   # config/ptk/jobs/build.ptk.yml
+   params:
+     jobs:
+       type: int
+   steps:
+   - compile:
+       run:
+       - cmake
+       - --build
+       - build
+       - -j
+       - ${params.jobs}
 
 Tool requirements merge **per tool**, not by replacing the entire list::
 
-   # tools.ptk.yml
-   tools:
-     git: {check: git --version}
-     cmake: {version: ">=3.28", check: cmake --version, choco: cmake}
-     ninja: {check: ninja --version}
-   requires_tools: [git, cmake]
+   # config/ptk/project.ptk.yml
+   requires_tools:
+   - git
+   - cmake
 
-   # build.tools.ptk.yml
-   jobs:
-     build:
-       requires_tools:
-         cmake: {version: ">=3.30"}
-         ninja: true
+   # config/ptk/tools.ptk.yml
+   git:
+     check: git --version
+   cmake:
+     version: '>=3.28'
+     check: cmake --version
+     choco: cmake
+   ninja:
+     check: ninja --version
+
+   # config/ptk/jobs/build.ptk.yml
+   requires_tools:
+     cmake:
+       version: '>=3.30'
+     ninja: true
 
 ``build`` requires git, cmake and ninja, with its own CMake version constraint.
 Other jobs retain the global requirements and CMake definition. Use
@@ -514,17 +552,27 @@ selected managed tools. ``inherit_path`` defaults to false: PATH starts with
 standard OS directories, not the caller's potentially repository-specific PATH.
 This is environment isolation, not a filesystem or process sandbox::
 
+   # config/ptk/project.ptk.yml
    environment:
      isolate: true
      inherit_path: false
-     keep: [HTTP_PROXY, HTTPS_PROXY]
-     set: {BUILD_MODE: reproducible}
-   jobs:
-     build:
-       environment:
-         keep: [HTTP_PROXY, HTTPS_PROXY, COMPANY_SDK]
-       steps:
-         - compile: {run: [compiler, source.c]}
+     keep:
+     - HTTP_PROXY
+     - HTTPS_PROXY
+     set:
+       BUILD_MODE: reproducible
+
+   # config/ptk/jobs/build.ptk.yml
+   environment:
+     keep:
+     - HTTP_PROXY
+     - HTTPS_PROXY
+     - COMPANY_SDK
+   steps:
+   - compile:
+       run:
+       - compiler
+       - source.c
 
 A job's explicitly set environment fields override the global fields.
 Lists replace, so include all desired ``keep`` entries in a job override.
@@ -564,14 +612,15 @@ source remains active.
 Toolbase must already be installed on Windows, with ``TB_HOMEDIR`` set and
 ``tbexcmd`` / ``TBUpdate`` available on the caller's PATH::
 
-   tools:
-     ninja:
-       version: "==1.12.1"
-       toolbase:
-         package: ninja
-         version: "1.12.1"
-         environment: ptk
-         bin: [bin]
+   # config/ptk/tools.ptk.yml
+   ninja:
+     version: ==1.12.1
+     toolbase:
+       package: ninja
+       version: 1.12.1
+       environment: ptk
+       bin:
+       - bin
 
 PTK enables the exact ``package/version`` and runs ``TBUpdate -e`` only if that
 version's directory is missing. Nonzero exits fail installation. Enable/update
@@ -587,20 +636,18 @@ exercised by PTK's pytest suite.
 Artifactory uses an installed ``curl`` executable, HTTPS and a bearer token from
 an optional environment variable. No JFrog CLI or legacy downloader is required::
 
-   tools:
-     compiler:
-       version: "==12.3.0"
-       check: compiler --version
-       artifactory:
-         url: https://artifacts.example.org/artifactory
-         repository: tools-local
-         path: compilers/windows
-         name: compiler-12.3.0.zip
-         # Required for an exact URL; use the actual archive SHA-256:
-         sha256: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-         token_env: ARTIFACTORY_TOKEN
-         bin: bin
-         # extract: false  # Keep a standalone executable instead of unpacking.
+   # config/ptk/tools.ptk.yml
+   compiler:
+     version: ==12.3.0
+     check: compiler --version
+     artifactory:
+       url: https://artifacts.example.org/artifactory
+       repository: tools-local
+       path: compilers/windows
+       name: compiler-12.3.0.zip
+       sha256: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+       token_env: ARTIFACTORY_TOKEN
+       bin: bin
 
 ``url`` is the Artifactory base URL, not the repository URL. ``path`` defaults
 to ``.`` (repository root). ``artifactory`` may also map ``windows`` and ``linux``
@@ -641,12 +688,12 @@ Disabling installation in Docker
 
 Set ``docker: false`` on a tool to disable its installation inside Docker::
 
-   tools:
-     compiler:
-       docker: false
-       version: ">=12"
-       check: compiler --version
-       apt: gcc
+   # config/ptk/tools.ptk.yml
+   compiler:
+     docker: false
+     version: '>=12'
+     check: compiler --version
+     apt: gcc
 
 The default is ``docker: false``: tools must normally be supplied by the image.
 Set ``docker: true`` on a tool to allow PTK to install it inside Docker. With ``false``,
@@ -669,7 +716,7 @@ host does not count as running inside Docker.
 Local orchestration
 ===================
 
-Use ``workflow.ptk.yml`` to compose existing jobs into local sequential and
+Use ``workflows/<name>.ptk.yml`` to compose existing jobs into local sequential and
 parallel groups, including jobs from configured VMR members. Workflows load
 from the repository configuration directory; VMR roots can also own a workflow
 file. See :doc:`workflows` for complete syntax, command examples, preflight,
@@ -680,11 +727,11 @@ Output folder configuration
 
 Place ``folder_structure.ptk.yml`` in each repository's ``repository.config_path``::
 
-   layout:
-     builds: _builds
-     bin: _bin
-     logs: _logs
-     reports: _reports
+   # config/ptk/folder_structure.ptk.yml
+   builds: _builds
+   bin: _bin
+   logs: _logs
+   reports: _reports
 
 PTK discovers this file automatically. Define each layout field in one file;
 duplicate definitions are errors.

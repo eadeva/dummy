@@ -1,0 +1,13 @@
+# PTK configuration: this file owns its section or named entity.
+params:
+  suite:
+    type: choice
+    default: unit
+    choices:
+    - unit
+    - smoke
+steps:
+- tests:
+    uses: echo
+    with:
+      message: 'Testing ${env.PROJECT_IDENTITY}: ${params.suite} (${vh.variant})'

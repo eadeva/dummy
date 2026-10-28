@@ -68,11 +68,20 @@ PTK must be installed on the workspace host. See
 ## Tools
 
 ```yaml
-tools:
-  cmake: {version: ">=3.28,<4", check: cmake --version,
-          choco: {package: cmake, version: "3.30.2"}, uv_tool: "cmake==3.30.2"}
-jobs:
-  build: {requires_tools: [cmake], steps: [...]}
+# config/ptk/tools.ptk.yml
+cmake:
+  version: '>=3.28,<4'
+  check: cmake --version
+  choco:
+    package: cmake
+    version: 3.30.2
+  uv_tool: cmake==3.30.2
+
+# config/ptk/jobs/build.ptk.yml
+requires_tools:
+- cmake
+steps:
+- '...'
 ```
 
 Runs check `requires_tools` first; `ptk setup install` (or `ptk build --setup`) installs what is
@@ -90,12 +99,15 @@ Explicit version pins remain respected. Open a new terminal after installation.
 ## Shared configs
 
 ```yaml
-configs:
-  pre-commit:   {overlay: ptk/configs/pre-commit.overlay.yaml}
-  ruff:         {}
-  clang-format: {overlay: ptk/configs/clang-format.overlay.yaml}
-  clang-tidy:   {overlay: ptk/configs/clang-tidy.overlay.yaml}
-  clangd:       {}
+# config/ptk/configs.ptk.yml
+pre-commit:
+  overlay: ptk/configs/pre-commit.overlay.yaml
+ruff: {}
+clang-format:
+  overlay: ptk/configs/clang-format.overlay.yaml
+clang-tidy:
+  overlay: ptk/configs/clang-tidy.overlay.yaml
+clangd: {}
 ```
 
 `ptk setup configs sync` merges ptk's base configs with your overlays into `.pre-commit-config.yaml`,
@@ -118,12 +130,15 @@ steps; `ptk report open` opens it, `ptk report export --run ID` rebuilds older o
 ## Credentials
 
 ```yaml
-credentials:
-  artifactory:
-    fields: [user, token]
-    env: {token: ARTIFACTORY_TOKEN}          # CI
-    gopass: {path: team/artifactory}         # optional
-    # Optional test: use a helper that reads secrets from its environment.
+# config/ptk/credentials.ptk.yml
+artifactory:
+  fields:
+  - user
+  - token
+  env:
+    token: ARTIFACTORY_TOKEN
+  gopass:
+    path: team/artifactory
 ```
 
 Looked up in order `env -> keyring -> gopass -> vault -> prompt` (configurable per
@@ -135,38 +150,39 @@ into command-line arguments or write them to report input files. keyring support
 
 ## Configuration files
 
-All ptk files end in `.ptk.yml`:
-
-| File | Purpose |
-|------|---------|
-| `.main.ptk.yml` | repository-root marker: alias and default authoring folder |
-| `*.ptk.yml` | automatically discovered fragments using their full schema paths |
-| `cx.ptk.yml` | applied automatically in CI |
-| `local.ptk.yml` | personal additions, without duplicate definitions (git-ignore it) |
-| `maintainers.ptk.yml` | who sees maintainer-only jobs |
-| `workflow.ptk.yml` | local sequential/parallel groups of job calls |
+`.main.ptk.yml` identifies the project and its configuration directory:
 
 ```yaml
-# .main.ptk.yml
-repository: {alias: demo, config_path: .}
+repository: {alias: demo, config_path: config/ptk}
 schema_version: 1
-# ptk_version: ">=0.1,<0.2"            # optional: choose your supported PTK releases
-project: {name: demo, default_job: build}
-vars: {preset: "${vh.variant}"}
 ```
 
-PTK discovers all `*.ptk.yml` and `*.ptk.yaml` files throughout the repository,
-excluding generated/dependency folders, symlinks and nested project boundaries.
-`repository.config_path` remains the default authoring folder. `cx.ptk.yml` is
-CI-only; maintainer identities are loaded separately. Files merge disjoint map
-fields; duplicate scalar/list definitions raise an error with both locations.
-Use full schema paths in every file. Explicit CLI `--set` applies a runtime
-override. See [configuration authoring](docs/configuration.rst).
+| Location | Contents |
+|---|---|
+| `config/ptk/project.ptk.yml` | Project name, component directories, variables and shared defaults |
+| `config/ptk/folder_structure.ptk.yml` | Output layout |
+| `config/ptk/artifactory_paths.ptk.yml` | Artifact destinations |
+| `config/ptk/credentials.ptk.yml` | Credential declarations |
+| `config/ptk/tools.ptk.yml` | Tool declarations |
+| `config/ptk/versioning.ptk.yml` | Version sources |
+| `config/ptk/configs.ptk.yml` | Formatter/linter settings |
+| `config/ptk/maintainers.ptk.yml` | Maintainer login IDs |
+| `config/ptk/project.variants.ptk.yml` | Default variant, constraints and variant environment |
+| `config/ptk/variants/<name>.ptk.yml` | One project variant |
+| `config/ptk/jobs/<name>.ptk.yml` | One job |
+| `config/ptk/workflows/<name>.ptk.yml` | One workflow |
+| `<component directory>/component.variants.ptk.yml` | Component features, dependencies and constraints |
 
-* every value remembers its file and line: `ptk setup config show --sources`
-* unknown keys, unknown names in conditions and `${...}` references are errors
-  with `file:line` and "did you mean ..."
-* `ptk setup config schema -o .ptk/schema.json` for editor autocompletion
+Each file contains its section body; entity names come from filenames. Register
+component directories in `project.ptk.yml` and keep their definitions beside their
+`CMakeLists.txt` or Bazel module. All files except the marker and project document
+are optional. PTK loads known locations only, with no includes or implicit file
+overrides. It validates each document and then references across the model.
+
+Use `ptk setup config show --sources` for provenance and `ptk setup config validate`
+for errors with source locations. Explicit `--set` overrides, shared defaults and
+variant inheritance remain available. The extension uses PTK's loading mechanism
+and document schemas. See [configuration authoring](docs/configuration.rst).
 
 ## Commands available now
 
@@ -203,21 +219,45 @@ Exit codes: 0 passed, 1 failed, 2 usage/configuration error, 130 cancelled (Ctrl
 ## Running jobs
 
 ```yaml
-jobs:
-  build:
-    params:
-      jobs: {type: int, default: 8, env: PTK_JOBS}                 # typed default
-      toolchain: {default: "${vh.data.toolchain}"}                # per-variant default
+# config/ptk/jobs/build.ptk.yml
+params:
+  jobs:
+    type: int
+    default: 8
+    env: PTK_JOBS
+  toolchain:
+    default: ${vh.data.toolchain}
+steps:
+- configure:
+  - cmake
+  - --preset
+  - ${vars.preset}
+- compile: cmake --build --preset ${vars.preset} -j ${params.jobs}
+- checks:
+    parallel: true
     steps:
-      - configure: [cmake, --preset, "${vars.preset}"]        # list: no shell
-      - compile: "cmake --build --preset ${vars.preset} -j ${params.jobs}"   # string: shell
-      - checks:
-          parallel: true
-          steps:
-            - lint: {run: tools/lint.py, python: {uvx: "ruff==0.6.9"}}
-            - unit: {run: [pytest, -q], python: {venv: {requirements: tools/req.txt}}, passthrough: true}
-            - qac:  {run: tools/qac.bat, when: "COMPONENT_CAMERA", continue_on_error: true}
-      - upload: {run: tools/upload.sh, secrets: {TOKEN: artifactory.token}, retries: 2, timeout: 600}
+    - lint:
+        run: tools/lint.py
+        python:
+          uvx: ruff==0.6.9
+    - unit:
+        run:
+        - pytest
+        - -q
+        python:
+          venv:
+            requirements: tools/req.txt
+        passthrough: true
+    - qac:
+        run: tools/qac.bat
+        when: COMPONENT_CAMERA
+        continue_on_error: true
+- upload:
+    run: tools/upload.sh
+    secrets:
+      TOKEN: artifactory.token
+    retries: 2
+    timeout: 600
 ```
 
 * `.bat/.cmd` → `cmd /c`, `.ps1` → `pwsh -File`, `.sh` → `bash`, `.py` → Python via uv
@@ -229,7 +269,7 @@ jobs:
 * `ptk dry-run JOB` shows the expanded steps, conditions, final commands and where every
   parameter value comes from
 * parameter precedence: `-p` > `--params FILE` > `env:` variable > `default:`; defaults can
-  be changed per layer (`local.ptk.yml`, `cx.ptk.yml`, `--set`) and may use `${env:..}`,
+  be changed explicitly with `--set` and may use `${env:..}`,
   `${vars.x}`, `${vh.*}` (per-variant defaults) or `${project.*}`
 * `project.default_job` is what plain `ptk` runs
 
@@ -271,19 +311,21 @@ See [background process limitations](docs/m11.rst) and the [CLI reference](docs/
 
 ## Local workflows
 
-Put `workflow.ptk.yml` in the configuration folder to compose existing jobs:
+Put `workflows/verify.ptk.yml` in the configuration folder to compose existing jobs:
 
 ```yaml
-workflows:
-  verify:
-    max_workers: 2
+# config/ptk/workflows/verify.ptk.yml
+max_workers: 2
+steps:
+- build:
+    job: build
+- checks:
+    parallel: true
     steps:
-      - build: {job: build}
-      - checks:
-          parallel: true
-          steps:
-            - tests: {job: test}
-            - lint: {job: lint}
+    - tests:
+        job: test
+    - lint:
+        job: lint
 ```
 
 Run `ptk workflow dry-run verify`, then `ptk verify` (or `ptk workflow run verify`). Each call keeps
@@ -350,7 +392,7 @@ two runnable jobs in `jobs/hello.ptk.yml` and `jobs/build.ptk.yml`.
 Variants, tools, versioning, environment, credentials and shared settings have
 separate folders with commented configuration examples. `project.ptk.yml` defines the project; PTK discovers
 them; the conventional CX and maintainer entry files remain at the config root.
-A local `workflow.ptk.yml` starter sequences the two generated jobs.
+A local `workflows/verify.ptk.yml` starter sequences the two generated jobs.
 Run `ptk hello` for messages and `ptk build` for generated version files. Existing files are protected; missing ignore rules are appended.
 
 In a VMR, `ptk setup init` initializes every checked-out member without a root
@@ -406,7 +448,7 @@ Runtime templates can use `${date.timestamp}` (for example `2026_10_26_1507`),
 `${date.utc.timestamp}`, or separate date/time components. One timestamp is shared
 across a CLI invocation, including parallel workflow children.
 
-`artifactory_structure.ptk.yaml` defines a global base path, GitHub event paths,
+`artifactory_paths.ptk.yml` defines a global base path, GitHub event paths,
 and optional job suffixes. PTK resolves the destination; GitHub workflows choose
 files, authenticate and upload:
 

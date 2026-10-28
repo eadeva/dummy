@@ -5,7 +5,7 @@ from math import isfinite
 from pathlib import Path
 
 from ...domain.config import tree as t
-from ...domain.config.discovery import IGNORED_DIRECTORIES
+from ...domain.config.layout import editor_layout
 from .project import ExportSchema
 from .role import command_allowed, visible
 from .variants import VariantService
@@ -47,14 +47,12 @@ def describe_configuration(tree, root, files, error=None, fingerprints=None):
             sources.append(
                 {"path": list(path), "file": str(file), "line": location.line}
             )
+    schema = ExportSchema().execute()
     return {
-        "version": 1,
+        "version": 2,
         "fingerprints": fingerprints or {},
-        "write_directory": str(t.get(tree, ("repository", "config_path")).value)
-        if tree is not None and t.get(tree, ("repository", "config_path"))
-        else "config/ptk",
-        "ignored_directories": sorted(IGNORED_DIRECTORIES),
-        "schema": ExportSchema().execute(),
+        **editor_layout(root / ".main.ptk.yml", tree, schema),
+        "schema": schema,
         "value": value,
         "locked": locked,
         "sources": sources,

@@ -1,0 +1,13 @@
+# Component features and dependencies; keep this file beside the component build definition.
+requires_components:
+- core
+features:
+  DISPLAY_SIZE:
+    type: int
+    min: 5
+    max: 15
+    default: 8
+    help: Display diagonal in inch
+  TOUCH:
+    type: bool
+    help: Touch screen

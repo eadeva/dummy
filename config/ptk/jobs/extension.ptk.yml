@@ -1,19 +1,22 @@
-# Build the VS Code installer: ptk extension
-# Output: extensions/project-toolkit/project-toolkit-<version>.vsix
-jobs:
-  extension:
-    help: Build and test the Project Toolkit VS Code extension (VSIX)
-    requires_tools: [node, npm]
-    environment:
-      # Use the developer's Node installation, including npm.cmd on Windows.
-      inherit_path: true
-    steps:
-      - dependencies:
-          cwd: "${project.root}/extensions/project-toolkit"
-          run: [npm, ci, --include=dev]
-          timeout: 600
-      - package:
-          cwd: "${project.root}/extensions/project-toolkit"
-          # The npm prepublish script runs syntax checks and the Node test suite.
-          run: [npm, run, package]
-          timeout: 600
+# PTK configuration: this file owns its section or named entity.
+help: Build and test the Project Toolkit VS Code extension (VSIX)
+requires_tools:
+- node
+- npm
+environment:
+  inherit_path: true
+steps:
+- dependencies:
+    cwd: ${project.root}/extensions/project-toolkit
+    run:
+    - npm
+    - ci
+    - --include=dev
+    timeout: 600
+- package:
+    cwd: ${project.root}/extensions/project-toolkit
+    run:
+    - npm
+    - run
+    - package
+    timeout: 600

@@ -1,0 +1,11 @@
+# PTK configuration: this file owns its section or named entity.
+name: Authoring example
+default_job: build
+param_defaults:
+  jobs: 4
+environment:
+  isolate: true
+  inherit_path: false
+components:
+  device:
+    path: components/device

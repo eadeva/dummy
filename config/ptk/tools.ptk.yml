@@ -1,0 +1,8 @@
+# PTK configuration: this file owns its section or named entity.
+node:
+  description: Node.js 22 or newer; install Node.js including npm and reopen the terminal
+  version: '>=22'
+  check: node --version
+npm:
+  description: npm, included with Node.js
+  check: npm --version

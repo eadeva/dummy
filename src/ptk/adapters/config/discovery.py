@@ -1,39 +1,91 @@
-"""Repository configuration discovery, shared by CLI and editor clients."""
+"""Bounded discovery of the conventional PTK configuration directory."""
 
-import os
 from pathlib import Path
 
-from ...domain.config.discovery import IGNORED_DIRECTORIES
+from ...domain.config.layout import ENTITY_DIRECTORIES, SECTION_FILES
+from ...domain.errors import ConfigError, Location, Problem
 
 
-def discover_files(main: Path, *, ci: bool = False) -> list[Path]:
-    """Do not cross symlinks, generated resources or another project boundary.
-
-    config_path is the preferred authoring folder, not a loading boundary.
-    Maintainer identities remain an independently validated identity document.
-    """
-    main = main.resolve()
-    root = main.parent
-    files = [main]
-    for directory, folders, names in os.walk(root, followlinks=False):
-        base = Path(directory)
-        folders[:] = sorted(
-            name
-            for name in folders
-            if name not in IGNORED_DIRECTORIES
-            and not (base / name).is_symlink()
-            and not (base / name / ".main.ptk.yml").exists()
-            and not (base / name / ".git").exists()
-            and not (base.name == ".github" and name == "ptk")
+def checked_path(root: Path, relative: str) -> Path:
+    path = root / relative
+    if (
+        Path(relative).is_absolute()
+        or ".." in Path(relative).parts
+        or not path.resolve().is_relative_to(root)
+    ):
+        raise ConfigError(
+            [Problem(f"configuration path must stay within the repository: {relative}")]
         )
-        for name in sorted(names):
-            if not name.endswith((".ptk.yml", ".ptk.yaml")):
+    current = root
+    for part in Path(relative).parts:
+        current = current / part
+        if current != path and current.exists() and not current.is_dir():
+            raise ConfigError(
+                [Problem(f"configuration parent must be a directory: {current}")]
+            )
+        if current.is_symlink():
+            raise ConfigError(
+                [
+                    Problem(
+                        f"configuration paths cannot contain symbolic links: {relative}"
+                    )
+                ]
+            )
+    return path
+
+
+def discover_files(
+    main: Path, config_path: str, components: tuple[Path, ...] = ()
+) -> list[Path]:
+    root = main.resolve().parent
+    folder = checked_path(root, config_path)
+    known = {
+        "project.ptk.yml",
+        "project.variants.ptk.yml",
+        "maintainers.ptk.yml",
+        *SECTION_FILES,
+    }
+    files = [main]
+    problems = []
+    for file in sorted(folder.iterdir()):
+        if file.name in ENTITY_DIRECTORIES:
+            checked_path(root, str(file.relative_to(root)))
+            if not file.is_dir():
+                problems.append(
+                    Problem(
+                        "expected a configuration directory",
+                        location=Location(str(file)),
+                    )
+                )
                 continue
-            if name in {".main.ptk.yml", ".gen.version.ptk.yml", "maintainers.ptk.yml"}:
+            for entity in sorted(file.iterdir()):
+                if entity.is_dir() or not entity.name.endswith(".ptk.yml"):
+                    problems.append(
+                        Problem(
+                            "expected <name>.ptk.yml directly in this directory",
+                            location=Location(str(entity)),
+                        )
+                    )
+                    continue
+                checked_path(root, str(entity.relative_to(root)))
+                files.append(entity)
+        elif file.name.endswith((".ptk.yml", ".ptk.yaml")):
+            if (
+                file == main
+                or file in components
+                or file.name == ".gen.version.ptk.yml"
+            ):
                 continue
-            if name == "cx.ptk.yml" and not ci:
-                continue
-            file = base / name
-            if not file.is_symlink() and file.is_file():
+            if file.name not in known:
+                problems.append(
+                    Problem(
+                        "unexpected configuration filename",
+                        location=Location(str(file)),
+                    )
+                )
+            elif file.name != "maintainers.ptk.yml":
+                checked_path(root, str(file.relative_to(root)))
                 files.append(file)
+    if problems:
+        raise ConfigError(problems)
     return files

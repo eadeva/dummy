@@ -54,8 +54,9 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
               const selection = selections.get(key) || [];
               selections.delete(key);
               const installed = await configuration(document.uri);
-              if (!installed?.schema || installed.version !== 1) return state({ error: "No compatible PTK project schema is available. Open the project and refresh PTK, or use Raw YAML.", schema: {}, selection });
-              return state({ schema: installed.schema, selection });
+              if (!installed?.schema || installed.version !== 2) return state({ error: "No compatible PTK project schema is available. Open the project and refresh PTK, or use Raw YAML.", schema: {}, selection });
+              const schema = projectEdits.schemaForFile(installed, document.uri.fsPath);
+              return state({ schema: schema || {}, ...(schema ? {} : { error: "This file is not part of PTK’s configuration layout. Use Raw YAML." }), selection });
             }
             if (message.type === "edit") {
               if (message.version !== document.version) throw new Error("The YAML changed outside this form. Your edit was not applied; review the refreshed fields and try again.");
@@ -117,7 +118,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
       return panels.get(key).webview.postMessage({ type: "navigate", selection });
     }
     let config = owner.project.configuration;
-    if (!config || config.version !== 1) throw new Error("The installed PTK does not support this configuration editor. Update PTK and the extension together.");
+    if (!config || config.version !== 2) throw new Error("The installed PTK does not support this configuration editor. Update PTK and the extension together.");
     const panel = vscode.window.createWebviewPanel(viewType, `${owner.project.alias}: Configuration`, vscode.ViewColumn.Active, { retainContextWhenHidden: true });
     panels.set(key, panel);
     let version = 1, chain = Promise.resolve(), disposed = false;
@@ -130,23 +131,6 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
       config = owner.project.configuration;
       version++;
       return state(extra);
-    }
-    async function newFile() {
-      const relative = await vscode.window.showInputBox({ title: "New configuration file", prompt: "Path relative to the repository; this change moves here without leaving a duplicate", value: `${config.write_directory || "config"}/change.ptk.yml` });
-      if (relative === undefined) return;
-      const file = path.resolve(owner.root, relative);
-      const parts = path.relative(owner.root, file).split(path.sep);
-      if (!relative.trim() || path.isAbsolute(relative) || parts.includes("..") || !/\.ptk\.ya?ml$/.test(file) || [".main.ptk.yml", ".gen.version.ptk.yml", "maintainers.ptk.yml", "cx.ptk.yml"].includes(path.basename(file))) throw new Error("Choose a new *.ptk.yml file inside this PTK repository.");
-      if (parts.some(part => (config.ignored_directories || []).includes(part)) || parts.some((part, i) => part === ".github" && parts[i + 1] === "ptk")) throw new Error("PTK does not load configuration from this folder.");
-      for (let directory = path.dirname(file); directory !== owner.root; directory = path.dirname(directory)) {
-        const stat = await fs.lstat(directory).catch(error => { if (error.code !== "ENOENT") throw error; });
-        if (stat?.isSymbolicLink()) throw new Error("Choose a folder without symbolic links.");
-        for (const marker of [".main.ptk.yml", ".git"]) {
-          if (await fs.stat(path.join(directory, marker)).catch(() => undefined)) throw new Error("The destination belongs to another project.");
-        }
-      }
-      if (await fs.lstat(file).catch(error => { if (error.code !== "ENOENT") throw error; })) throw new Error("This file already exists. Choose a new filename.");
-      return file;
     }
     const listener = panel.webview.onDidReceiveMessage(message => {
       chain = chain.then(async () => {
@@ -167,8 +151,6 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
           owner = await reloadProject(owner.project.entry_file, { publish: false });
           config = owner.project.configuration;
           if (JSON.stringify(before.fingerprints) !== JSON.stringify(config.fingerprints)) throw new Error("A source file changed. Review the refreshed configuration before editing again.");
-          const destination = message.newFile ? await newFile() : undefined;
-          if (message.newFile && !destination) return state({ ack: message.id });
           const documents = new Map(), texts = new Map();
           for (const file of config.files) {
             const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(file));
@@ -176,11 +158,21 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
             if (config.fingerprints?.[file] && crypto.createHash("sha256").update(doc.getText()).digest("hex") !== config.fingerprints[file]) throw new Error("A source changed while loading. Refresh and retry the edit.");
             documents.set(file, doc); texts.set(file, doc.getText());
           }
-          const changes = projectEdits.plan({ ...config, entry_file: owner.project.entry_file }, texts, message.operations, destination);
-          if (destination) await vscode.workspace.fs.createDirectory(vscode.Uri.file(path.dirname(destination)));
+          const changes = projectEdits.plan({ ...config, entry_file: owner.project.entry_file }, texts, message.operations);
+          for (const [file, after] of changes) {
+            const relative = path.relative(owner.root, file);
+            if (relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) throw new Error("Configuration files must stay inside the repository.");
+            for (let current = file; current !== owner.root; current = path.dirname(current)) {
+              const stat = await fs.lstat(current).catch(error => { if (error.code !== "ENOENT") throw error; });
+              if (stat?.isSymbolicLink()) throw new Error("Configuration paths cannot contain symbolic links.");
+              if (current === file && stat && !documents.has(file)) throw new Error("The destination file already exists. Refresh PTK before editing it.");
+            }
+            if (after !== null && !documents.has(file)) await vscode.workspace.fs.createDirectory(vscode.Uri.file(path.dirname(file)));
+          }
           const edit = new vscode.WorkspaceEdit();
           for (const [file, after] of changes) {
             const uri = vscode.Uri.file(file), doc = documents.get(file);
+            if (after === null) { edit.deleteFile(uri); continue; }
             if (!doc) { edit.createFile(uri, { overwrite: false }); edit.insert(uri, new vscode.Position(0, 0), after); }
             else {
               const patch = model.minimalEdit(doc.getText(), after);
@@ -188,7 +180,8 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
             }
           }
           if (!await vscode.workspace.applyEdit(edit)) throw new Error("VS Code could not apply the configuration edit.");
-          for (const file of changes.keys()) {
+          for (const [file, after] of changes) {
+            if (after === null) continue;
             const doc = documents.get(file) || await vscode.workspace.openTextDocument(vscode.Uri.file(file));
             if (!await doc.save()) throw new Error("A configuration file could not be saved. Review the open YAML documents.");
           }

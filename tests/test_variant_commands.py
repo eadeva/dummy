@@ -4,11 +4,13 @@ import yaml
 from click.testing import CliRunner
 
 from ptk.drivers.cli.main import cli
+from tests.project_files import read_project, write_project
 
 
 def setup(tmp_path):
     file = tmp_path / ".main.ptk.yml"
-    file.write_text(
+    write_project(
+        file,
         yaml.safe_dump(
             {
                 "repository": {"alias": "demo", "config_path": "."},
@@ -42,7 +44,7 @@ def setup(tmp_path):
                     }
                 },
             }
-        )
+        ),
     )
     return file
 
@@ -79,7 +81,7 @@ def test_matrix_failure_preserves_later_runs(tmp_path):
     import sys
 
     file = setup(tmp_path)
-    config = yaml.safe_load(file.read_text())
+    config = read_project(file)
     config["jobs"]["go"]["steps"].append(
         {
             "fail_small": {
@@ -88,7 +90,7 @@ def test_matrix_failure_preserves_later_runs(tmp_path):
             }
         }
     )
-    file.write_text(yaml.safe_dump(config))
+    write_project(file, yaml.safe_dump(config))
     result = CliRunner().invoke(cli, ["-C", str(file), "go", "--all-variants"])
     assert result.exit_code == 1, result.output
     summaries = {

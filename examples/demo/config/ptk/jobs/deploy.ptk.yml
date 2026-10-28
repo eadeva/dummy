@@ -1,0 +1,11 @@
+# PTK configuration: this file owns its section or named entity.
+help: Upload binaries (maintainers only)
+audience: maintainer
+steps:
+- upload:
+    run:
+    - python
+    - tools/upload.py
+    - ${run.bin_dir}
+    secrets:
+      ARTIFACTORY_TOKEN: artifactory.token

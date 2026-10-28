@@ -3,7 +3,7 @@ Version discovery and generated build files
 
 PTK discovers versions; it never bumps versions, commits changes or creates tags.
 Put maintained rules in ``versioning.ptk.yml`` in ``repository.config_path``.
-Every ``*.ptk.yml`` file is discovered automatically; fields cannot overwrite another file.
+The file contains the versioning body without a ``versioning`` wrapper and owns all version rules.
 A project without versioning configuration runs as before.
 
 Every configured job run resolves versions once after variant selection and
@@ -25,17 +25,17 @@ Sources
 
 A minimal configuration::
 
-   versioning:
-     project:
-       source: literal
-       version: "1.2.3"
-     components:
-       core: {}                  # inherits the selected project version
-       sdk:
-         source: file
-         path: components/sdk/pyproject.toml
-         format: toml
-         key: project.version
+   # config/ptk/versioning.ptk.yml
+   project:
+     source: literal
+     version: 1.2.3
+   components:
+     core: {}
+     sdk:
+       source: file
+       path: components/sdk/pyproject.toml
+       format: toml
+       key: project.version
 
 Components declared in the variant model also inherit automatically unless
 explicitly configured here. Components can have independent versions even when
@@ -79,15 +79,24 @@ Existing variant release lines
 Variant overrides replace the selected source definition; specify all needed
 source settings. Variant names must exist in the project's variant model::
 
-   versioning:
-     project: {source: git, match: "v*", strip_prefix: v}
-     variants:
-       a:
-         project: {source: git, match: "v1.*", strip_prefix: v}
-       b:
-         project: {source: git, match: "v2.*", strip_prefix: v}
-     components:
-       core: {}
+   # config/ptk/versioning.ptk.yml
+   project:
+     source: git
+     match: v*
+     strip_prefix: v
+   variants:
+     a:
+       project:
+         source: git
+         match: v1.*
+         strip_prefix: v
+     b:
+       project:
+         source: git
+         match: v2.*
+         strip_prefix: v
+   components:
+     core: {}
 
 An inheriting component follows the selected project's release line. An explicit
 component source remains independent. ``variants.NAME.components`` can override
@@ -122,19 +131,23 @@ variables are removed before the current snapshot's variables are injected.
 Only the current repository is resolved by default. Explicit VMR dependencies
 can be declared globally or on individual jobs::
 
-   versioning:
-     project: {source: literal, version: "1.2.3"}
-     dependencies:
-       frontend: {variant: release}
-   jobs:
-     package:
-       version_dependencies:
-         engine: {variant: debug}
-       steps:
-         - show:
-             uses: echo
-             with:
-               message: "Frontend ${version.projects.frontend.value}"
+   # config/ptk/versioning.ptk.yml
+   project:
+     source: literal
+     version: 1.2.3
+   dependencies:
+     frontend:
+       variant: release
+
+   # config/ptk/jobs/package.ptk.yml
+   version_dependencies:
+     engine:
+       variant: debug
+   steps:
+   - show:
+       uses: echo
+       with:
+         message: Frontend ${version.projects.frontend.value}
 
 Dependency variants are mandatory when the dependency has variants; no implicit
 mapping from the caller's variant occurs. Dependencies resolve recursively;

@@ -6,15 +6,19 @@ Background process steps
 
 ``background: true`` is supported on ``run`` steps, including Python commands::
 
-   jobs:
-     build:
-       steps:
-         - analyze:
-             run: [python, tools/analyze.py]
-             background: true
-             timeout: 120
-         - compile:
-             run: [cmake, --build, build]
+   # config/ptk/jobs/build.ptk.yml
+   steps:
+   - analyze:
+       run:
+       - python
+       - tools/analyze.py
+       background: true
+       timeout: 120
+   - compile:
+       run:
+       - cmake
+       - --build
+       - build
 
 The next step can start while the background process runs. All background jobs
 are joined at the end of their containing sequential group (or job). Nested

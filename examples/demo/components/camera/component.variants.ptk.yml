@@ -1,0 +1,6 @@
+# Component features and dependencies; keep this file beside the component build definition.
+requires_components:
+- display
+features:
+  NIGHT_VISION:
+    type: bool

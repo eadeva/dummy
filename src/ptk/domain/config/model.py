@@ -1,7 +1,8 @@
 """Meta-model of the ptk configuration (entities).
 
-Entry point is ``.main.ptk.yml``; further ``*.ptk.yml`` files are discovered recursively
-and contribute disjoint fields. Unknown keys are errors everywhere.
+Entry point is ``.main.ptk.yml``. Conventional documents own each section or
+named entity; registered components own their local feature definitions.
+Unknown keys are errors everywhere.
 
 Steps are written as an ordered list of single-key mappings::
 
@@ -114,10 +115,19 @@ class WorkspaceSpec(_Strict):
         return value
 
 
+class ComponentRegistration(_Strict):
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={"x-ptk-directory-template": "components/{name}"},
+    )
+    path: str = Field(min_length=1)
+
+
 class ProjectSpec(_Strict):
     name: str
     description: str = ""
     default_job: str | None = None
+    components: dict[str, ComponentRegistration] = Field(default_factory=dict)
 
 
 # --------------------------------------------------------------------------- params

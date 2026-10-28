@@ -1,3 +1,5 @@
+from tests.project_files import read_project, write_project
+
 """Exercise the built-ins against real Git and a local pre-commit hook."""
 
 import json
@@ -153,10 +155,10 @@ def test_validate_uses_framework_schema_without_running_hooks(tmp_path):
 def test_explicit_checks_work_without_automatic_installation(tmp_path, mode):
     root = repository(tmp_path / "repo", enabled=False)
     if mode == "unmanaged":
-        path = root / "config/project.ptk.yml"
-        data = yaml.safe_load(path.read_text())
+        path = root / ".main.ptk.yml"
+        data = read_project(path)
         del data["configs"]
-        path.write_text(yaml.safe_dump(data))
+        write_project(path, data)
     if mode == "ci":
         result = CliRunner(env={"PTK_CI": "1", "PTK_ROLE": "user"}).invoke(
             cli, ["-C", str(root / ".main.ptk.yml"), "pre-commit", "check"]
@@ -184,10 +186,10 @@ def test_custom_hooks_path_allows_checks_but_blocks_hook_mutations(tmp_path):
 
 def test_group_policy_hides_commands_and_refuses_mutations(tmp_path, offline_engine):
     root = repository(tmp_path / "repo")
-    config = root / "config/project.ptk.yml"
-    data = yaml.safe_load(config.read_text())
+    config = root / ".main.ptk.yml"
+    data = read_project(config)
     data["command_audience"] = {"pre-commit": "maintainer"}
-    config.write_text(yaml.safe_dump(data))
+    write_project(config, data)
     before = snapshot(root)
     for action in ("install", "uninstall", "run", "check", "validate", "status"):
         result = invoke(root, "pre-commit", action)

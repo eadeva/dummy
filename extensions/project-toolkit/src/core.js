@@ -38,8 +38,8 @@ function parseInventory(text) {
       throw new Error("Invalid repository paths in PTK inventory.");
     }
     const config = project.configuration;
-    if (!object(config) || config.version !== 1 || !object(config.schema) || config.value !== null && !object(config.value) ||
-        !Array.isArray(config.files) || !config.files.every(absolute) ||
+    if (!object(config) || config.version !== 2 || !object(config.schema) || config.value !== null && !object(config.value) ||
+        !Array.isArray(config.bindings) || !Array.isArray(config.documents) || !Array.isArray(config.files) || !config.files.every(absolute) ||
         !Array.isArray(config.sources) || !config.sources.every(source => object(source) && absolute(source.file) &&
           Array.isArray(source.path) && source.path.every(key => typeof key === "string" || Number.isSafeInteger(key) && key >= 0))) {
       throw new Error("Invalid PTK configuration interface. Update PTK and Project Toolkit together.");

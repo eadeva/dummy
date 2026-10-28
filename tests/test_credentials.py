@@ -24,6 +24,7 @@ from ptk.domain.config.model import CredentialSpec
 from ptk.domain.credentials import key_for
 from ptk.domain.errors import PtkError
 from ptk.drivers.cli.main import cli
+from tests.project_files import project_files
 
 POSIX = not sys.platform.startswith("win")
 HOST = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": "/tmp"}
@@ -273,7 +274,7 @@ jobs:
 
 @pytest.fixture
 def cli_env(write, tmp_path):
-    root = write({".main.ptk.yml": PROJECT})
+    root = write(project_files(PROJECT))
     env = {
         **HOST,
         "PTK_VAULT_FILE": str(tmp_path / "v" / "vault.json"),

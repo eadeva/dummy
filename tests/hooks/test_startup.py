@@ -1,3 +1,5 @@
+from tests.project_files import write_workflows
+
 """Job/workflow startup boundaries and failures before executing user steps."""
 
 import pytest
@@ -25,16 +27,19 @@ from .test_installation import hook_path
 )
 def test_help_preview_and_ci_do_not_install(tmp_path, monkeypatch, args):
     root = repository(tmp_path / "app")
-    (root / "config/workflow.ptk.yml").write_text(
-        yaml.safe_dump(
-            {
-                "workflows": {
-                    "verify": {
-                        "steps": [{"first": {"job": "build"}}],
+    write_workflows(
+        (root / "config/workflow.ptk.yml").parent / "workflows",
+        yaml.safe_load(
+            yaml.safe_dump(
+                {
+                    "workflows": {
+                        "verify": {
+                            "steps": [{"first": {"job": "build"}}],
+                        }
                     }
                 }
-            }
-        )
+            )
+        )["workflows"],
     )
 
     def forbidden(*args, **kwargs):
@@ -97,28 +102,31 @@ def test_vmr_workflow_checks_each_participant_before_any_job(
     unused = repository(workspace / "unused", alias="unused")
     (unused / ".pre-commit-config.yaml").unlink()
     (workspace / ".main.ptk.yml").write_text("virtual_monorepo: true\n")
-    (workspace / "workflow.ptk.yml").write_text(
-        yaml.safe_dump(
-            {
-                "workflows": {
-                    "verify": {
-                        "open_report": None,
-                        "steps": [
-                            {
-                                "parallel": {
-                                    "parallel": True,
-                                    "steps": [
-                                        {"one": {"repo": "a", "job": "build"}},
-                                        {"two": {"repo": "b", "job": "build"}},
-                                    ],
-                                }
-                            },
-                            {"again": {"repo": "a", "job": "build"}},
-                        ],
+    write_workflows(
+        (workspace / "workflow.ptk.yml").parent / "workflows",
+        yaml.safe_load(
+            yaml.safe_dump(
+                {
+                    "workflows": {
+                        "verify": {
+                            "open_report": None,
+                            "steps": [
+                                {
+                                    "parallel": {
+                                        "parallel": True,
+                                        "steps": [
+                                            {"one": {"repo": "a", "job": "build"}},
+                                            {"two": {"repo": "b", "job": "build"}},
+                                        ],
+                                    }
+                                },
+                                {"again": {"repo": "a", "job": "build"}},
+                            ],
+                        }
                     }
                 }
-            }
-        )
+            )
+        )["workflows"],
     )
     seen = []
     original = EnsureHooks.execute

@@ -1,0 +1,5 @@
+# PTK configuration: this file owns its section or named entity.
+components:
+- core
+features:
+  CHECKS: false

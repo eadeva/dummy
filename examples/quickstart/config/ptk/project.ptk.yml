@@ -1,0 +1,13 @@
+# PTK configuration: this file owns its section or named entity.
+name: quickstart
+description: Offline example using only the Python interpreter running ptk
+default_job: build
+reporting:
+  formats:
+  - json
+  - html
+  - junit
+  - markdown
+components:
+  core:
+    path: components/core

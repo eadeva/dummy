@@ -1,6 +1,0 @@
-# Local jobs/workflows install these hooks automatically for every developer.
-# Maintainers regenerate the committed file with `ptk setup configs sync pre-commit`.
-configs:
-  pre-commit:
-    enabled: true
-    overlay: config/ptk/configs/pre-commit.overlay.yaml

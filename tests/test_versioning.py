@@ -16,12 +16,11 @@ from ptk.bootstrap import create_app
 from ptk.domain.errors import PtkError
 from ptk.domain.versioning import VersionSource
 from ptk.drivers.cli.main import cli
+from tests.project_files import project_files, read_project, write_project
 
 
 def project(write, config):
-    return write(
-        {".main.ptk.yml": yaml.safe_dump({"project": {"name": "demo"}, **config})}
-    )
+    return write(project_files(yaml.safe_dump({"project": {"name": "demo"}, **config})))
 
 
 def test_run_snapshot_env_and_generators_are_consistent(write, load):
@@ -278,16 +277,16 @@ def test_vmr_explicit_dependencies_and_cycle(tmp_path):
             config["versioning"]["dependencies"] = {"frontend": {"variant": "release"}}
         else:
             config["variants"] = {"default": "release", "variants": {"release": {}}}
-        (root / ".main.ptk.yml").write_text(yaml.safe_dump(config))
+        write_project(root / ".main.ptk.yml", yaml.safe_dump(config))
     app = create_app()
     p = app.load_project.execute(config_file=tmp_path / "engine/.main.ptk.yml")
     snapshot = app.versions().resolve(p)
     assert set(snapshot["projects"]) == {"engine", "frontend"}
     assert snapshot["projects"]["frontend"]["variant"] == "release"
     path = tmp_path / "frontend/.main.ptk.yml"
-    config = yaml.safe_load(path.read_text())
+    config = read_project(path)
     config["versioning"]["dependencies"] = {"engine": {}}
-    path.write_text(yaml.safe_dump(config))
+    write_project(path, yaml.safe_dump(config))
     with pytest.raises(PtkError, match="cycle"):
         app.versions().resolve(p)
 

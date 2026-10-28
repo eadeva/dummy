@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0
+
+- Use PTK’s conventional document layout and section schemas through configuration interface v2.
+- Create, rename and remove job, workflow and variant files in their known directories.
+- Show component definitions beside their code, using explicitly registered component directories.
+- Remove the per-change destination picker; PTK supplies file ownership.
+- Preserve typing, drafts and focus while saving configuration.
+
 ## 0.5.1
 
 - Apply text edits when leaving a field or saving; keep focus, drafts and cursor stable during save replies.

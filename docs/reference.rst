@@ -6,8 +6,8 @@ These tables are generated from the models used to validate configuration.
 can mean a default factory (for example, an empty mapping), rather than ``null``.
 Use ``ptk setup config show`` to inspect effective defaults for your project.
 
-All discovered files use their full schema paths. Removed include directives and merge tags are rejected before these
-models. See :doc:`configuration` for loading, short forms and validation rules.
+These tables describe the assembled model. Each conventional document contains
+its section body; see :doc:`configuration` for file ownership and validation rules.
 ``plugins`` selects installed distributions for entry-point loading; see
 :doc:`plugins` for the extension contracts and configuration examples.
 

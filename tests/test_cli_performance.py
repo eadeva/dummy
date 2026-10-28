@@ -1,3 +1,5 @@
+from tests.project_files import write_project
+
 """Bound startup work without timing thresholds that vary across machines."""
 
 import json
@@ -18,7 +20,8 @@ from ptk.drivers.cli.main import cli
 
 def make_project(root):
     file = root / ".main.ptk.yml"
-    file.write_text(
+    write_project(
+        file,
         "repository: {alias: demo, config_path: .}\n"
         "project: {name: demo}\n"
         "jobs: {build: {steps: [{hello: {uses: echo}}]}}\n"

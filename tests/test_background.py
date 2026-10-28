@@ -12,17 +12,19 @@ from ptk.application.use_cases.run import Cancelled, RunRequest
 from ptk.bootstrap import create_app
 from ptk.domain.config.model import StepSpec
 from ptk.domain.execution.model import Status
+from tests.project_files import write_project
 
 
 def execute(tmp_path, steps, cancel=None):
-    (tmp_path / ".main.ptk.yml").write_text(
+    write_project(
+        tmp_path / ".main.ptk.yml",
         yaml.safe_dump(
             {
                 "repository": {"alias": "demo", "config_path": "."},
                 "project": {"name": "background"},
                 "jobs": {"go": {"steps": steps}},
             }
-        )
+        ),
     )
     app = create_app(environ=dict(os.environ))
     project = app.load_project.execute(tmp_path)

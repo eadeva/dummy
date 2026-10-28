@@ -1,14 +1,22 @@
-# Build HTML: ptk docs
-# Open _builds/default/docs/sphinx/html/index.html afterwards. Warnings fail the job.
-# The docs dependency group is installed automatically by uv when needed.
-jobs:
-  docs:
-    help: Build PTK's Sphinx documentation with warnings treated as errors
-    env:
-      UV_PROJECT_ENVIRONMENT: "${project.root}/.ptk/venvs/docs"
-    steps:
-      - sphinx:
-          python: {project: ., groups: [docs]}
-          run: [python, -m, sphinx, -W, --keep-going, -b, html, docs, "${run.build_dir}/html"]
-          passthrough: true
-          timeout: 600
+# PTK configuration: this file owns its section or named entity.
+help: Build PTK's Sphinx documentation with warnings treated as errors
+env:
+  UV_PROJECT_ENVIRONMENT: ${project.root}/.ptk/venvs/docs
+steps:
+- sphinx:
+    python:
+      project: .
+      groups:
+      - docs
+    run:
+    - python
+    - -m
+    - sphinx
+    - -W
+    - --keep-going
+    - -b
+    - html
+    - docs
+    - ${run.build_dir}/html
+    passthrough: true
+    timeout: 600

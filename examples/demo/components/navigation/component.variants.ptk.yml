@@ -1,0 +1,12 @@
+# Component features and dependencies; keep this file beside the component build definition.
+requires_components:
+- display
+features:
+  MAP_REGION:
+    type: enum
+    values:
+    - EU
+    - US
+  NAV_3D:
+    type: bool
+    depends_on: DISPLAY_SIZE >= 10

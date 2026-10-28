@@ -7,7 +7,7 @@
   const app = document.getElementById("app");
   let state, schema, selected = [], issue = "", serial = 0, inflight, commitRequested = false, rendering = false;
   const queue = new Map();
-  let deferred, nextFile = false;
+  let deferred;
   let parameterDraft = {};
   const stored = vscode.getState() || {};
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -57,8 +57,6 @@
   }
   function status() {
     const node = document.getElementById("status");
-    const destination = document.getElementById("next-file");
-    if (destination) destination.value = nextFile ? "new" : "current";
     const validation = document.getElementById("validation-error");
     if (validation) { validation.textContent = state.validationError || ""; validation.hidden = !state.validationError; }
     if (node) node.textContent = inflight ? "Saving…" : queue.size ? "Editing · Leave the field or press Ctrl/Cmd+S to save" : state.dirty ? "Unsaved changes · Ctrl/Cmd+S to save" : "Saved";
@@ -76,8 +74,7 @@
       const operations = [...queue.values()];
       queue.clear();
       inflight = { id: ++serial, operations, structural: operations.some(op => op.render || op.op !== "set" || op.value !== null && typeof op.value === "object") };
-      vscode.postMessage({ type: "edit", id: inflight.id, version: state.version, operations, newFile: nextFile });
-      nextFile = false;
+      vscode.postMessage({ type: "edit", id: inflight.id, version: state.version, operations });
       status();
     }
   }
@@ -154,13 +151,6 @@
       actions.append(button("Raw YAML", () => afterEdits(() => vscode.postMessage({ type: "raw" }))),
         button("Save & validate", () => afterEdits(() => vscode.postMessage({ type: "validate" }))),
         button("Save", () => afterEdits(() => vscode.postMessage({ type: "save" })), ""));
-      if (state.logical) {
-        const destination = el("select", undefined, { "aria-label": "File for next change", id: "next-file" });
-        destination.append(el("option", "Next change: existing source", { value: "current" }), el("option", "Next change: new file…", { value: "new" }));
-        destination.value = nextFile ? "new" : "current";
-        destination.addEventListener("change", () => { nextFile = destination.value === "new"; });
-        actions.prepend(destination);
-      }
       toolbar.append(heading, actions);
       header.append(toolbar, el("p", "", { className: "status", id: "status", role: "status" }));
       app.append(header);
@@ -299,6 +289,8 @@
       if (!isList && Object.hasOwn(value, key)) { showIssue(`Field ${key} already exists.`); return; }
       const child = S.child(spec, value, key, schema);
       let next = S.initial(child, schema);
+      const directory = S.resolve(child, schema)["x-ptk-directory-template"];
+      if (directory) next.path = directory.replace("{name}", key);
       if (isList && child.$ref === "#/$defs/StepEntry") next = { [`step_${key + 1}`]: { run: "echo Hello" } };
       afterEdits(() => change({ op: "add", path: [...selected, key], value: next }, true));
     }, ""));

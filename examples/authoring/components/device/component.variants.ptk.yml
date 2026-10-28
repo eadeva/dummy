@@ -1,0 +1,7 @@
+# Component features and dependencies; keep this file beside the component build definition.
+features:
+  SIZE:
+    type: int
+    default: 4
+    min: 1
+    max: 16

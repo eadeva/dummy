@@ -6,25 +6,24 @@ import pytest
 import yaml
 
 from ptk.package_version import package_version
+from tests.project_files import write_project
 
 
 def configured_project(root, versioning):
-    (root / ".main.ptk.yml").write_text(
+    write_project(
+        root / ".main.ptk.yml",
         yaml.safe_dump(
             {
                 "repository": {"alias": "ptk", "config_path": "config"},
                 "project": {"name": "ptk"},
                 "variants": {"default": "release", "variants": {"release": {}}},
             }
-        )
+        ),
     )
-    (root / "config").mkdir()
-    (root / "config/versioning.ptk.yml").write_text(
-        yaml.safe_dump({"versioning": versioning})
-    )
+    (root / "config/versioning.ptk.yml").write_text(yaml.safe_dump(versioning))
 
 
-def test_package_version_uses_config_includes_and_default_variant(tmp_path):
+def test_package_version_uses_versioning_file_and_default_variant(tmp_path):
     configured_project(
         tmp_path,
         {

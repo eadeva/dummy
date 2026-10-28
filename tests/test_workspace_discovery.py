@@ -1,3 +1,5 @@
+from tests.project_files import read_project, write_project
+
 """Bounded discovery and explicit workspace membership on real filesystems."""
 
 from collections import Counter
@@ -152,11 +154,13 @@ def test_discovery_metadata_is_strict_and_does_not_load_includes(
         workspace_root(tmp_path)
 
 
-@pytest.mark.parametrize("layer", ["config/jobs.ptk.yml", "config/local.ptk.yml"])
+@pytest.mark.parametrize(
+    "layer", ["config/project.ptk.yml", "config/jobs/build.ptk.yml"]
+)
 def test_discovery_flag_cannot_come_from_includes_or_overlays(tmp_path, layer):
     repository(tmp_path, "demo")
     (tmp_path / layer).write_text("virtual_monorepo: false\n")
-    with pytest.raises(PtkError, match="must be defined only in .main.ptk.yml"):
+    with pytest.raises(PtkError, match="unknown key 'virtual_monorepo'"):
         create_app().load_project.execute(tmp_path)
 
 
@@ -174,12 +178,12 @@ def test_discovery_flag_cannot_be_changed_on_cli(tmp_path):
 def test_discovery_is_reused_for_versions_and_credentials(tmp_path, monkeypatch):
     a, b = workspace(tmp_path)
     for main in (a, b):
-        config = yaml.safe_load(main.read_text())
+        config = read_project(main)
         config["versioning"] = {"project": {"source": "literal", "version": "1.0"}}
         if main == a:
             config["versioning"]["dependencies"] = {"bootloader": {}}
         config["credentials"] = {"shared": {"providers": ["env"]}}
-        main.write_text(yaml.safe_dump(config))
+        write_project(main, config)
     reads = Counter()
     metadata_reads = Counter()
     original_read = Path.read_text
@@ -215,12 +219,12 @@ def test_manual_routing_supplies_context_for_shared_services(tmp_path):
     (tmp_path / ".main.ptk.yml").write_text("virtual_monorepo: true\n")
     for alias in ("a", "b"):
         main = repository(tmp_path / alias, alias)
-        config = yaml.safe_load(main.read_text())
+        config = read_project(main)
         config["versioning"] = {"project": {"source": "literal", "version": "1.0"}}
         if alias == "a":
             config["versioning"]["dependencies"] = {"b": {}}
         config["credentials"] = {"shared": {"providers": ["vault"]}}
-        main.write_text(yaml.safe_dump(config))
+        write_project(main, config)
     discovery = WorkspaceDiscovery()
     entries = discovery.repositories(tmp_path)
     one, two = create_app(workspace=discovery), create_app(workspace=discovery)

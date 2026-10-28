@@ -1,0 +1,10 @@
+# Component features and dependencies; keep this file beside the component build definition.
+features:
+  LOG_LEVEL:
+    type: enum
+    values:
+    - ERROR
+    - WARN
+    - INFO
+    - DEBUG
+    default: INFO

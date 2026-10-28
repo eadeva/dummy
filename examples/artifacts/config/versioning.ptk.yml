@@ -1,0 +1,4 @@
+# PTK configuration: this file owns its section or named entity.
+project:
+  source: literal
+  version: 1.2.3

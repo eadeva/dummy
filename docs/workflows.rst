@@ -14,11 +14,9 @@ are a separate future phase; neither is implemented by this feature.
 Files and commands
 ------------------
 
-Put ``workflow.ptk.yml`` directly in ``repository.config_path``. PTK loads it
-once as a conventional defaults layer before explicit main/includes, then CX and
-local overlays. An explicitly included copy retains its include position. More
-workflow files can be included with the normal YAML loader. Keep ``.main.ptk.yml``
-minimal. Names use lowercase letters, digits and hyphens, starting with a letter.
+Put each workflow in ``workflows/<name>.ptk.yml`` under ``repository.config_path``.
+The file contains the workflow body, without a ``workflows`` wrapper. Names use
+lowercase letters, digits and hyphens, starting with a letter.
 Workflows and jobs have separate namespaces::
 
    ptk workflow list
@@ -36,7 +34,7 @@ such workflows remain accessible through ``workflow run``.
 
 A complete repository-owned workflow:
 
-.. literalinclude:: ../examples/workflows/app/config/workflow.ptk.yml
+.. literalinclude:: ../examples/workflows/app/config/workflows/verify.ptk.yml
    :language: yaml
 
 The example lives in a small manual VMR. From ``examples/workflows`` run::
@@ -127,10 +125,10 @@ repository/job before the run.
 VMR ownership
 -------------
 
-At the VMR root, an optional ``workflow.ptk.yml`` holds workspace-owned workflows.
-It needs only a ``workflows`` mapping, not a project entry file, and supports normal
-includes. Every workspace-owned leaf must specify ``repo``. Only discovered,
-configured VMR members can be referenced; filesystem paths are not repo selectors.
+At the VMR root, ``workflows/<name>.ptk.yml`` holds each workspace workflow.
+Each document contains one workflow body. Every workspace-owned leaf must specify
+``repo``. Only configured VMR members can be referenced; filesystem paths are not
+repository selectors.
 
 Workspace-owned workflows have no variant configuration. They can call repositories
 without variants; workflows involving variant-enabled repositories must be owned by
@@ -177,12 +175,13 @@ report is available. Opening a saved report does not execute workflow steps.
 The workflow opens its summary HTML report automatically after a local run.
 Set the policy on the workflow, independently of each job's report policy::
 
-   workflows:
-     verify:
-       open_report: always  # default; on-errors opens only when errors are present
-       steps:
-         - check: {job: check}
-         - test: {job: test}
+   # config/ptk/workflows/verify.ptk.yml
+   open_report: always
+   steps:
+   - check:
+       job: check
+   - test:
+       job: test
 
 ``on-errors`` includes failed job calls, tolerated failures in nested groups,
 failed steps or tests, error findings and child report/import problems. It does

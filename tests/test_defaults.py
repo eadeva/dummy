@@ -12,6 +12,7 @@ from ptk.bootstrap import create_app
 from ptk.domain.errors import ConfigError, PtkError
 from ptk.drivers.cli.main import cli
 from tests.conftest import DEMO
+from tests.project_files import project_files
 
 HOST = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": "/tmp"}
 
@@ -19,6 +20,7 @@ PROJECT = """
 project: {name: t, default_job: hello}
 vars: {flavour: vanilla}
 variants:
+  default: slow
   components:
     core:
       features:
@@ -47,14 +49,14 @@ def prepare(root, environ=None, **request):
 
 
 def test_default_job_is_used_when_no_job_given(write):
-    root = write({".main.ptk.yml": PROJECT})
+    root = write(project_files(PROJECT))
     plan = prepare(root, variant="slow")
     assert plan.job == "hello"
     assert prepare(root, job="other", variant="slow").job == "other"
 
 
 def test_parameter_defaults_per_variant_vars_and_env(write):
-    root = write({".main.ptk.yml": PROJECT})
+    root = write(project_files(PROJECT))
     slow = prepare(root, variant="slow")
     assert slow.params == {
         "who": "world",
@@ -74,7 +76,7 @@ def test_parameter_defaults_per_variant_vars_and_env(write):
 
 
 def test_template_default_is_type_checked_at_run_time(write):
-    root = write({".main.ptk.yml": PROJECT.replace("mode: quick}", "mode: reckless}")})
+    root = write(project_files(PROJECT.replace("mode: quick}", "mode: reckless}")))
     with pytest.raises(
         PtkError, match="parameter 'mode': expected one of careful, quick"
     ):
@@ -83,12 +85,12 @@ def test_template_default_is_type_checked_at_run_time(write):
 
 def test_duplicate_defaults_are_rejected_across_files(write):
     root = write(
-        {
-            ".main.ptk.yml": PROJECT,
-            "local.ptk.yml": "jobs: {hello: {params: {who: {default: me}}}}\n",
-        }
+        project_files(
+            PROJECT,
+            {"local.ptk.yml": "jobs: {hello: {params: {who: {default: me}}}}\n"},
+        )
     )
-    with pytest.raises(ConfigError, match="configuration conflict"):
+    with pytest.raises(ConfigError, match="unexpected configuration filename"):
         prepare(root, variant="slow")
 
 
@@ -100,36 +102,36 @@ def test_duplicate_defaults_are_rejected_across_files(write):
     ],
 )
 def test_invalid_default_references_are_config_errors(write, snippet, message):
-    root = write({".main.ptk.yml": PROJECT.replace("who: {default: world}", snippet)})
+    root = write(project_files(PROJECT.replace("who: {default: world}", snippet)))
     with pytest.raises(ConfigError, match=message.replace("$", r"\$")):
         create_app(environ={}).load_project.execute(root)
 
 
 def test_default_job_must_exist_and_be_public(write):
     root = write(
-        {".main.ptk.yml": PROJECT.replace("default_job: hello", "default_job: helo")}
+        project_files(PROJECT.replace("default_job: hello", "default_job: helo"))
     )
     with pytest.raises(ConfigError, match="did you mean 'hello'"):
         create_app(environ={}).load_project.execute(root)
     root = write(
-        {
-            ".main.ptk.yml": PROJECT.replace(
+        project_files(
+            PROJECT.replace(
                 "  other:\n    steps", "  other:\n    audience: maintainer\n    steps"
             ).replace("default_job: hello", "default_job: other")
-        }
+        )
     )
     with pytest.raises(ConfigError, match="available to everyone"):
         create_app(environ={}).load_project.execute(root)
 
 
 def test_no_job_and_no_default(write):
-    root = write({".main.ptk.yml": PROJECT.replace(", default_job: hello", "")})
+    root = write(project_files(PROJECT.replace(", default_job: hello", "")))
     with pytest.raises(PtkError, match="no project.default_job"):
         prepare(root, variant="slow")
 
 
 def test_plain_ptk_runs_default_job(write):
-    root = write({".main.ptk.yml": PROJECT})
+    root = write(project_files(PROJECT))
     args = ["--config", str(root / ".main.ptk.yml")]
     result = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
         cli, args, catch_exceptions=False

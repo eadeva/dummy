@@ -46,7 +46,7 @@ def source_files(root: Path) -> dict[str, Path]:
         directory = root / "examples" / example
         for path in directory.rglob("*"):
             relative = path.relative_to(directory)
-            if path.name in {"local.ptk.yml", ".gen.version.ptk.yml"}:
+            if path.name == ".gen.version.ptk.yml":
                 continue
             if any(part.startswith(("_", ".")) for part in relative.parts[:-1]):
                 continue

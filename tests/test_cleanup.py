@@ -1,3 +1,5 @@
+from tests.project_files import read_project, write_project
+
 """Destructive operations are scoped and preflighted before any deletion."""
 
 import json
@@ -69,11 +71,7 @@ def test_configured_folders_confirmation_and_all(tmp_path):
     names = ("build-output", "binaries", "logs", "reports")
     (tmp_path / "config/folder_structure.ptk.yml").write_text(
         yaml.safe_dump(
-            {
-                "layout": dict(
-                    zip(("builds", "bin", "logs", "reports"), names, strict=True)
-                )
-            }
+            dict(zip(("builds", "bin", "logs", "reports"), names, strict=True))
         )
     )
     paths = seed(tmp_path, roots=names) + seed(tmp_path, "release", roots=names)
@@ -97,9 +95,7 @@ def test_unsafe_config_and_active_job_refuse_before_deletion(tmp_path):
     assert result.exit_code == 2 and "locked" in result.output
     assert all(p.exists() for p in paths)
     lock.unlink()
-    (tmp_path / "config/folder_structure.ptk.yml").write_text(
-        "layout: {reports: config}\n"
-    )
+    (tmp_path / "config/folder_structure.ptk.yml").write_text("reports: config\n")
     result = invoke(tmp_path, "clean-all", "--yes")
     assert result.exit_code == 2 and "protected" in result.output
     assert all(p.exists() for p in paths)
@@ -150,10 +146,10 @@ def test_mapping_and_invalid_mapping_cleanup_preflight(tmp_path, monkeypatch):
         result.output
     )
     assert all(p.exists() for p in paths)
-    p = tmp_path / "a/config/project.ptk.yml"
-    data = yaml.safe_load(p.read_text())
+    p = tmp_path / "a/.main.ptk.yml"
+    data = read_project(p)
     data["variants"]["variants"]["debug"]["repo_variants"] = {"b": "release"}
-    p.write_text(yaml.safe_dump(data))
+    write_project(p, data)
     kept = seed(tmp_path / "b")
     result = runner.invoke(cli, args)
     assert result.exit_code == 0, result.output
@@ -211,10 +207,10 @@ def test_old_workflow_variant_rejected(tmp_path):
 @pytest.mark.parametrize("mapped", ["missing", "abstract"])
 def test_invalid_mapping_preserves_all_outputs(tmp_path, monkeypatch, mapped):
     workspace(tmp_path, {"b": mapped})
-    p = tmp_path / "b/config/project.ptk.yml"
-    data = yaml.safe_load(p.read_text())
+    p = tmp_path / "b/.main.ptk.yml"
+    data = read_project(p)
     data["variants"]["variants"]["abstract"] = {"abstract": True}
-    p.write_text(yaml.safe_dump(data))
+    write_project(p, data)
     monkeypatch.chdir(tmp_path)
     paths = seed(tmp_path / "a") + seed(tmp_path / "b")
     result = CliRunner(env={"PTK_CI": "0"}).invoke(cli, ["-c", "a", "verify"])
@@ -224,14 +220,14 @@ def test_invalid_mapping_preserves_all_outputs(tmp_path, monkeypatch, mapped):
 
 def test_inherited_mapping_and_workflow_rerun(tmp_path, monkeypatch):
     workspace(tmp_path, {})
-    p = tmp_path / "a/config/project.ptk.yml"
-    data = yaml.safe_load(p.read_text())
+    p = tmp_path / "a/.main.ptk.yml"
+    data = read_project(p)
     data["variants"]["variants"]["base"] = {
         "abstract": True,
         "repo_variants": {"b": "release"},
     }
     data["variants"]["variants"]["debug"]["extends"] = ["base"]
-    p.write_text(yaml.safe_dump(data))
+    write_project(p, data)
     paths = seed(tmp_path / "a") + seed(tmp_path / "b", "release")
     monkeypatch.chdir(tmp_path)
     runner = CliRunner(env={"PTK_CI": "0"})

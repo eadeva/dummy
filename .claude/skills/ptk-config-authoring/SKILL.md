@@ -1,47 +1,26 @@
 ---
 name: ptk-config-authoring
-description: Create or change ptk YAML configuration, discovered fragments and substitutions.
+description: Create or change PTK configuration documents, component registrations and substitutions.
 ---
 
-# ptk-config-authoring
+# PTK configuration authoring
 
-1. Read [docs/configuration.rst](../../../docs/configuration.rst); export `ptk setup config schema -o schema.json` when exact field names are needed.
+1. Read [configuration](../../../docs/configuration.rst). Inspect the installed PTK with `describe --json --configuration` for current values, source locations, file ownership and document schemas. `ptk setup config schema` describes the assembled model.
+2. Keep `.main.ptk.yml` at the repository root. It owns `repository: {alias: lowercase-name, config_path: relative/directory}`, `schema_version`, optional `ptk_version` and the discovery flag.
+3. Use the conventional documents under `config_path`: `project.ptk.yml`, `folder_structure.ptk.yml`, `artifactory_paths.ptk.yml`, `credentials.ptk.yml`, `tools.ptk.yml`, `versioning.ptk.yml`, `configs.ptk.yml`, `project.variants.ptk.yml`, `maintainers.ptk.yml`, and individual files in `jobs/`, `workflows/`, `variants/`. All use `.ptk.yml`. Documents contain their section body, and filenames supply entity names. No includes or implicit file overlays are supported.
+4. Register components as `components: {name: {path: src/name}}` in `project.ptk.yml`. Keep `component.variants.ptk.yml` beside each component's CMakeLists.txt or Bazel module. It defines features, dependencies and constraints. Project variants select components and feature values; component constraints apply only when that component is selected.
+5. Put project name, default job, variables, shared parameter/tool defaults, environment, logging, reporting, plugins and command audience in `project.ptk.yml`. Job-specific requirements and parameters go in that job's file. Explicit CLI `--set`, shared defaults and variant inheritance retain their model behavior.
+6. Use `${vars.name}`, `${params.name}`, `${env:NAME:-fallback}` and `${vh.*}`; escape literal references with `$${...}`. `${date.timestamp}` is local invocation time and `${date.utc.timestamp}` is UTC. Registration and discovery paths are literal and repository-relative.
+7. Verify with `ptk setup config validate`, inspect origins with `ptk setup config show --sources`, then dry-run affected jobs and variants. Unknown fields and references are errors. Other repository files are not scanned.
+8. For new projects, use `ptk setup init DIRECTORY --config-dir PATH`; preview with `--dry-run` when useful. Existing files are not overwritten. In VMR mode, omit DIRECTORY to initialize checked-out members without markers. A manual workspace marker contains `virtual_monorepo: true` and optional `members`; workspace workflows live in `workflows/<name>.ptk.yml` at the VMR root.
 
-2. Use `.main.ptk.yml` as the entry point and `*.ptk.yml` fragments. Keep `local.ptk.yml` untracked.
-
-3. Let PTK discover *.ptk.yml and *.ptk.yaml recursively inside the repository. Write every fragment at its full schema path. Never use include directives or merge tags. Maps contribute disjoint fields; duplicate scalar/list definitions are errors. Keep each field in one file, including local and active CI fragments. CLI --set remains an explicit runtime override.
-
-4. Keep each list in one source file. To move a setting, remove its old definition before adding it elsewhere.
-
-5. Use `${vars.name}`, `${params.name}`, `${env:NAME:-fallback}` and `${vh.*}`; escape literal references with `$${...}`. `${date.timestamp}` gives local invocation time as `YYYY_MM_DD_HHMM`; `${date.utc.timestamp}` uses UTC. Date components can be combined for custom formats. The instant is shared across steps, variants and local workflow children; discovery fields remain literal.
-
-6. Inspect origins with `ptk setup config show --sources` before changing an unexpected effective value.
-
-7. Export `ptk setup config schema -o schema.json` for editor support. Use the full root schema in every fragment.
-
-8. Verify with `ptk setup config validate`, then `ptk dry-run JOB` for every affected variant.
-
-9. Avoid unknown keys, unresolved references, duplicate file definitions and unsupported `plugins` expectations.
-
-10. For a new project, obtain the user's config-folder choice, preview `ptk setup init DIRECTORY --config-dir PATH --dry-run`, then run without `--dry-run`. The path is required and relative to the repository root; there is no default. On a terminal, omit the option to prompt. In VMR mode, omit DIRECTORY to initialize all checked-out members lacking `.main.ptk.yml`; configured repositories are skipped. Apply the one folder choice relative to each new member's root. Aliases are made unique, and existing .gitignore content is preserved with missing rules appended. Preflight conflicts in new members stop the batch before writes. Validate new configs and run their hello/build jobs, using repository aliases in a VMR. Retain separate job files and commented examples under the starter's topic folders.
-
-11. Use `param_defaults` for shared defaults on explicitly declared parameters; job defaults win. Use `cx.ptk.yml` for workflows and preserve per-tool requirement inheritance.
-
-A project's root `.main.ptk.yml` requires `repository: {alias: lowercase-name, config_path: relative/directory}`. Use config_path as the default authoring folder and location of the independent maintainer list; configuration discovery spans the repository. Commands use the repository root. In VMR workspaces, invoke `ptk <repository-alias> <command>`. A separate manual workspace marker contains only `virtual_monorepo: true` and optional `members: [nested/repo, other]`; without a list, only direct child directories are checked. It needs no repository metadata. Omit the flag on project entries for automatic detection; explicit `false` keeps a project standalone and excludes it from VMR listings. Keep discovery fields literal and entry-only, never in fragments or CLI overrides. See the `ptk-vmr` skill for Git-pointer membership and bounded discovery.
-
-Start from [examples/authoring/.main.ptk.yml](../../../examples/authoring/.main.ptk.yml) and its fragments for a complete tested configuration. Read [docs/configuration.rst](../../../docs/configuration.rst) for default environment isolation and explicit inheritance.
-
-For version discovery, read [docs/versioning.rst](../../../docs/versioning.rst). Keep `.main.ptk.yml` minimal; use `ptk setup init --config-dir PATH` for starter fragments. Maintain `versioning.ptk.yml`, never commit `.gen.version.ptk.yml`. Use `PTK_VERSION_ALIAS_COMPONENT_NAME` and `${version.projects.alias.value}`; generators consume the run snapshot. Declare VMR version dependencies and their variants explicitly. Do not add bump/tag operations.
-
-
-To combine existing jobs locally, use [workflow configuration](../../../docs/workflows.rst) and the `ptk-workflow-authoring` skill. Put `workflow.ptk.yml` in the configured folder; workspace-owned workflows belong at the VMR root. Workflows preserve each call's repository settings and never run wholesale on CX. GitHub job/template generation is deferred.
-
-For upload destinations, read [Artifactory destination rules](../../../docs/artifacts.rst) and start from [the destination example](../../../examples/artifacts/config/artifactory_structure.ptk.yaml). Any discovered `*.ptk.yml` or `*.ptk.yaml` file can define the `artifactory` section. Configure global base, event route and optional PTK-job suffix; preserve branch slashes. PTK resolves paths only; workflows select files, authenticate and upload. Preview with `ptk artifacts destination --job NAME --event release`; use `--at ISO_TIMESTAMP` for a shared explicit date and `--format github` for step outputs. Never add file-selection or credential fields to this model.
+Start with the tested [authoring example](../../../examples/authoring/.main.ptk.yml).
+See [versioning](../../../docs/versioning.rst), [workflow authoring](../../../docs/workflows.rst)
+and [artifact destinations](../../../docs/artifacts.rst) for their section contracts.
+The [artifact example](../../../examples/artifacts/config/artifactory_paths.ptk.yml)
+contains destination rules only; uploads and credentials belong to workflow steps.
 
 Maintainers are plain login IDs in `maintainers.ptk.yml`: `maintainers: [alice, bob]`.
-Match OS usernames locally and triggering GitHub actors on Actions; do not use
-Git emails or `PTK_ROLE=maintainer`. Use `ptk setup doctor` to inspect the detected
-ID. Init seeds the creator. Configuration writers (shared-config sync, self setup,
-editor setup and variant editing) require a listed maintainer and are hidden from
-normal users. `command_audience` can add restrictions but cannot relax these defaults.
-Keep machine-wide tool installation and personal credential setup available.
+Match local OS usernames or triggering GitHub actors. `PTK_ROLE=maintainer` does not
+grant access. Configuration writers require a listed maintainer; command audience
+can add restrictions but cannot relax these defaults. Validation stays available.

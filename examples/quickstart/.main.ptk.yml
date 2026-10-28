@@ -1,42 +1,5 @@
+# PTK configuration: this file owns its section or named entity.
 schema_version: 1
-# Optional: choose a range for the PTK releases your project supports.
-# ptk_version: ">=0.1,<0.2"
-project:
-  name: quickstart
-  description: Offline example using only the Python interpreter running ptk
-  default_job: build
-variants:
-  default: debug
-  components:
-    core:
-      features:
-        CHECKS: {type: bool, default: true}
-  variants:
-    debug:
-      components: [core]
-    release:
-      components: [core]
-      features: {CHECKS: false}
-reporting:
-  formats: [json, html, junit, markdown]
-jobs:
-  build:
-    help: Write a demo artifact and run independent checks
-    params:
-      message: {default: Hello from ptk, help: Text to put in the artifact}
-    steps:
-      - prepare:
-          run: [demo.py, prepare, "${params.message}"]
-          python: {interpreter: cli}
-      - checks:
-          parallel: true
-          steps:
-            - unit:
-                run: [demo.py, test, "${params.message}"]
-                python: {interpreter: cli}
-            - extra:
-                run: [demo.py, extra]
-                python: {interpreter: cli}
-                when: CHECKS
-
-repository: {alias: quickstart, config_path: .}
+repository:
+  alias: quickstart
+  config_path: config/ptk

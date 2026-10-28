@@ -9,6 +9,7 @@ from ptk.application.ports import ProcessOutcome
 from ptk.application.use_cases.tools import ToolService, tools_for_jobs
 from ptk.domain.config.model import ToolSpec
 from ptk.domain.tools import tool_identity
+from tests.project_files import project_files
 
 
 class Runner:
@@ -44,8 +45,7 @@ class Installer:
 def project(write, load):
     return load(
         write(
-            {
-                ".main.ptk.yml": """
+            project_files("""
 project: {name: docker-example}
 tools:
   compiler:
@@ -58,8 +58,7 @@ jobs:
     requires_tools: [compiler]
     steps:
       - hello: echo hello
-"""
-            }
+""")
         )
     )
 

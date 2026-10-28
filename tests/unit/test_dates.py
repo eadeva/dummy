@@ -7,6 +7,7 @@ from ptk.application.use_cases.run import PrepareRun, RunRequest
 from ptk.bootstrap import create_app
 from ptk.domain.config.dates import date_values
 from ptk.domain.errors import ConfigError
+from tests.project_files import project_files
 
 AT = datetime(2026, 10, 26, 0, 7, 8, tzinfo=timezone(timedelta(hours=1)))
 
@@ -24,8 +25,7 @@ def test_local_utc_and_custom_date_parts_share_one_instant():
 
 def test_job_defaults_vars_environment_and_steps_freeze_the_clock(write, load):
     root = write(
-        {
-            ".main.ptk.yml": """
+        project_files("""
 project: {name: demo}
 vars: {folder: "out/${date.timestamp}"}
 environment: {set: {GLOBAL_DATE: "${date.utc.timestamp}"}}
@@ -36,8 +36,7 @@ jobs:
     steps:
       - first: {uses: echo, with: {message: "${vars.folder}/${params.stamp}"}}
       - second: {uses: echo, with: {message: "${date.timestamp}/${date.utc.timestamp}"}, env: {STEP_DATE: "${date.iso}"}}
-"""
-        }
+""")
     )
     app = create_app(started_at=AT)
     project = load(root)
@@ -62,14 +61,14 @@ jobs:
 @pytest.mark.parametrize("field", ["timestmp", "utc.unknown", "utc.utc.timestamp"])
 def test_unknown_date_fields_fail_configuration_validation(write, load, field):
     root = write(
-        {
-            ".main.ptk.yml": yaml.safe_dump(
+        project_files(
+            yaml.safe_dump(
                 {
                     "project": {"name": "demo"},
                     "vars": {"stamp": "${date." + field + "}"},
                 }
             )
-        }
+        )
     )
     with pytest.raises(ConfigError, match="unknown date field"):
         load(root)

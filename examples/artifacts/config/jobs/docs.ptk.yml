@@ -1,0 +1,6 @@
+# PTK configuration: this file owns its section or named entity.
+steps:
+- html:
+    uses: echo
+    with:
+      message: Documentation would build here
