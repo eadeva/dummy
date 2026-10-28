@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.2
+
+- Remove duplicate run, dry-run and report branches from the built-in command
+  tree; use the actions on individual jobs and workflows instead.
+- Add an inline Open Report action to jobs and workflows, including VMR
+  workflows. Job reports follow the selected variant; workflows open their
+  latest aggregate report. Report actions retain their meaning when rerun.
+- Print an informational terminal message when a report is unavailable.
+  Update PTK from the same checkout for `report open --if-exists` and
+  `workflow report --if-exists` support.
+
 ## 0.3.1
 
 - Replace the Activity Bar toolbox with the custom wizard and PTk lettering

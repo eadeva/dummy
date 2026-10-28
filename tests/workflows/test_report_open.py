@@ -191,3 +191,72 @@ def test_workflow_opening_suppresses_child_openings(
     assert opened_reports[0].name == expected
     if expected == "report.html":
         assert "jobs" in opened_reports[0].parts
+
+
+@pytest.mark.parametrize("custom", [False, True])
+def test_explicit_workflow_report_opens_latest_aggregate_only(
+    tmp_path, opened_reports, custom
+):
+    import os
+
+    from tests.workflows.test_cli import invoke, repository
+
+    root = repository(
+        tmp_path,
+        workflows={"verify": {"open_report": None, "steps": [{"build": "build"}]}},
+        extra={"reporting": {"dir": "custom-reports"}} if custom else {},
+    )
+    missing = invoke(root, "workflow", "report", "--if-exists", "verify")
+    assert missing.exit_code == 0 and "Info:" in missing.output
+    assert "hasn't run yet" in missing.output and opened_reports == []
+    assert invoke(root, "workflow", "report", "verify").exit_code != 0
+    assert invoke(root, "workflow", "report", "--if-exists", "unknown").exit_code != 0
+    assert invoke(root, "workflow", "run", "verify").exit_code == 0
+    assert opened_reports == []
+    folder = root / ("custom-reports" if custom else "_reports") / "workflows/verify"
+    [report] = list(folder.glob("*/workflow.html"))
+    os.utime(report, (1, 1))
+    assert invoke(root, "workflow", "run", "verify").exit_code == 0
+    latest = next(p for p in folder.glob("*/workflow.html") if p != report)
+    assert invoke(root, "workflow", "report", "--if-exists", "verify").exit_code == 0
+    assert opened_reports == [latest]
+
+
+def test_workspace_report_respects_owner_and_member_report_policy(
+    tmp_path, monkeypatch, opened_reports
+):
+    from tests.workflows.test_cli import repository
+
+    repository(
+        tmp_path / "a",
+        alias="alpha",
+        workflows={"verify": {"steps": [{"build": "build"}]}},
+    )
+    (tmp_path / ".main.ptk.yml").write_text(
+        "virtual_monorepo: true\nmembers: [a]\n", encoding="utf-8"
+    )
+    (tmp_path / "workflow.ptk.yml").write_text(
+        "workflows: {verify: {steps: [{build: {repo: alpha, job: build}}]}}\n",
+        encoding="utf-8",
+    )
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner(env={"PTK_ROLE": "user", "PTK_CI": "0"})
+    reports = []
+    for owner in [tmp_path, tmp_path / "a"]:
+        report = owner / "_reports/workflows/verify/run/workflow.html"
+        report.parent.mkdir(parents=True)
+        report.write_text("<html></html>", encoding="utf-8")
+        reports.append(report)
+    for name in ["verify", "alpha/verify"]:
+        result = runner.invoke(
+            cli, ["workflow", "report", "--if-exists", name], catch_exceptions=False
+        )
+        assert result.exit_code == 0, result.output
+    assert opened_reports == reports
+    config = tmp_path / "a/config/project.ptk.yml"
+    data = yaml.safe_load(config.read_text())
+    data["command_audience"] = {"workflow": "maintainer"}
+    config.write_text(yaml.safe_dump(data), encoding="utf-8")
+    denied = runner.invoke(cli, ["workflow", "report", "--if-exists", "alpha/verify"])
+    assert denied.exit_code != 0 and "maintainer-only" in denied.output
+    assert opened_reports == reports

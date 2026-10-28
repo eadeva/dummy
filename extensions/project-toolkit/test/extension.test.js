@@ -223,12 +223,71 @@ test("the newest refresh wins when discovery completes out of order", async t =>
 
 test("job actions expose icons with tooltip titles in the sidebar", () => {
   const manifest = require("../package.json").contributes;
-  for (const name of ["run", "preview", "runWithParameters", "showHelp"]) {
+  for (const name of ["run", "preview", "runWithParameters", "showHelp", "openReport"]) {
     const command = `project-toolkit.${name}`;
     const entry = manifest.commands.find(entry => entry.command === command);
     assert.ok(entry.icon && entry.title);
     assert.match(manifest.menus["view/item/context"].find(entry => entry.command === command).group, /^inline@/);
   }
+});
+
+test("tree omits duplicate run and report commands in repositories and workspaces", async t => {
+  const doc = inventory();
+  doc.mode = "workspace";
+  doc.commands = builtinCommands();
+  doc.workflows = [{ name: "all" }];
+  const h = harness(t, [doc]);
+  await h.controller.ready();
+  const root = h.controller.provider.getChildren()[0];
+  const project = root.children.find(node => node.project);
+  for (const owner of [root, project]) {
+    const builtins = owner.children.find(node => node.label === "Built-in commands");
+    assert.deepEqual(builtins.children.map(node => node.label), ["CLI help", "help", "workflow", "setup"]);
+    assert.deepEqual(builtins.children.find(node => node.label === "workflow").children.map(node => node.label), ["list", "show"]);
+  }
+  for (const label of ["Jobs", "Workflows"]) {
+    const node = project.children.find(node => node.label === label).children[0];
+    assert.equal(node.contextValue, `${node.kind}-report`);
+  }
+  assert.equal(root.children[0].children[0].contextValue, "workflow-report");
+  // Removing the duplicate rows does not remove CLI operations or saved tasks.
+  await h.command("runBuiltin", { ...h.target("builtin"), name: "run" });
+  assert.equal(h.tasks[0].execution.args.at(-1), "run");
+});
+
+test("report actions target job variants and aggregate workflows without running or prompting", async t => {
+  const doc = inventory();
+  doc.ci = true;
+  doc.mode = "workspace";
+  doc.commands = builtinCommands();
+  doc.workflows = [{ name: "all" }];
+  doc.projects[0].jobs[0].params[0].required = true;
+  const h = harness(t, [doc]);
+  await h.controller.ready();
+  await h.command("selectVariant", { ...h.target(), name: "large" });
+  h.api.window.showQuickPick = h.api.window.showInputBox = () => assert.fail("Report actions must not prompt for run parameters");
+  await h.command("openReport", h.target());
+  await h.command("openReport", h.target("workflow"));
+  await h.command("openReport", { kind: "workflow", name: "all", root: doc.root });
+  assert.deepEqual(h.tasks[0].execution.args.slice(2), ["--variant", "large", "report", "open", "--if-exists", "--", "build"]);
+  assert.deepEqual(h.tasks[1].execution.args.slice(2), ["workflow", "report", "--if-exists", "--", "build"]);
+  assert.deepEqual(h.tasks[2].execution.args, ["workflow", "report", "--if-exists", "--", "all"]);
+  for (const task of h.tasks) {
+    assert.equal(task.definition.report, true);
+    assert.deepEqual((await h.api.taskProvider.resolveTask(task)).execution.args, task.execution.args);
+  }
+  assert.deepEqual(h.errors, []);
+  const stale = h.target("workflow");
+  doc.projects[0].commands.find(spec => spec.name === "workflow").children = [];
+  await h.controller.refresh();
+  await h.command("openReport", stale);
+  assert.equal(h.tasks.length, 3);
+  assert.equal(await h.api.taskProvider.resolveTask(h.tasks[1]), undefined);
+  assert.match(h.errors.at(-1), /Report opening is unavailable/);
+  h.api.workspace.isTrusted = false;
+  await h.command("openReport", h.target());
+  assert.equal(h.tasks.length, 3);
+  assert.match(h.errors.at(-1), /Trust this workspace/);
 });
 
 test("help runs without variant or required-parameter prompts and survives task restoration", async t => {

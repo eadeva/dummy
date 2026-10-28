@@ -83,7 +83,16 @@ function createController(vscode, context) {
   const title = target => `${target.project?.alias || path.basename(target.root)} / ${target.kind} / ${target.name}`;
 
   function builtinTree(owner, commands) {
-    const targets = core.builtinTargets(owner, commands);
+    // Dedicated job/workflow actions replace these generic tree entries only.
+    // Keep the full inventory for CLI help, the command palette and saved tasks.
+    function visible(items) {
+      return items.filter(spec => !["run", "dry-run", "report"].includes(spec.path[0]) &&
+        !(spec.path[0] === "workflow" && ["run", "dry-run", "report"].includes(spec.path[1])))
+        .map(spec => ({ ...spec, children: visible(spec.children) }))
+        .filter(spec => spec.runnable || spec.children.length);
+    }
+    const treeCommands = visible(commands || []);
+    const targets = core.builtinTargets(owner, treeCommands);
     const nodes = new Map(targets.map(target => [target.name, {
       ...target, label: target.spec.name, tooltip: target.spec.help,
       id: JSON.stringify([owner.folder.uri.fsPath, owner.project?.entry_file || owner.root, "builtin", target.name]),
@@ -96,7 +105,7 @@ function createController(vscode, context) {
     const help = nodes.get("--help");
     help.icon = "question";
     help.command = { command: "project-toolkit.showHelp", title: "Show CLI help", arguments: [targets[0]] };
-    const children = [help, ...(commands || []).map(spec => nodes.get(spec.path.join(" ")))];
+    const children = [help, ...treeCommands.map(spec => nodes.get(spec.path.join(" ")))];
     if (!commands) children.push({ label: "Update PTK to browse built-in commands", icon: "info" });
     return { label: "Built-in commands", children, icon: "terminal" };
   }
@@ -109,7 +118,7 @@ function createController(vscode, context) {
     for (const kind of ["job", "workflow"]) {
       const children = project[`${kind}s`].map(spec => ({
         ...common, kind, name: spec.name, spec, label: spec.name, tooltip: spec.help,
-        contextValue: kind === "job" && project.capabilities.reports ? "job-report" : kind,
+        contextValue: core.canOpenReport({ ...common, kind }) ? `${kind}-report` : kind,
         description: kind === "workflow" ? (common.ci ? "dry-run only on CI" : "local") : (spec.default ? "default" : ""),
         icon: kind === "job" ? "tools" : "git-merge",
       }));
@@ -146,7 +155,8 @@ function createController(vscode, context) {
         const children = record.inventory.projects.map(project => projectNode(project, record));
         if (record.inventory.workflows.length) children.unshift({ label: "Workspace workflows", icon: "git-merge", children: record.inventory.workflows.map(spec => ({
           kind: "workflow", name: spec.name, spec, root: record.inventory.root, folder: record.folder, ci: record.inventory.ci,
-          label: spec.name, tooltip: spec.help, icon: "git-merge", contextValue: "workflow",
+          label: spec.name, tooltip: spec.help, icon: "git-merge",
+          contextValue: core.canOpenReport({ kind: "workflow", commands: record.inventory.commands }) ? "workflow-report" : "workflow",
         })) });
         if (record.inventory.mode === "workspace") children.push(builtinTree({ root: record.inventory.root, folder: record.folder, ci: record.inventory.ci }, record.inventory.commands));
         return { label: record.folder.name, description: record.inventory.mode === "workspace" ? "VMR" : "", children, icon: "root-folder" };
@@ -286,7 +296,8 @@ function createController(vscode, context) {
   function makeTask(target, options = {}) {
     trusted();
     const config = settings(target.folder);
-    if (target.kind === "workflow" && target.ci && !options.preview && !options.help) throw new Error("Workflows run locally only; CI can dry-run workflows or run individual jobs.");
+    if (options.report && !core.canOpenReport(target)) throw new Error("Report opening is unavailable. Check PTK's version and command permissions.");
+    if (target.kind === "workflow" && target.ci && !options.preview && !options.help && !options.report) throw new Error("Workflows run locally only; CI can dry-run workflows or run individual jobs.");
     const definition = { type: "project-toolkit", kind: target.kind, name: target.name, root: target.root };
     if (options.variant) definition.variant = options.variant;
     if (options.preview !== undefined) definition.preview = options.preview;
@@ -294,8 +305,9 @@ function createController(vscode, context) {
     if (options.reRun !== undefined) definition.reRun = options.reRun;
     if (options.params && Object.keys(options.params).length) definition.params = options.params;
     if (options.help !== undefined) definition.help = options.help;
+    if (options.report !== undefined) definition.report = options.report;
     if (options.inputs && Object.keys(options.inputs).length) definition.inputs = options.inputs;
-    const task = new vscode.Task(definition, target.folder, `${options.help ? "Help " : options.preview ? "Dry Run " : options.clean ? "Clean " : options.reRun ? "Re-run " : ""}${title(target)}`, "project-toolkit",
+    const task = new vscode.Task(definition, target.folder, `${options.report ? "Report " : options.help ? "Help " : options.preview ? "Dry Run " : options.clean ? "Clean " : options.reRun ? "Re-run " : ""}${title(target)}`, "project-toolkit",
       new vscode.ProcessExecution(config.executable, [...config.arguments, ...core.argsFor(target, options)], { cwd: target.root }), []);
     task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Dedicated, clear: false, focus: target.kind === "builtin" && !options.help };
     return task;
@@ -355,10 +367,11 @@ function createController(vscode, context) {
     if (name) return vscode.tasks.executeTask(makeTask({ ...owner, kind: "variant", name }));
   });
   command("openReport", async element => {
-    const target = await chooseTarget(element, true);
+    const target = await chooseTarget(element);
     if (!target) return;
-    if (!target.project.capabilities.reports) throw new Error("Report commands are maintainer-only in this repository.");
-    return vscode.tasks.executeTask(makeTask({ ...target, kind: "report" }, { variant: variantFor(target.project) }));
+    return vscode.tasks.executeTask(makeTask(target, {
+      report: true, variant: target.kind === "job" ? variantFor(target.project) : undefined,
+    }));
   });
   command("validate", async element => {
     const owner = await chooseProject(element, "validate");
@@ -384,15 +397,15 @@ function createController(vscode, context) {
       const d = task.definition;
       const targets = d.kind === "builtin" ? core.availableBuiltins(records) : core.availableTargets(records);
       const target = targets.find(t => t.kind === d.kind && t.name === d.name && t.root === d.root);
-      if (!target || target.ci && target.kind === "workflow" && !d.preview && !d.help) return;
-      if (!d.help && !(d.kind === "job" && d.clean === true) && (target.spec.params || []).some(p => p.required && !Object.hasOwn(d.kind === "builtin" ? d.inputs || {} : d.params || {}, p.name))) {
+      if (!target || d.report && !core.canOpenReport(target) || target.ci && target.kind === "workflow" && !d.preview && !d.help && !d.report) return;
+      if (!d.report && !d.help && !(d.kind === "job" && d.clean === true) && (target.spec.params || []).some(p => p.required && !Object.hasOwn(d.kind === "builtin" ? d.inputs || {} : d.params || {}, p.name))) {
         const action = d.kind === "builtin" ? "Run Command with Options" : "Run Job with Parameters";
         output.appendLine(`Use Project Toolkit: ${action} to supply required parameters for ${target.name}.`);
         return;
       }
       const resolved = makeTask(target, {
         variant: target.project ? d.variant || variantFor(target.project) : undefined,
-        preview: d.preview, params: d.params, help: d.help, inputs: d.inputs, clean: d.clean, reRun: d.reRun,
+        preview: d.preview, params: d.params, help: d.help, inputs: d.inputs, clean: d.clean, reRun: d.reRun, report: d.report,
       });
       resolved.definition = task.definition;
       resolved.name = task.name;

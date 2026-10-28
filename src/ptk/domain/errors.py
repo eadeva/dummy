@@ -36,6 +36,10 @@ class PtkError(Exception):
     """Base class for all expected, user-facing errors."""
 
 
+class RunNotFoundError(PtkError):
+    """No saved run is available for the requested report."""
+
+
 @dataclass
 class ConfigError(PtkError):
     problems: list[Problem] = field(default_factory=list)

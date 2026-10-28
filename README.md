@@ -61,7 +61,7 @@ Install the VSIX through **Extensions: Install from VSIX...**. Build it from the
 repository root with `ptk extension` (or `uv run ptk extension`), or download
 the VSIX artifact from the branch's CI run. The job requires Node.js 22+ and npm,
 installs the build dependencies, runs the checks and writes
-`extensions/project-toolkit/project-toolkit-0.3.1.vsix`.
+`extensions/project-toolkit/project-toolkit-0.3.2.vsix`.
 PTK must be installed on the workspace host. See
 [editor documentation](docs/editor.rst) for setup and permissions.
 
@@ -179,7 +179,7 @@ ptk pre-commit run [HOOK] [--all-files]   run checks on staged or all tracked fi
 ptk pre-commit check [HOOK]              run checks on all tracked files
 ptk pre-commit install | uninstall | status | validate
 ptk run [JOB] [-p NAME=VALUE]... [same options]   generic form for scripts and CI
-ptk workflow list | show NAME | dry-run NAME | run NAME
+ptk workflow list | show NAME | dry-run NAME | run NAME | report NAME [--if-exists]
 ptk setup config validate | show [PATH] [--sources] [--format yaml|json] | schema [-o FILE]
 ptk variant list [--names] | show [NAME] [--json] [--all] | explain NAME FEATURE | check [NAMES] [--strict]
 ptk setup vscode tasks [--check] [--command "uv run ptk"] [--users-only]
@@ -188,7 +188,7 @@ ptk setup vscode skills [--check]
 ptk setup creds setup [--vault] | set NAME [FIELD] [--store S] | list | test NAME | remove NAME
 ptk setup configs sync [NAMES] [--diff] | check [NAMES]
 ptk setup [--job A]... [--dry-run] [--allow-system] | ptk setup doctor | ptk setup self [--tools]
-ptk [-V v] report export [JOB] [--run ID] [-f FORMAT]... | open [JOB] [--run ID]
+ptk [-V v] report export [JOB] [--run ID] [-f FORMAT]... | open [JOB] [--run ID] [--if-exists]
 ptk help [--no-open] [-o FILE]       full help as an HTML page, opened in your browser
 ```
 
@@ -301,7 +301,9 @@ links to HTML reports; JSON files remain available for automation.
 If a job and workflow share a name, local interactive calls ask which to run;
 CX selects the job. Use `ptk run NAME` or `ptk workflow run NAME` to select
 explicitly. Reports print their file paths; use `ptk report open JOB` to open
-a job report explicitly. No local browser-link server is started.
+a job report explicitly, or `ptk workflow report NAME` for the latest aggregate
+workflow report. Add `--if-exists` to get an informational message when there
+is no saved run/report. No local browser-link server is started.
 
 See [workflows](docs/workflows.rst) and `examples/workflows` for nested groups,
 VMR ownership, failure handling and reports. The later `ptk setup init --workflows`

@@ -145,9 +145,59 @@ def show_workflow(ctx, name):
     click.echo(yaml.safe_dump({"workflows": {name: authored(spec)}}, sort_keys=False))
 
 
+def report_directory(root, name, project=None):
+    """Use the same report location for workflow execution and explicit opening."""
+    from ...application.use_cases.run import layout_of
+
+    report_root = root / "_reports"
+    if project is not None:
+        layout = layout_of(project)
+        report_root = (
+            root / project.config.reporting.dir
+            if project.config.reporting.dir
+            else layout.root / layout.reports
+        )
+    return report_root / "workflows" / name.split("/")[-1]
+
+
+@workflow_group.command("report")
+@click.argument("name")
+@click.option(
+    "--if-exists",
+    is_flag=True,
+    help="Print an informational message if no report exists.",
+)
+@click.pass_context
+@guarded
+def open_workflow_report(ctx, name, if_exists):
+    """Open the latest saved aggregate HTML report of a workflow."""
+    parent, entries, owner, _, root = select(ctx, name)
+    project = None
+    if owner is not None:
+        project = create_app(host=parent.app.host).load_project.execute(
+            config_file=entries[owner], overrides=parent.overrides, ci=parent.ci
+        )
+    folder = report_directory(root, name, project)
+    reports = [path for path in folder.glob("*/workflow.html") if path.is_file()]
+    if not reports:
+        if not if_exists:
+            raise PtkError(f"no report for workflow {name!r} - run the workflow first")
+        console.print(
+            f"[cyan]Info:[/] No report for workflow {escape(name)!r}: "
+            "the workflow hasn't run yet, or its report was removed.",
+            highlight=False,
+            soft_wrap=True,
+        )
+        return
+    latest = max(reports, key=lambda path: (path.stat().st_mtime_ns, path.parent.name))
+    print_report(latest)
+    if not parent.app.open_in_browser(latest):
+        console.print("[dim]no browser available here - open the file above[/]")
+
+
 def execute_workflow(ctx, name, *, dry_run=False):
     from ...adapters.locking import job_lock
-    from ...application.use_cases.run import Cancelled, RunRequest, layout_of
+    from ...application.use_cases.run import Cancelled, RunRequest
     from ...application.use_cases.workflow import (
         CallOutcome,
         PrepareWorkflow,
@@ -252,18 +302,7 @@ def execute_workflow(ctx, name, *, dry_run=False):
                 bindings[node.path].app.hooks.execute(project, click.echo)
                 checked_repositories.add(project.root)
     run_id = datetime.now(UTC).strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8]
-    report_root = root / "_reports"
-    if owner is not None:
-        owner_project = create_app(host=parent.app.host).load_project.execute(
-            config_file=entries[owner], overrides=parent.overrides, ci=parent.ci
-        )
-        layout = layout_of(owner_project)
-        report_root = (
-            root / owner_project.config.reporting.dir
-            if owner_project.config.reporting.dir
-            else layout.root / layout.reports
-        )
-    target = report_root / "workflows" / name.split("/")[-1] / run_id
+    target = report_directory(root, name, owner_project) / run_id
     child_openings = {}
 
     def run(node, cancel):

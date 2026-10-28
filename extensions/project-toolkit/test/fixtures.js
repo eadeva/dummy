@@ -13,6 +13,10 @@ function builtinCommands() {
   });
   return [
     command(["help"]),
+    command(["run"]),
+    command(["dry-run"]),
+    command(["report"], [], [command(["report", "open"]), command(["report", "export"])]),
+    command(["workflow"], [], ["list", "show", "run", "dry-run", "report"].map(name => command(["workflow", name]))),
     command(["setup"], [], [
       command(["setup", "creds"], [], [
         command(["setup", "creds", "list"], [builtinParam("name")]),

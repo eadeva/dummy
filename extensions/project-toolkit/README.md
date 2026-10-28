@@ -8,8 +8,8 @@ sidebar, help, variant selection, parameter prompts, configuration and reports.
 1. Install PTK from the same checkout/version as this extension. The CLI must
    support `ptk describe --json` (inventory schema version 1).
 2. In VS Code, run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.3.1.vsix`. You can also use
-   `code --install-extension project-toolkit-0.3.1.vsix`.
+   `project-toolkit-0.3.2.vsix`. You can also use
+   `code --install-extension project-toolkit-0.3.2.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -40,13 +40,19 @@ gold configuration files and blue repositories and commands. The selected varian
 has a green checkmark and a **selected** label. Colours follow your VS Code theme;
 labels and icon shapes also identify each category.
 
-- Expand **Jobs** and hover over a job to see four icons: **Run**, **Dry Run**,
+- Expand **Jobs** and hover over a job to see **Run**, **Dry Run**,
   **Run Job with Parameters** (gear) and **Show Help** (question mark). Each icon
   has a tooltip. Output appears in VS Code's task terminal; **Tasks: Terminate
   Task** stops a running task. Help displays the job's `--help` without running it
   or asking for parameters.
   **Dry Run** calls `ptk dry-run JOB` or `ptk workflow dry-run NAME`: it shows what
   would run without executing the job or workflow steps.
+- Click **Open Latest Job or Workflow Report** (preview icon) on a job or
+  workflow. Jobs open the report for the selected variant; workflows open the
+  latest saved aggregate report. If no report is available, the task terminal
+  prints an **Info** message that it has not run yet or its saved report was
+  removed. The action does not run the job/workflow or prompt for parameters.
+  Update PTK from the same checkout as extension 0.3.2 for this action.
 - Use the parameter icon or **Run Job with Parameters** in the command palette
   to override optional parameters. Required non-secret parameters are prompted
   automatically. Lists use comma-separated values; PTK validates the supplied
@@ -60,17 +66,21 @@ labels and icon shapes also identify each category.
   owner variant and its repository variant mappings. On CI, workflows can only be dry-run; individual
   jobs remain runnable. The help icon displays workflow usage.
 - Expand **Built-in commands** to browse the CLI tree, including **setup > creds**,
-  configuration, variants, reports and **help**. **CLI help** displays `ptk --help`;
+  configuration, variants and **help**. **CLI help** displays `ptk --help`;
   **help** runs PTK's HTML help command. Use the play icon to run a command, the
   gear to choose options/arguments, or the question mark for its usage. Required
   arguments are prompted automatically; optional values retain PTK defaults when
   omitted. Credential values and vault passwords are entered through PTK's hidden
   terminal prompts. Command names and credential names are ordinary arguments;
   never enter secret values into the extension's option prompts.
-- Use **Open Latest Job Report**, **Validate Configuration** and **Open
+- Use **Open Latest Job or Workflow Report**, **Validate Configuration** and **Open
   Configuration File** from the command palette. Available operations follow
   PTK's maintainer permissions. Report files and explicit opening use the machine
   running PTK; no local browser-link server is started.
+
+The built-in tree omits the duplicate `run`, `dry-run` and `report` branches,
+including their workflow equivalents. These operations are available directly
+on jobs/workflows. Other built-in commands and CLI help remain available.
 
 Multiple VS Code folders and VMR member repositories are supported. The extension
 refreshes after PTK YAML and VMR project-list changes; **Refresh Projects** forces
@@ -103,7 +113,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.3.1.vsix`. Use `ptk dry-run extension`
+`extensions/project-toolkit/project-toolkit-0.3.2.vsix`. Use `ptk dry-run extension`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:
@@ -128,10 +138,13 @@ Controller tests inject the VS Code API and check task restoration, permissions,
 workspace trust, multi-root selection and cancellation; they are not graphical
 extension-host acceptance tests. For a manual smoke test, install the VSIX, open
 `examples/quickstart`, dry-run and run a job, select a variant, and run the same
-task again through **Tasks: Run Task**. Hover over the four job icons to check their
-tooltips, open job help, and expand **Built-in commands > setup > creds** to inspect
+task again through **Tasks: Run Task**. Hover over the job icons to check their
+tooltips, open job help and reports, and expand **Built-in commands > setup > creds** to inspect
 help and run `list`. Check **setup > config > show** with the gear to select a
 configuration path and JSON output.
+Before the first run, click a job/workflow's report icon and check the informational
+terminal message; after a run, check that the matching report opens. Repeat with
+a different job variant and with a workspace workflow.
 
 The extension has no runtime npm dependencies. PTK owns configuration parsing,
 role filtering and execution. Discovery does not run jobs or install tools, but

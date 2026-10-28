@@ -40,8 +40,8 @@ order, omitting empty groups. At a VMR root, Repositories replaces Jobs.
      - Inspect the product line
    * - ``ptk report open|export``
      - View and regenerate reports
-   * - ``ptk workflow list|show|dry-run|run``
-     - Inspect or execute local job workflows (execution is disabled on CX)
+   * - ``ptk workflow list|show|dry-run|run|report``
+     - Inspect or execute local workflows, or open their latest report (execution is disabled on CX)
    * - ``ptk artifacts destination --job JOB``
      - Resolve Artifactory URL/repository/path for an external uploader; see :doc:`artifacts`
    * - ``ptk JOB`` / ``ptk run JOB``

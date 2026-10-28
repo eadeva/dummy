@@ -20,7 +20,7 @@ from rich.markup import escape
 from rich.table import Table
 
 from ... import __version__
-from ...domain.errors import ConfigError, PtkError
+from ...domain.errors import ConfigError, PtkError, RunNotFoundError
 from .access import AccessGroup, MaintainerOption, can_switch_ci, require
 from .artifacts import artifacts_group
 from .editor import describe
@@ -803,15 +803,35 @@ def report_export(
 @report_group.command("open")
 @click.argument("job", required=False)
 @click.option(
+    "--if-exists", is_flag=True, help="Print an informational message if no run exists."
+)
+@click.option(
     "--run", "run_id", metavar="RUN_ID", help="An older run kept in the log history."
 )
 @click.pass_context
 @guarded
-def report_open(ctx: click.Context, job: str | None, run_id: str | None) -> None:
+def report_open(
+    ctx: click.Context, job: str | None, run_id: str | None, if_exists: bool = False
+) -> None:
     """Open the HTML report of the latest (or a given) run of JOB in the browser."""
     project, name = _report_target(ctx, job)
     service = _state(ctx).app.reports
-    summary = service.latest(project, name, _state(ctx).variant, run_id)
+    try:
+        summary = service.latest(project, name, _state(ctx).variant, run_id)
+    except RunNotFoundError:
+        if not if_exists:
+            raise
+        detail = (
+            f"saved run {run_id!r} is unavailable"
+            if run_id
+            else "the job hasn't run yet for this variant, or its saved run was removed"
+        )
+        console.print(
+            f"[cyan]Info:[/] No report for job {escape(name)!r}: {escape(detail)}.",
+            highlight=False,
+            soft_wrap=True,
+        )
+        return
     target = None
     if run_id:  # older runs get their own folder so the latest report stays
         target = (

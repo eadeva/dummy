@@ -7,7 +7,7 @@ import os
 from collections.abc import Mapping
 from pathlib import Path
 
-from ...domain.errors import PtkError
+from ...domain.errors import PtkError, RunNotFoundError
 from ...domain.reporting.model import Contribution, Report
 from . import exporters, html, importers
 
@@ -36,8 +36,8 @@ class FileReportStore:
                     else []
                 )
                 hint = f" (kept runs: {', '.join(runs)})" if runs else ""
-                raise PtkError(f"no run {run_id}{hint}")
-            raise PtkError(f"no run found in {log_dir} - run the job first")
+                raise RunNotFoundError(f"no run {run_id}{hint}")
+            raise RunNotFoundError(f"no run found in {log_dir} - run the job first")
         return json.loads(summary.read_text(encoding="utf-8"))
 
     def contributions(self, reports_dir: Path, labels: list[str]) -> list[Contribution]:

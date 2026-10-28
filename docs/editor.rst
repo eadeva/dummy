@@ -21,7 +21,9 @@ PTK as a process and show output in the task terminal. Saved tasks preserve
 dry-run mode, parameters, variants and help requests.
 
 Expand **Built-in commands** to browse ``setup``, ``setup creds``, ``help`` and
-other permitted commands. The tree has Run, Options and Help icons. Required
+other permitted commands. Duplicate ``run``, ``dry-run`` and ``report`` branches,
+including workflow equivalents, are omitted in favour of job/workflow actions.
+The remaining tree commands have Run, Options and Help icons. Required
 arguments are prompted automatically; the gear lets you supply optional values.
 Credential values and vault passwords stay in PTK's hidden terminal prompts.
 **CLI help** displays ``ptk --help``; **help** opens PTK's HTML help.
@@ -31,7 +33,7 @@ retain job actions and CLI help, with an update hint for built-in browsing.
 Selecting a variant stores the choice in VS Code's workspace state for that
 repository. **Use project default** clears it. Selection never rewrites PTK YAML.
 Workflows use the selected owner variant and its repository variant mappings. Use **Display Variant**
-for resolved features and **Open Latest Job Report** for PTK's report links.
+for resolved features and the report icon on a job or workflow to open its report.
 
 Multiple folders, VMR members and workspace workflows are supported. Discovery
 uses PTK's role-filtered inventory; commands still enforce permissions in the CLI.
@@ -47,7 +49,7 @@ host. Increase ``projectToolkit.discoveryTimeout`` for slow discovery.
 
 Build from the repository root with ``ptk extension`` or ``uv run ptk extension``.
 The job checks Node.js 22+ and npm, installs the build dependencies, runs the
-checks and writes ``extensions/project-toolkit/project-toolkit-0.3.1.vsix``.
+checks and writes ``extensions/project-toolkit/project-toolkit-0.3.2.vsix``.
 Use ``ptk dry-run extension`` to preview it. Node.js and npm must be on PATH.
 Set ``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
 integration tests. CI builds downloadable VSIX artifacts on Linux and Windows;
@@ -110,8 +112,15 @@ Report files
 ------------
 
 Jobs and workflows print the report file path. PTK does not start a local HTTP
-server or print browser URLs. Use **Open Latest Job Report** or
-``ptk report open JOB`` to open a job report explicitly. Configured
+server or print browser URLs. Click **Open Latest Job or Workflow Report** on the
+job/workflow row. Job reports follow the selected variant; workflows open the
+latest saved aggregate report. Missing reports produce an informational message
+in the task terminal, without running anything. Saved tasks with ``report: true``
+remain report requests when rerun.
+
+Update PTK together with extension 0.3.2. The CLI operations are
+``ptk report open --if-exists JOB`` and ``ptk workflow report --if-exists NAME``.
+Omitting ``--if-exists`` retains an error for missing reports. Configured
 ``open_report`` policies continue to open reports after local runs. Remote
 sessions open files on the machine running PTK.
 

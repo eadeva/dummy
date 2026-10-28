@@ -172,3 +172,53 @@ def test_invalid_open_report_is_rejected():
         JobSpec.model_validate(
             {"open_report": "sometimes", "steps": [{"hello": "echo hello"}]}
         )
+
+
+def test_explicit_job_report_handles_missing_runs_without_hiding_errors(
+    write, monkeypatch
+):
+    root = write(
+        {
+            ".main.ptk.yml": """
+        project: {name: report-open}
+        variants: {default: small, variants: {small: {}, large: {}}}
+        reporting: {dir: custom-reports, formats: []}
+        jobs:
+          build:
+            steps: [{hello: {uses: echo, with: {message: hello}}}]
+    """
+        }
+    )
+    opened = []
+    monkeypatch.setattr(
+        help_html, "open_in_browser", lambda path: opened.append(path) or True
+    )
+    runner = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"})
+    base = ["-C", str(root / ".main.ptk.yml")]
+
+    def invoke(*args):
+        return runner.invoke(cli, [*base, *args], catch_exceptions=False)
+
+    missing = invoke("-V", "small", "report", "open", "--if-exists", "build")
+    assert missing.exit_code == 0 and "Info:" in missing.output
+    assert "hasn't run yet" in missing.output
+    assert opened == [] and not (root / "custom-reports").exists()
+    assert invoke("report", "open", "build").exit_code != 0
+    assert invoke("report", "open", "--if-exists", "unknown").exit_code != 0
+    assert (
+        invoke("-V", "unknown", "report", "open", "--if-exists", "build").exit_code != 0
+    )
+    assert invoke("-V", "small", "run", "build").exit_code == 0
+    assert (
+        invoke("-V", "large", "report", "open", "--if-exists", "build").exit_code == 0
+    )
+    assert opened == []
+    assert (
+        invoke("-V", "small", "report", "open", "--if-exists", "build").exit_code == 0
+    )
+    assert opened == [root / "custom-reports/small/build/report.html"]
+    assert "</html>" in opened[0].read_text(encoding="utf-8")
+    summary = root / "_logs/small/build/run.json"
+    summary.write_text("not json", encoding="utf-8")
+    malformed = runner.invoke(cli, [*base, "report", "open", "--if-exists", "build"])
+    assert malformed.exit_code != 0 and "hasn't run yet" not in malformed.output

@@ -44,6 +44,9 @@ test("actual PTK inventory, preview, job parameters and variant inspection agree
   const before = fs.readdirSync(root, { recursive: true });
   const doc = core.parseInventory(invoke(root, ["describe", "--json"]));
   const target = core.availableTargets([{ inventory: doc }]).find(target => target.kind === "job");
+  assert.match(invoke(root, core.argsFor(target, { variant: "large", report: true })), /Info:.*job.*hasn't run yet/s);
+  const workflow = core.availableTargets([{ inventory: doc }]).find(target => target.kind === "workflow");
+  assert.match(invoke(root, core.argsFor(workflow, { report: true })), /Info:.*workflow.*hasn't run yet/s);
   assert.equal(target.spec.params.some(p => p.name === "token"), false);
   assert.match(invoke(root, core.argsFor(target, { help: true })), /--message/);
   const builtins = core.availableBuiltins([{ inventory: doc }]);
@@ -91,6 +94,8 @@ test("actual VMR discovery supports member jobs and workspace workflow previews"
   const job = targets.find(target => target.kind === "job" && target.project.alias === "alpha");
   invoke(root, core.argsFor(job, { preview: true }));
   const workflow = targets.find(target => target.kind === "workflow" && !target.project);
+  assert.equal(core.canOpenReport(workflow), true);
+  assert.match(invoke(root, core.argsFor(workflow, { report: true })), /Info:.*workflow.*hasn't run yet/s);
   invoke(root, core.argsFor(workflow, { preview: true }));
   assert.equal(fs.existsSync(path.join(root, "_logs")), false);
 });

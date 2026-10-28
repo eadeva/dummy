@@ -2,7 +2,7 @@
   "name": "project-toolkit",
   "displayName": "Project Toolkit",
   "description": "Run PTK jobs, workflows and built-in commands, browse help, select variants and open reports.",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "publisher": "eadeva",
   "license": "UNLICENSED",
   "private": true,
@@ -98,7 +98,7 @@
       },
       {
         "command": "project-toolkit.openReport",
-        "title": "Open Latest Job Report",
+        "title": "Open Latest Job or Workflow Report",
         "category": "Project Toolkit",
         "icon": "$(open-preview)"
       },
@@ -171,7 +171,8 @@
         },
         {
           "command": "project-toolkit.openReport",
-          "when": "view == project-toolkit.projects && viewItem == job-report"
+          "when": "view == project-toolkit.projects && viewItem =~ /^(job|workflow)-report$/",
+          "group": "inline@5"
         },
         {
           "command": "project-toolkit.selectVariant",
@@ -201,12 +202,12 @@
         {
           "command": "project-toolkit.clean",
           "when": "view == project-toolkit.projects && viewItem =~ /^(job|workflow)/",
-          "group": "inline@5"
+          "group": "inline@6"
         },
         {
           "command": "project-toolkit.reRun",
           "when": "view == project-toolkit.projects && viewItem =~ /^(job|workflow)/",
-          "group": "inline@6"
+          "group": "inline@7"
         }
       ]
     },
@@ -301,6 +302,11 @@
             "type": "boolean",
             "default": false,
             "description": "Delete selected output folders and then execute."
+          },
+          "report": {
+            "type": "boolean",
+            "default": false,
+            "description": "Open the latest job report for the selected variant, or the latest aggregate workflow report, without executing it."
           }
         },
         "when": "processExecutionSupported && isWorkspaceTrusted"

@@ -108,7 +108,7 @@ function builtinArgs(spec, inputs = {}) {
   return [...options, ...(positional.length ? ["--", ...positional] : [])];
 }
 
-function argsFor(target, { variant, preview = false, params = {}, help = false, inputs = {}, clean = false, reRun = false } = {}) {
+function argsFor(target, { variant, preview = false, params = {}, help = false, inputs = {}, clean = false, reRun = false, report = false } = {}) {
   if (typeof clean !== "boolean" || typeof reRun !== "boolean" || clean && reRun) throw new Error("Choose clean or re-run.");
   if ((clean || reRun) && !["job", "workflow"].includes(target.kind)) throw new Error("Cleanup applies to jobs and workflows.");
   if (typeof help !== "boolean") throw new Error("Task help must be a boolean.");
@@ -119,6 +119,14 @@ function argsFor(target, { variant, preview = false, params = {}, help = false, 
     throw new Error("Task contains an unknown or secret parameter. Use PTK's credential environment or terminal prompt for secrets.");
   }
   const args = target.project ? ["--config", target.project.entry_file] : [];
+  if (typeof report !== "boolean") throw new Error("Report mode must be a boolean.");
+  if (report) {
+    if (preview || help || clean || reRun) throw new Error("Open a report separately from run, help or cleanup actions.");
+    if (target.kind === "workflow") return [...args, "workflow", "report", "--if-exists", "--", target.name];
+    if (target.kind !== "job") throw new Error("Reports apply to jobs and workflows.");
+    if (variant) args.push("--variant", variant);
+    return [...args, "report", "open", "--if-exists", "--", target.name];
+  }
   if (variant && target.kind !== "builtin") args.push("--variant", variant);
   if (!help && clean) args.push("--clean");
   if (!help && reRun) args.push("--re-run");
@@ -172,7 +180,7 @@ function availableTargets(records) {
       }
     }
     for (const spec of inventory.workflows) {
-      targets.push({ kind: "workflow", name: spec.name, spec, folder, root: inventory.root, ci: inventory.ci });
+      targets.push({ kind: "workflow", name: spec.name, spec, folder, root: inventory.root, ci: inventory.ci, commands: inventory.commands });
     }
   }
   return targets;
@@ -202,4 +210,12 @@ function availableBuiltins(records) {
   });
 }
 
-module.exports = { parseInventory, readInventory, selectedVariant, argsFor, availableTargets, availableBuiltins, builtinTargets };
+function canOpenReport(target) {
+  if (target.kind === "job" && !target.project?.capabilities.reports) return false;
+  const commands = target.project?.commands ?? target.commands;
+  if (!commands) return target.kind === "job";
+  const name = target.kind === "job" ? "report open" : "workflow report";
+  return builtinTargets({}, commands).some(command => command.name === name && command.spec.runnable);
+}
+
+module.exports = { parseInventory, readInventory, selectedVariant, argsFor, availableTargets, availableBuiltins, builtinTargets, canOpenReport };

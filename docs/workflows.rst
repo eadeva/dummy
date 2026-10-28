@@ -168,6 +168,12 @@ to newer logs. Workflow reports use colored status cards and per-column filters.
 Open a child report for its project versions, tool dependencies and test details.
 Workflow history is retained until explicitly removed; it has no automatic rotation.
 
+Use ``ptk workflow report NAME`` to reopen the latest saved aggregate HTML report.
+At a VMR root, use a workspace workflow name or qualify a member workflow as
+``ALIAS/NAME``. The extension's report icon uses this operation. Add
+``--if-exists`` to print an informational message instead of failing when no
+report is available. Opening a saved report does not execute workflow steps.
+
 The workflow opens its summary HTML report automatically after a local run.
 Set the policy on the workflow, independently of each job's report policy::
 
