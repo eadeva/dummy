@@ -132,9 +132,10 @@ function createController(vscode, context, editorFactory = createEditors) {
   }
 
   function configNode(file, common = {}) {
-    const node = { ...common, kind: "config-file", configFile: file, configPath: [],
+    const configOwner = [common.folder?.uri.fsPath || common.root, common.project?.entry_file || common.root];
+    const node = { ...common, kind: "config-file", configFile: file, configPath: [], configOwner,
       label: path.relative(common.root || path.dirname(file), file), icon: "file-code", tooltip: file,
-      id: JSON.stringify([file, []]), hasChildren: true, collapsed: true };
+      id: JSON.stringify([configOwner, file, []]), hasChildren: true, collapsed: true };
     node.command = { command: "project-toolkit.openConfig", title: "Edit configuration", arguments: [node] };
     return node;
   }

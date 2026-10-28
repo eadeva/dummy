@@ -120,7 +120,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
         const configPath = [...at, key];
         const hasChildren = value !== null && typeof value === "object";
         const node = { ...element, configPath, kind: "config-field", label: typeof key === "number" ? `Item ${key + 1}` : name,
-          id: JSON.stringify([element.configFile, configPath]), collapsed: true, hasChildren,
+          id: JSON.stringify([element.configOwner, element.configFile, configPath]), collapsed: true, hasChildren,
           description: hasChildren ? Array.isArray(value) ? `${value.length} items` : `${Object.keys(value).length} fields` : value === null ? "null" : String(value).slice(0, 100),
           icon: hasChildren ? "symbol-namespace" : "symbol-property", children: undefined,
         };

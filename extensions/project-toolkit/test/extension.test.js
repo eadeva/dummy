@@ -549,3 +549,16 @@ test("configuration files and validation remain available after an invalid save 
   assert.deepEqual(h.tasks[0].execution.args.slice(-3), ["setup", "config", "validate"]);
   assert.equal(h.tasks[0].execution.args[1], h.target().project.entry_file);
 });
+
+
+test("shared configuration files have unique tree identities in different repositories", async t => {
+  const a = inventory(path.resolve("first")), b = inventory(path.resolve("second"));
+  const shared = path.resolve("common.ptk.yml");
+  a.projects[0].config_files.push(shared);
+  b.projects[0].config_files.push(shared);
+  const h = harness(t, [a, b]);
+  await h.controller.ready();
+  const files = h.controller.provider.getChildren().map(root => root.children[0].children.find(node => node.label === "Configuration").children.find(node => node.configFile === shared));
+  assert.notEqual(files[0].id, files[1].id);
+  assert.notDeepEqual(files[0].configOwner, files[1].configOwner);
+});
