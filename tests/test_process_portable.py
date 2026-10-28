@@ -60,13 +60,17 @@ def test_captured_windows_launch_hides_console_and_keeps_process_group(
 
 @pytest.mark.skipif(sys.platform != "win32", reason="native Windows console APIs")
 @pytest.mark.parametrize("shell", [False, True])
-def test_windows_captured_process_has_no_console(tmp_path, shell):
+def test_windows_captured_process_has_no_console_window(tmp_path, shell):
     import subprocess
 
     argv = [
         sys.executable,
         "-c",
-        "import ctypes; print(ctypes.windll.kernel32.GetConsoleWindow()); print(ctypes.windll.kernel32.GetConsoleCP())",
+        (
+            "import ctypes; from ctypes import wintypes; "
+            "get_window = ctypes.windll.kernel32.GetConsoleWindow; "
+            "get_window.restype = wintypes.HWND; print(bool(get_window()))"
+        ),
     ]
     command = CommandSpec(
         shell=subprocess.list2cmdline(argv) if shell else None,
@@ -77,7 +81,8 @@ def test_windows_captured_process_has_no_console(tmp_path, shell):
     lines = []
     result = SubprocessRunner().run(command, lines.append)
     assert result.exit_code == 0, (result, lines)
-    assert lines == ["0", "0"]
+    # CREATE_NO_WINDOW suppresses the window; a console code page may still exist.
+    assert lines == ["False"]
 
 
 def test_process_environment_and_exit(tmp_path):
