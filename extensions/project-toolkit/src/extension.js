@@ -10,6 +10,14 @@ const { validateParameters } = require("./parameters");
 // themes. Labels and icon shapes carry the same meaning without relying on colour.
 const iconColors = {
   error: "errorForeground", warning: "list.warningForeground",
+  repo: "charts.blue", "root-folder": "charts.blue", project: "charts.blue",
+  "play-circle": "charts.green", tasklist: "charts.green", check: "charts.green",
+  "git-merge": "charts.purple", layers: "charts.orange", versions: "charts.orange",
+  "settings-gear": "charts.yellow", folder: "charts.yellow", key: "charts.yellow",
+  package: "charts.orange", tools: "charts.orange", calendar: "charts.purple",
+  terminal: "charts.blue", "symbol-variable": "charts.blue", "symbol-object": "charts.purple",
+  "list-tree": "charts.purple", "list-ordered": "charts.purple", "list-unordered": "charts.purple",
+  output: "charts.blue", graph: "charts.green", question: "charts.blue", sync: "charts.blue",
 };
 
 // VS Code is injected so command dispatch and trust boundaries can be tested
@@ -32,7 +40,7 @@ function createController(vscode, context, editorFactory = createEditors) {
     project: async (entry, { publish = true } = {}) => {
       if (publish) await refresh();
       else {
-        await pending;
+        await settled();
         const record = records.find(record => record.inventory?.projects.some(project => project.entry_file === entry));
         if (!record) throw new Error("PTK project is no longer available.");
         const inventory = await core.readInventory(settings(record.folder), record.folder.uri.fsPath);
@@ -47,7 +55,7 @@ function createController(vscode, context, editorFactory = createEditors) {
       throw new Error("PTK project is no longer available.");
     },
     configuration: async uri => {
-      await pending;
+      await settled();
       return records.flatMap(record => record.inventory?.projects || [])
         .find(project => project.config_files?.includes(uri.fsPath))?.configuration;
     },
@@ -118,7 +126,14 @@ function createController(vscode, context, editorFactory = createEditors) {
       }
       if (different) changed.fire();
     });
-    return pending;
+    return settled();
+  }
+
+  async function settled() {
+    // A watcher may supersede discovery while it is in flight. Consumers must
+    // wait for the replacement too, rather than acknowledge an older inventory.
+    let observed;
+    do { observed = pending; await observed; } while (observed !== pending);
   }
 
   function schedule(uri) {
@@ -274,7 +289,7 @@ function createController(vscode, context, editorFactory = createEditors) {
 
   async function chooseProject(element, capability) {
     trusted();
-    await pending;
+    await settled();
     const candidates = records.flatMap(record => (record.inventory?.projects || [])
       .filter(project => !project.error && (!capability || project.capabilities[capability]))
       .map(project => ({ project, folder: record.folder, root: project.root, ci: record.inventory.ci })));
@@ -287,7 +302,7 @@ function createController(vscode, context, editorFactory = createEditors) {
 
   async function chooseTarget(element, jobsOnly = false) {
     trusted();
-    await pending;
+    await settled();
     const targets = core.availableTargets(records).filter(t => !jobsOnly || t.kind === "job");
     if (element?.kind) {
       const found = targets.find(t => t.root === element.root && t.kind === element.kind && t.name === element.name);
@@ -300,7 +315,7 @@ function createController(vscode, context, editorFactory = createEditors) {
 
   async function chooseBuiltin(element, helpOnly = false) {
     trusted();
-    await pending;
+    await settled();
     const targets = core.availableBuiltins(records).filter(target => helpOnly || target.spec.runnable);
     if (element?.kind) {
       const found = targets.find(target => target.root === element.root && target.name === element.name && target.project?.entry_file === element.project?.entry_file);
@@ -456,7 +471,7 @@ function createController(vscode, context, editorFactory = createEditors) {
   });
   async function validateConfiguration(element = {}) {
     trusted();
-    await pending;
+    await settled();
     const candidates = records.flatMap(record => ((record.inventory || record.previous)?.projects || [])
       .map(project => ({ project, folder: record.folder, root: project.root })));
     let owner = candidates.find(candidate => element.project?.entry_file === candidate.project.entry_file ||
@@ -502,13 +517,13 @@ function createController(vscode, context, editorFactory = createEditors) {
   context.subscriptions.push(vscode.tasks.registerTaskProvider("project-toolkit", {
     async provideTasks() {
       if (!vscode.workspace.isTrusted) return [];
-      await pending;
+      await settled();
       return core.availableTargets(records).filter(t => !(t.kind === "workflow" && t.ci) && !(t.spec.params || []).some(p => p.required && !p.env))
         .map(t => makeTask(t, { variant: t.project ? variantFor(t) : undefined }));
     },
     async resolveTask(task) {
       if (!vscode.workspace.isTrusted) return;
-      await pending;
+      await settled();
       const d = task.definition;
       const targets = d.kind === "builtin" ? core.availableBuiltins(records) : core.availableTargets(records);
       const target = targets.find(t => t.kind === d.kind && t.name === d.name && t.root === d.root);
@@ -542,7 +557,7 @@ function createController(vscode, context, editorFactory = createEditors) {
     vscode.workspace.onDidChangeWorkspaceFolders(() => schedule()), vscode.workspace.onDidGrantWorkspaceTrust(refresh),
     { dispose() { disposed = true; revision++; clearTimeout(timer); } });
   refresh();
-  return { refresh, provider, ready: () => pending };
+  return { refresh, provider, ready: settled };
 }
 
 function activate(context) { return createController(require("vscode"), context); }

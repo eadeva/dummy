@@ -29,23 +29,64 @@
     for (const key of path) { schema = child(schema, value, key, root); value = value?.[key]; }
     return schema;
   }
-  function initial(schema, root, depth = 0) {
-    schema = resolve(schema, root);
-    if (depth > 15) return null;
-    // A non-null field is useful when adding an optional field; absence already
-    // represents the default null. Defaults never populate unselected fields.
-    if (Object.hasOwn(schema, "default") && schema.default !== null) return structuredClone(schema.default);
-    const chosen = choices(schema, root).find(part => part.type !== "null") || schema;
-    if (chosen.enum) return chosen.enum[0];
-    if (chosen.type === "object") {
-      const value = {};
-      for (const key of chosen.required || []) value[key] = initial(chosen.properties?.[key], root, depth + 1);
-      return value;
+  function initial(schema, root, context = {}) {
+    const object = value => value !== null && typeof value === "object" && !Array.isArray(value);
+    const uniqueName = (base, used) => {
+      let name = base, index = 2;
+      while (used.has(name)) name = `${base}_${index++}`;
+      return name;
+    };
+    function create(spec, seed, depth = 0, existing = []) {
+      if (depth > 30) throw new Error("This schema requires a recursive value. Use Raw YAML to define it.");
+      spec = resolve(spec, root);
+      const template = spec["x-ptk-initial"] ?? (spec.default !== null ? spec.default : undefined);
+      let value = structuredClone(seed === undefined ? template : seed);
+      const variants = choices(spec, root);
+      const chosen = variants.find(part => value !== undefined && part.type === type(value)) || variants.find(part => part.type !== "null") || spec;
+      spec = { ...spec, ...chosen };
+      if ((value === undefined || object(value) && !Object.keys(value).length) && spec["x-ptk-initial"] !== undefined) value = structuredClone(spec["x-ptk-initial"]);
+      if (value === undefined && spec.default !== undefined && spec.default !== null) value = structuredClone(spec.default);
+      if (Object.hasOwn(spec, "const")) return structuredClone(spec.const);
+      const reference = spec["x-ptk-reference"];
+      if (reference && context.configuration) {
+        const targets = reference.path.reduce((value, key) => value?.[key], context.configuration);
+        const names = Object.keys(targets || {});
+        if (!names.length) throw new Error(`Create a ${reference.label} before adding this field.`);
+        return names.includes(value) ? value : names[0];
+      }
+      if (spec.enum) return spec.enum.includes(value) ? value : structuredClone(spec.enum[0]);
+      if (spec.type === "object" || object(value)) {
+        value = object(value) ? value : {};
+        for (const key of new Set([...(spec.required || []), ...Object.keys(value)])) {
+          const property = spec.properties?.[key] || (object(spec.additionalProperties) ? spec.additionalProperties : {});
+          value[key] = create(property, value[key], depth + 1);
+        }
+        while (Object.keys(value).length < (spec.minProperties || 0)) {
+          const unused = [...Object.keys(spec.properties || {}), ...(spec.propertyNames?.enum || [])].find(key => !Object.hasOwn(value, key));
+          if (!unused && spec.additionalProperties === false) throw new Error("The schema cannot supply enough required fields.");
+          const key = unused || uniqueName(spec["x-ptk-entry-name"] || "item", new Set(Object.keys(value)));
+          value[key] = create(spec.properties?.[key] || spec.additionalProperties, undefined, depth + 1);
+        }
+        if (spec["x-ptk-entry-name"] && spec.maxProperties === 1 && Object.keys(value).length === 1) {
+          const key = Object.keys(value)[0];
+          const name = uniqueName(key, new Set(existing.flatMap(item => object(item) ? Object.keys(item) : [])));
+          if (name !== key) value = { [name]: value[key] };
+        }
+        return value;
+      }
+      if (spec.type === "array" || Array.isArray(value)) {
+        const result = [];
+        const items = Array.isArray(value) ? value : [];
+        for (let index = 0; index < Math.max(items.length, spec.minItems || 0); index++) result.push(create(spec.items, items[index], depth + 1, result));
+        return result;
+      }
+      if (value !== undefined) return value;
+      if (spec.type === "boolean") return false;
+      if (["number", "integer"].includes(spec.type)) return spec.minimum ?? (spec.exclusiveMinimum !== undefined ? spec.exclusiveMinimum + 1 : Math.min(0, spec.maximum ?? 0));
+      if (spec.minLength) return "value".repeat(Math.ceil(spec.minLength / 5)).slice(0, spec.minLength);
+      return spec.type === "null" ? null : "";
     }
-    if (chosen.type === "array") return Array.from({ length: chosen.minItems || 0 }, () => initial(chosen.items, root, depth + 1));
-    if (chosen.type === "boolean") return false;
-    if (["number", "integer"].includes(chosen.type)) return chosen.minimum ?? (chosen.exclusiveMinimum !== undefined ? chosen.exclusiveMinimum + 1 : 0);
-    return chosen.type === "null" ? null : "";
+    return create(schema, undefined, 0, context.existing || []);
   }
   return { type, resolve, choices, effective, child, at, initial };
 });

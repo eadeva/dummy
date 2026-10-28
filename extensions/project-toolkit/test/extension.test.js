@@ -43,7 +43,8 @@ function harness(t, docs = [inventory()], trusted = true) {
   const api = {
     EventEmitter, Task, ProcessExecution,
     TreeItem: class { constructor(label, state) { Object.assign(this, { label, state }); } },
-    ThemeIcon: class {}, ThemeColor: class {}, TreeItemCollapsibleState: { Expanded: 2, Collapsed: 1, None: 0 },
+    ThemeIcon: class { constructor(id, color) { Object.assign(this, { id, color }); } },
+    ThemeColor: class { constructor(id) { this.id = id; } }, TreeItemCollapsibleState: { Expanded: 2, Collapsed: 1, None: 0 },
     TaskRevealKind: { Always: 1 }, TaskPanelKind: { Dedicated: 2 },
     Uri: { file: fsPath => ({ scheme: "file", fsPath }) },
     window: {
@@ -643,4 +644,39 @@ test("unchanged refreshes and edit preflight do not redraw the tree; identities 
   await h.editorActions.project(doc.projects[0].entry_file);
   assert.equal(h.treeChanges(), before + 1);
   assert.deepEqual(ids(h.controller.provider.getChildren()), original);
+});
+
+test("an editor save waits for a superseding refresh instead of acknowledging an old snapshot", async t => {
+  const doc = inventory();
+  const h = harness(t, [doc]);
+  await h.controller.ready();
+  let started, releaseFirst, releaseLatest, latestStarted;
+  const firstStarted = new Promise(resolve => { started = resolve; });
+  const nextStarted = new Promise(resolve => { latestStarted = resolve; });
+  let reads = 0;
+  t.mock.method(core, "readInventory", async () => {
+    if (++reads === 1) { started(); await new Promise(resolve => { releaseFirst = resolve; }); }
+    else { latestStarted(); await new Promise(resolve => { releaseLatest = resolve; }); }
+    return structuredClone(doc);
+  });
+  const saved = h.editorActions.project(doc.projects[0].entry_file);
+  await firstStarted;
+  doc.projects[0].configuration.value.jobs.added = { steps: [{ hello: { run: "echo hello" } }] };
+  const watcherRefresh = h.controller.refresh();
+  releaseFirst();
+  await nextStarted;
+  releaseLatest();
+  const [owner] = await Promise.all([saved, watcherRefresh]);
+  assert.deepEqual(owner.project.configuration.value.jobs.added, doc.projects[0].configuration.value.jobs.added);
+});
+
+test("tree icons use distinct theme colours for jobs, workflows and configuration categories", async t => {
+  const h = harness(t);
+  await h.controller.ready();
+  const project = h.controller.provider.getChildren()[0].children[0];
+  const jobs = project.children.find(item => item.label === "Jobs");
+  const workflows = project.children.find(item => item.label === "Workflows");
+  const config = project.children.find(item => item.label === "Configuration");
+  const items = [project, jobs, jobs.children[0], workflows, config].map(item => h.controller.provider.getTreeItem(item));
+  assert.deepEqual(items.map(item => item.iconPath.color.id), ["charts.blue", "charts.green", "charts.green", "charts.purple", "charts.yellow"]);
 });

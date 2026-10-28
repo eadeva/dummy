@@ -7,7 +7,8 @@
   const app = document.getElementById("app");
   let state, schema, selected = [], issue = "", serial = 0, inflight, commitRequested = false, rendering = false;
   const queue = new Map();
-  let deferred;
+  const deferred = [], uiDrafts = new Map();
+  let pointerActive = false, renderPending = false;
   let parameterDraft = {};
   const stored = vscode.getState() || {};
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -59,14 +60,18 @@
     const node = document.getElementById("status");
     const validation = document.getElementById("validation-error");
     if (validation) { validation.textContent = state.validationError || ""; validation.hidden = !state.validationError; }
-    if (node) node.textContent = inflight ? "Saving…" : queue.size ? "Editing · Leave the field or press Ctrl/Cmd+S to save" : state.dirty ? "Unsaved changes · Ctrl/Cmd+S to save" : "Saved";
+    if (node) node.textContent = inflight || deferred.length ? "Saving…" : queue.size ? "Editing · Leave the field or press Ctrl/Cmd+S to save" : state.dirty ? "Unsaved changes · Ctrl/Cmd+S to save" : "Saved";
   }
   function flush(request = true) {
     if (request) commitRequested = true;
     if (inflight || !state) return;
     if (!queue.size) {
       commitRequested = false;
-      if (deferred) { const action = deferred; deferred = undefined; action(); }
+      if (deferred.length) {
+        try { deferred.shift()(); }
+        catch (error) { deferred.length = 0; showIssue(error.message); }
+        if (!inflight && !queue.size && deferred.length) flush(false);
+      }
       return;
     }
     if (commitRequested) {
@@ -79,10 +84,10 @@
     }
   }
   function afterEdits(action) {
-    const invalid = document.querySelector('[aria-invalid="true"]');
+    const invalid = document.querySelector('[data-number-invalid="true"]');
     if (invalid) { showIssue("Enter a valid number before continuing."); invalid.focus(); return; }
     document.activeElement?.blur();
-    deferred = action;
+    deferred.push(action);
     flush();
   }
   function change(operation, immediate = false) {
@@ -125,22 +130,27 @@
       input.value = String(value);
       input.addEventListener("input", () => {
         if (numeric && (!input.value.trim() || !input.checkValidity() || !Number.isFinite(Number(input.value)))) {
-          input.setAttribute("aria-invalid", "true"); return;
+          input.setAttribute("aria-invalid", "true"); input.setAttribute("data-number-invalid", "true"); return;
         }
         input.removeAttribute("aria-invalid");
+        input.removeAttribute("data-number-invalid");
         onValue(numeric ? Number(input.value) : input.value);
       });
-      input.addEventListener("blur", () => { if (!rendering && !input.hasAttribute("aria-invalid")) flush(); });
+      input.addEventListener("blur", () => { if (!rendering && !input.hasAttribute("data-number-invalid")) flush(); });
     }
     return input;
   }
   function renderConfiguration() {
+    // Keep the target button alive through pointerup/click if a save reply
+    // arrives mid-click. Replacing it here silently loses the user's action.
+    if (pointerActive) { renderPending = true; return; }
+    renderPending = false;
     rendering = true;
     try {
       const active = document.activeElement;
       const focus = active?.id ? { id: active.id, start: active.selectionStart, end: active.selectionEnd,
-        value: active.value, invalid: active.getAttribute("aria-invalid"),
-        draft: [...queue.values()].some(op => `field-${JSON.stringify(op.path)}` === active.id) } : undefined;
+        value: active.value, invalid: active.getAttribute("aria-invalid"), numberInvalid: active.getAttribute("data-number-invalid"),
+        draft: active.hasAttribute("data-ui-draft") || [...queue.values()].some(op => `field-${JSON.stringify(op.path)}` === active.id) } : undefined;
       const scroll = [window.scrollX, window.scrollY];
       app.replaceChildren();
       const header = el("header");
@@ -199,6 +209,7 @@
         if (input) {
           if (focus.draft || focus.invalid) input.value = focus.value;
           if (focus.invalid) input.setAttribute("aria-invalid", focus.invalid);
+          if (focus.numberInvalid) input.setAttribute("data-number-invalid", focus.numberInvalid);
           input.focus({ preventScroll: true });
           if (typeof focus.start === "number" && (["text", "search", "url", "tel", "password"].includes(input.type) || input.tagName === "TEXTAREA")) input.setSelectionRange(focus.start, focus.end);
         }
@@ -228,7 +239,19 @@
       const summary = Array.isArray(value) ? `${value.length} items` : Object.keys(value).join(", ") || "Empty object";
       field.append(el("p", summary, { className: "help" }), button("Edit fields →", () => navigate(P.namedEntry(value, path) ? [...path, P.namedEntry(value, path)] : path)));
     } else {
-      field.append(control(value, spec, next => change({ op: "set", path, value: next }), id));
+      const input = control(value, spec, next => change({ op: "set", path, value: next }), id);
+      const hint = el("p", required ? "Required — enter a value." : "Empty — enter a value.", { className: "empty-field-message", id: `${id}-empty` });
+      const markEmpty = () => {
+        const empty = typeof value === "string" ? !input.value.trim() : value === null && required;
+        field.classList.toggle("needs-value", empty);
+        hint.hidden = !empty;
+        if (empty && required || input.hasAttribute("data-number-invalid")) input.setAttribute("aria-invalid", "true");
+        else input.removeAttribute("aria-invalid");
+      };
+      input.setAttribute("aria-describedby", hint.id);
+      if (required) input.setAttribute("aria-required", "true");
+      input.addEventListener("input", markEmpty); input.addEventListener("change", markEmpty);
+      markEmpty(); field.append(input, hint);
     }
     const actions = el("div", undefined, { className: "field-actions" });
     let types = [...new Set(S.choices(spec, schema).map(item => item.type).filter(Boolean))];
@@ -262,9 +285,10 @@
     field.append(actions); main.append(field);
   }
   function addField(main, value, spec, resolved) {
+    const containerPath = [...selected];
     const box = el("fieldset", undefined, { className: "add" });
     const isList = Array.isArray(value);
-    const isJobs = selected.at(-1) === "jobs";
+    const isJobs = selected.length === 1 && selected[0] === "jobs";
     box.append(el("legend", isJobs ? "Add a job" : isList ? "Add an item" : "Add a field"));
     const row = el("div", undefined, { className: "row" });
     let name, options = Object.keys(resolved.properties || {}).filter(key => !Object.hasOwn(value, key));
@@ -275,6 +299,12 @@
     } else if (!isList) name = el("input", undefined, { placeholder: isJobs ? "e.g. build" : "Field name", "aria-label": isJobs ? "New job name" : "New field name" });
     const help = el("p", "", { className: "help" });
     if (name) {
+      name.id = `add-name-${JSON.stringify(containerPath)}`;
+      name.setAttribute("data-ui-draft", "true");
+      const draft = uiDrafts.get(name.id);
+      if (draft !== undefined && (name.tagName !== "SELECT" || options.includes(draft))) name.value = draft;
+      const rememberName = () => uiDrafts.set(name.id, name.value);
+      name.addEventListener("input", rememberName); name.addEventListener("change", rememberName);
       row.append(name);
       const describe = () => {
         const field = resolved.properties?.[name.value] || {};
@@ -283,16 +313,26 @@
       name.addEventListener("change", describe); describe();
     }
     row.append(button(isJobs ? "Add job" : isList ? "Add item" : "Add field", () => {
-      const key = isList ? value.length : name.value.trim();
+      const key = isList ? undefined : name.value.trim();
       if (!isList && (!key || ["__proto__", "constructor", "prototype"].includes(key))) { showIssue("Enter a valid field name."); return; }
       if (isJobs && !/^[a-z][a-z0-9-]*$/.test(key)) { showIssue("Job names must start with a lowercase letter and contain only lowercase letters, digits or hyphens."); return; }
-      if (!isList && Object.hasOwn(value, key)) { showIssue(`Field ${key} already exists.`); return; }
-      const child = S.child(spec, value, key, schema);
-      let next = S.initial(child, schema);
-      const directory = S.resolve(child, schema)["x-ptk-directory-template"];
-      if (directory) next.path = directory.replace("{name}", key);
-      if (isList && child.$ref === "#/$defs/StepEntry") next = { [`step_${key + 1}`]: { run: "echo Hello" } };
-      afterEdits(() => change({ op: "add", path: [...selected, key], value: next }, true));
+      afterEdits(() => {
+        const current = valueAt(containerPath);
+        if (current === null || typeof current !== "object") throw new Error("The parent field no longer exists.");
+        const index = isList ? current.length : key;
+        if (!isList && Object.hasOwn(current, key)) throw new Error(`Field ${key} already exists.`);
+        const currentSpec = S.at(schema, state.value, containerPath, schema);
+        const child = S.child(currentSpec, current, index, schema);
+        const next = S.initial(child, schema, { name: key, existing: isList ? current : [], configuration: state.configurationValue || state.value });
+        const directory = S.resolve(child, schema)["x-ptk-directory-template"];
+        if (directory) next.path = directory.replace("{name}", key);
+        if (name?.tagName === "INPUT" && uiDrafts.get(name.id)?.trim() === key) {
+          uiDrafts.delete(name.id);
+          const visible = document.getElementById(name.id);
+          if (visible) visible.value = "";
+        }
+        change({ op: "add", path: [...containerPath, index], value: next }, true);
+      });
     }, ""));
     box.append(row, help); main.append(box);
   }
@@ -385,7 +425,7 @@
         queue.clear();
         for (const operation of [...submitted, ...drafts]) queue.set(JSON.stringify(operation.path), operation);
       }
-      commitRequested = false; deferred = undefined;
+      commitRequested = false; deferred.length = 0;
       issue = message.issue || "The document changed outside this form. Review the refreshed fields before editing again.";
     } else if (message.issue === undefined) issue = "";
     inflight = undefined;
@@ -405,6 +445,13 @@
     else status();
     flush(false);
   });
+  document.addEventListener("pointerdown", event => { if (app.contains(event.target)) pointerActive = true; });
+  const finishPointer = () => setTimeout(() => {
+    pointerActive = false;
+    if (renderPending) renderConfiguration();
+  }, 0);
+  document.addEventListener("pointerup", finishPointer);
+  document.addEventListener("pointercancel", finishPointer);
   document.addEventListener("keydown", event => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s" && state?.mode === "configuration") {
       event.preventDefault(); afterEdits(() => vscode.postMessage({ type: "save" }));

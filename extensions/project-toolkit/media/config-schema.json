@@ -86,7 +86,12 @@
         "name"
       ],
       "title": "ArtifactorySource",
-      "type": "object"
+      "type": "object",
+      "x-ptk-initial": {
+        "url": "https://artifactory.example.invalid/artifactory",
+        "repository": "tools",
+        "name": "tool.zip"
+      }
     },
     "ArtifactoryStructure": {
       "additionalProperties": false,
@@ -110,7 +115,8 @@
           },
           "minProperties": 1,
           "title": "Events",
-          "type": "object"
+          "type": "object",
+          "x-ptk-entry-name": "push"
         },
         "jobs": {
           "additionalProperties": {
@@ -126,7 +132,11 @@
         "events"
       ],
       "title": "ArtifactoryStructure",
-      "type": "object"
+      "type": "object",
+      "x-ptk-initial": {
+        "url": "https://artifactory.example.invalid/artifactory",
+        "repository": "artifacts"
+      }
     },
     "ChocoSource": {
       "additionalProperties": false,
@@ -220,7 +230,10 @@
         "expr"
       ],
       "title": "Constraint",
-      "type": "object"
+      "type": "object",
+      "x-ptk-initial": {
+        "expr": "true"
+      }
     },
     "CredentialSpec": {
       "additionalProperties": false,
@@ -912,7 +925,13 @@
             }
           ],
           "default": null,
-          "title": "Default Job"
+          "title": "Default Job",
+          "x-ptk-reference": {
+            "path": [
+              "jobs"
+            ],
+            "label": "job"
+          }
         },
         "components": {
           "additionalProperties": {
@@ -995,7 +1014,10 @@
         }
       },
       "title": "PythonSpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-initial": {
+        "interpreter": "cli"
+      }
     },
     "ReportingSpec": {
       "additionalProperties": false,
@@ -1277,7 +1299,11 @@
         "version"
       ],
       "title": "ToolbaseSource",
-      "type": "object"
+      "type": "object",
+      "x-ptk-initial": {
+        "package": "tool",
+        "version": "1.0.0"
+      }
     },
     "VariantEnvSpec": {
       "additionalProperties": false,
@@ -1599,7 +1625,11 @@
         }
       },
       "title": "VersionSource",
-      "type": "object"
+      "type": "object",
+      "x-ptk-initial": {
+        "source": "literal",
+        "version": "0.1.0"
+      }
     },
     "VersioningSpec": {
       "additionalProperties": false,
@@ -1638,7 +1668,10 @@
         }
       },
       "title": "VersioningSpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-initial": {
+        "project": {}
+      }
     },
     "WorkflowSpec": {
       "additionalProperties": false,
@@ -1880,7 +1913,10 @@
       },
       "required": [],
       "title": "Step",
-      "type": "object"
+      "type": "object",
+      "x-ptk-initial": {
+        "run": "echo Hello"
+      }
     },
     "StepEntry": {
       "type": "object",
@@ -1891,6 +1927,7 @@
           "run": "echo Hello"
         }
       },
+      "x-ptk-entry-name": "step",
       "description": "- step-name: {run|uses|steps: ...}  or  - step-name: \"command\"",
       "additionalProperties": {
         "anyOf": [
@@ -1923,7 +1960,13 @@
             }
           ],
           "default": null,
-          "title": "Job"
+          "title": "Job",
+          "x-ptk-reference": {
+            "path": [
+              "jobs"
+            ],
+            "label": "job"
+          }
         },
         "repo": {
           "anyOf": [
@@ -1972,7 +2015,10 @@
       },
       "required": [],
       "title": "WorkflowNode",
-      "type": "object"
+      "type": "object",
+      "x-ptk-initial": {
+        "job": "hello"
+      }
     },
     "WorkflowEntry": {
       "default": {
@@ -1980,6 +2026,7 @@
           "job": "hello"
         }
       },
+      "x-ptk-entry-name": "job",
       "type": "object",
       "minProperties": 1,
       "maxProperties": 1,

@@ -32,6 +32,10 @@ main { padding: 24px 28px 40px; min-width: 0; max-width: 1000px; }
 .field { border: 1px solid var(--vscode-panel-border, var(--vscode-widget-border)); border-left: 3px solid var(--vscode-charts-blue, var(--vscode-focusBorder)); border-radius: 5px; padding: 16px; margin: 12px 0; }
 .field[data-type=boolean] { border-left-color: var(--vscode-charts-green, var(--vscode-focusBorder)); }
 .field[data-type=object], .field[data-type=array] { border-left-color: var(--vscode-charts-purple, var(--vscode-focusBorder)); }
+.field.needs-value { border-left-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground)); }
+.needs-value input, .needs-value textarea, .needs-value select { border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground)); }
+.empty-field-message { color: var(--vscode-errorForeground); font-size: 12px; }
+.empty-field-message[hidden] { display: none; }
 .field-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 8px; }
 .field label.name { font-weight: 600; overflow-wrap: anywhere; }
 .badge { padding: 2px 6px; border-radius: 3px; font-size: 11px; color: var(--vscode-descriptionForeground); background: var(--vscode-badge-background); }

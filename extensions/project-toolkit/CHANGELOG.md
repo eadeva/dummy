@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.1
+
+- Wait for superseding watcher refreshes before acknowledging configuration saves.
+- Queue Add actions in order and preserve unfinished field names and clicks during save replies.
+- Create required descendants, minimum collection entries and unique step names using the installed PTK schema.
+- Select existing jobs for new workflow steps and show empty fields in red with a fill-in message.
+- Restore theme-aware colors for project, job, workflow and configuration icons.
+
 ## 0.6.0
 
 - Use PTK’s conventional document layout and section schemas through configuration interface v2.

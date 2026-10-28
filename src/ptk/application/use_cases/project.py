@@ -487,6 +487,7 @@ class ExportSchema:
                 "minProperties": 1,
                 "maxProperties": 1,
                 "default": {"step": {"run": "echo Hello"}},
+                "x-ptk-entry-name": "step",
                 "description": '- step-name: {run|uses|steps: ...}  or  - step-name: "command"',
                 "additionalProperties": {
                     "anyOf": [
@@ -510,6 +511,7 @@ class ExportSchema:
             schema["$defs"]["WorkflowBody"] = body
             schema["$defs"]["WorkflowEntry"] = {
                 "default": {"job": {"job": "hello"}},
+                "x-ptk-entry-name": "job",
                 "type": "object",
                 "minProperties": 1,
                 "maxProperties": 1,
@@ -523,6 +525,41 @@ class ExportSchema:
                 )
             )
             schema["$defs"].pop("WorkflowNode", None)
+        # Form creation hints belong to the installed PTK schema. They describe
+        # a valid starting shape without changing runtime configuration defaults.
+        definitions = schema.get("$defs", {})
+        initial = {
+            "ArtifactoryStructure": {
+                "url": "https://artifactory.example.invalid/artifactory",
+                "repository": "artifacts",
+            },
+            "ArtifactorySource": {
+                "url": "https://artifactory.example.invalid/artifactory",
+                "repository": "tools",
+                "name": "tool.zip",
+            },
+            "ToolbaseSource": {"package": "tool", "version": "1.0.0"},
+            "PythonSpec": {"interpreter": "cli"},
+            "StepBody": {"run": "echo Hello"},
+            "WorkflowBody": {"job": "hello"},
+            "VersionSource": {"source": "literal", "version": "0.1.0"},
+            "VersioningSpec": {"project": {}},
+            "Constraint": {"expr": "true"},
+        }
+        for name, value in initial.items():
+            if name in definitions:
+                definitions[name]["x-ptk-initial"] = value
+        definitions["ArtifactoryStructure"]["properties"]["events"][
+            "x-ptk-entry-name"
+        ] = "push"
+        definitions["WorkflowBody"]["properties"]["job"]["x-ptk-reference"] = {
+            "path": ["jobs"],
+            "label": "job",
+        }
+        definitions["ProjectSpec"]["properties"]["default_job"]["x-ptk-reference"] = {
+            "path": ["jobs"],
+            "label": "job",
+        }
         for definition in [schema, schema.get("$defs", {}).get("JobSpec", {})]:
             properties = definition.get("properties", {})
             if "requires_tools" in properties:
@@ -532,7 +569,7 @@ class ExportSchema:
                         {"type": "array", "items": {"type": "string"}},
                     ]
                 }
-        # Each discovered file may supply any disjoint subset of the schema.
+        # The assembled schema also describes not-yet-authored optional sections.
         schema["required"] = []
         schema["properties"]["repository"] = {"$ref": "#/$defs/RepositorySpec"}
         # Authored omission means automatic discovery, not explicit standalone.

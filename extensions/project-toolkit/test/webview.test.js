@@ -121,3 +121,77 @@ test("an unfinished numeric value survives a structural acknowledgement", option
   assert.equal(await h.field("first").evaluate(input => document.activeElement === input), true);
   assert.equal((await h.edits()).length, 1);
 });
+
+test("adding a second list item during a save uses the acknowledged list position", options, async t => {
+  const h = await form(t, { jobs: { build: { steps: [] } } }, ["jobs", "build", "steps"]);
+  await h.page.getByRole("button", { name: "Add item", exact: true }).click();
+  const [first] = await h.edits();
+  await h.page.getByRole("button", { name: "Add item", exact: true }).click();
+  h.value.jobs.build.steps.push(first.operations[0].value);
+  await h.state({ ack: first.id });
+  const second = (await h.edits())[1];
+  assert.equal(second.operations[0].path.at(-1), 1);
+  assert.notDeepEqual(Object.keys(second.operations[0].value), Object.keys(first.operations[0].value));
+});
+
+test("a structural reply retains the next add-field name and caret", options, async t => {
+  const h = await form(t);
+  const name = h.page.getByRole("textbox", { name: "New field name", exact: true });
+  await name.fill("third");
+  await h.page.getByRole("button", { name: "Add field", exact: true }).click();
+  const [edit] = await h.edits();
+  await name.fill("fourth");
+  await name.evaluate(input => input.setSelectionRange(3, 3));
+  h.value.vars.third = "";
+  await h.state({ ack: edit.id });
+  assert.deepEqual(await name.evaluate(input => [input.value, document.activeElement === input, input.selectionStart]), ["fourth", true, 3]);
+});
+
+test("tree navigation does not discard an add action queued behind a scalar save", options, async t => {
+  const h = await form(t);
+  await h.field("first").fill("changed");
+  await h.page.getByRole("textbox", { name: "New field name", exact: true }).fill("third");
+  const [edit] = await h.edits();
+  await h.page.getByRole("button", { name: "Add field", exact: true }).click();
+  await h.page.evaluate(() => window.dispatchEvent(new MessageEvent("message", { data: { type: "navigate", selection: [] } })));
+  h.value.vars.first = "changed";
+  await h.state({ ack: edit.id });
+  assert.deepEqual((await h.edits())[1]?.operations[0].path, ["vars", "third"]);
+});
+
+test("a reply between pointer down and click cannot eat an Add field click", options, async t => {
+  const h = await form(t);
+  await h.page.locator(".field").filter({ has: h.field("unused") }).getByRole("button", { name: "Remove", exact: true }).click();
+  const [edit] = await h.edits();
+  await h.page.getByRole("textbox", { name: "New field name", exact: true }).fill("third");
+  const box = await h.page.getByRole("button", { name: "Add field", exact: true }).boundingBox();
+  await h.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await h.page.mouse.down();
+  delete h.value.vars.unused;
+  await h.state({ ack: edit.id });
+  await h.page.mouse.up();
+  assert.deepEqual((await h.edits())[1]?.operations[0].path, ["vars", "third"]);
+});
+
+test("empty text fields show a red fill-in cue that clears immediately on input", options, async t => {
+  const h = await form(t, { project: { name: "", description: "" } }, ["project"]);
+  const name = h.field("name");
+  const section = h.page.locator(".field").filter({ has: name });
+  assert.equal(await name.getAttribute("aria-required"), "true");
+  assert.equal(await name.getAttribute("aria-invalid"), "true");
+  assert.match(await section.getAttribute("class"), /needs-value/);
+  assert.equal(await section.locator(".empty-field-message").innerText(), "Required — enter a value.");
+  await name.fill("Demo");
+  assert.doesNotMatch(await section.getAttribute("class"), /needs-value/);
+  assert.equal(await name.getAttribute("aria-invalid"), null);
+  assert.equal(await section.locator(".empty-field-message").isVisible(), false);
+  assert.equal((await h.edits()).length, 0);
+  await h.field("description").focus();
+  assert.equal((await h.edits()).length, 1);
+});
+
+test("zero and false are filled values rather than empty fields", options, async t => {
+  const h = await form(t, { vars: { count: 0, enabled: false, empty: "" } });
+  const empty = h.page.locator(".needs-value label.name");
+  assert.deepEqual(await empty.allTextContents(), ["empty"]);
+});

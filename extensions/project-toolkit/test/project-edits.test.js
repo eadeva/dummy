@@ -16,7 +16,7 @@ function fixture() {
 
 test("Artifactory event defaults never acquire job step fields", () => {
   const events = S.child(schema.$defs.ArtifactoryStructure, {}, "events", schema);
-  assert.deepEqual(S.initial(events, schema), {});
+  assert.deepEqual(S.initial(events, schema), { push: { path: "" } });
   assert.deepEqual(S.initial(S.child(events, {}, "push", schema), schema), { path: "" });
 });
 test("scalar edits use document-relative paths and preserve comments", () => {

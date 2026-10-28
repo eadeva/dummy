@@ -36,9 +36,10 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
       panels.set(key, panel);
       let applying = false;
       let disposed = false;
+      let configurationValue;
       let chain = Promise.resolve();
       const post = message => !disposed && panel.webview.postMessage(message);
-      function state(extra = {}) { return post({ type: "state", ...configurationState(document), ...extra }); }
+      function state(extra = {}) { return post({ type: "state", ...configurationState(document), configurationValue, ...extra }); }
       const updates = vscode.workspace.onDidChangeTextDocument(event => {
         if (event.document.uri.toString() !== key) return;
         if (!applying) state();
@@ -56,6 +57,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
               const installed = await configuration(document.uri);
               if (!installed?.schema || installed.version !== 2) return state({ error: "No compatible PTK project schema is available. Open the project and refresh PTK, or use Raw YAML.", schema: {}, selection });
               const schema = projectEdits.schemaForFile(installed, document.uri.fsPath);
+              configurationValue = installed.value;
               return state({ schema: schema || {}, ...(schema ? {} : { error: "This file is not part of PTK’s configuration layout. Use Raw YAML." }), selection });
             }
             if (message.type === "edit") {

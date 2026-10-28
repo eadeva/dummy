@@ -154,8 +154,16 @@ features go beside their code. Raw-file forms use the appropriate document schem
 
 Text and numbers remain local while typing. Leaving a field, saving or navigating
 commits the edit; save replies preserve focus, cursor and unfinished input.
+Add actions are queued in order and acknowledge the newest completed refresh,
+so file-watcher activity cannot hide a successfully added item. New items include
+required descendants and minimum collection entries from PTK's schema. Workflow
+steps select an existing job; create a job first if none exists.
+Empty text fields have red borders and a fill-in message that clears while typing.
+Zero and false remain filled values. Starter URLs use ``example.invalid`` and
+must be replaced with the intended endpoint before use.
 The form uses the VS Code tree and breadcrumbs for navigation. List rows show
 names or values. There is no duplicate navigation sidebar or destination picker.
+Theme-aware colors distinguish jobs, workflows and configuration categories.
 Fingerprints reject stale edits, and dirty YAML must be saved first.
 
 Loading errors appear in the tree and Problems panel. Validate Configuration stays

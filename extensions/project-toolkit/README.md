@@ -8,8 +8,8 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
 1. Install PTK from the same checkout/version as this extension. The CLI must
    support `ptk describe --json` (inventory schema version 1).
 2. In VS Code, run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.5.1.vsix`. You can also use
-   `code --install-extension project-toolkit-0.5.1.vsix`.
+   `project-toolkit-0.6.1.vsix`. You can also use
+   `code --install-extension project-toolkit-0.6.1.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -44,8 +44,7 @@ Set `projectToolkit.discoveryTimeout` (seconds) for slow projects.
 
 Find PTK by its custom wizard icon, with **PTk** on the hat. The project tree
 uses theme colours to distinguish green jobs, purple workflows, orange variants,
-gold configuration files and blue repositories and commands. The selected variant
-has a green checkmark and a **selected** label. Colours follow your VS Code theme;
+gold configuration and blue repositories and commands. Colours follow your VS Code theme;
 labels and icon shapes also identify each category.
 
 - Expand **Jobs** and hover over a job to see **Run**, **Dry Run**,
@@ -69,9 +68,9 @@ labels and icon shapes also identify each category.
   expressions and resolved when PTK runs. Choose **Run job**, **Dry run** or
   **Cancel**. Lists use comma-separated values. Secret parameters stay in their
   declared credential environment and are excluded from the form.
-- Click a **Variant**, or use **Select Variant for Jobs**. The selection is stored
-  per repository in VS Code workspace state. Choose **Use project default** to
-  clear it. PTK configuration files are unchanged by selection.
+- Use the variant selector on each job or repository workflow. The selection is
+  stored independently for that row in VS Code workspace state. Choose
+  **Use project default** to clear it. PTK configuration files are unchanged.
 - Use **Display Variant** to inspect resolved features. Edit variant definitions
   in the configuration tree and form, or in raw YAML.
 - Expand **Workflows** to run or dry-run local workflows. Workflows retain their
@@ -128,7 +127,9 @@ Text and number fields stay local while you type. Leaving a field, pressing
 **Save** / **Ctrl/Cmd+S**, or navigating to another section applies the finished
 edit; the project form then saves and reloads it through PTK. Checkboxes, choices
 and structural actions apply immediately. Save replies preserve active text,
-focus and the cursor; unchanged inventories do not redraw the tree.
+focus and the cursor; unchanged inventories do not redraw the tree. Add actions
+are queued in order, and a watcher refresh cannot acknowledge an older snapshot
+that hides the newly added item. The next field name survives save replies.
 
 Use the VS Code tree for navigation. The form has no second navigation sidebar;
 breadcrumbs show the current field path. List rows show step names or their values
@@ -137,6 +138,11 @@ Edits go to the owning document supplied by PTK. Adding a job, workflow or varia
 creates its conventional file. Components are registered in project settings;
 their features and dependencies live in `component.variants.ptk.yml` beside their
 code. Renaming an entity moves its file, and deleting it removes its file.
+New items recursively include their required fields, minimum list/map entries
+and creation hints supplied by PTK. Workflow steps choose an existing job; create
+a job first if none exists. Empty text fields have a red border and a fill-in
+message that clears as you type. Zero and false are treated as filled values.
+Starter URLs use example.invalid; replace them with your own settings before use.
 Source fingerprints reject stale edits, and unsaved YAML documents must be saved
 or undone before using the project form.
 
@@ -168,7 +174,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.5.1.vsix`. Use `ptk dry-run extension`
+`extensions/project-toolkit/project-toolkit-0.6.1.vsix`. Use `ptk dry-run extension`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:

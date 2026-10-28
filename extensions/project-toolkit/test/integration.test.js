@@ -310,3 +310,32 @@ test("registered component edits create a local document and entity renames roun
   apply([{ op: "remove", path: ["jobs", "inspect"] }]);
   assert.equal(fs.existsSync(path.join(root, "jobs/inspect.ptk.yml")), false);
 });
+
+test("new configuration items from the installed schema validate with their required descendants", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
+  const S = require("../media/schema"), { plan } = require("../src/project-edits");
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk required fields "));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  project(root, "required");
+  const read = () => core.parseInventory(invoke(root, ["describe", "--json", "--configuration"])).projects[0].configuration;
+  let config = read();
+  function add(field, definition, existing = []) {
+    const value = S.initial(config.schema.$defs[definition], config.schema, { configuration: config.value, existing });
+    const docs = new Map(config.files.map(file => [file, fs.readFileSync(file, "utf8")]));
+    for (const [file, text] of plan(config, docs, [{ op: "add", path: field, value }])) {
+      fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, text);
+    }
+    invoke(root, ["setup", "config", "validate"]);
+    config = read();
+    assert.equal(config.error, null);
+    return value;
+  }
+  add(["artifactory"], "ArtifactoryStructure");
+  assert.deepEqual(config.value.artifactory.events, { push: { path: "" } });
+  add(["versioning"], "VersioningSpec");
+  add(["jobs", "new-job"], "JobSpec");
+  add(["jobs", "new-job", "steps", 1], "StepEntry", config.value.jobs["new-job"].steps);
+  assert.deepEqual(config.value.jobs["new-job"].steps.map(item => Object.keys(item)[0]), ["step", "step_2"]);
+  add(["jobs", "new-job", "steps", 0, "step", "python"], "PythonSpec");
+  add(["workflows", "new-workflow"], "WorkflowSpec");
+  assert.equal(config.value.workflows["new-workflow"].steps[0].job.job, "build");
+});
