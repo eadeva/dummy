@@ -62,6 +62,12 @@ def test_unrecognized_configuration_names_are_errors(write, load, name):
         load(root)
 
 
+def test_unrecognized_filename_lists_the_conventional_names(write, load):
+    root = write(files(**{"config/artifactory_structure.ptk.yml": "{}"}))
+    with pytest.raises(ConfigError, match="expected one of: artifactory_paths.ptk.yml"):
+        load(root)
+
+
 @pytest.mark.parametrize(
     "name", ["jobs/nested/a.ptk.yml", "jobs/build.ptk.yaml", "jobs/1bad.ptk.yml"]
 )

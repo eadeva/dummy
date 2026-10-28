@@ -79,7 +79,9 @@ def discover_files(
             if file.name not in known:
                 problems.append(
                     Problem(
-                        "unexpected configuration filename",
+                        "unexpected configuration filename; expected one of: "
+                        + ", ".join(sorted(known))
+                        + "; named jobs, workflows and variants belong in their directories",
                         location=Location(str(file)),
                     )
                 )

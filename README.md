@@ -95,6 +95,9 @@ package version and updates compatible dependencies. Pull the desired branch
 first: installing a checkout does not run `git pull`. `PTK_SOURCE` overrides the
 source; a standalone downloaded script defaults to the `ptk` package index entry.
 Explicit version pins remain respected. Open a new terminal after installation.
+Installation reads only the marker, versioning and optional default-variant
+settings to determine the package version. Errors in other project files remain
+visible through `ptk setup config validate` and do not block installation.
 
 ## Shared configs
 

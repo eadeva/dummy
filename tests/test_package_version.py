@@ -5,6 +5,7 @@ import subprocess
 import pytest
 import yaml
 
+from ptk.domain.errors import ConfigError
 from ptk.package_version import package_version
 from tests.project_files import write_project
 
@@ -35,6 +36,77 @@ def test_package_version_uses_versioning_file_and_default_variant(tmp_path):
     )
     assert package_version(tmp_path) == "2.3.4rc1"
     assert package_version(tmp_path, resolved_version="7.8.9+2.gabc") == "7.8.9+2.gabc"
+
+
+@pytest.mark.parametrize(
+    "filename,contents",
+    [
+        ("artifactory_structure.ptk.yml", "artifactory: {}"),
+        ("artifactory_paths.ptk.yml", "events: ["),
+        ("jobs/broken.ptk.yml", "steps: ["),
+        ("project.ptk.yml", "not_a_project: true"),
+    ],
+)
+def test_package_version_does_not_load_unrelated_configuration(
+    tmp_path, load, filename, contents
+):
+    configured_project(tmp_path, {"project": {"source": "literal", "version": "1.2.3"}})
+    file = tmp_path / "config" / filename
+    file.parent.mkdir(parents=True, exist_ok=True)
+    file.write_text(contents)
+    assert package_version(tmp_path) == "1.2.3"
+    # Installing PTK must remain possible so users can diagnose/repair the project.
+    # Ordinary project loading still rejects the same invalid document.
+    with pytest.raises(ConfigError):
+        load(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "filename,contents",
+    [
+        (".main.ptk.yml", "repository: {alias: ptk, config_path: ../outside}"),
+        ("config/project.variants.ptk.yml", "default: [release]"),
+        ("config/versioning.ptk.yml", "project: {source: literal}"),
+        (
+            "config/versioning.ptk.yml",
+            "project: {source: literal, version: 1.2.3, typo: 1}",
+        ),
+        ("config/versioning.ptk.yml", "project: ["),
+    ],
+)
+def test_package_version_validates_its_inputs(tmp_path, filename, contents):
+    configured_project(tmp_path, {"project": {"source": "literal", "version": "1.2.3"}})
+    (tmp_path / filename).write_text(contents)
+    with pytest.raises(ConfigError) as error:
+        package_version(tmp_path)
+    assert filename in str(error.value)
+
+
+def test_package_version_without_variant_settings(tmp_path):
+    configured_project(tmp_path, {"project": {"source": "literal", "version": "1.2.3"}})
+    (tmp_path / "config/project.variants.ptk.yml").unlink()
+    assert package_version(tmp_path) == "1.2.3"
+
+
+def test_package_version_requires_versioning_document(tmp_path):
+    configured_project(tmp_path, {})
+    (tmp_path / "config/versioning.ptk.yml").unlink()
+    with pytest.raises(ConfigError, match="versioning.ptk.yml"):
+        package_version(tmp_path)
+
+
+@pytest.mark.parametrize("filename", ["versioning.ptk.yml", "project.variants.ptk.yml"])
+def test_package_version_rejects_symlink_inputs(tmp_path, filename):
+    configured_project(tmp_path, {"project": {"source": "literal", "version": "1.2.3"}})
+    file = tmp_path / "config" / filename
+    target = tmp_path / "other.txt"
+    file.replace(target)
+    try:
+        file.symlink_to(target)
+    except OSError:
+        pytest.skip("symlinks unavailable")
+    with pytest.raises(ConfigError, match="symbolic links"):
+        package_version(tmp_path)
 
 
 def test_package_version_tracks_git_and_configured_fallback(tmp_path):

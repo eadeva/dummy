@@ -13,7 +13,7 @@ selects the uv ``release`` and ``docs`` dependency groups and creates::
 
 Nothing is uploaded, tagged or version-bumped. No Artifactory endpoint or
 credentials are needed. The version comes from PTK's project versioning
-configuration in ``config/ptk/versioning/versioning.ptk.yml``. It is Git-managed:
+configuration in ``config/ptk/versioning.ptk.yml``. It is Git-managed:
 reachable ``v*`` tags are selected and the ``v`` prefix removed. Exact clean
 ``v1.2.3`` becomes ``1.2.3``; commits after it add ``+N.gHASH`` and tracked dirty
 changes add the configured ``dirty`` suffix. Fetch full history and tags for
@@ -23,7 +23,14 @@ release preparation. Untagged/shallow checkouts use the explicitly configured
 The job consumes ``PTK_VERSION_PTK`` from its immutable run snapshot. Python
 metadata normalizes that value to PEP 440 and rejects incompatible versions.
 ``pyproject.toml`` declares a dynamic version, so ordinary wheel/editable builds
-also use PTK's configuration engine. Runtime ``ptk.__version__`` reads installed
+also use PTK's configuration reader and version discovery. Metadata generation
+reads only ``.main.ptk.yml``, ``versioning.ptk.yml`` and the optional
+``project.variants.ptk.yml`` in ``repository.config_path``. The default variant
+selects any project version override. These inputs are validated, but unrelated
+project files are not loaded: an unfinished job or an unexpected configuration
+filename must not prevent installing PTK to diagnose and repair the project.
+Normal commands still validate the complete project with the fixed layout.
+Runtime ``ptk.__version__`` reads installed
 distribution metadata. Source distributions freeze the resolved version in
 ``PKG-INFO``: rebuilding a wheel without Git retains the original version,
 even inside another checkout or with a different build environment.
