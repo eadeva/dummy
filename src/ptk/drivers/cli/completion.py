@@ -165,19 +165,50 @@ def parameters(ctx, param, incomplete):
     help="PowerShell: complete prefixes, then list matches on Tab (changes Tab for all commands).",
 )
 @click.option(
+    "--install",
+    "install_profile",
+    type=click.Path(path_type=Path, dir_okay=False),
+    metavar="PROFILE",
+    help="PowerShell: persist completion in a profile, e.g. $PROFILE.CurrentUserAllHosts.",
+)
+@click.option(
+    "--uninstall",
+    "uninstall_profile",
+    type=click.Path(path_type=Path, dir_okay=False),
+    metavar="PROFILE",
+    help="PowerShell: remove the managed completion block from this profile.",
+)
+@click.option(
     "-o",
     "--output",
     type=click.Path(path_type=Path, dir_okay=False),
     help="Write the registration script to this file instead of stdout.",
 )
 @click.pass_context
-def completion_command(ctx, shell, double_tab, output):
+def completion_command(
+    ctx, shell, double_tab, install_profile, uninstall_profile, output
+):
     """Generate terminal Tab completion for ptk (no project required).
 
     PowerShell: ptk setup completion powershell --double-tab | Out-String | Invoke-Expression
 
-    Put the same line in $PROFILE to enable completion in future terminals.
+    Persist for future terminals with --install $PROFILE.CurrentUserAllHosts.
+    install/install.ps1 enables this automatically.
     """
+    if (
+        sum(value is not None for value in (install_profile, uninstall_profile, output))
+        > 1
+    ):
+        raise click.UsageError("Choose only one of --install, --uninstall or --output.")
+    if (install_profile or uninstall_profile) and shell != "powershell":
+        raise click.UsageError(
+            "Profile installation is supported for PowerShell; other shells can source --output files."
+        )
+    if uninstall_profile and double_tab:
+        raise click.UsageError("--double-tab cannot be combined with --uninstall.")
+    if uninstall_profile:
+        _update_profile(uninstall_profile, None)
+        return
     if double_tab and shell != "powershell":
         raise click.UsageError(
             "--double-tab is a PowerShell option; other shells use their own Tab bindings."
@@ -193,7 +224,9 @@ if (Get-Command Set-PSReadLineKeyHandler -ErrorAction SilentlyContinue) {
     Write-Warning 'PTK completion registered. Double-Tab listing requires PSReadLine in an interactive terminal.'
 }
 """
-    if output:
+    if install_profile:
+        _update_profile(install_profile, text)
+    elif output:
         try:
             output.write_text(text + "\n", encoding="utf-8")
         except OSError as exc:
@@ -203,3 +236,21 @@ if (Get-Command Set-PSReadLineKeyHandler -ErrorAction SilentlyContinue) {
         click.echo(f"Completion script written to {output}")
     else:
         click.echo(text)
+
+
+def _update_profile(profile, source):
+    from .completion_profiles import update_profile
+
+    try:
+        changed = update_profile(profile, source)
+    except (OSError, ValueError) as exc:
+        raise click.ClickException(
+            f"Cannot update completion profile {profile}: {exc}"
+        ) from None
+    action = "installed" if source is not None else "removed"
+    click.echo(
+        f"Completion {action}: {profile}"
+        if changed
+        else f"Completion profile already up to date: {profile}"
+    )
+    click.echo("Open a new PowerShell terminal for this profile change to take effect.")

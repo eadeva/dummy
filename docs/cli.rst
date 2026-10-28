@@ -69,17 +69,44 @@ Terminal Tab completion
 -----------------------
 
 Completion works with the installed ``ptk`` executable, independently of any
-editor. Enable it once in your current shell. In PowerShell::
+editor. The Windows installer (``install/install.ps1``) saves it automatically in
+``$PROFILE.CurrentUserAllHosts`` for future terminals of that PowerShell edition.
+Running ``.\install\install.ps1`` from PowerShell also activates it in that
+session. If you launch the installer in a separate process with ``powershell
+-File``, open a new terminal afterwards. Use ``-NoCompletion`` on the installer
+to leave completion settings unchanged.
+
+For an existing installation, enable it permanently with::
+
+   ptk setup completion powershell --double-tab --install $PROFILE.CurrentUserAllHosts
+
+This updates one marked PTK block, preserves the rest of the profile and its
+encoding, and keeps a ``.ptk.bak`` backup of an existing profile before the first
+change. Repeating the command updates the block without adding duplicates.
+PowerShell supplies the path, including redirected Documents locations;
+Windows PowerShell and PowerShell 7 have separate profiles. Run the command in
+each edition you use. The saved registration does not start PTK during shell
+startup; PTK runs only when completion is requested.
+
+Open a new terminal, or activate completion immediately in the current shell::
 
    ptk setup completion powershell --double-tab | Out-String | Invoke-Expression
 
-Add that same line to your ``$PROFILE`` to enable it in future terminals.
 ``--double-tab`` uses PSReadLine's ``Complete`` binding: Tab completes the unique
 prefix; another Tab lists the remaining matches. This changes Tab for **all
 commands** in that shell. Omit the flag to keep your current key bindings
 (Windows PowerShell normally cycles matches with Tab). PSReadLine must be
 available for the double-Tab binding; the PTK completer itself does not require it.
-The registration script does not edit your profile automatically.
+Generating a script without ``--install`` does not modify the profile.
+Profile loading must be allowed by your PowerShell execution policy; PTK does
+not change that policy. Terminals started with ``-NoProfile`` do not load it.
+
+To remove permanent completion, remove only the managed PTK block with::
+
+   ptk setup completion powershell --uninstall $PROFILE.CurrentUserAllHosts
+
+Then open a new terminal. Removal does not reset bindings already active in the
+current session or remove activation lines you previously added by hand.
 
 For Bash (4.4 or later), enable completion with::
 
