@@ -1,0 +1,2139 @@
+schema_version: 1
+definitions:
+  ATTR_req_type: &ATTR_req_type
+    type: mm-attribute
+    title: req_type
+    mandatory: true
+    values:
+    - functional
+    - non-functional
+    - constraint
+    lifecycle_status: established
+    description: Type of requirement
+  ATTR_verification_criteria: &ATTR_verification_criteria
+    type: mm-attribute
+    title: verification_criteria
+    mandatory: true
+    values: str
+    lifecycle_status: established
+    description: Defines the criteria to verify the requirement.
+  ATTR_SW_verification_level: &ATTR_SW_verification_level
+    type: mm-attribute
+    title: verification_level
+    mandatory: true
+    values:
+    - review
+    - sw-qualification-test
+    - sw-integration-test
+    - sw-component-test
+    - sw-unit-test
+    lifecycle_status: established
+    description: Defines on which level in the process the requirement is verified.
+  ATTR_legal: &ATTR_legal
+    type: mm-attribute
+    title: legal
+    mandatory: true
+    values:
+    - 'true'
+    - 'false'
+    lifecycle_status: established
+    description: The attribute defines the legal relevance of the object.
+  ATTR_safety: &ATTR_safety
+    type: mm-attribute
+    title: safety
+    mandatory: true
+    values:
+    - QM
+    - ASIL-A
+    - ASIL-B
+    - ASIL-C
+    - ASIL-D
+    - ASIL-A(D)
+    - ASIL-A(C)
+    - ASIL-A(B)
+    - ASIL-A(A)
+    - ASIL-B(D)
+    - ASIL-B(C)
+    - ASIL-B(B)
+    - ASIL-C(D)
+    - ASIL-C(C)
+    - ASIL-D(D)
+    - QM(D)
+    - QM(C)
+    - QM(B)
+    - QM(A)
+    lifecycle_status: established
+    description: The attribute defines the safety relevance of the object.
+  ATTR_security: &ATTR_security
+    type: mm-attribute
+    title: security
+    mandatory: true
+    values:
+    - 'true'
+    - 'false'
+    lifecycle_status: established
+    description: The attribute defines the security relevance of the object.
+  ATTR_supplier: &ATTR_supplier
+    type: mm-attribute
+    title: supplier
+    mandatory: true
+    values: string
+    lifecycle_status: established
+    description: The attributes defines the supplier of the object.
+  ATTR_activation_event: &ATTR_activation_event
+    type: mm-attribute
+    title: activation_event
+    mandatory: true
+    values: string
+    lifecycle_status: established
+    description: 'task/runnable activation event, timer, alarm, os, data, interrupt etc.
+
+
+      Could also be a link to a sw-event type.'
+  ATTR_cycle_time: &ATTR_cycle_time
+    type: mm-attribute
+    title: cycle_time
+    mandatory: true
+    values: string
+    lifecycle_status: established
+    description: The cycle time determines how frequent the task is executed. Can be defined as a numerical value + unit for
+      time. E.g., 10ms. Can also be used to determine whether it's an init task. In this case 'init' can be given as the value.
+  ATTR_max_duration: &ATTR_max_duration
+    type: mm-attribute
+    title: max_duration
+    mandatory: false
+    values: int
+    lifecycle_status: established
+    description: Used for runnables, tasks and sequences - maximal runtime duration in ms (netto)
+  ATTR_max_latency: &ATTR_max_latency
+    type: mm-attribute
+    title: max_latency
+    mandatory: false
+    values: int
+    lifecycle_status: established
+    description: Used for interrupts - maximal runtime latency in ms (netto)
+  ATTR_priority: &ATTR_priority
+    type: mm-attribute
+    title: priority
+    mandatory: false
+    values: int
+    lifecycle_status: established
+    description: priorities for task starting with 1 - lowest prio to n - highest prio
+  ATTR_feature_function: &ATTR_feature_function
+    type: mm-attribute
+    title: feature_function
+    mandatory: false
+    values: str
+    lifecycle_status: established
+    description: 'Contains the feature or function that is relevant for this test case.
+
+      Values to be specified by each project.'
+  ATTR_TC_unit_component_status: &ATTR_TC_unit_component_status
+    type: mm-attribute
+    title: status
+    mandatory: false
+    values:
+    - New/Changed
+    - Specified
+    - Specification Reviewed
+    - Implemented
+    - Released
+    lifecycle_status: established
+    description: 'Contains the lifecycle status of the test case.
+
+      For unit and component level test cases it defaults to ``Released`` when left unset.'
+  ATTR_test_category: &ATTR_test_category
+    type: mm-attribute
+    title: test_category
+    mandatory: false
+    values:
+    - Regression_Test
+    - Smoke_Test
+    lifecycle_status: established
+    description: Contains the test category(s).
+  ATTR_test_design_technique: &ATTR_test_design_technique
+    type: mm-attribute
+    title: test_design_technique
+    mandatory: false
+    values:
+    - Boundary_Value_Test
+    - Equivalence_Class_Test
+    - Fault_Injection_Test
+    - Error_Guessing_Test
+    - Control_Flow_Analysis
+    - Data_Flow_Analysis
+    - Negative_Test
+    - Positive_Test
+    - Cause_Effect_Graphing
+    - Classification_Tree_Technique
+    - Combinatorial_Test
+    - Condition_Test
+    - Decision_Table_Test
+    - Metamorphic_Test
+    - Multiple_Condition_Test
+    - Random_Test
+    - State_Transition_Test
+    - Syntax_Test
+    lifecycle_status: established
+    description: 'Contains the design test technique(s) of the test case.
+
+      Can be extended with project-specific values.'
+  ATTR_test_method: &ATTR_test_method
+    type: mm-attribute
+    title: test_method
+    mandatory: false
+    values:
+    - Requirement_Based_Test
+    - Use_Case_Test
+    - Defect_Based_Test
+    - Conformance_Test
+    - Interface_Test
+    - Back_to_Back_Test
+    - Performance_Test
+    - Stress_Test
+    - Resource_Usage_Test
+    lifecycle_status: established
+    description: 'Contains the test method(s) of the test case.
+
+      Can be extended with project-specific values.'
+  ATTR_TC_unit_component_testcase_type: &ATTR_TC_unit_component_testcase_type
+    type: mm-attribute
+    title: testcase_type
+    mandatory: true
+    values:
+    - Automated
+    - Semi_Automated
+    - Manual
+    lifecycle_status: established
+    description: 'Contains the design test case type of the test case.
+
+      For unit and component level test cases it defaults to ``Automated`` when left unset.'
+  ATTR_variant: &ATTR_variant
+    type: mm-attribute
+    title: variant
+    mandatory: false
+    values: str
+    lifecycle_status: established
+    description: 'Describes which product (HW & SW) variants the test artifact applies to.
+
+      May contain multiple variants.'
+  ATTR_latest_report_path: &ATTR_latest_report_path
+    type: mm-attribute
+    title: latest_report_path
+    mandatory: false
+    values: str
+    lifecycle_status: established
+    description: 'This attribute is auto-populated during the documentation build and must not
+
+      be set manually. It contains a link to the test report associated with the
+
+      latest test execution and is written by the ``verdict_overlay`` extension when
+
+      a ``report_urls.json`` manifest sits next to the TACO result files; otherwise
+
+      the attribute stays unset.'
+  ATTR_latest_test_verdict: &ATTR_latest_test_verdict
+    type: mm-attribute
+    title: latest_test_verdict
+    mandatory: false
+    values:
+    - Not executed
+    - Passed
+    - Failed
+    - Blocked
+    - Error
+    lifecycle_status: established
+    description: 'This attribute is auto-populated during the documentation build and must not
+
+      be set manually. It contains the verdict of the latest test execution and is
+
+      written by the ``verdict_overlay`` extension when TACO result files are made
+
+      available via the ``TACO_RESULTS_DIR`` environment variable; otherwise the
+
+      attribute stays unset.'
+  ATTR_TC_legal: &ATTR_TC_legal
+    type: mm-attribute
+    title: legal
+    mandatory: true
+    values:
+    - 'true'
+    - 'false'
+    lifecycle_status: established
+    description: 'The attribute defines the legal relevance of the test case.
+
+      It is auto-populated during the documentation build by the ``ssl_inheritance``
+
+      extension, which inherits the value from the requirement(s) linked via the
+
+      ``validates`` relation (``true`` takes precedence over ``false``). Manually
+
+      entered values are overwritten and a mismatch raises a build warning.'
+  ATTR_TC_safety: &ATTR_TC_safety
+    type: mm-attribute
+    title: safety
+    mandatory: true
+    values:
+    - QM
+    - ASIL-A
+    - ASIL-B
+    - ASIL-C
+    - ASIL-D
+    - ASIL-A(D)
+    - ASIL-A(C)
+    - ASIL-A(B)
+    - ASIL-A(A)
+    - ASIL-B(D)
+    - ASIL-B(C)
+    - ASIL-B(B)
+    - ASIL-C(D)
+    - ASIL-C(C)
+    - ASIL-D(D)
+    - QM(D)
+    - QM(C)
+    - QM(B)
+    - QM(A)
+    lifecycle_status: established
+    description: 'The attribute defines the safety relevance (ASIL) of the test case.
+
+      It is auto-populated during the documentation build by the ``ssl_inheritance``
+
+      extension, which inherits the value from the requirement(s) linked via the
+
+      ``validates`` relation (the most conservative value, i.e. the highest ASIL,
+
+      wins). Manually entered values are overwritten and a mismatch raises a build
+
+      warning.'
+  ATTR_TC_security: &ATTR_TC_security
+    type: mm-attribute
+    title: security
+    mandatory: true
+    values:
+    - 'true'
+    - 'false'
+    lifecycle_status: established
+    description: 'The attribute defines the security relevance of the test case.
+
+      It is auto-populated during the documentation build by the ``ssl_inheritance``
+
+      extension, which inherits the value from the requirement(s) linked via the
+
+      ``validates`` relation (``true`` takes precedence over ``false``). Manually
+
+      entered values are overwritten and a mismatch raises a build warning.'
+  ATTR_TC_status: &ATTR_TC_status
+    type: mm-attribute
+    title: status
+    mandatory: true
+    values:
+    - New/Changed
+    - Specified
+    - Specification Reviewed
+    - Implemented
+    - Released
+    lifecycle_status: established
+    description: Contains the lifecycle status of the test case.
+  ATTR_tags: &ATTR_tags
+    type: mm-attribute
+    title: tags
+    mandatory: false
+    values: str
+    lifecycle_status: established
+    description: 'Used for extra tags that describe a needs object beyond what the predefined attributes allow.
+
+      Tags should be entered in the form of a semicolon separated list.
+
+      See https://sphinx-needs.readthedocs.io/en/latest/directives/need.html#tags for details.
+
+      Usage of this should be defined by the project.'
+  ATTR_test_environment: &ATTR_test_environment
+    type: mm-attribute
+    title: test_environment
+    mandatory: true
+    values:
+    - HiL
+    - HoL
+    - SiL
+    - SoL
+    - PiL
+    - PoL
+    - MiL
+    - MoL
+    - Vehicle
+    lifecycle_status: established
+    description: 'Contains the test environment for the test case.
+
+      For unit and component level test cases it defaults to ``SiL`` when left unset.'
+  ATTR_test_implementation: &ATTR_test_implementation
+    type: mm-attribute
+    title: test_implementation
+    mandatory: false
+    values: str
+    lifecycle_status: established
+    description: Contains an optional reference to the test implementation, e.g. a link to a test case in a test management
+      tool or a file path.
+  ATTR_test_implementation_id: &ATTR_test_implementation_id
+    type: mm-attribute
+    title: test_implementation_id
+    mandatory: false
+    values: str
+    lifecycle_status: established
+    description: Contains an optional reference to the test implementation ID, e.g. the UUID generated by vTestStudio.
+  ATTR_test_tool: &ATTR_test_tool
+    type: mm-attribute
+    title: test_tool
+    mandatory: true
+    values:
+    - Not_Applicable
+    - GoogleTest
+    - PyTest
+    - RobotFramework
+    - vTestStudio
+    - dSPACE
+    - CANoe
+    lifecycle_status: established
+    description: 'Contains the test tool used to implement the test artifact.
+
+      Can be extended with project-specific values.
+
+      For unit and component level test cases it defaults to ``GoogleTest`` when left unset.'
+  ATTR_testcase_type: &ATTR_testcase_type
+    type: mm-attribute
+    title: testcase_type
+    mandatory: true
+    values:
+    - Automated
+    - Semi_Automated
+    - Manual
+    lifecycle_status: established
+    description: Contains the design test case type of the test case.
+  ATTR_TC_verification_level: &ATTR_TC_verification_level
+    type: mm-attribute
+    title: verification_level
+    mandatory: true
+    values:
+    - Software_Unit_Verification
+    - Software_Integration_Verification
+    - Software_Verification
+    - System_Integration_Verification
+    - System_Verification
+    - Vehicle_Test
+    - Not_Applicable
+    lifecycle_status: established
+    description: 'Contains the verification level for the test case.
+
+      For unit and component level test cases it defaults to ``Software_Unit_Verification`` when left unset.'
+  ATTR_TC_verification_type: &ATTR_TC_verification_type
+    type: mm-attribute
+    title: verification_type
+    mandatory: true
+    values:
+    - Dynamic_Test
+    - Review
+    - Simulation
+    - Calculation
+    - Static_Test
+    - Not_Applicable
+    lifecycle_status: established
+    description: 'Contains the verification type of the test case.
+
+      For unit and component level test cases it defaults to ``Dynamic_Test`` when left unset.'
+  ATTR_project: &ATTR_project
+    type: mm-attribute
+    title: project
+    mandatory: true
+    values: str
+    lifecycle_status: established
+    description: 'Describes which project the test artifact applies to.
+
+      May contain to multiple projects.'
+  REL_SW_req_satisfies: &REL_SW_req_satisfies
+    type: mm-relation
+    title: req_satisfies
+    target_classes:
+    - CLASS_REQ_Sw
+    - CLASS_REQ_Sys
+    cardinality: 1..*
+    lifecycle_status: established
+    description: The attribute defines which requirements are satisfied by this requirement.
+  REL_SW_Port_provides: &REL_SW_Port_provides
+    type: mm-relation
+    title: provides
+    target_classes:
+    - CLASS_SW_If
+    cardinality: 0..1
+    lifecycle_status: established
+    description: The attribute links to the provided interface.
+  REL_SW_Port_requires: &REL_SW_Port_requires
+    type: mm-relation
+    title: requires
+    target_classes:
+    - CLASS_SW_If
+    cardinality: 0..1
+    lifecycle_status: established
+    description: The attribute links to the required interface.
+  REL_arc_parent: &REL_arc_parent
+    type: mm-relation
+    title: arc_parent
+    target_classes:
+    - CLASS_SW_Comp
+    cardinality: 0..1
+    lifecycle_status: established
+    description: The attribute defines the hierarchical parent of the object.
+  REL_executes: &REL_executes
+    type: mm-relation
+    title: executes
+    target_classes:
+    - CLASS_SWC_SWC_Run
+    - CLASS_SWC_SW_Oper
+    cardinality: 0..*
+    lifecycle_status: established
+    description: Determines which runnables are executed in scope of which task.
+  REL_validates: &REL_validates
+    type: mm-relation
+    title: validates
+    target_classes:
+    - CLASS_REQ_SwC
+    cardinality: 0..*
+    lifecycle_status: established
+    description: Determines which requirements are validated by the test case.
+classes:
+- id: CLASS_BHVIEW
+  type: mm-class
+  title: bhview
+  class_id_prefix: BHVIEW_
+  long_name_english: Behavioral view
+  lifecycle_status: phase-out
+  section: Software Detailed Design
+  description: 'Behavioral view holds the detailed design information in the form of a PlantUML behavioral diagram.
+
+
+    .. Question is whether this is stil up to date since it could also hold a class diagram or some non-behavioral diagram.
+    Could be replaced in future by a better type.'
+- id: CLASS_DD
+  type: mm-class
+  title: ddec
+  class_id_prefix: DD_
+  long_name_english: Design Decision
+  lifecycle_status: established
+  section: General aspects
+  description: 'Design decisions are architectural decisions made during the design process that impact the structure and
+    behavior of the software system.
+
+
+    Idea to have alternatives as children.
+
+
+    See also description here ``infrastructure/99_infrastructure/DevelopmentDocumentation/ddec_ModelConcept.html``'
+- id: CLASS_DDSG
+  type: mm-class
+  title: ddsg
+  class_id_prefix: DDSG_
+  long_name_english: Detailed Design
+  lifecycle_status: established
+  section: Software Detailed Design
+  description: 'The detailed design comprises static and dynamic aspects, consistent with the software architecture
+
+    It is used to construct software units consistent with the software detailed design.'
+  children:
+  - id: REL_DDSG_realizes
+    type: mm-relation
+    title: realizes
+    target_classes:
+    - CLASS_SWC
+    cardinality: 0..*
+    lifecycle_status: established
+    description: Link to establish traceability from the detailed design to the software component.
+- id: CLASS_FEAT
+  type: mm-class
+  title: feature
+  class_id_prefix: FEAT_
+  long_name_english: Feature
+  lifecycle_status: established
+  section: Requirements Elicitation
+  description: 'Features describe on a high level the usage and the characteristics of a system.
+
+    Features can be used for clustering Stakeholder requirements.'
+  children:
+  - id: REL_FEAT_func_parent
+    type: mm-relation
+    title: func_parent
+    target_classes:
+    - CLASS_FEAT
+    cardinality: 0..1
+    lifecycle_status: established
+    description: The attribute defines the hierarchical parent of the feature.
+- id: CLASS_REQ_HSI
+  type: mm-class
+  title: req-hsi
+  class_id_prefix: REQ_HSI_
+  long_name_english: Hardware-Software Interface Requirement
+  lifecycle_status: established
+  section: Hardware Requirements
+  description: 'A Hardware-Software Interface (HSI) requirement specifies the binding
+
+    technical contract between the HW and SW domains needed to guarantee their
+
+    correct cooperation — going beyond a simple signal/data-exchange list. It
+
+    captures, for each signal or HW component in the signal flow, both the
+
+    characteristics of the HW involved and the strategy chosen for HW/SW
+
+    interaction, so that neither domain can implement its side without violating
+
+    the other''s assumptions.'
+- id: CLASS_REQ_Hw
+  type: mm-class
+  title: req-hw
+  class_id_prefix: REQ_Hw_
+  long_name_english: Hardware Requirement
+  lifecycle_status: established
+  section: Hardware Requirements
+  description: 'This is just a placeholder to trace hardware requirements from DNG.
+
+    Requirement management for hardware requirements is done in scope of DNG.'
+- id: CLASS_REQ_Stkh
+  type: mm-class
+  title: req-stkh
+  class_id_prefix: REQ_Stkh_
+  long_name_english: Stakeholder Requirement
+  lifecycle_status: established
+  section: Requirements Elicitation
+  description: A stakeholder requirement is a requirement which specifies the needs or expectations of a stakeholder or stakeholder
+    group regarding the system.
+  children:
+  - <<: *ATTR_legal
+    id: ATTR_REQ_Stkh_legal
+  - <<: *ATTR_req_type
+    id: ATTR_REQ_Stkh_req_type
+    values:
+    - stakeholder business requirement
+    - stakeholder technical requirement
+  - <<: *ATTR_safety
+    id: ATTR_REQ_Stkh_safety
+  - <<: *ATTR_security
+    id: ATTR_REQ_Stkh_security
+  - id: ATTR_REQ_Stkh_status_crs
+    type: mm-attribute
+    title: status_crs
+    mandatory: true
+    values:
+    - new/changed
+    - in clarification
+    - accepted
+    - accepted with deviation
+    - accepted with deviation agreed
+    - rejected
+    - rejected and not agreed
+    - obsolete
+    lifecycle_status: established
+    description: status of the stakeholder requirement
+  - id: ATTR_REQ_Stkh_safety_relevance
+    type: mm-attribute
+    title: safety_relevance
+    mandatory: true
+    values:
+    - 'no'
+    - functional safety
+    - SOTIF
+    - SEooC
+    - product safety
+    lifecycle_status: established
+    description: safety relevance of the requirement
+  - id: REL_REQ_Stkh_clustered_by
+    type: mm-relation
+    title: clustered_by
+    target_classes:
+    - CLASS_FEAT
+    cardinality: 1..1
+    lifecycle_status: established
+    description: The relation indicates that the stakeholder requirement is clustered by one or more features.
+- id: CLASS_REQ_Sw
+  type: mm-class
+  title: req-sw
+  class_id_prefix: REQ_Sw_
+  long_name_english: Software Requirement
+  lifecycle_status: established
+  section: Software Requirements
+  description: 'Software requirements specify a software component or composition on a blackbox level.
+
+
+    Software Requirements can come from the following sources:
+
+
+    * via a direct take over from system requirements which are mapped to SW domain
+
+
+    * via non-functional requirements (e.g., from Security, Safety)
+
+
+    * channeled stakeholder requirements which were identified as only SW relevant and thus are not considered on system level'
+  children:
+  - <<: *ATTR_legal
+    id: ATTR_REQ_Sw_legal
+  - <<: *ATTR_req_type
+    id: ATTR_REQ_Sw_req_type
+  - <<: *ATTR_safety
+    id: ATTR_REQ_Sw_safety
+  - <<: *ATTR_security
+    id: ATTR_REQ_Sw_security
+  - id: ATTR_REQ_Sw_status
+    type: mm-attribute
+    title: status
+    mandatory: true
+    values:
+    - draft
+    - under review
+    - in clarification
+    - accepted
+    - rejected
+    - obsolete
+    lifecycle_status: established
+    description: Status of the requirement
+  - <<: *ATTR_verification_criteria
+    id: ATTR_REQ_Sw_verification_criteria
+  - <<: *ATTR_SW_verification_level
+    id: ATTR_REQ_Sw_verification_level
+  - <<: *REL_SW_req_satisfies
+    id: REL_REQ_Sw_req_satisfies
+    target_classes:
+    - CLASS_REQ_Sw
+    - CLASS_REQ_Sys
+    - CLASS_REQ_Stkh
+- id: CLASS_REQ_SwC
+  type: mm-class
+  title: req-swc
+  class_id_prefix: REQ_SwC_
+  long_name_english: Software Component Requirement
+  lifecycle_status: established
+  section: Software Requirements
+  description: 'A software component requirement is a requirement which describes the behavior of a software component.
+
+    It is derived from the software function breakdown.
+
+    It usually starts with "The software component shall ...".'
+  children:
+  - <<: *ATTR_legal
+    id: ATTR_REQ_SwC_legal
+  - <<: *ATTR_req_type
+    id: ATTR_REQ_SwC_req_type
+  - <<: *ATTR_safety
+    id: ATTR_REQ_SwC_safety
+  - <<: *ATTR_security
+    id: ATTR_REQ_SwC_security
+  - id: ATTR_REQ_SwC_status
+    type: mm-attribute
+    title: status
+    mandatory: true
+    values:
+    - draft
+    - under review
+    - in clarification
+    - accepted
+    - rejected
+    - obsolete
+    lifecycle_status: established
+    description: Status of the requirement
+  - <<: *ATTR_verification_criteria
+    id: ATTR_REQ_SwC_verification_criteria
+  - <<: *ATTR_SW_verification_level
+    id: ATTR_REQ_SwC_verification_level
+  - <<: *REL_SW_req_satisfies
+    id: REL_REQ_SwC_req_satisfies
+- id: CLASS_REQ_Sys
+  type: mm-class
+  title: req-sys
+  class_id_prefix: REQ_Sys_
+  long_name_english: System Requirement
+  lifecycle_status: established
+  section: System Requirements
+  description: 'A system requirement is a requirement which specifies the behavior or other aspects (e.g., quality attributes
+    like scalability, usability, ...) of the system.
+
+    It is derived from stakeholder requirements or another level of system requirements and specifies the system functions
+    which need to be fulfilled in order to provide the desired behavior or aspect.'
+  children:
+  - <<: *ATTR_legal
+    id: ATTR_REQ_Sys_legal
+  - <<: *ATTR_req_type
+    id: ATTR_REQ_Sys_req_type
+  - <<: *ATTR_safety
+    id: ATTR_REQ_Sys_safety
+  - <<: *ATTR_security
+    id: ATTR_REQ_Sys_security
+  - id: ATTR_REQ_Sys_status
+    type: mm-attribute
+    title: status
+    mandatory: true
+    values:
+    - draft
+    - under review
+    - in clarification
+    - accepted
+    - rejected
+    - obsolete
+    lifecycle_status: established
+    description: Status of the requirement
+  - <<: *ATTR_verification_criteria
+    id: ATTR_REQ_Sys_verification_criteria
+  - <<: *ATTR_SW_verification_level
+    id: ATTR_REQ_Sys_verification_level
+    values:
+    - validation
+    - system-verification
+    - system-integration-verification
+    - software-verification
+    - software-integration-verification
+    - software-unit-verification
+    - review
+  - <<: *REL_SW_req_satisfies
+    id: REL_REQ_Sys_req_satisfies
+    target_classes:
+    - CLASS_REQ_Sys
+    - CLASS_REQ_Stkh
+- id: CLASS_SWC
+  type: mm-class
+  title: swc
+  class_id_prefix: SWC_
+  long_name_english: Software Component
+  lifecycle_status: established
+  section: Software Architecture
+  description: A software component is the smallest (reusable) element in the software architecture.
+  children:
+  - <<: *ATTR_legal
+    id: ATTR_SWC_legal
+  - <<: *ATTR_safety
+    id: ATTR_SWC_safety
+  - <<: *ATTR_security
+    id: ATTR_SWC_security
+  - <<: *ATTR_supplier
+    id: ATTR_SWC_supplier
+  - id: CLASS_SWC_SW_Oper
+    type: mm-class
+    title: sw-operation
+    class_id_prefix: SW_Oper_
+    long_name_english: Software Operation
+    lifecycle_status: established
+    description: Any kind of SW procedure which is not a runnable. However, only global operations shall be modelled on architecture
+      level. Operations are entities not known to the OS.
+    children:
+    - <<: *ATTR_activation_event
+      id: ATTR_SWC_SW_Oper_activation_event
+      mandatory: false
+    - <<: *ATTR_max_duration
+      id: ATTR_SWC_SW_Oper_max_duration
+    - <<: *ATTR_max_latency
+      id: ATTR_SWC_SW_Oper_max_latency
+  - id: CLASS_SWC_SW_Port
+    type: mm-class
+    title: sw-port
+    class_id_prefix: SW_Port_
+    long_name_english: Software Port
+    lifecycle_status: established
+    description: A software port is an interaction point of a software component to communicate with other software components.
+    children:
+    - <<: *REL_SW_Port_provides
+      id: REL_SWC_SW_Port_provides
+    - <<: *REL_SW_Port_requires
+      id: REL_SWC_SW_Port_requires
+  - id: CLASS_SWC_SWC_Run
+    type: mm-class
+    title: swc-runnable
+    class_id_prefix: SWC_Run_
+    long_name_english: Software Component Runnable
+    lifecycle_status: established
+    description: 'A SW procedure that is activated by the operating environment like OS or RTE, mostly within a task. E.g.
+      the main procedure of a SW component.
+
+
+      Cycle time is explicitly not an attribute since this is handled in scope of the task. In case function owners want to
+      determine in which task the runnable shall run, this shall be added as an integration hint.'
+    children:
+    - <<: *ATTR_activation_event
+      id: ATTR_SWC_SWC_Run_activation_event
+    - <<: *ATTR_max_duration
+      id: ATTR_SWC_SWC_Run_max_duration
+    - <<: *ATTR_max_latency
+      id: ATTR_SWC_SWC_Run_max_latency
+  - <<: *REL_arc_parent
+    id: REL_SWC_arc_parent
+- id: CLASS_SWC_List
+  type: mm-class
+  title: swc-list
+  class_id_prefix: SWC_List_
+  long_name_english: Software Component List
+  lifecycle_status: established
+  section: Software Architecture
+  description: 'A software component list is used to create lists of software components and software compositions and can
+    represent deployment as well as other structuring aspects.
+
+
+    Typical deployment-oriented usages are grouping SWCs by target or packaging, for example:
+
+
+    * deployed on a specific HW, chip, container, binary, or image
+
+    * integrated as part of a composition or AUTOSAR SWC
+
+    * configured for trusted/MMU-related deployment modes
+
+    * assigned to a function group for deployment planning
+
+
+    A swc-list can also refer to another swc-list to define hierarchical structures, and one software component or composition
+    may be referenced in multiple swc-lists (for example across several ECUs).'
+  children:
+  - id: REL_SWC_List_integrates
+    type: mm-relation
+    title: integrates
+    target_classes:
+    - CLASS_SWC
+    - CLASS_SW_Comp
+    - CLASS_SWC_List
+    cardinality: 1..*
+    lifecycle_status: established
+    description: The attribute specifies the relation of the software component list to the software components and compositions
+      which are integrated in scope of the swc-list.
+- id: CLASS_SW_Comp
+  type: mm-class
+  title: sw-composition
+  class_id_prefix: SW_Comp_
+  long_name_english: Software Composition
+  lifecycle_status: established
+  section: Software Architecture
+  description: A software composition encapsulates software compositions or software components.
+  children:
+  - <<: *ATTR_legal
+    id: ATTR_SW_Comp_legal
+  - <<: *ATTR_safety
+    id: ATTR_SW_Comp_safety
+  - <<: *ATTR_security
+    id: ATTR_SW_Comp_security
+  - <<: *ATTR_supplier
+    id: ATTR_SW_Comp_supplier
+  - id: CLASS_SW_Comp_SW_Port
+    type: mm-class
+    title: sw-port
+    class_id_prefix: SW_Port_
+    long_name_english: Software Port
+    lifecycle_status: established
+    description: A software port is an interaction point of a software component to communicate with other software components.
+    children:
+    - <<: *REL_SW_Port_provides
+      id: REL_SW_Comp_SW_Port_provides
+    - <<: *REL_SW_Port_requires
+      id: REL_SW_Comp_SW_Port_requires
+  - <<: *REL_arc_parent
+    id: REL_SW_Comp_arc_parent
+- id: CLASS_SW_Con
+  type: mm-class
+  title: sw-connection
+  class_id_prefix: SW_Con_
+  long_name_english: Software Connection
+  lifecycle_status: established
+  section: Software Architecture
+  description: A software connection defines a communication link between software components through their ports and specifies
+    the interface elements carried by the connection.
+  children:
+  - id: REL_SW_Con_carries
+    type: mm-relation
+    title: carries
+    target_classes:
+    - CLASS_SW_If_SW_IfElm
+    cardinality: 1..*
+    lifecycle_status: established
+    description: The attribute specifies the bandwidth of the interface elements carried by the connection.
+  - id: REL_SW_Con_connects
+    type: mm-relation
+    title: connects
+    target_classes:
+    - CLASS_SWC_SW_Port
+    - CLASS_SW_Comp_SW_Port
+    cardinality: '2'
+    lifecycle_status: established
+    description: The attribute specifies the connected ports of the connection.
+- id: CLASS_SW_Event
+  type: mm-class
+  title: sw-event
+  class_id_prefix: SW_Event_
+  long_name_english: Software Event
+  lifecycle_status: established
+  section: Software Architecture
+  description: 'The class is used to reflect events which are relevant for SW (e.g., timer, alarm, OS, data, interrupt etc.).
+    This does not necessarily mean that only events from SW are considered. Consequently, this could also be an event coming
+    from hardware.
+
+    '
+  children:
+  - <<: *ATTR_cycle_time
+    id: ATTR_SW_Event_cycle_time
+    mandatory: false
+  - <<: *ATTR_priority
+    id: ATTR_SW_Event_priority
+  - id: REL_SW_Event_triggers
+    type: mm-relation
+    title: triggers
+    target_classes:
+    - CLASS_SWC_SWC_Run
+    - CLASS_SWC_SW_Oper
+    - CLASS_SW_Seq
+    - CLASS_SW_Task
+    cardinality: 1..*
+    lifecycle_status: established
+    description: Determines which entities are triggered in scope of the task.
+- id: CLASS_SW_Func
+  type: mm-class
+  title: sw-function
+  class_id_prefix: SW_Func_
+  long_name_english: Software Function
+  lifecycle_status: established
+  section: Software Requirements
+  description: A software function provides functionality which software needs to fulfill in order to provide the desired
+    behavior. The entirety of software functions must fulfill the entirety of domain-specific system functions for software.
+  children:
+  - id: ATTR_SW_Func_domain
+    type: mm-attribute
+    title: domain
+    mandatory: false
+    values: SW
+    lifecycle_status: established
+    description: The attribute determines to which domain the software function belongs.
+  - id: REL_SW_Func_described_by
+    type: mm-relation
+    title: described_by
+    target_classes:
+    - CLASS_REQ_Sw
+    - CLASS_REQ_SwC
+    cardinality: 0..*
+    lifecycle_status: established
+    description: The attribute defines by which requirements the function is described.
+  - id: REL_SW_Func_func_parent
+    type: mm-relation
+    title: func_parent
+    target_classes:
+    - CLASS_SW_Func
+    - CLASS_SYS_Func
+    cardinality: 0..1
+    lifecycle_status: established
+    description: The attribute defines the hierarchical parent of the function.
+  - id: REL_SW_Func_func_trace
+    type: mm-relation
+    title: func_trace
+    target_classes:
+    - CLASS_SWC
+    - CLASS_SW_Comp
+    cardinality: 0..1
+    lifecycle_status: established
+    description: The attribute defines which architecture components implement the function. It contains the traceability
+      to the software components and compositions.
+- id: CLASS_SW_If
+  type: mm-class
+  title: sw-if
+  class_id_prefix: SW_If_
+  long_name_english: Software Interface
+  lifecycle_status: established
+  section: Software Architecture
+  description: A software interface defines the contract for interaction between software components, specifying the methods,
+    data, and protocols used for communication. It enables modularity and interoperability within the software architecture.
+  children:
+  - id: ATTR_SW_If_if_type
+    type: mm-attribute
+    title: if_type
+    mandatory: true
+    values:
+    - client-server-interface
+    - sender-receiver-interface
+    - interface-header
+    lifecycle_status: established
+    description: The attribute specifies the type of interface. For AUTOSAR interfaces, please use 'client-server-interface'
+      or 'sender-receiver-interface'. Otherwise use 'interface-header'.
+  - id: CLASS_SW_If_SW_IfElm
+    type: mm-class
+    title: sw-ifelement
+    class_id_prefix: SW_IfElm_
+    long_name_english: Software Interface Element
+    lifecycle_status: established
+    description: A software interface element defines a single element of a software interface, such as a method or data structure.
+    children:
+    - id: ATTR_SW_If_SW_IfElm_arguments
+      type: mm-attribute
+      title: arguments
+      mandatory: false
+      values: string
+      lifecycle_status: established
+      description: 'The ``arguments`` attribute provides a semicolon-separated list of arguments for an ``ifelement_type``
+        "operation". The names in ``arguments`` do not need to match the actual implementation; they should simply convey
+        the purpose or nature of each input. Data types are not required, as they are considered implementation details and
+        may not be known during the architectural definition phase. However, data types can be optionally included. For example
+        when using
+
+
+        * data types like float and double or
+
+        * predefined interfaces, such as standardized AUTOSAR interfaces.'
+    - id: ATTR_SW_If_SW_IfElm_ifelement_type
+      type: mm-attribute
+      title: ifelement_type
+      mandatory: true
+      values:
+      - attribute
+      - operation
+      lifecycle_status: established
+      description: The attribute specifies the type of interface element.
+    - id: ATTR_SW_If_SW_IfElm_range
+      type: mm-attribute
+      title: range
+      mandatory: false
+      values: string
+      lifecycle_status: established
+      description: 'The attribute ``range`` specifies the range using mathematical interval notation:
+
+
+        * Round brackets () indicate an open interval (value not included).
+
+
+        * Square brackets [] indicate a closed interval (value included).
+
+
+        * Curly brackets {} indicate a set and are used when only specific discrete values are allowed.
+
+
+        Round and square brackets can also be mixed, if only one part of the internal is opened or closed.
+
+        Inside the intervals, use commas to separate the values.
+
+        All decimal values must use a point (.) as the decimal separator.
+
+
+        For interface elements of type "operation", provide ``range`` as a semicolon-separated list, following the same order
+        as ``arguments``.'
+    - id: ATTR_SW_If_SW_IfElm_resolution
+      type: mm-attribute
+      title: resolution
+      mandatory: false
+      values: string
+      lifecycle_status: established
+      description: The attribute ``resolution`` defines the numerical resolution value. Optionally, include a SI-unit if the
+        argument or attribute represents a physical quantity. For operation elements, specify a semicolon-separated list in
+        ``resolution`` in the same order as in ``arguments``. If an argument has no resolution and no unit, use "na" (not
+        applicable).
+    - id: ATTR_SW_If_SW_IfElm_return_val
+      type: mm-attribute
+      title: return_val
+      mandatory: false
+      values: string
+      lifecycle_status: established
+      description: Defines the return value for an operation.
+    - id: ATTR_SW_If_SW_IfElm_storage
+      type: mm-attribute
+      title: storage
+      mandatory: false
+      values: str
+      lifecycle_status: phase-out
+      description: Defines where the interface element is stored.
+- id: CLASS_SW_Seq
+  type: mm-class
+  title: sw-sequence
+  class_id_prefix: SW_Seq_
+  long_name_english: Software Sequence
+  lifecycle_status: established
+  section: Software Architecture
+  description: 'An arbitrary sequence of procedure calls within or across SW components.
+
+    A sequence consists of two elements at least. These can be of type SwOperation or SwcRunnable.'
+  children:
+  - <<: *REL_executes
+    id: REL_SW_Seq_executes
+    target_classes:
+    - CLASS_SWC_SWC_Run
+    - CLASS_SWC_SW_Oper
+    cardinality: 2..*
+  - <<: *ATTR_max_duration
+    id: ATTR_SW_Seq_max_duration
+  - <<: *ATTR_max_latency
+    id: ATTR_SW_Seq_max_latency
+- id: CLASS_SW_Task
+  type: mm-class
+  title: sw-task
+  class_id_prefix: SW_Task_
+  long_name_english: Software Task
+  lifecycle_status: established
+  section: Software Architecture
+  description: Usually a regular sequence of SW runnable calls, activated by the environment, e.g. OS or RTE events. Nevertheless
+    a task can be empty or can call SW operations as well.
+  children:
+  - <<: *ATTR_activation_event
+    id: ATTR_SW_Task_activation_event
+  - <<: *ATTR_cycle_time
+    id: ATTR_SW_Task_cycle_time
+  - <<: *ATTR_max_duration
+    id: ATTR_SW_Task_max_duration
+  - <<: *ATTR_max_latency
+    id: ATTR_SW_Task_max_latency
+  - <<: *ATTR_priority
+    id: ATTR_SW_Task_priority
+  - id: ATTR_SW_Task_task_type
+    type: mm-attribute
+    title: task_type
+    mandatory: true
+    values:
+    - auto
+    - basic
+    - extended
+    lifecycle_status: established
+    description: The task type describes how the task is scheduled.
+  - <<: *REL_executes
+    id: REL_SW_Task_executes
+    target_classes:
+    - CLASS_SWC_SWC_Run
+    - CLASS_SWC_SW_Oper
+- id: CLASS_SYS
+  type: mm-class
+  title: sys-element
+  class_id_prefix: SYS_
+  long_name_english: System Element
+  lifecycle_status: phase-out
+  section: System Architecture
+  description: "Do not use this class anymore. It is superseded by ``sys-techelm``\n(``SYS_Tech_``) and ``sys-logelm`` (``SYS_Log_``).\n\
+    A system element is a component which is part of the system architecture.\n\n.. note::\n\n   **Migration.** Existing projects\
+    \ shall migrate each ``sys-element``\n   object as follows:\n\n   * Already tagged ``log-component`` → convert to ``sys-logelm``.\n\
+    \   * Already tagged ``tech`` → convert to ``sys-techelm``.\n   * No explicit tag → convert to ``sys-techelm`` (the default\
+    \ target;\n     an untagged ``sys-element`` is assumed to describe an\n     implementation-level, technical component)."
+  children:
+  - <<: *ATTR_legal
+    id: ATTR_SYS_legal
+  - <<: *ATTR_safety
+    id: ATTR_SYS_safety
+  - <<: *ATTR_security
+    id: ATTR_SYS_security
+  - <<: *ATTR_supplier
+    id: ATTR_SYS_supplier
+  - id: CLASS_SYS_SYS_Port
+    type: mm-class
+    title: sys-port
+    class_id_prefix: SYS_Port_
+    long_name_english: System Port
+    lifecycle_status: established
+    description: A system port is an interaction point of a system component to communicate with other system components.
+    children:
+    - id: REL_SYS_SYS_Port_provides
+      type: mm-relation
+      title: provides
+      target_classes:
+      - CLASS_SYS_If
+      cardinality: 0..1
+      lifecycle_status: established
+      description: The attribute links to the provided interface.
+    - id: REL_SYS_SYS_Port_requires
+      type: mm-relation
+      title: requires
+      target_classes:
+      - CLASS_SYS_If
+      cardinality: 0..1
+      lifecycle_status: established
+      description: The attribute links to the required interface.
+  - id: REL_SYS_arc_parent
+    type: mm-relation
+    title: arc_parent
+    target_classes:
+    - CLASS_SYS
+    cardinality: 0..1
+    lifecycle_status: established
+    description: The attribute defines the hierarchical parent of the object.
+- id: CLASS_SYS_Con
+  type: mm-class
+  title: sys-connection
+  class_id_prefix: SYS_Con_
+  long_name_english: System Connection
+  lifecycle_status: established
+  section: System Architecture
+  description: A system connection defines a communication link between system components through their ports and specifies
+    the interface elements carried by the connection.
+  children:
+  - id: REL_SYS_Con_carries
+    type: mm-relation
+    title: carries
+    target_classes:
+    - CLASS_SYS_If_SYS_IfElm
+    cardinality: 1..*
+    lifecycle_status: established
+    description: The attribute specifies the bandwidth of the interface elements carried by the connection.
+  - id: REL_SYS_Con_connects
+    type: mm-relation
+    title: connects
+    target_classes:
+    - CLASS_SYS_SYS_Port
+    cardinality: '2'
+    lifecycle_status: established
+    description: The attribute specifies the connected ports of the connection.
+  - id: REL_SYS_Con_described_by
+    type: mm-relation
+    title: described_by
+    target_classes:
+    - CLASS_REQ_HSI
+    - CLASS_REQ_Sys
+    cardinality: 1..*
+    lifecycle_status: established
+    description: The attribute defines by which requirements the connection is described.
+- id: CLASS_SYS_Func
+  type: mm-class
+  title: sys-function
+  class_id_prefix: SYS_Func_
+  long_name_english: System Function
+  lifecycle_status: established
+  section: System Requirements
+  description: A system function is a function which the system needs to fulfill in order to provide the desired behavior.
+    System functions are created during the system breakdown.
+  children:
+  - id: ATTR_SYS_Func_domain
+    type: mm-attribute
+    title: domain
+    mandatory: true
+    values:
+    - SYS
+    - SW
+    - HW
+    lifecycle_status: established
+    description: 'The attribute determines to which domain the system function belongs. The default value is "SYS".
+
+      In case a system function has a domain other than "SYS" it means it is fully handled in the respective domain.'
+  - id: REL_SYS_Func_aggregated_by
+    type: mm-relation
+    title: aggregated_by
+    target_classes:
+    - CLASS_USER_Func
+    cardinality: 1..*
+    lifecycle_status: established
+    description: The attribute defines which system functions are aggregated by the user function.
+  - id: REL_SYS_Func_described_by
+    type: mm-relation
+    title: described_by
+    target_classes:
+    - CLASS_REQ_Sw
+    - CLASS_REQ_Hw
+    cardinality: 1..*
+    lifecycle_status: established
+    description: The attribute defines by which requirements the function is described.
+  - id: REL_SYS_Func_func_parent
+    type: mm-relation
+    title: func_parent
+    target_classes:
+    - CLASS_SYS_Func
+    - CLASS_FEAT
+    cardinality: 0..1
+    lifecycle_status: established
+    description: The attribute defines the hierarchical parent of the function.
+  - id: REL_SYS_Func_func_trace
+    type: mm-relation
+    title: func_trace
+    target_classes:
+    - CLASS_SYS_Log
+    cardinality: 0..*
+    lifecycle_status: established
+    description: The attribute defines which architecture elements implement the function.
+  - id: REL_SYS_Func_implements
+    type: mm-relation
+    title: implements
+    target_classes:
+    - CLASS_SYS_Tech
+    cardinality: 0..*
+    lifecycle_status: established
+    description: The attribute defines which architecture elements implement the function.
+- id: CLASS_SYS_If
+  type: mm-class
+  title: sys-if
+  class_id_prefix: SYS_If_
+  long_name_english: System Interface
+  lifecycle_status: established
+  section: System Architecture
+  description: A system interface defines the contract for interaction between system components, specifying the methods,
+    data, and protocols used for communication. It enables modularity and interoperability within the software system.
+  children:
+  - id: ATTR_SYS_If_if_type
+    type: mm-attribute
+    title: if_type
+    mandatory: true
+    values: str
+    lifecycle_status: established
+    description: The attribute specifies the type of interface.
+  - id: CLASS_SYS_If_SYS_IfElm
+    type: mm-class
+    title: sys-ifelement
+    class_id_prefix: SYS_IfElm_
+    long_name_english: System Interface Element
+    lifecycle_status: established
+    description: A system interface element defines a single element of a system interface, such as a method or data structure.
+    children:
+    - id: ATTR_SYS_If_SYS_IfElm_arguments
+      type: mm-attribute
+      title: arguments
+      mandatory: false
+      values: string
+      lifecycle_status: established
+      description: 'The ``arguments`` attribute provides a semicolon-separated list of arguments for an ``ifelement_type``
+        "operation". The names in ``arguments`` do not need to match the actual implementation; they should simply convey
+        the purpose or nature of each input. Data types are not required, as they are considered implementation details and
+        may not be known during the architectural definition phase. However, data types can be optionally included. For example
+        when using
+
+
+        * data types like float and double or
+
+        * predefined interfaces, such as standardized AUTOSAR interfaces.'
+    - id: ATTR_SYS_If_SYS_IfElm_ifelement_type
+      type: mm-attribute
+      title: ifelement_type
+      mandatory: true
+      values:
+      - attribute
+      - operation
+      lifecycle_status: established
+      description: The attribute specifies the type of interface element.
+    - id: ATTR_SYS_If_SYS_IfElm_range
+      type: mm-attribute
+      title: range
+      mandatory: false
+      values: string
+      lifecycle_status: established
+      description: 'The attribute ``range`` specifies the range using mathematical interval notation:
+
+
+        * Round brackets () indicate an open interval (value not included).
+
+
+        * Square brackets [] indicate a closed interval (value included).
+
+
+        * Curly brackets {} indicate a set and are used when only specific discrete values are allowed.
+
+
+        Round and square brackets can also be mixed, if only one part of the internal is opened or closed.
+
+        Inside the intervals, use commas to separate the values.
+
+        All decimal values must use a point (.) as the decimal separator.
+
+
+        For interface elements of type "operation", provide ``range`` as a semicolon-separated list, following the same order
+        as ``arguments``.'
+    - id: ATTR_SYS_If_SYS_IfElm_resolution
+      type: mm-attribute
+      title: resolution
+      mandatory: false
+      values: string
+      lifecycle_status: established
+      description: The attribute ``resolution`` defines the numerical resolution value. Optionally, include a SI-unit if the
+        argument or attribute represents a physical quantity. For operation elements, specify a semicolon-separated list in
+        ``resolution`` in the same order as in ``arguments``. If an argument has no resolution and no unit, use "na" (not
+        applicable).
+    - id: ATTR_SYS_If_SYS_IfElm_return_val
+      type: mm-attribute
+      title: return_val
+      mandatory: false
+      values: string
+      lifecycle_status: established
+      description: Defines the return value for an operation.
+    - id: ATTR_SYS_If_SYS_IfElm_storage
+      type: mm-attribute
+      title: storage
+      mandatory: false
+      values: str
+      lifecycle_status: phase-out
+      description: Defines where the interface element is stored.
+- id: CLASS_SYS_Log
+  type: mm-class
+  title: sys-logelm
+  class_id_prefix: SYS_Log_
+  long_name_english: System Element
+  lifecycle_status: established
+  section: System Architecture
+  description: A logical system element is a conceptual system element which does not represent a design element.
+  children:
+  - <<: *ATTR_legal
+    id: ATTR_SYS_Log_legal
+  - <<: *ATTR_safety
+    id: ATTR_SYS_Log_safety
+  - <<: *ATTR_security
+    id: ATTR_SYS_Log_security
+  - <<: *ATTR_supplier
+    id: ATTR_SYS_Log_supplier
+  - id: CLASS_SYS_Log_SYS_Port
+    type: mm-class
+    title: sys-port
+    class_id_prefix: SYS_Port_
+    long_name_english: System Port
+    lifecycle_status: established
+    description: A system port is an interaction point of a system component to communicate with other system components.
+    children:
+    - id: REL_SYS_Log_SYS_Port_provides
+      type: mm-relation
+      title: provides
+      target_classes:
+      - CLASS_SYS_If
+      cardinality: 0..1
+      lifecycle_status: established
+      description: The attribute links to the provided interface.
+    - id: REL_SYS_Log_SYS_Port_requires
+      type: mm-relation
+      title: requires
+      target_classes:
+      - CLASS_SYS_If
+      cardinality: 0..1
+      lifecycle_status: established
+      description: The attribute links to the required interface.
+  - id: REL_SYS_Log_arc_parent
+    type: mm-relation
+    title: arc_parent
+    target_classes:
+    - CLASS_SYS
+    cardinality: 0..1
+    lifecycle_status: established
+    description: The attribute defines the hierarchical parent of the object.
+- id: CLASS_SYS_Tech
+  type: mm-class
+  title: sys-techelm
+  class_id_prefix: SYS_Tech_
+  long_name_english: System Element Technical
+  lifecycle_status: established
+  section: System Architecture
+  description: A technical system element is a system element which describes design constraints for the implementation.
+  children:
+  - <<: *ATTR_legal
+    id: ATTR_SYS_Tech_legal
+  - <<: *ATTR_safety
+    id: ATTR_SYS_Tech_safety
+  - <<: *ATTR_security
+    id: ATTR_SYS_Tech_security
+  - <<: *ATTR_supplier
+    id: ATTR_SYS_Tech_supplier
+  - id: CLASS_SYS_Tech_SYS_Port
+    type: mm-class
+    title: sys-port
+    class_id_prefix: SYS_Port_
+    long_name_english: System Port
+    lifecycle_status: established
+    description: A system port is an interaction point of a system component to communicate with other system components.
+    children:
+    - id: REL_SYS_Tech_SYS_Port_provides
+      type: mm-relation
+      title: provides
+      target_classes:
+      - CLASS_SYS_If
+      cardinality: 0..1
+      lifecycle_status: established
+      description: The attribute links to the provided interface.
+    - id: REL_SYS_Tech_SYS_Port_requires
+      type: mm-relation
+      title: requires
+      target_classes:
+      - CLASS_SYS_If
+      cardinality: 0..1
+      lifecycle_status: established
+      description: The attribute links to the required interface.
+  - id: REL_SYS_Tech_arc_parent
+    type: mm-relation
+    title: arc_parent
+    target_classes:
+    - CLASS_SYS
+    cardinality: 0..1
+    lifecycle_status: established
+    description: The attribute defines the hierarchical parent of the object.
+- id: CLASS_TC_SwC
+  type: mm-class
+  title: tc-swc
+  class_id_prefix: TC_SwC_
+  long_name_english: Test Case Software Component
+  lifecycle_status: established
+  section: Test Management
+  description: 'Test case for a software component that validates a software component.
+
+    This object is used to realize a test case on SW Component Test level (ASPICE SWE.4).'
+  children:
+  - <<: *ATTR_feature_function
+    id: ATTR_TC_SwC_feature_function
+  - <<: *ATTR_latest_report_path
+    id: ATTR_TC_SwC_latest_report_path
+  - <<: *ATTR_latest_test_verdict
+    id: ATTR_TC_SwC_latest_test_verdict
+  - <<: *ATTR_TC_legal
+    id: ATTR_TC_SwC_legal
+  - <<: *ATTR_TC_safety
+    id: ATTR_TC_SwC_safety
+  - <<: *ATTR_TC_security
+    id: ATTR_TC_SwC_security
+  - <<: *ATTR_TC_unit_component_status
+    id: ATTR_TC_SwC_status
+  - <<: *ATTR_tags
+    id: ATTR_TC_SwC_tags
+  - <<: *ATTR_test_category
+    id: ATTR_TC_SwC_test_category
+  - <<: *ATTR_test_design_technique
+    id: ATTR_TC_SwC_test_design_technique
+  - <<: *ATTR_test_environment
+    id: ATTR_TC_SwC_test_environment
+  - <<: *ATTR_test_method
+    id: ATTR_TC_SwC_test_method
+  - <<: *ATTR_test_tool
+    id: ATTR_TC_SwC_test_tool
+  - <<: *ATTR_TC_unit_component_testcase_type
+    id: ATTR_TC_SwC_testcase_type
+  - <<: *ATTR_variant
+    id: ATTR_TC_SwC_variant
+  - <<: *ATTR_TC_verification_level
+    id: ATTR_TC_SwC_verification_level
+  - <<: *ATTR_TC_verification_type
+    id: ATTR_TC_SwC_verification_type
+  - <<: *REL_validates
+    id: REL_TC_SwC_validates
+    target_classes:
+    - CLASS_REQ_SwC
+- id: CLASS_TC_SwF
+  type: mm-class
+  title: tc-swf
+  class_id_prefix: TC_SwF_
+  long_name_english: Test Case Software Function
+  lifecycle_status: established
+  section: Test Management
+  description: 'Test cases for validating the software function against the software requirements.
+
+    This object is used to realize a test case on SW Verification level (ASPICE SWE.6)'
+  children:
+  - <<: *ATTR_feature_function
+    id: ATTR_TC_SwF_feature_function
+  - <<: *ATTR_latest_report_path
+    id: ATTR_TC_SwF_latest_report_path
+  - <<: *ATTR_latest_test_verdict
+    id: ATTR_TC_SwF_latest_test_verdict
+  - <<: *ATTR_TC_legal
+    id: ATTR_TC_SwF_legal
+  - <<: *ATTR_TC_safety
+    id: ATTR_TC_SwF_safety
+  - <<: *ATTR_TC_security
+    id: ATTR_TC_SwF_security
+  - <<: *ATTR_TC_status
+    id: ATTR_TC_SwF_status
+  - <<: *ATTR_tags
+    id: ATTR_TC_SwF_tags
+  - <<: *ATTR_test_category
+    id: ATTR_TC_SwF_test_category
+  - <<: *ATTR_test_design_technique
+    id: ATTR_TC_SwF_test_design_technique
+    mandatory: true
+  - <<: *ATTR_test_environment
+    id: ATTR_TC_SwF_test_environment
+  - <<: *ATTR_test_method
+    id: ATTR_TC_SwF_test_method
+    mandatory: true
+  - <<: *ATTR_test_tool
+    id: ATTR_TC_SwF_test_tool
+  - <<: *ATTR_testcase_type
+    id: ATTR_TC_SwF_testcase_type
+  - <<: *ATTR_variant
+    id: ATTR_TC_SwF_variant
+  - <<: *ATTR_TC_verification_level
+    id: ATTR_TC_SwF_verification_level
+  - <<: *ATTR_TC_verification_type
+    id: ATTR_TC_SwF_verification_type
+  - <<: *REL_validates
+    id: REL_TC_SwF_validates
+    target_classes:
+    - CLASS_REQ_Sw
+- id: CLASS_TC_SwI
+  type: mm-class
+  title: tc-swi
+  class_id_prefix: TC_SwI_
+  long_name_english: Test Case Software Integration
+  lifecycle_status: established
+  section: Test Management
+  description: 'Test case to validate the successful integration of the software based on a software integration strategy
+    and software architecture.
+
+    This object is used to realize a test case on SW Verification level (ASPICE SWE.5)'
+  children:
+  - <<: *ATTR_feature_function
+    id: ATTR_TC_SwI_feature_function
+  - <<: *ATTR_latest_report_path
+    id: ATTR_TC_SwI_latest_report_path
+  - <<: *ATTR_latest_test_verdict
+    id: ATTR_TC_SwI_latest_test_verdict
+  - <<: *ATTR_TC_legal
+    id: ATTR_TC_SwI_legal
+  - <<: *ATTR_TC_safety
+    id: ATTR_TC_SwI_safety
+  - <<: *ATTR_TC_security
+    id: ATTR_TC_SwI_security
+  - <<: *ATTR_TC_status
+    id: ATTR_TC_SwI_status
+  - <<: *ATTR_tags
+    id: ATTR_TC_SwI_tags
+  - <<: *ATTR_test_category
+    id: ATTR_TC_SwI_test_category
+  - <<: *ATTR_test_design_technique
+    id: ATTR_TC_SwI_test_design_technique
+    mandatory: true
+  - <<: *ATTR_test_environment
+    id: ATTR_TC_SwI_test_environment
+  - <<: *ATTR_test_method
+    id: ATTR_TC_SwI_test_method
+    mandatory: true
+  - <<: *ATTR_test_tool
+    id: ATTR_TC_SwI_test_tool
+  - <<: *ATTR_testcase_type
+    id: ATTR_TC_SwI_testcase_type
+  - <<: *ATTR_variant
+    id: ATTR_TC_SwI_variant
+  - <<: *ATTR_TC_verification_level
+    id: ATTR_TC_SwI_verification_level
+  - <<: *ATTR_TC_verification_type
+    id: ATTR_TC_SwI_verification_type
+  - <<: *REL_validates
+    id: REL_TC_SwI_validates
+    target_classes:
+    - CLASS_SW_Comp
+    - CLASS_SWC
+    - CLASS_SWC_SW_Port
+    - CLASS_SW_Con
+    - CLASS_SW_If
+    - CLASS_SW_If_SW_IfElm
+    - CLASS_SW_Task
+    - CLASS_SWC_SWC_Run
+    - CLASS_SW_Event
+    - CLASS_SWC_SW_Oper
+    - CLASS_SW_Seq
+- id: CLASS_TC_SwU
+  type: mm-class
+  title: tc-swu
+  class_id_prefix: TC_SwU_
+  long_name_english: Test Case Software Unit
+  lifecycle_status: established
+  section: Test Management
+  description: 'Test case for a software unit (e.g., function, class, method) that validates a software unit.
+
+    This object is used to realize a test case on SW Unit Test level (ASPICE SWE.4).'
+  children:
+  - <<: *ATTR_feature_function
+    id: ATTR_TC_SwU_feature_function
+  - <<: *ATTR_latest_report_path
+    id: ATTR_TC_SwU_latest_report_path
+  - <<: *ATTR_latest_test_verdict
+    id: ATTR_TC_SwU_latest_test_verdict
+  - <<: *ATTR_TC_legal
+    id: ATTR_TC_SwU_legal
+  - <<: *ATTR_TC_safety
+    id: ATTR_TC_SwU_safety
+  - <<: *ATTR_TC_security
+    id: ATTR_TC_SwU_security
+  - <<: *ATTR_TC_unit_component_status
+    id: ATTR_TC_SwU_status
+  - <<: *ATTR_tags
+    id: ATTR_TC_SwU_tags
+  - <<: *ATTR_test_category
+    id: ATTR_TC_SwU_test_category
+  - <<: *ATTR_test_design_technique
+    id: ATTR_TC_SwU_test_design_technique
+  - <<: *ATTR_test_environment
+    id: ATTR_TC_SwU_test_environment
+  - <<: *ATTR_test_method
+    id: ATTR_TC_SwU_test_method
+  - <<: *ATTR_test_tool
+    id: ATTR_TC_SwU_test_tool
+  - <<: *ATTR_TC_unit_component_testcase_type
+    id: ATTR_TC_SwU_testcase_type
+  - <<: *ATTR_variant
+    id: ATTR_TC_SwU_variant
+  - <<: *ATTR_TC_verification_level
+    id: ATTR_TC_SwU_verification_level
+  - <<: *ATTR_TC_verification_type
+    id: ATTR_TC_SwU_verification_type
+  - <<: *REL_validates
+    id: REL_TC_SwU_validates
+    target_classes:
+    - CLASS_DDSG
+- id: CLASS_TC_SysF
+  type: mm-class
+  title: tc-sysf
+  class_id_prefix: TC_SysF_
+  long_name_english: Test Case System Function
+  lifecycle_status: established
+  section: Test Management
+  description: 'Test cases for validating the system function against the system requirements.
+
+    This object is used to realize a test case on System verification level (ASPICE SYS.5).'
+  children:
+  - <<: *ATTR_feature_function
+    id: ATTR_TC_SysF_feature_function
+  - <<: *ATTR_latest_report_path
+    id: ATTR_TC_SysF_latest_report_path
+  - <<: *ATTR_latest_test_verdict
+    id: ATTR_TC_SysF_latest_test_verdict
+  - <<: *ATTR_TC_legal
+    id: ATTR_TC_SysF_legal
+  - <<: *ATTR_TC_safety
+    id: ATTR_TC_SysF_safety
+  - <<: *ATTR_TC_security
+    id: ATTR_TC_SysF_security
+  - <<: *ATTR_TC_status
+    id: ATTR_TC_SysF_status
+  - <<: *ATTR_tags
+    id: ATTR_TC_SysF_tags
+  - <<: *ATTR_test_category
+    id: ATTR_TC_SysF_test_category
+  - <<: *ATTR_test_design_technique
+    id: ATTR_TC_SysF_test_design_technique
+    mandatory: true
+  - <<: *ATTR_test_environment
+    id: ATTR_TC_SysF_test_environment
+  - <<: *ATTR_test_implementation
+    id: ATTR_TC_SysF_test_implementation
+  - <<: *ATTR_test_implementation_id
+    id: ATTR_TC_SysF_test_implementation_id
+  - <<: *ATTR_test_method
+    id: ATTR_TC_SysF_test_method
+    mandatory: true
+  - <<: *ATTR_test_tool
+    id: ATTR_TC_SysF_test_tool
+  - <<: *ATTR_testcase_type
+    id: ATTR_TC_SysF_testcase_type
+  - <<: *ATTR_variant
+    id: ATTR_TC_SysF_variant
+  - <<: *ATTR_TC_verification_level
+    id: ATTR_TC_SysF_verification_level
+  - <<: *ATTR_TC_verification_type
+    id: ATTR_TC_SysF_verification_type
+  - <<: *REL_validates
+    id: REL_TC_SysF_validates
+    target_classes:
+    - CLASS_REQ_Sys
+- id: CLASS_TC_SysI
+  type: mm-class
+  title: tc-sysi
+  class_id_prefix: TC_SysI_
+  long_name_english: Test Case System Integration
+  lifecycle_status: established
+  section: Test Management
+  description: 'Test case to validate the successful integration of the system based on a system integration strategy and
+    system architecture.
+
+    This object is used to realize a test case on System integration level (ASPICE SYS.4).'
+  children:
+  - <<: *ATTR_feature_function
+    id: ATTR_TC_SysI_feature_function
+  - <<: *ATTR_latest_report_path
+    id: ATTR_TC_SysI_latest_report_path
+  - <<: *ATTR_latest_test_verdict
+    id: ATTR_TC_SysI_latest_test_verdict
+  - <<: *ATTR_TC_legal
+    id: ATTR_TC_SysI_legal
+  - <<: *ATTR_TC_safety
+    id: ATTR_TC_SysI_safety
+  - <<: *ATTR_TC_security
+    id: ATTR_TC_SysI_security
+  - <<: *ATTR_TC_status
+    id: ATTR_TC_SysI_status
+  - <<: *ATTR_tags
+    id: ATTR_TC_SysI_tags
+  - <<: *ATTR_test_category
+    id: ATTR_TC_SysI_test_category
+  - <<: *ATTR_test_design_technique
+    id: ATTR_TC_SysI_test_design_technique
+    mandatory: true
+  - <<: *ATTR_test_environment
+    id: ATTR_TC_SysI_test_environment
+  - <<: *ATTR_test_implementation
+    id: ATTR_TC_SysI_test_implementation
+  - <<: *ATTR_test_implementation_id
+    id: ATTR_TC_SysI_test_implementation_id
+  - <<: *ATTR_test_method
+    id: ATTR_TC_SysI_test_method
+    mandatory: true
+  - <<: *ATTR_test_tool
+    id: ATTR_TC_SysI_test_tool
+  - <<: *ATTR_testcase_type
+    id: ATTR_TC_SysI_testcase_type
+  - <<: *ATTR_variant
+    id: ATTR_TC_SysI_variant
+  - <<: *ATTR_TC_verification_level
+    id: ATTR_TC_SysI_verification_level
+  - <<: *ATTR_TC_verification_type
+    id: ATTR_TC_SysI_verification_type
+  - <<: *REL_validates
+    id: REL_TC_SysI_validates
+    target_classes:
+    - CLASS_SYS_Func
+    - CLASS_SYS_Tech
+    - CLASS_SYS_SYS_Port
+    - CLASS_SYS_Con
+    - CLASS_SYS_If
+    - CLASS_SYS_If_SYS_IfElm
+    - CLASS_REQ_HSI
+- id: CLASS_TC_Veh
+  type: mm-class
+  title: tc-veh
+  class_id_prefix: TC_Veh_
+  long_name_english: Test Case Vehicle
+  lifecycle_status: established
+  section: Test Management
+  description: Test case to be run in a vehicle context.
+  children:
+  - <<: *ATTR_feature_function
+    id: ATTR_TC_Veh_feature_function
+  - <<: *ATTR_latest_report_path
+    id: ATTR_TC_Veh_latest_report_path
+  - <<: *ATTR_latest_test_verdict
+    id: ATTR_TC_Veh_latest_test_verdict
+  - <<: *ATTR_TC_legal
+    id: ATTR_TC_Veh_legal
+  - <<: *ATTR_TC_safety
+    id: ATTR_TC_Veh_safety
+  - <<: *ATTR_TC_security
+    id: ATTR_TC_Veh_security
+  - <<: *ATTR_TC_status
+    id: ATTR_TC_Veh_status
+  - <<: *ATTR_tags
+    id: ATTR_TC_Veh_tags
+  - <<: *ATTR_test_category
+    id: ATTR_TC_Veh_test_category
+  - <<: *ATTR_test_design_technique
+    id: ATTR_TC_Veh_test_design_technique
+    mandatory: true
+  - <<: *ATTR_test_environment
+    id: ATTR_TC_Veh_test_environment
+  - <<: *ATTR_test_implementation
+    id: ATTR_TC_Veh_test_implementation
+  - <<: *ATTR_test_implementation_id
+    id: ATTR_TC_Veh_test_implementation_id
+  - <<: *ATTR_test_method
+    id: ATTR_TC_Veh_test_method
+    mandatory: true
+  - <<: *ATTR_test_tool
+    id: ATTR_TC_Veh_test_tool
+  - <<: *ATTR_testcase_type
+    id: ATTR_TC_Veh_testcase_type
+  - <<: *ATTR_variant
+    id: ATTR_TC_Veh_variant
+  - <<: *ATTR_TC_verification_level
+    id: ATTR_TC_Veh_verification_level
+  - <<: *ATTR_TC_verification_type
+    id: ATTR_TC_Veh_verification_type
+  - <<: *REL_validates
+    id: REL_TC_Veh_validates
+    target_classes:
+    - CLASS_REQ_Stkh
+- id: CLASS_TEST_PLAN
+  type: mm-class
+  title: test-plan
+  class_id_prefix: TEST_PLAN_
+  long_name_english: Test Plan
+  lifecycle_status: established
+  section: Test Management
+  description: Defines the scope, objectives, and organizational structure for testing activities.
+  children:
+  - <<: *ATTR_feature_function
+    id: ATTR_TEST_PLAN_feature_function
+  - <<: *ATTR_latest_test_verdict
+    id: ATTR_TEST_PLAN_latest_test_verdict
+  - <<: *ATTR_project
+    id: ATTR_TEST_PLAN_project
+  - id: ATTR_TEST_PLAN_status
+    type: mm-attribute
+    title: status
+    mandatory: true
+    values:
+    - draft
+    - under review
+    - approved
+    - retired
+    lifecycle_status: established
+    description: 'Defines the lifecycle status of the test plan.
+
+      The concrete transition rules depend on the creation and maintenance process
+
+      (e.g. manual vs. automatically generated test plans).'
+  - <<: *ATTR_tags
+    id: ATTR_TEST_PLAN_tags
+  - <<: *ATTR_test_environment
+    id: ATTR_TEST_PLAN_test_environment
+    mandatory: false
+  - <<: *ATTR_test_tool
+    id: ATTR_TEST_PLAN_test_tool
+  - <<: *ATTR_variant
+    id: ATTR_TEST_PLAN_variant
+  - <<: *ATTR_TC_verification_level
+    id: ATTR_TEST_PLAN_verification_level
+    mandatory: false
+  - id: REL_TEST_PLAN_contains_testcase
+    type: mm-relation
+    title: contains_testcase
+    target_classes:
+    - CLASS_TC_Veh
+    - CLASS_TC_SysF
+    - CLASS_TC_SysI
+    - CLASS_TC_SwF
+    - CLASS_TC_SwI
+    - CLASS_TC_SwC
+    - CLASS_TC_SwU
+    cardinality: 0..*
+    lifecycle_status: established
+    description: Defines which test cases are included in the scope of the test plan.
+  - id: REL_TEST_PLAN_contains_testsuite
+    type: mm-relation
+    title: contains_testsuite
+    target_classes:
+    - CLASS_TEST_SUITE
+    cardinality: 0..*
+    lifecycle_status: established
+    description: Defines which test suites are included in the scope of the test plan.
+- id: CLASS_TCS
+  type: mm-class
+  title: test-script
+  class_id_prefix: TCS_
+  long_name_english: Test Script
+  lifecycle_status: established
+  section: Test Management
+  description: Defines executable test steps implementing one or more test cases
+  children:
+  - id: ATTR_TCS_contains
+    type: mm-attribute
+    title: contains
+    mandatory: false
+    values: str
+    lifecycle_status: established
+    description: Describes the logical or physical content of the test script.
+  - id: ATTR_TCS_status
+    type: mm-attribute
+    title: status
+    mandatory: true
+    values:
+    - draft
+    - implemented
+    - released
+    - obsolete
+    lifecycle_status: established
+    description: 'Defines the lifecycle status of the test case.
+
+      Do not use obsolete, Usecase is in discussion.'
+  - <<: *ATTR_tags
+    id: ATTR_TCS_tags
+  - id: ATTR_TCS_verification_level
+    type: mm-attribute
+    title: verification_level
+    mandatory: true
+    values:
+    - Software_Unit_Verification
+    - Software_Integration_Verification
+    - Software_Verification
+    - System_Integration_Verification
+    - System_Verification
+    - Vehicle_Test
+    - Not_Applicable
+    lifecycle_status: established
+    description: 'Defines the verification level addressed by the test script.
+
+      Typically aligned with the verification level of the associated test case.
+
+      Usecase is still in discussion'
+  - id: REL_TCS_implements_testcase
+    type: mm-relation
+    title: implements_testcase
+    target_classes:
+    - CLASS_TC_Veh
+    - CLASS_TC_SysF
+    - CLASS_TC_SysI
+    - CLASS_TC_SwF
+    - CLASS_TC_SwI
+    - CLASS_TC_SwC
+    - CLASS_TC_SwU
+    cardinality: '1'
+    lifecycle_status: established
+    description: Defines the test case implemented by the test script.
+- id: CLASS_TEST_SUITE
+  type: mm-class
+  title: test-suite
+  class_id_prefix: TEST_SUITE_
+  long_name_english: Test Suite
+  lifecycle_status: established
+  section: Test Management
+  description: Groups related test cases and test suites for structured execution and management.
+  children:
+  - <<: *ATTR_feature_function
+    id: ATTR_TEST_SUITE_feature_function
+  - <<: *ATTR_latest_test_verdict
+    id: ATTR_TEST_SUITE_latest_test_verdict
+  - <<: *ATTR_project
+    id: ATTR_TEST_SUITE_project
+  - id: ATTR_TEST_SUITE_status
+    type: mm-attribute
+    title: status
+    mandatory: true
+    values:
+    - draft
+    - under review
+    - released
+    - obsolete
+    lifecycle_status: established
+    description: 'Defines the lifecycle status of the test case.
+
+      Do not use obsolete, Usecase is in discussion.'
+  - <<: *ATTR_tags
+    id: ATTR_TEST_SUITE_tags
+  - <<: *ATTR_test_environment
+    id: ATTR_TEST_SUITE_test_environment
+  - <<: *ATTR_test_tool
+    id: ATTR_TEST_SUITE_test_tool
+  - <<: *ATTR_variant
+    id: ATTR_TEST_SUITE_variant
+  - <<: *ATTR_TC_verification_level
+    id: ATTR_TEST_SUITE_verification_level
+    mandatory: false
+  - id: REL_TEST_SUITE_contains_testcase
+    type: mm-relation
+    title: contains_testcase
+    target_classes:
+    - CLASS_TC_Veh
+    - CLASS_TC_SysF
+    - CLASS_TC_SysI
+    - CLASS_TC_SwF
+    - CLASS_TC_SwI
+    - CLASS_TC_SwC
+    - CLASS_TC_SwU
+    cardinality: 0..*
+    lifecycle_status: established
+    description: Defines which test cases are grouped within the test suite.
+  - id: REL_TEST_SUITE_contains_testsuite
+    type: mm-relation
+    title: contains_testsuite
+    target_classes:
+    - CLASS_TEST_SUITE
+    cardinality: 0..*
+    lifecycle_status: established
+    description: Defines hierarchical grouping of test suites.
+- id: CLASS_USER_Func
+  type: mm-class
+  title: user-function
+  class_id_prefix: USER_Func_
+  long_name_english: User Function
+  lifecycle_status: established
+  section: System Requirements
+  description: 'User Functions are formalized black box representations of a (sub) feature.
+
+    They are developed from the associated use cases and requirements and consist of a function description and the properties
+    of all relevant inputs and outputs.'
+  children:
+  - id: REL_USER_Func_aggregated_by
+    type: mm-relation
+    title: aggregated_by
+    target_classes:
+    - CLASS_FEAT
+    cardinality: 1..*
+    lifecycle_status: established
+    description: The attribute defines which user functions are aggregated by the feature.
+  - id: REL_USER_Func_described_by
+    type: mm-relation
+    title: described_by
+    target_classes:
+    - CLASS_REQ_Sys
+    cardinality: 1..*
+    lifecycle_status: established
+    description: The attribute defines by which requirements the function is described.
