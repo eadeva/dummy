@@ -12,7 +12,7 @@ Use this skill only in PTK's own source checkout. Confirm the checkout, project 
 
 2. Use reStructuredText for Sphinx pages and add new pages to the toctree.
 
-3. Generate model reference tables through the ptk-schema directive; do not copy field lists that can drift.
+3. Generate configuration field tables through the ptk-schema directive; use YAML paths, allowed values, defaults and constraints. Keep source-module maps, Python API signatures and autodoc/pydoc output out of the published docs. Do not copy field lists that can drift. Keep plugin implementation contracts in the plugin-development skill references.
 
 4. Use literalinclude for runnable configuration and scripts; add tests that execute the same source examples.
 

@@ -11,7 +11,7 @@ domain rules describe behavior, and adapters perform I/O.
    :class: ptk-diagram
    :target: ../_static/diagrams/architecture-overview.svg
 
-   Responsibilities and interaction boundaries. This is a conceptual view, not a complete Python import graph.
+   Responsibilities and interaction boundaries for configuration, execution and results.
 
 .. grid:: 1 1 3 3
    :gutter: 3
@@ -42,7 +42,8 @@ domain rules describe behavior, and adapters perform I/O.
 
 The twelve arc42 chapters below describe the current CLI and its deployment
 boundaries. Behavioral expectations and their review state are maintained in
-:doc:`/requirements/index`; source entry points are in :doc:`/reference/modules`.
+:doc:`/requirements/index`. Configure these capabilities using the
+:doc:`/reference/configuration-schema`.
 
 .. toctree::
    :maxdepth: 1

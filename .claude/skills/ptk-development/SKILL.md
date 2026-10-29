@@ -25,7 +25,7 @@ Use this skill only in PTK's own source checkout. Confirm the checkout, project 
 
 9. Review CI results before marking a milestone complete; record explicit remaining limitations in PLAN.md.
 
-10. Extension contracts and explicit distribution loading are documented in `docs/reference/plugins.rst`; test third-party entry points without importing unselected distributions.
+10. Read [plugin authoring contracts](../ptk-plugin-development/references/contracts.md) for Python interfaces and `docs/reference/plugins.rst` for configuration; test third-party entry points without importing unselected distributions.
 
 11. For startup changes, profile before editing and run `scripts/benchmark_cli.py`
     before/after sequentially in the same Python environment. Preserve all command

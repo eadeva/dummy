@@ -120,8 +120,12 @@ RST grids and cards; repository-owned SVGs provide diagrams without a network
 renderer. Requirement overview counts come from Sphinx-Needs filters. Keep
 documentation authoring conventions separate from PTK product requirements.
 
-The configuration reference is generated from the validation models. Seventeen
-repository-local authoring skills are shipped under ``.claude/skills`` and
+The configuration reference is generated from the validation schema and uses
+YAML paths and values. Published docs do not include a source-module catalog or
+Python API reference. Plugin-authoring contracts live with the plugin-development
+skill and are available to installed assistants outside the published docs.
+
+Seventeen repository-local authoring skills are shipped under ``.claude/skills`` and
 included in the documentation. Tests check catalog completeness and source links.
 The wheel bundles fifteen project-facing skills, reference docs and examples
 through the allowlist in ``src/ptk/authoring_bundle.py``. Keep the canonical skill
@@ -156,7 +160,7 @@ parameter passing and execution. The extension CI job runs ``uv run ptk extensio
 on Linux and Windows and uploads the VSIX. Controller tests use an injected VS Code API; graphical
 extension-host acceptance remains a manual check. See :doc:`/guides/editor`.
 
-Plugin contracts and generators are documented in :doc:`/reference/plugins`; variant inspection
+Plugin selection and generators are documented in :doc:`/reference/plugins`; variant inspection
 and matrix commands in :doc:`/reference/cli`; background process behavior in :doc:`/reference/execution`.
 Real machine-wide tool/credential setup still needs acceptance on target machines.
 Publishing and merging are separate decisions.

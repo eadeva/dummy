@@ -90,6 +90,10 @@
 .ptk-overview-note p:last-child { margin-bottom: 0; }
 .rst-content .ptk-card table td, .rst-content .ptk-card table th { padding: .6rem .75rem; }
 
+/* Configuration paths remain readable on narrow screens. */
+.ptk-configuration-section > h2,
+.ptk-configuration-section table a { overflow-wrap: anywhere; }
+
 @media (max-width: 767px) {
     .ptk-hero { padding: 1.2rem; }
     .ptk-hero .ptk-lead p { font-size: 1.08rem; }

@@ -250,7 +250,7 @@ parameters. String commands use platform shell syntax.
 
 The registered built-ins are ``echo``, ``wait``, ``report.import``,
 ``configs.sync``, ``tools.ensure``, ``files.copy``, ``files.clean`` and
-``variant.generate`` and ``version.generate``. Their contracts are in :doc:`/reference/plugins`.
+``variant.generate`` and ``version.generate``. Their configuration is in :doc:`/reference/plugins`.
 ``--from`` and ``--to`` select top-level steps.
 
 Python modes are mutually exclusive: ``uvx`` for a Python tool, ``venv`` for

@@ -165,7 +165,7 @@ What you can do
       Keep project-specific behavior in your project.
 
       +++
-      :doc:`Plugin contracts </reference/plugins>` ·
+      :doc:`Plugin configuration </reference/plugins>` ·
       :need:`Related requirement <REQ_Sw_PLUGINS>`
 
    .. grid-item-card:: :octicon:`code` Bring the project into your editor

@@ -1,5 +1,5 @@
-Plugins, generators and additional built-ins
-============================================
+Plugin and generator configuration
+==================================
 
 Loading installed plugins
 -------------------------
@@ -16,52 +16,43 @@ non-callable handlers and duplicate or reserved names are errors. Plugins run
 as trusted Python code with the user's permissions; the allow-list is not a
 sandbox. Ordinary projects with no ``plugins`` do not load these extensions.
 
-Register callables in the extension's ``pyproject.toml``::
+Use the installed plugin's documented names in configuration:
 
-   [project.entry-points."ptk.steps"]
-   "company.check" = "company_extension:check"
-
-   [project.entry-points."ptk.generators"]
-   custom = "company_extension:generate"
-
-The supported contracts are:
-
-.. list-table::
+.. list-table:: Plugin configuration
    :header-rows: 1
-   :widths: 25 75
+   :widths: 30 70
 
-   * - Entry-point group
-     - Callable contract
-   * - ``ptk.steps``
-     - ``(step: PlannedStep, out, ctx: BuiltinContext) -> int``. Return an exit code;
-       write messages with ``out`` for masking. Poll ``ctx.cancel.is_set()``.
-   * - ``ptk.reporters``
-     - ``(report: Report, target: Path) -> Path``. Write the chosen format and return
-       its file. Select its entry-point name in ``report_formats`` or ``-f``.
-   * - ``ptk.report_contributors``
-     - ``(reports_dir: Path, labels: list[str]) -> list[Contribution]``. Read results
-       only for the supplied visible step labels; disabled steps are filtered out.
-   * - ``ptk.secret_providers``
-     - ``() -> SecretProvider``. Implement the port in ``application/ports.py``;
-       use the entry-point name in ``credentials.NAME.providers`` and ``--store``.
-   * - ``ptk.installers``
-     - ``(tool_name: str, options: dict, out) -> None``. Raise ``PtkError`` on failure.
-       Configure ``tools.NAME.installers.PLUGIN: {options...}``. Plugin methods
-       precede platform methods; PTK rechecks the configured version afterward.
-       Make executables discoverable by the configured environment/PATH.
-   * - ``ptk.generators``
-     - ``(variant: ResolvedVariant) -> dict[str, str]``. Return relative filenames
-       and text; PTK validates destinations and writes below the output folder.
+   * - Capability
+     - Configuration
+   * - Step
+     - Set a job step's ``uses`` to the registered name and pass options in ``with``.
+   * - Report exporter
+     - Add the registered format name to ``report_formats`` or select it with ``ptk report export JOB -f NAME``.
+   * - Result importer
+     - Select the plugin distribution in ``plugins``; its importer reads results from visible steps.
+   * - Credential provider
+     - Add the provider name to ``credentials.NAME.providers`` and select it with ``--store`` when saving a value.
+   * - Tool installer
+     - Set ``tools.NAME.installers.PLUGIN: {options...}``. Configure the environment/PATH so PTK can find the installed executable.
+   * - Variant generator
+     - Add the registered name to the ``generators`` list of a ``variant.generate`` step.
 
-Handlers can raise ``PtkError`` with actionable messages. Built-in step retries
-may call handlers again: make them repeatable or leave retries disabled. Python
-handlers must cooperate with cancellation; only subprocesses support forced
-process-tree termination. Do not print secrets directly or include them in files.
+The plugin supplies its accepted option names and supported PTK versions.
+For example, after installing a distribution that provides ``company.check``::
+
+   # config/ptk/jobs/check.ptk.yml
+   steps:
+   - checks:
+       uses: company.check
+       with:
+         mode: strict
+
+Here ``mode`` is an example plugin option, not a built-in PTK field.
 
 Variant generators
 ------------------
 
-Seven built-in generators implement the same contract as external generators::
+Select one or more of the seven built-in variant generators::
 
    - generate:
        uses: variant.generate
@@ -124,29 +115,9 @@ There are no compatibility aliases. See :doc:`/guides/configuration` for the com
 list and login-ID-only maintainer schema. This is not an operating-system
 security boundary.
 
-Runnable extension starter
----------------------------
-
-``examples/plugin`` is a complete minimal distribution. Install it into the
-Python environment that contains PTK, for example from a development checkout::
-
-   uv pip install ./examples/plugin
-
-Select ``plugins: [ptk-example-extension]`` and a step with
-``uses: example.check``. The skill tests load the declared entry point and run
-a real configured job. See the ``ptk-plugin-development`` authoring skill.
-
-Credential-provider keys include ``storage_ref`` as well as logical ``ref``.
-Persist by ``storage_ref`` to honor VMR namespaces. Provider availability checks
-must be non-interactive; listing never calls ``get`` on persistent stores.
-Custom installers must manage their own version-specific destinations and
-configure a discoverable PATH explicitly; PTK cannot isolate arbitrary external
-installer side effects.
-
 Version generators
 ------------------
 
 The bundled ``version.generate`` step supports C headers, CMake, MSBuild, Python
-and JSON. See :doc:`/guides/versioning`. Custom ``ptk.steps`` handlers receive the resolved
-run snapshot in ``ctx.versions``; consume that snapshot instead of rediscovering
-Git state during execution. Existing variant generator contracts are unchanged.
+and JSON. See :doc:`/guides/versioning` for source selection, output configuration
+and examples.

@@ -49,6 +49,8 @@ def source_files(root: Path) -> dict[str, Path]:
         metadata = root / ".claude/skills" / name / "agents/openai.yaml"
         if metadata.is_file():
             files[f"skills/{name}/agents/openai.yaml"] = metadata
+    contract = "skills/ptk-plugin-development/references/contracts.md"
+    files[contract] = root / ".claude" / contract
     files["agents/ptk-expert.agent.md"] = root / ".claude/agents/ptk-expert.md"
     for example in EXAMPLES:
         directory = root / "examples" / example

@@ -1,9 +1,9 @@
 Reference
 =========
 
-Command syntax and configuration schemas describe the current installed CLI.
-The schema tables are generated from PTK's validation models; requirements are
-maintained separately in RST.
+Use these pages to configure PTK and understand the commands that apply that
+configuration. Field tables, allowed values and constraints come from the same
+schema used by PTK validation.
 
 .. toctree::
    :maxdepth: 1
@@ -12,4 +12,3 @@ maintained separately in RST.
    configuration-schema
    execution
    plugins
-   modules

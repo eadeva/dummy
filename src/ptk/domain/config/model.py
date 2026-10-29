@@ -1020,7 +1020,7 @@ class PtkConfig(_Strict):
         description="Analyze step diagnostics and retain ignored or justified findings with their reasons.",
     )
     plugins: list[str] = Field(
-        description="Python modules loaded to register additional PTK plugins.",
+        description="Installed distribution names selected for PTK plugin loading.",
         default_factory=list,
     )
     command_audience: dict[

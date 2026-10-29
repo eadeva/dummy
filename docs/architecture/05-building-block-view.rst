@@ -34,10 +34,10 @@ for interface-specific operations.
 Configuration and execution
 ---------------------------
 
-``LoadProject`` uses ``FileConfigSource`` for discovery/loading and domain rules
-for validation. Configuration schemas and ownership metadata come from the same
-model. ``PrepareRun`` and ``RunJob`` coordinate selection, parameter resolution,
-planning, environment/tool preparation and execution. Workflows schedule job
+The project loader discovers conventional configuration files and applies domain
+rules for validation. Configuration schemas and ownership metadata come from the
+same model. Run preparation and execution coordinate selection, parameter
+resolution, planning and environment/tool preparation. Workflows schedule job
 calls while preserving the owning repository's context.
 
 Results and integrations
@@ -48,5 +48,4 @@ Report exporters do not execute jobs. Plugin entry points extend steps,
 reporters, report contributors, secret providers, installers and generators;
 only explicitly selected installed distributions are loaded.
 
-See :doc:`/reference/modules` for source paths and :doc:`/reference/plugins`
-for callable contracts. Internal classes are not all stable public APIs.
+See :doc:`/reference/plugins` for plugin selection and generator configuration.
