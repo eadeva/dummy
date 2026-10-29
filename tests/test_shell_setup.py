@@ -39,7 +39,7 @@ def installation(tmp_path, monkeypatch):
         .invoke(
             cli,
             [
-                "setup",
+                "self-service",
                 "completion",
                 shell,
                 *(["--double-tab"] if shell == "powershell" else []),
@@ -56,7 +56,7 @@ def test_cli_installs_all_profiles_and_is_idempotent(installation):
     original = "# Existing login settings\nexport KEPT_SETTING=yes\n"
     (home / ".profile").write_text(original)
     result = CliRunner().invoke(
-        cli, ["setup", "completion", "install", "--executable", str(launcher)]
+        cli, ["self-service", "completion", "install", "--executable", str(launcher)]
     )
     assert result.exit_code == 0, result.output
     assert all(path.is_file() for path in ps)
@@ -70,7 +70,7 @@ def test_cli_installs_all_profiles_and_is_idempotent(installation):
     ]
     before = {path: (path.read_bytes(), path.stat().st_mtime_ns) for path in files}
     again = CliRunner().invoke(
-        cli, ["setup", "completion", "install", "--executable", str(launcher)]
+        cli, ["self-service", "completion", "install", "--executable", str(launcher)]
     )
     assert again.exit_code == 0, again.output
     assert before == {
@@ -113,7 +113,7 @@ def test_fresh_shell_without_venv_or_shared_tool_on_path(
         profile = home / (".bashrc" if profile_index == 0 else ".bash_profile")
         command = """if [ -e "$TEST_CALL_LOG" ]; then exit 41; fi
 command -v ptk
-COMP_WORDS=(ptk setup "")
+COMP_WORDS=(ptk self-service "")
 COMP_CWORD=2
 _ptk_completion ptk
 printf '%s\\n' "${COMPREPLY[@]}"
@@ -126,7 +126,7 @@ printf '%s\\n' "${COMPREPLY[@]}"
 if ($ptkToolDirectory -ne 'keep my setting') { throw 'profile changed my variable' }
 if (Test-Path -LiteralPath $env:TEST_CALL_LOG) { throw 'PTK ran during profile loading' }
 $found = (Get-Command ptk).Source
-$matches = @((TabExpansion2 'ptk setup ' 10).CompletionMatches.CompletionText)
+$matches = @((TabExpansion2 'ptk self-service ' 17).CompletionMatches.CompletionText)
 @{ executable = $found; matches = $matches } | ConvertTo-Json -Compress
 """
         argv = [
@@ -144,11 +144,11 @@ $matches = @((TabExpansion2 'ptk setup ' 10).CompletionMatches.CompletionText)
     if shell == "bash":
         lines = result.stdout.splitlines()
         assert lines[0] == str(launcher)
-        assert {"completion", "extension", "init"} <= set(lines[1:])
+        assert {"completion", "extension", "tools"} <= set(lines[1:])
     else:
         data = json.loads(result.stdout)
         assert data["executable"] == str(launcher)
-        assert {"completion", "extension", "init"} <= set(data["matches"])
+        assert {"completion", "extension", "tools"} <= set(data["matches"])
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="requires POSIX sh")
@@ -243,7 +243,7 @@ def test_powershell_automatically_loads_profile_in_a_new_terminal(
             "-NoLogo",
             "-NonInteractive",
             "-Command",
-            "@((TabExpansion2 'ptk setup ' 10).CompletionMatches.CompletionText) | ConvertTo-Json -Compress",
+            "@((TabExpansion2 'ptk self-service ' 17).CompletionMatches.CompletionText) | ConvertTo-Json -Compress",
         ],
         cwd=home,
         env=env,
@@ -253,7 +253,7 @@ def test_powershell_automatically_loads_profile_in_a_new_terminal(
         timeout=30,
     )
     assert result.returncode == 0, result.stderr
-    assert {"completion", "extension", "init"} <= set(json.loads(result.stdout))
+    assert {"completion", "extension", "tools"} <= set(json.loads(result.stdout))
 
 
 def test_git_bash_home_is_queried_without_loading_profiles(tmp_path, monkeypatch):

@@ -8,7 +8,7 @@ const { inventory, builtinParam } = require("./fixtures");
 
 function target(kind = "job") {
   const project = inventory().projects[0];
-  return { kind, project, name: "build", spec: project.jobs[0] };
+  return { kind, project, name: "build", spec: kind === "workflow" ? project.workflows[0] : project.jobs[0] };
 }
 
 test("inventory accepts the versioned CLI contract and isolated broken members", () => {
@@ -50,10 +50,10 @@ test("job arguments put global options first and preserve literal metacharacters
   ]);
 });
 
-test("previews translate typed options and boolean flags", () => {
+test("previews use the same parameter interface as execution", () => {
   assert.deepEqual(core.argsFor(target(), { preview: true, params: { output_path: "some folder", verbose: "false" } }).slice(2),
-    ["dry-run", "build", "--output-path", "some folder", "--no-verbose"]);
-  assert.equal(core.argsFor(target(), { preview: true, params: { verbose: "true" } }).at(-1), "--verbose");
+    ["run", "build", "--dry-run", "--param", "output_path=some folder", "--param", "verbose=false"]);
+  assert.equal(core.argsFor(target(), { preview: true, params: { verbose: "true" } }).at(-1), "verbose=true");
   assert.throws(() => core.argsFor(target(), { preview: true, params: { verbose: "invalid" } }), /Boolean/);
   assert.throws(() => core.argsFor(target(), { preview: "true" }), /boolean/);
   assert.throws(() => core.argsFor(target(), { params: { token: "secret" } }), /unknown or secret/);
@@ -61,10 +61,10 @@ test("previews translate typed options and boolean flags", () => {
 
 test("workflows select their owner variants and resolve shared names explicitly", () => {
   assert.deepEqual(core.argsFor(target("workflow"), { variant: "large" }).slice(2), ["--variant", "large", "workflow", "run", "build"]);
-  assert.deepEqual(core.argsFor({ kind: "workflow", name: "all" }, { preview: true }), ["workflow", "dry-run", "all"]);
+  assert.deepEqual(core.argsFor({ kind: "workflow", name: "all", spec: { command: ["workflow", "run", "all"] } }, { preview: true }), ["workflow", "run", "all", "--dry-run"]);
   assert.deepEqual(core.argsFor(target("report"), { variant: "large" }).slice(2), ["--variant", "large", "report", "open", "build"]);
   assert.deepEqual(core.argsFor(target("variant")).slice(2), ["variant", "show", "build"]);
-  assert.deepEqual(core.argsFor(target("validate")).slice(2), ["setup", "config", "validate"]);
+  assert.deepEqual(core.argsFor(target("validate")).slice(2), ["validate"]);
 });
 
 test("target discovery preserves healthy VMR members and workspace workflows", () => {
@@ -96,28 +96,28 @@ test("job and workflow help bypasses required parameters", () => {
 });
 
 test("built-in options, repeated values and leading-dash positional arguments stay literal", () => {
-  const target = { kind: "builtin", spec: { path: ["setup", "config", "show"], runnable: true, params: [
+  const target = { kind: "builtin", spec: { path: ["maintainer", "config", "show"], runnable: true, params: [
     builtinParam("path"),
     builtinParam("item", { kind: "option", option: "--item", multiple: true }),
     builtinParam("enabled", { kind: "option", option: "--enabled", secondary_option: "--no-enabled", is_flag: true }),
   ] } };
   assert.deepEqual(core.argsFor(target, { variant: "ignored", inputs: { path: ["--literal;$(value)"], item: ["a b", "-c"], enabled: ["false"] } }),
-    ["setup", "config", "show", "--item=a b", "--item=-c", "--no-enabled", "--", "--literal;$(value)"]);
+    ["maintainer", "config", "show", "--item=a b", "--item=-c", "--no-enabled", "--", "--literal;$(value)"]);
   assert.throws(() => core.argsFor(target, { inputs: { unexpected: ["value"] } }), /Invalid built-in/);
   assert.throws(() => core.argsFor(target, { inputs: { path: "value" } }), /Invalid built-in/);
   assert.throws(() => core.argsFor(target, { inputs: { enabled: ["maybe"] } }), /Invalid flag/);
 });
 
 test("built-in required and positional arguments are validated while help needs no values", () => {
-  const target = { kind: "builtin", spec: { path: ["setup", "creds", "set"], runnable: true, params: [
+  const target = { kind: "builtin", spec: { path: ["self-service", "creds", "set"], runnable: true, params: [
     builtinParam("name", { required: true }), builtinParam("field"), builtinParam("extra", { nargs: -1 }),
   ] } };
   assert.throws(() => core.argsFor(target), /Required argument: name/);
   assert.throws(() => core.argsFor(target, { inputs: { name: ["a", "b"] } }), /number of values/);
   assert.throws(() => core.argsFor(target, { inputs: { name: ["a"], extra: ["b"] } }), /preceding positional/);
   assert.deepEqual(core.argsFor(target, { inputs: { name: ["a"], field: ["b"], extra: ["c", "d"] } }),
-    ["setup", "creds", "set", "--", "a", "b", "c", "d"]);
-  assert.deepEqual(core.argsFor(target, { help: true }), ["setup", "creds", "set", "--help"]);
+    ["self-service", "creds", "set", "--", "a", "b", "c", "d"]);
+  assert.deepEqual(core.argsFor(target, { help: true }), ["self-service", "creds", "set", "--help"]);
   assert.throws(() => core.argsFor(target, { preview: true, inputs: { name: ["a"] } }), /do not support generic dry runs/);
   target.spec.runnable = false;
   assert.throws(() => core.argsFor(target), /Choose a subcommand/);
@@ -128,9 +128,9 @@ test("built-in discovery keeps VMR root and member contexts separate", () => {
   doc.mode = "workspace";
   doc.commands = [{ name: "repos", path: ["repos"], runnable: true, params: [], children: [] }];
   const targets = core.availableBuiltins([{ inventory: doc, folder: "workspace" }]);
-  const member = targets.find(t => t.name === "setup creds set");
+  const member = targets.find(t => t.name === "self-service creds set");
   assert.equal(member.project, doc.projects[0]);
-  assert.deepEqual(core.argsFor(member, { help: true }), ["--config", member.project.entry_file, "setup", "creds", "set", "--help"]);
+  assert.deepEqual(core.argsFor(member, { help: true }), ["--config", member.project.entry_file, "self-service", "creds", "set", "--help"]);
   assert.deepEqual(core.argsFor(targets.find(t => t.name === "repos")), ["repos"]);
   assert.equal(targets.filter(t => t.name === "--help").length, 2);
 });
@@ -150,7 +150,7 @@ test("missing executables, failing processes and timeouts are reported", async (
 test("cleanup flags precede commands and workflow variants are forwarded", () => {
   const job = target("job");
   assert.deepEqual(core.argsFor(job, { clean: true, variant: "large" }).slice(2), ["--variant", "large", "--clean", "run", "build"]);
-  assert.deepEqual(core.argsFor(target("workflow"), { reRun: true, variant: "large", preview: true }).slice(2), ["--variant", "large", "--re-run", "workflow", "dry-run", "build"]);
+  assert.deepEqual(core.argsFor(target("workflow"), { reRun: true, variant: "large", preview: true }).slice(2), ["--variant", "large", "--re-run", "workflow", "run", "build", "--dry-run"]);
   assert.throws(() => core.argsFor(job, { clean: true, reRun: true }), /Choose/);
   assert.deepEqual(core.argsFor(job, { clean: true, help: true }).slice(2), ["build", "--help"]);
 });
@@ -158,11 +158,11 @@ test("cleanup flags precede commands and workflow variants are forwarded", () =>
 test("uv launch arguments prevent implicit syncing on POSIX and Windows without changing explicit commands", () => {
   for (const executable of ["uv", "/tools/uv", "C:\\tools with spaces\\uv.EXE"]) {
     const settings = { executable, arguments: ["run", "--project", "folder with spaces", "ptk"] };
-    assert.deepEqual(core.launchArgs(settings, ["version", "check"]), ["run", "--no-sync", "--project", "folder with spaces", "ptk", "version", "check"]);
+    assert.deepEqual(core.launchArgs(settings, ["validate", "--versions"]), ["run", "--no-sync", "--project", "folder with spaces", "ptk", "validate", "--versions"]);
     assert.deepEqual(settings.arguments, ["run", "--project", "folder with spaces", "ptk"]);
     assert.deepEqual(core.launchArgs({ executable, arguments: ["run", "--no-sync", "ptk"] }, ["describe", "--json", "--configuration"]), ["run", "--no-sync", "ptk", "describe", "--json", "--configuration"]);
   }
-  assert.deepEqual(core.launchArgs({ executable: "ptk", arguments: [] }, ["version", "check"]), ["version", "check"]);
+  assert.deepEqual(core.launchArgs({ executable: "ptk", arguments: [] }, ["validate", "--versions"]), ["validate", "--versions"]);
   assert.deepEqual(core.launchArgs({ executable: "uv", arguments: ["tool", "run", "ptk"] }, ["--help"]), ["tool", "run", "ptk", "--help"]);
 });
 
@@ -192,4 +192,23 @@ test("discovery does not retry without the configuration interface", async () =>
   const doc = inventory();
   const script = `if (process.argv.includes('--configuration')) { process.stderr.write('No such option: --configuration'); process.exit(2); } process.stdout.write(${JSON.stringify(JSON.stringify(doc))});`;
   await assert.rejects(core.readInventory({ executable: process.execPath, arguments: ["-e", script, "--"], timeout: 10 }, process.cwd()), /No such option: --configuration/);
+});
+
+test("maintainer command paths come from PTK for run, preview, help and cleanup", () => {
+  const job = target();
+  job.spec.command = ["maintainer", "run", "build"];
+  job.spec.help_command = ["maintainer", "build"];
+  assert.deepEqual(core.argsFor(job, { preview: true, params: { verbose: "false" } }).slice(2),
+    ["maintainer", "run", "build", "--dry-run", "--param", "verbose=false"]);
+  assert.deepEqual(core.argsFor(job, { help: true }).slice(2), ["maintainer", "build", "--help"]);
+  const workflow = target("workflow");
+  workflow.spec.command = ["maintainer", "workflow", "run", "build"];
+  assert.deepEqual(core.argsFor(workflow, { clean: true, preview: true }).slice(2),
+    ["--clean", "maintainer", "workflow", "run", "build", "--dry-run"]);
+  for (const invalid of [undefined, [], ["--unexpected"], ["run", 123]]) {
+    const doc = inventory();
+    doc.projects[0].jobs[0].command = invalid;
+    assert.throws(() => core.parseInventory(JSON.stringify(doc)), /Incomplete/);
+  }
+  assert.throws(() => core.parseInventory(JSON.stringify({ ...inventory(), schema_version: 1 })), /Update PTK/);
 });

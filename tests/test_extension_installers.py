@@ -95,7 +95,7 @@ if ($env:TEST_MODE -eq 'opt-out') { $options.NoExtension = $true }
         return
     recorded = [json.loads(line) for line in calls.read_text().splitlines()]
     assert len(recorded) == 1
-    assert recorded[0][:3] == ["setup", "extension", "--if-available"]
+    assert recorded[0][:3] == ["self-service", "extension", "--if-available"]
     assert ("--force" in recorded[0]) == (mode != "package")
     if mode == "failure":
         assert result.returncode != 0 and "done -" not in result.stdout

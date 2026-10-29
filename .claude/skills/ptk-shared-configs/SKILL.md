@@ -6,7 +6,7 @@ description: Manage ptk shared pre-commit, Ruff and clang configuration with pro
 
 # ptk-shared-configs
 
-1. Read [docs/configuration.rst](../../../docs/configuration.rst); inspect available configuration fields with `ptk setup config schema` and preview effective files with `ptk setup configs sync --diff`.
+1. Read [docs/configuration.rst](../../../docs/configuration.rst); inspect available configuration fields with `ptk maintainer config schema` and preview effective files with `ptk maintainer sync configs --diff`.
 
 2. Manage only tools declared under `configs`. Edit overlays rather than generated outputs.
 
@@ -16,7 +16,7 @@ description: Manage ptk shared pre-commit, Ruff and clang configuration with pro
 
 5. For clang YAML, inspect map/list/null merge behavior; clang-tidy checks and CheckOptions have special rules.
 
-6. Preview `ptk setup configs sync --diff`, apply `ptk setup configs sync`, then run `ptk setup configs check`.
+6. Preview `ptk maintainer sync configs --diff`, apply `ptk maintainer sync configs`, then run `ptk maintainer sync configs --check`.
 
 7. Commit effective files and overlays together so CI and tools see the same configuration.
 
@@ -28,15 +28,15 @@ description: Manage ptk shared pre-commit, Ruff and clang configuration with pro
     before developers run jobs. Local jobs automatically install/repair the hooks;
     workflows check each participating repository before starting jobs. This works
     for normal users and does not synchronize configuration. Help, previews, CI,
-    and disabled entries do not install hooks. Diagnose with `setup doctor`.
+    and disabled entries do not install hooks. Diagnose with `self-service doctor`.
 
 11. Preserve existing hooks and custom Git settings. Resolve `core.hooksPath`,
     hook-file symlink or `.legacy` backup conflicts with the maintainer; do not
     blindly remove them. Use the same relative config path across linked worktrees.
     Enforce checks in CI because local hook installation cannot prevent bypass.
 
-`setup configs sync` (including `--diff`) and `setup self` require a login ID
-listed in the configuration folder's `maintainers.ptk.yml`. `setup configs check`
-is available to normal users. Verify identity with `setup doctor`; do not suggest
+`maintainer sync configs` (including `--diff`) requires a login ID
+listed in the configuration folder's `maintainers.ptk.yml`. `validate --generated`
+checks generated configuration without writing and is available to normal users. Verify identity with `self-service doctor`; do not suggest
 `PTK_ROLE=maintainer` as a workaround. See the maintainer section of the
 [configuration guide](../../../docs/configuration.rst).

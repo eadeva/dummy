@@ -104,7 +104,7 @@ def test_profile_command_and_invalid_combinations(tmp_path, monkeypatch):
     result = runner.invoke(
         cli,
         [
-            "setup",
+            "self-service",
             "completion",
             "powershell",
             "--double-tab",
@@ -122,11 +122,11 @@ def test_profile_command_and_invalid_combinations(tmp_path, monkeypatch):
         ["powershell", "--install", str(profile), "--uninstall", str(profile)],
         ["powershell", "--uninstall", str(profile), "--double-tab"],
     ):
-        failed = runner.invoke(cli, ["setup", "completion", *args])
+        failed = runner.invoke(cli, ["self-service", "completion", *args])
         assert failed.exit_code == 2, failed.output
         assert profile.read_bytes() == before
     removed = runner.invoke(
-        cli, ["setup", "completion", "powershell", "--uninstall", str(profile)]
+        cli, ["self-service", "completion", "powershell", "--uninstall", str(profile)]
     )
     assert removed.exit_code == 0, removed.output
     assert profile.read_text() == ""
@@ -199,8 +199,8 @@ if ($env:TEST_MODE -eq 'opt-out') { $options.NoCompletion = $true }
 & $env:TEST_INSTALL @options
 if ($env:TEST_MODE -eq 'default') {
     & $env:TEST_INSTALL @options
-    $matches = @((TabExpansion2 'ptk setup ' 10).CompletionMatches.CompletionText)
-    if ('completion' -notin $matches -or 'init' -notin $matches) { throw "completion missing: $matches" }
+    $matches = @((TabExpansion2 'ptk self-service ' 17).CompletionMatches.CompletionText)
+    if ('completion' -notin $matches -or 'tools' -notin $matches) { throw "completion missing: $matches" }
     if ((Get-PSReadLineKeyHandler -Chord Tab).Function -ne 'Complete') { throw 'Tab binding missing' }
 }
 """)
@@ -230,7 +230,7 @@ if ($env:TEST_MODE -eq 'default') {
     assert profile.with_name(profile.name + ".ptk.bak").read_bytes() == original
     # A fresh PowerShell process loads the persisted profile without the installer.
     script.write_text(""". $env:TEST_PROFILE
-$matches = @((TabExpansion2 'ptk setup ' 10).CompletionMatches.CompletionText)
+$matches = @((TabExpansion2 'ptk self-service ' 17).CompletionMatches.CompletionText)
 @{ matches = $matches; kept = $global:KeptSetting; tab = (Get-PSReadLineKeyHandler -Chord Tab).Function } | ConvertTo-Json -Compress
 """)
     fresh = _powershell(
@@ -243,5 +243,5 @@ $matches = @((TabExpansion2 'ptk setup ' 10).CompletionMatches.CompletionText)
     )
     assert fresh.returncode == 0, fresh.stdout + fresh.stderr
     data = json.loads(fresh.stdout)
-    assert {"init", "completion"} <= set(data["matches"])
+    assert {"tools", "completion"} <= set(data["matches"])
     assert data["kept"] == "kept" and data["tab"] == "Complete"

@@ -21,11 +21,11 @@ Node.js, npm, Git checkout or extension download. Editable builds (``uv sync``)
 skip the VSIX build so Python development stays fast.
 
 Publish the Python distributions to your Artifactory PyPI repository. The
-installer installs PTK, then calls ``ptk setup extension --if-available`` using
+installer installs PTK, then calls ``ptk self-service extension --if-available`` using
 the installed tool's executable. The extension needs no separate publication
-or release manifest. ``ptk setup extension --output project-toolkit.vsix``
+or release manifest. ``ptk self-service extension --output project-toolkit.vsix``
 exports it for manual installation. Plain ``uv tool install`` only installs the
-package; call ``ptk setup extension`` afterwards to install/update VS Code too.
+package; call ``ptk self-service extension`` afterwards to install/update VS Code too.
 No editor installation runs during wheel building, import or normal CLI startup.
 The installers remain small separate bootstrap scripts.
 

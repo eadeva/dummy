@@ -57,12 +57,12 @@ def test_export_without_project_loading(runner, tmp_path, vsix, configuration):
     if configuration:
         (tmp_path / ".main.ptk.yml").write_text(configuration)
     target = tmp_path / "export.vsix"
-    result = runner.invoke(cli, ["setup", "extension", "--output", str(target)])
+    result = runner.invoke(cli, ["self-service", "extension", "--output", str(target)])
     assert result.exit_code == 0, result.output
     assert target.read_bytes() == vsix.read_bytes()
     assert inspect_vsix(target)["version"] == "0.7.0"
     # Never overwrite a manually supplied file, even with identical content.
-    result = runner.invoke(cli, ["setup", "extension", "--output", str(target)])
+    result = runner.invoke(cli, ["self-service", "extension", "--output", str(target)])
     assert result.exit_code != 0
     assert target.read_bytes() == vsix.read_bytes()
 
@@ -101,7 +101,7 @@ def test_version_policy_and_profile(
         )
 
     monkeypatch.setattr(extension.subprocess, "run", execute)
-    args = ["setup", "extension", "--profile", "Development profile"]
+    args = ["self-service", "extension", "--profile", "Development profile"]
     result = runner.invoke(cli, args + (["--force"] if force else []))
     assert result.exit_code == 0, result.output
     assert any("--install-extension" in call for call in calls) == changes
@@ -110,9 +110,9 @@ def test_version_policy_and_profile(
 
 def test_missing_editor_can_be_skipped(runner, monkeypatch):
     monkeypatch.setattr(extension.shutil, "which", lambda name: None)
-    result = runner.invoke(cli, ["setup", "extension"])
+    result = runner.invoke(cli, ["self-service", "extension"])
     assert result.exit_code != 0 and "not found" in result.output
-    result = runner.invoke(cli, ["setup", "extension", "--if-available"])
+    result = runner.invoke(cli, ["self-service", "extension", "--if-available"])
     assert result.exit_code == 0 and "Skipping" in result.output
 
 
@@ -131,7 +131,7 @@ def test_installation_failures_are_not_reported_as_success(runner, monkeypatch, 
         )
 
     monkeypatch.setattr(extension.subprocess, "run", execute)
-    result = runner.invoke(cli, ["setup", "extension"])
+    result = runner.invoke(cli, ["self-service", "extension"])
     assert result.exit_code != 0
     assert "Installed Project Toolkit" not in result.output
 
@@ -141,10 +141,10 @@ def test_development_vsix_and_missing_bundle(tmp_path, monkeypatch, vsix):
     monkeypatch.setattr(extension, "files", lambda package: tmp_path)
     runner = CliRunner()
     target = tmp_path / "export.vsix"
-    result = runner.invoke(cli, ["setup", "extension", "--output", str(target)])
+    result = runner.invoke(cli, ["self-service", "extension", "--output", str(target)])
     assert result.exit_code != 0 and "editable/source" in result.output
     result = runner.invoke(
-        cli, ["setup", "extension", "--vsix", str(vsix), "--output", str(target)]
+        cli, ["self-service", "extension", "--vsix", str(vsix), "--output", str(target)]
     )
     assert result.exit_code == 0, result.output
     assert target.read_bytes() == vsix.read_bytes()
@@ -156,7 +156,7 @@ def test_invalid_vsix_and_export_options(runner, tmp_path):
     result = runner.invoke(
         cli,
         [
-            "setup",
+            "self-service",
             "extension",
             "--vsix",
             str(path),
@@ -166,6 +166,6 @@ def test_invalid_vsix_and_export_options(runner, tmp_path):
     )
     assert result.exit_code != 0 and "Invalid" in result.output
     result = runner.invoke(
-        cli, ["setup", "extension", "--output", "export.vsix", "--force"]
+        cli, ["self-service", "extension", "--output", "export.vsix", "--force"]
     )
     assert result.exit_code == 2

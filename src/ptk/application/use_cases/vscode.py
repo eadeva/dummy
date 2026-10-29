@@ -46,6 +46,7 @@ class VSCodeTasks:
                 help=spec.help,
                 is_default=name == config.project.default_job,
                 passthrough=any(s.passthrough for s in spec.walk_steps()),
+                maintainer=spec.audience == "maintainer",
             )
             for name, spec in config.jobs.items()
             if visible(spec.audience, audience) and (not spec.only_cx or project.ci)
@@ -65,7 +66,12 @@ class VSCodeTasks:
         tasks.extend(
             vscode.workflow_tasks(
                 [
-                    (name, spec.help)
+                    (
+                        name,
+                        spec.help,
+                        spec.audience == "maintainer"
+                        or config.command_audience.get("workflow") == "maintainer",
+                    )
                     for name, spec in config.workflows.items()
                     if visible(spec.audience, audience)
                     and visible(

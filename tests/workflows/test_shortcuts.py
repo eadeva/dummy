@@ -85,7 +85,7 @@ def test_generated_editor_tasks_resolve_collisions_without_prompting(tmp_path):
 
     root = setup_project(tmp_path, collide=True)
     grant_maintainer(root)
-    result = invoke(root, "setup", "vscode", "tasks", env={"PTK_ROLE": ""})
+    result = invoke(root, "maintainer", "sync", "tasks", env={"PTK_ROLE": ""})
     assert result.exit_code == 0, result.output
     tasks = json.loads((root / ".vscode/tasks.json").read_text())["tasks"]
     for label, marker in (

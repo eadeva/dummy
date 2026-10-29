@@ -139,7 +139,7 @@ def test_plain_ptk_runs_default_job(write):
     assert result.exit_code == 0, result.output
     assert "hello world careful vanilla-plain 1" in result.output
     dry = CliRunner(env={"PTK_CI": "0"}).invoke(
-        cli, [*args, "-V", "fast", "dry-run"], catch_exceptions=False
+        cli, [*args, "-V", "fast", "run", "--dry-run"], catch_exceptions=False
     )
     assert "say  echo hello world quick" in dry.output
 
@@ -153,6 +153,6 @@ def test_plain_ptk_outside_a_project_shows_help(tmp_path, monkeypatch):
 def test_demo_toolchain_follows_variant():
     args = ["--config", str(DEMO / ".main.ptk.yml")]
     us = CliRunner(env={"PTK_CI": "0"}).invoke(
-        cli, [*args, "-V", "b_us", "dry-run"], catch_exceptions=False
+        cli, [*args, "-V", "b_us", "run", "--dry-run"], catch_exceptions=False
     )
     assert "-DTOOLCHAIN=arm-clang" in us.output and "build (dry run" in us.output

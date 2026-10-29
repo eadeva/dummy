@@ -1,4 +1,4 @@
-"""Git-aware pre-commit installation, including gitfiles and linked worktrees.
+"""Git-aware pre-commit hook installation, including gitfiles and linked worktrees.
 
 The engine lives under Git's common directory, so shared hooks never depend on
 a disposable uv tool cache or another worktree's project virtual environment.
@@ -158,7 +158,7 @@ class GitHooks:
         if not config.is_file():
             raise PtkError(
                 f"pre-commit configuration missing: {config}; ask a maintainer to run "
-                "'ptk setup configs sync pre-commit' and commit the result"
+                "'ptk maintainer sync configs pre-commit' and commit the result"
             )
         try:
             data = yaml.safe_load(config.read_text(encoding="utf-8"))
@@ -342,7 +342,7 @@ class GitHooks:
                 status = self._status(target)
                 if not status.installed:
                     raise PtkError(
-                        f"pre-commit installation verification failed in {root}: {status.detail}"
+                        f"pre-commit hook installation verification failed in {root}: {status.detail}"
                     )
         except OSError as exc:
             raise PtkError(

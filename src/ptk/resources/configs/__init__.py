@@ -1,1 +1,1 @@
-"""Base configs projects extend with overlays (ptk setup configs sync)."""
+"""Base configs projects extend with overlays (ptk maintainer sync configs)."""

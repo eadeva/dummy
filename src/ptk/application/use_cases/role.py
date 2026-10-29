@@ -15,28 +15,21 @@ from .project import Project
 
 Role = Literal["maintainer", "user"]
 
-MAINTAINER_COMMANDS = frozenset(
-    {
-        "setup.configs.sync",
-        "setup.self",
-        "setup.vscode",
-    }
-)
-
 
 def command_allowed(path: str, role: Role, policies: dict[str, str]) -> bool:
+    if path == "maintainer" or path.startswith("maintainer."):
+        return role == "maintainer"
     if role == "maintainer" or path in {
-        "setup",
-        "setup.config",
-        "setup.config.validate",
-        "setup.completion",
-        "setup.extension",
+        "init",
+        "validate",
+        "self-service",
+        "self-service.completion",
+        "self-service.extension",
     }:
         return True
     parts = path.split(".")
     return all(
-        (prefix := ".".join(parts[:i])) not in MAINTAINER_COMMANDS
-        and policies.get(prefix) != "maintainer"
+        policies.get(".".join(parts[:i])) != "maintainer"
         for i in range(1, len(parts) + 1)
     )
 

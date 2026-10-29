@@ -9,6 +9,7 @@ import rich_click as click
 
 from ...bootstrap import create_app
 from ...domain.errors import PtkError
+from .access import allowed, denied_command
 from .jobs import ProjectGroup
 from .state import CliState, state_of
 from .workspace_commands import RESERVED, build_commands
@@ -42,14 +43,14 @@ class WorkspaceGroup(ProjectGroup):
     def resolve_command(self, ctx, args):
         if (
             len(args) >= 2
-            and args[0] == "setup"
+            and args[0] == "self-service"
             and args[1] in {"completion", "extension"}
         ):
             ctx.meta["vmr_repositories"] = None
             ctx.meta["host_setup"] = True
             state_of(ctx).completion = True
         # Init resolves its scope itself, including members without PTK config.
-        if args[:2] == ["setup", "init"] or args[:1] == ["init"]:
+        if args[:1] == ["init"]:
             ctx.meta["vmr_repositories"] = None
         if args[:1] == ["describe"]:
             try:
@@ -75,13 +76,13 @@ class WorkspaceGroup(ProjectGroup):
                     return None
                 raise click.ClickException(str(exc)) from None
         repos = ctx.meta["vmr_repositories"]
-        if repos is not None and RESERVED.intersection(repos):
+        if repos is not None and set(RESERVED).intersection(repos):
             if ctx.resilient_parsing:
                 ctx.meta["vmr_repositories"] = None
                 return None
             raise click.ClickException(
                 "repository alias conflicts with a workspace command: "
-                + ", ".join(sorted(RESERVED.intersection(repos)))
+                + ", ".join(sorted(set(RESERVED).intersection(repos)))
             )
         return repos
 
@@ -100,18 +101,24 @@ class WorkspaceGroup(ProjectGroup):
                 if not ctx.resilient_parsing:
                     raise
                 workflows = set()
-            return sorted(set(repos) | RESERVED | workflows)
-        return (
-            sorted(set(repos) | RESERVED)
-            if repos is not None
-            else super().list_commands(ctx)
-        )
+            return [
+                *sorted(repos),
+                *sorted(workflows),
+                *[
+                    name
+                    for name in RESERVED
+                    if self.get_command(ctx, name) is not None and allowed(ctx, name)
+                ],
+            ]
+        return super().list_commands(ctx)
 
     def get_command(self, ctx, cmd_name):
         repos = self._repositories(ctx)
         if repos is None:
             return super().get_command(ctx, cmd_name)
         if cmd_name in RESERVED:
+            if not allowed(ctx, cmd_name):
+                return denied_command(cmd_name)
             if "vmr_commands" not in ctx.meta:
                 ctx.meta["vmr_commands"] = build_commands(ctx, repos)
             return ctx.meta["vmr_commands"].get(cmd_name)
@@ -158,7 +165,17 @@ class WorkspaceGroup(ProjectGroup):
                             "Workflows",
                             [n for n in names if n not in repos and n not in RESERVED],
                         ),
-                        ("Commands", [n for n in names if n in RESERVED]),
+                        (
+                            "Commands",
+                            [
+                                n
+                                for n in names
+                                if n in RESERVED
+                                and n not in {"self-service", "maintainer"}
+                            ],
+                        ),
+                        ("Self-service", [n for n in names if n == "self-service"]),
+                        ("Maintenance", [n for n in names if n == "maintainer"]),
                     )
                     if commands
                 ]

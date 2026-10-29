@@ -63,26 +63,26 @@ if (-not $NoCompletion -or -not $NoExtension) {
 
 if (-not $NoExtension) {
     # A checkout rebuild must refresh same-version extension code during development.
-    $extensionOptions = @("setup", "extension", "--if-available")
+    $extensionOptions = @("self-service", "extension", "--if-available")
     if ($ForceExtension -or $fromCheckout) { $extensionOptions += "--force" }
     & $ptkExecutable @extensionOptions
-    if ($LASTEXITCODE -ne 0) { throw "PTK installed, but extension setup failed; retry: ptk setup extension" }
+    if ($LASTEXITCODE -ne 0) { throw "PTK installed, but extension setup failed; retry: ptk self-service extension" }
 }
 
 if (-not $NoCompletion) {
     try {
         # Use the tool just installed, even if an older ptk is active in a venv.
-        & $ptkExecutable setup completion install --executable $ptkExecutable --powershell-profile $PROFILE.CurrentUserAllHosts
+        & $ptkExecutable self-service completion install --executable $ptkExecutable --powershell-profile $PROFILE.CurrentUserAllHosts
         if ($LASTEXITCODE -ne 0) { throw "could not update shell profiles" }
-        $completionScript = & $ptkExecutable setup completion powershell --double-tab | Out-String
+        $completionScript = & $ptkExecutable self-service completion powershell --double-tab | Out-String
         if ($LASTEXITCODE -ne 0) { throw "could not generate completion" }
         Invoke-Expression $completionScript
         Say "Tab completion enabled now and in future PowerShell and Bash/Git Bash terminals"
         Say "double-Tab listing applies to all commands; profile: $($PROFILE.CurrentUserAllHosts)"
     } catch {
         Write-Warning "PTK is installed, but completion setup failed: $_"
-        Say 'retry: ptk setup completion install'
+        Say 'retry: ptk self-service completion install'
     }
 }
 
-Say "done - run: ptk setup doctor"
+Say "done - run: ptk self-service doctor"

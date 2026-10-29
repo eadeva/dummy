@@ -20,6 +20,7 @@ class TaskJob:
     help: str
     is_default: bool
     passthrough: bool
+    maintainer: bool = False
 
 
 def build_tasks(
@@ -35,6 +36,7 @@ def build_tasks(
         args = (
             (["-V", f"${{input:{VARIANT_INPUT}}}"] if variants else [])
             + ([repository_alias] if repository_alias else [])
+            + (["maintainer"] if job.maintainer else [])
             + [
                 "run",
                 job.name,
@@ -90,7 +92,7 @@ def merge(
 
 
 def workflow_tasks(
-    workflows: list[tuple[str, str]],
+    workflows: list[tuple[str, str, bool]],
     *,
     command: str,
     repository_alias: str | None = None,
@@ -101,6 +103,7 @@ def workflow_tasks(
             "type": "shell",
             "command": command,
             "args": ([repository_alias] if repository_alias else [])
+            + (["maintainer"] if restricted else [])
             + ["workflow", "run", name],
             "group": "build",
             "problemMatcher": [],
@@ -108,5 +111,5 @@ def workflow_tasks(
             if help_text
             else f"Run workflow {name}",
         }
-        for name, help_text in workflows
+        for name, help_text, restricted in workflows
     ]

@@ -14,8 +14,8 @@ const python = process.env.PTK_TEST_PYTHON;
 const repo = path.resolve(__dirname, "../../..");
 const env = { ...process.env, PYTHONPATH: path.join(repo, "src"), PTK_CI: "0", PTK_ROLE: "user", NO_COLOR: "1" };
 
-function invoke(cwd, args) {
-  const result = spawnSync(python, ["-m", "ptk", ...args], { cwd, env, encoding: "utf8", timeout: 30000 });
+function invoke(cwd, args, extraEnv = {}) {
+  const result = spawnSync(python, ["-m", "ptk", ...args], { cwd, env: { ...env, ...extraEnv }, encoding: "utf8", timeout: 30000 });
   assert.equal(result.error, undefined);
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   return result.stdout;
@@ -110,8 +110,9 @@ test("actual PTK inventory, preview, job parameters and variant inspection agree
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk extension "));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   project(root, "demo");
+  fs.writeFileSync(path.join(root, "maintainers.ptk.yml"), JSON.stringify({ maintainers: [os.userInfo().username] }));
   const before = fs.readdirSync(root, { recursive: true });
-  const doc = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));
+  const doc = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"], { PTK_ROLE: "" }));
   const target = core.availableTargets([{ inventory: doc }]).find(target => target.kind === "job");
   assert.match(invoke(root, core.argsFor(target, { variant: "large", report: true })), /Info:.*job.*hasn't run yet/s);
   const workflow = core.availableTargets([{ inventory: doc }]).find(target => target.kind === "workflow");
@@ -119,10 +120,10 @@ test("actual PTK inventory, preview, job parameters and variant inspection agree
   assert.equal(target.spec.params.some(p => p.name === "token"), false);
   assert.match(invoke(root, core.argsFor(target, { help: true })), /--message/);
   const builtins = core.availableBuiltins([{ inventory: doc }]);
-  const show = builtins.find(target => target.name === "setup config show");
-  assert.equal(JSON.parse(invoke(root, core.argsFor(show, { inputs: { path: ["project.name"], fmt: ["json"] } }))), "demo");
-  invoke(root, core.argsFor(builtins.find(target => target.name === "setup creds list")));
-  invoke(root, core.argsFor(builtins.find(target => target.name === "setup creds set"), { help: true }));
+  const show = builtins.find(target => target.name === "maintainer config show");
+  assert.equal(JSON.parse(invoke(root, core.argsFor(show, { inputs: { path: ["project.name"], fmt: ["json"] } }), { PTK_ROLE: "" })), "demo");
+  invoke(root, core.argsFor(builtins.find(target => target.name === "self-service creds list")));
+  invoke(root, core.argsFor(builtins.find(target => target.name === "self-service creds set"), { help: true }));
   invoke(root, core.argsFor(builtins.find(target => target.name === "--help"), { help: true }));
   assert.deepEqual(fs.readdirSync(root, { recursive: true }), before);
   const options = { variant: "large", params: { message: "text with spaces;$(literal)", verbose: "false", tags: "one,two" } };
@@ -150,14 +151,15 @@ test("actual VMR discovery supports member jobs and workspace workflow previews"
   fs.writeFileSync(path.join(root, ".main.ptk.yml"), "virtual_monorepo: true\nmembers: [a, b]\n");
   fs.mkdirSync(path.join(root, "workflows"));
   fs.writeFileSync(path.join(root, "workflows/verify.ptk.yml"), "steps:\n- build: {repo: alpha, job: build}\n");
-  const doc = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));
+  for (const folder of [root, path.join(root, "a"), path.join(root, "b")]) fs.writeFileSync(path.join(folder, "maintainers.ptk.yml"), JSON.stringify({ maintainers: [os.userInfo().username] }));
+  const doc = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"], { PTK_ROLE: "" }));
   assert.equal(doc.mode, "workspace");
   const targets = core.availableTargets([{ inventory: doc }]);
   const builtins = core.availableBuiltins([{ inventory: doc }]);
-  const member = builtins.find(target => target.project?.alias === "alpha" && target.name === "setup config show");
-  assert.equal(JSON.parse(invoke(root, core.argsFor(member, { inputs: { path: ["project.name"], fmt: ["json"] } }))), "alpha");
-  const shared = builtins.find(target => !target.project && target.name === "setup config show");
-  const configs = invoke(root, core.argsFor(shared, { inputs: { path: ["project.name"], fmt: ["json"] } }));
+  const member = builtins.find(target => target.project?.alias === "alpha" && target.name === "maintainer config show");
+  assert.equal(JSON.parse(invoke(root, core.argsFor(member, { inputs: { path: ["project.name"], fmt: ["json"] } }), { PTK_ROLE: "" })), "alpha");
+  const shared = builtins.find(target => !target.project && target.name === "maintainer config show");
+  const configs = invoke(root, core.argsFor(shared, { inputs: { path: ["project.name"], fmt: ["json"] } }), { PTK_ROLE: "" });
   assert.match(configs, /"alpha"/);
   assert.match(configs, /"beta"/);
   const job = targets.find(target => target.kind === "job" && target.project.alias === "alpha");
@@ -223,7 +225,7 @@ test("real uv discovery and version-check launch do not sync or alter installed 
   const script = `import json,sys; print(json.dumps(json.loads(${JSON.stringify(JSON.stringify(doc))})) if sys.argv[-3:] == ['describe', '--json', '--configuration'] else 'Version sources and resolved names are valid.')`;
   const settings = { executable: uv, arguments: ["run", "--offline", "--project", root, "python", "-c", script, "--"], timeout: 10 };
   assert.deepEqual(await core.readInventory(settings, root), doc);
-  const checked = spawnSync(uv, core.launchArgs(settings, ["version", "check"]), { cwd: root, encoding: "utf8", timeout: 10000 });
+  const checked = spawnSync(uv, core.launchArgs(settings, ["validate", "--versions"]), { cwd: root, encoding: "utf8", timeout: 10000 });
   assert.equal(checked.status, 0, checked.stderr);
   assert.match(checked.stdout, /Version sources and resolved names are valid/);
   assert.doesNotMatch(checked.stderr, /Uninstalled|Installed|RECORD/);
@@ -251,7 +253,7 @@ test("configuration form round-trips PTK YAML scalar types and creates valid job
   const docs = new Map(config.files.map(file => [file, fs.readFileSync(file, "utf8")]));
   const changes = require("../src/project-edits").plan(config, docs, [{ op: "add", path: ["jobs", "new-job"], value: S.initial(schema.$defs.JobSpec, schema) }]);
   for (const [file, text] of changes) fs.writeFileSync(file, text);
-  invoke(root, ["setup", "config", "validate"]);
+  invoke(root, ["validate"]);
   assert.ok(core.parseInventory(invoke(root, ["describe", "--json", "--configuration"])).projects[0].jobs.some(job => job.name === "new-job"));
 });
 
@@ -269,7 +271,7 @@ test("runtime schema routes events to their fixed owning file", { skip: !python 
   function apply(operations) {
     const docs = new Map(config.files.map(file => [file, fs.readFileSync(file, "utf8")]));
     for (const [file, text] of plan(config, docs, operations)) fs.writeFileSync(file, text);
-    invoke(root, ["setup", "config", "validate"]);
+    invoke(root, ["validate"]);
     config = read();
   }
   apply([{ op: "add", path: ["artifactory", "events", "release"], value: event }]);
@@ -328,7 +330,7 @@ test("project form saves to the owning file then detects stale sources", { skip:
   assert.equal(messages.at(-1).value.jobs.build.params.message.default, "updated");
   assert.ok(fs.existsSync(path.join(root, "jobs/build.ptk.yml")));
   assert.equal(fs.existsSync(path.join(root, "config/parameters.ptk.yml")), false);
-  invoke(root, ["setup", "config", "validate"]);
+  invoke(root, ["validate"]);
   fs.appendFileSync(entry, "\n# external change\n");
   await receive({ type: "edit", id: 2, version: messages.at(-1).version,
     operations: [{ op: "set", path: ["jobs", "build", "params", "message", "default"], value: "should not apply" }] });
@@ -349,7 +351,7 @@ test("registered component edits create a local document and entity renames roun
       if (text === null) fs.unlinkSync(file);
       else { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, text); }
     }
-    invoke(root, ["setup", "config", "validate"]);
+    invoke(root, ["validate"]);
     config = read();
   }
   apply([{ op: "add", path: ["project", "components"], value: { networking: { path: "src/networking" } } }]);
@@ -377,7 +379,7 @@ test("new configuration items from the installed schema validate with their requ
     for (const [file, text] of plan(config, docs, [{ op: "add", path: field, value }])) {
       fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, text);
     }
-    invoke(root, ["setup", "config", "validate"]);
+    invoke(root, ["validate"]);
     config = read();
     assert.equal(config.error, null);
     return value;
@@ -391,4 +393,30 @@ test("new configuration items from the installed schema validate with their requ
   add(["jobs", "new-job", "steps", 0, "step", "python"], "PythonSpec");
   add(["workflows", "new-workflow"], "WorkflowSpec");
   assert.equal(config.value.workflows["new-workflow"].steps[0].job.job, "build");
+});
+
+test("real maintainer jobs and workflows execute through the discovered namespace", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk maintenance extension "));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  project(root, "demo");
+  fs.writeFileSync(path.join(root, "maintainers.ptk.yml"), JSON.stringify({ maintainers: [os.userInfo().username] }));
+  const job = JSON.parse(fs.readFileSync(path.join(root, "jobs/build.ptk.yml"), "utf8"));
+  fs.writeFileSync(path.join(root, "jobs/publish.ptk.yml"), JSON.stringify({ ...job, audience: "maintainer" }));
+  fs.writeFileSync(path.join(root, "workflows/release.ptk.yml"), JSON.stringify({ audience: "maintainer", open_report: null, steps: [{ publish: "publish" }] }));
+  const user = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));
+  assert.equal(core.availableTargets([{ inventory: user }]).some(target => ["publish", "release"].includes(target.name)), false);
+  const doc = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"], { PTK_ROLE: "" }));
+  const targets = core.availableTargets([{ inventory: doc }]);
+  for (const name of ["publish", "release"]) {
+    const target = targets.find(target => target.name === name);
+    assert.equal(target.spec.command[0], "maintainer");
+    const preview = core.argsFor(target, { preview: true, variant: "large" });
+    assert.match(invoke(root, preview, { PTK_ROLE: "" }), /dry.run/i);
+    assert.equal(fs.existsSync(path.join(root, "_logs")), false);
+    invoke(root, core.argsFor(target, { help: true }), { PTK_ROLE: "" });
+  }
+  const jobTarget = targets.find(target => target.name === "publish");
+  invoke(root, core.argsFor(jobTarget, { variant: "large", params: { message: "maintenance", verbose: "false" } }), { PTK_ROLE: "" });
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root, "_logs/large/publish/run.json"))).params.message, "maintenance");
+  invoke(root, core.argsFor(targets.find(target => target.name === "release"), { variant: "large" }), { PTK_ROLE: "" });
 });

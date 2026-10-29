@@ -88,7 +88,7 @@ Additional built-ins
 --------------------
 
 * ``configs.sync`` accepts optional ``with: {names: [ruff, clang-format]}`` and
-  runs the same shared-config service as ``ptk setup configs sync``.
+  runs the same shared-config service as ``ptk maintainer sync configs``.
 * ``tools.ensure`` accepts ``with: {tools: [cmake], allow_system: false}``. All
   names must be declared. Place it before dependent commands. Jobs containing
   this step defer the initial required-tool check to the step; subsequent commands
@@ -108,19 +108,21 @@ Use canonical dotted paths, for example::
 
    # config/ptk/project.ptk.yml
    command_audience:
-     setup.creds: maintainer
-     setup.install: maintainer
+     self-service.creds: maintainer
+     self-service.tools: maintainer
      report: all
 
-Supported keys are ``setup``, its immediate commands/groups (``config``, ``configs``,
-``creds``, ``vscode``, ``install``, ``self``, ``doctor``, ``init``),
-``setup.configs.sync|check``, ``setup.vscode.tasks|skills``,
-``pre-commit``, ``variant``, ``version``, ``report``, ``workflow`` and
-``artifacts``. Expand alternatives to individual dotted keys in YAML.
-Restrictions apply to descendants and compatibility aliases, normal/HTML help
-and completion. Configuration writers are restricted by default; ``all`` cannot
-relax those restrictions. See :doc:`configuration` for the command list and the
-login-ID-only maintainer schema. This is not an operating-system security boundary.
+Supported keys are ``self-service`` and its project operations (``tools``,
+``creds``, ``doctor``, ``hooks``), individual ``self-service.hooks.install``,
+``self-service.hooks.uninstall`` and ``self-service.hooks.status`` paths,
+``pre-commit``, ``variant``, ``report`` and ``workflow``. The schema also accepts
+``maintainer`` and its ``config``, ``sync``, ``version`` and ``artifacts`` paths;
+these always require a listed maintainer, even when their policy is ``all``.
+Restrictions apply to descendants, normal/HTML help and completion. ``init``,
+``validate``, completion and extension installation remain available to all users.
+There are no compatibility aliases. See :doc:`configuration` for the command
+list and login-ID-only maintainer schema. This is not an operating-system
+security boundary.
 
 Runnable extension starter
 ---------------------------

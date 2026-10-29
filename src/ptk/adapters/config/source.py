@@ -6,7 +6,7 @@ from pathlib import Path
 
 from ...application.ports import MAIN_FILE
 from ...domain.config.tree import Node
-from ...domain.errors import ConfigError, Problem
+from ...domain.errors import ConfigError, Problem, ProjectNotFoundError
 from .discovery import checked_path, discover_files
 from .yaml_loader import YamlConfigReader
 
@@ -34,11 +34,11 @@ class FileConfigSource:
                 break
         if found is not None:
             return found
-        raise ConfigError(
+        raise ProjectNotFoundError(
             [
                 Problem(
                     f"no {MAIN_FILE} found in {start} or any parent directory "
-                    f"(create one with 'ptk setup init')"
+                    f"(create one with 'ptk init')"
                 )
             ]
         )

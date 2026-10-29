@@ -216,8 +216,10 @@ function createController(vscode, context, editorFactory = createEditors) {
     // Dedicated job/workflow actions replace these generic tree entries only.
     // Keep the full inventory for CLI help, the command palette and saved tasks.
     function visible(items) {
-      return items.filter(spec => !["run", "dry-run", "report"].includes(spec.path[0]) &&
-        !(spec.path[0] === "workflow" && ["run", "dry-run", "report"].includes(spec.path[1])))
+      return items.filter(spec => {
+        const path = spec.path[0] === "maintainer" ? spec.path.slice(1) : spec.path;
+        return !["run", "report"].includes(path[0]) && !(path[0] === "workflow" && path[1] === "run");
+      })
         .map(spec => ({ ...spec, children: visible(spec.children) }))
         .filter(spec => spec.runnable || spec.children.length);
     }
@@ -593,14 +595,14 @@ function createController(vscode, context, editorFactory = createEditors) {
       // not evidence that there is no project.
       return vscode.tasks.executeTask(makeTask({ folder, root: folder.uri.fsPath, kind: "validate", name: "configuration" }));
     }
-    const action = await vscode.window.showInformationMessage("No PTK project found (.main.ptk.yml).", "PTK setup init");
-    if (action === "PTK setup init") return initializeProject(folder);
+    const action = await vscode.window.showInformationMessage("No PTK project found (.main.ptk.yml).", "PTK init");
+    if (action === "PTK init") return initializeProject(folder);
   }
   async function initializeProject(folder) {
     trusted();
     folder = folder || vscode.workspace.workspaceFolders?.[0];
-    if (!folder) { await vscode.window.showInformationMessage("Open a folder before running PTK setup init."); return; }
-    const configDir = await vscode.window.showInputBox({ title: "PTK setup init", prompt: "Configuration folder relative to the repository root", value: "config/ptk" });
+    if (!folder) { await vscode.window.showInformationMessage("Open a folder before running PTK init."); return; }
+    const configDir = await vscode.window.showInputBox({ title: "PTK init", prompt: "Configuration folder relative to the repository root", value: "config/ptk" });
     if (!configDir?.trim()) return;
     return vscode.tasks.executeTask(makeTask({ folder, root: folder.uri.fsPath, kind: "init", name: "project" }, { configDir: configDir.trim() }));
   }

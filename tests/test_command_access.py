@@ -16,13 +16,13 @@ from tests.project_files import read_project, write_project
 from tests.test_workspace import workspace
 
 MUTATIONS = [
-    ["setup", "configs", "sync"],
-    ["configs", "sync", "--diff"],
-    ["setup", "self"],
-    ["self-setup"],
-    ["setup", "vscode"],
-    ["vscode", "tasks"],
-    ["setup", "vscode", "skills", "--check"],
+    ["maintainer", "sync", "configs"],
+    ["maintainer", "sync", "configs", "--diff"],
+    ["maintainer", "sync", "tasks"],
+    ["maintainer", "sync", "skills", "--check"],
+    ["maintainer", "config", "show"],
+    ["maintainer", "version", "generate"],
+    ["maintainer", "artifacts", "destination", "--job", "build"],
 ]
 
 
@@ -53,7 +53,7 @@ def snapshot(root):
 @pytest.mark.parametrize("forced", ["user", "maintainer"])
 def test_mutation_commands_denied_before_side_effects(tmp_path, args, forced):
     config = project(
-        tmp_path, command_audience={"setup.vscode": "all", "variant": "all"}
+        tmp_path, command_audience={"maintainer.sync": "all", "variant": "all"}
     )
     before = snapshot(tmp_path)
     result = CliRunner(env={"PTK_ROLE": forced}).invoke(cli, ["-C", str(config), *args])
@@ -66,9 +66,13 @@ def test_normal_help_html_and_completion_exclude_mutations(tmp_path):
     runner = CliRunner(env={"PTK_ROLE": "user"})
     base = ["-C", str(config)]
     for group, hidden, shown in [
-        (["setup"], ["vscode", "self"], ["install", "creds", "config", "doctor"]),
-        (["setup", "configs"], ["sync"], ["check"]),
-        (["variant"], ["set", "new", "gui"], ["list", "show", "check"]),
+        ([], ["maintainer", "describe", "run"], ["self-service", "validate", "init"]),
+        (
+            ["self-service"],
+            ["config", "sync", "init"],
+            ["tools", "creds", "doctor", "hooks"],
+        ),
+        (["variant"], ["set", "new", "gui", "check"], ["list", "show", "explain"]),
     ]:
         result = runner.invoke(cli, [*base, *group, "--help"])
         assert result.exit_code == 0, result.output
@@ -86,7 +90,7 @@ def test_normal_help_html_and_completion_exclude_mutations(tmp_path):
     assert result.exit_code == 0, result.output
     html = out.read_text()
     for command in (
-        "setup configs sync",
+        "maintainer sync configs",
         "setup self",
         "setup vscode",
         "variant new",
@@ -117,14 +121,14 @@ def test_missing_or_invalid_configuration_does_not_expose_mutations(
             )
             base = ["-C", str(tmp_path / ".main.ptk.yml")]
         for args in (
-            ["setup", "self"],
-            ["vscode", "--help"],
+            ["maintainer", "sync", "configs"],
+            ["maintainer", "--help"],
         ):
             result = runner.invoke(cli, [*base, *args])
             assert result.exit_code != 0 and "maintainer-only" in result.output, (
                 result.output
             )
-        help_result = runner.invoke(cli, [*base, "setup", "--help"])
+        help_result = runner.invoke(cli, [*base, "--help"])
         assert help_result.exit_code == 0, help_result.output
         assert "vscode" not in help_result.output
 
@@ -134,37 +138,42 @@ def test_listed_user_can_edit_but_downgrade_cannot(tmp_path):
     grant_maintainer(tmp_path)
     runner = CliRunner(env={"PTK_ROLE": ""})
     base = ["-C", str(config)]
-    assert "vscode" in runner.invoke(cli, [*base, "setup", "--help"]).output
-    result = runner.invoke(cli, [*base, "setup", "configs", "sync"])
+    assert "maintainer" in runner.invoke(cli, [*base, "--help"]).output
+    result = runner.invoke(cli, [*base, "maintainer", "sync", "configs"])
     assert result.exit_code == 0, result.output
     assert (tmp_path / "ruff-base.toml").exists()
     before = snapshot(tmp_path)
     result = runner.invoke(
-        cli, [*base, "setup", "configs", "sync"], env={"PTK_ROLE": "user"}
+        cli, [*base, "maintainer", "sync", "configs"], env={"PTK_ROLE": "user"}
     )
     assert result.exit_code != 0 and "maintainer-only" in result.output
     assert snapshot(tmp_path) == before
 
 
-def test_explicit_policy_still_protects_aliases_and_legacy_setup_dispatch(tmp_path):
+def test_explicit_policy_protects_self_service_operations(tmp_path):
     config = project(
         tmp_path,
-        command_audience={"setup.creds": "maintainer", "setup.install": "maintainer"},
+        command_audience={
+            "self-service.creds": "maintainer",
+            "self-service.tools": "maintainer",
+        },
     )
     runner = CliRunner(env={"PTK_ROLE": "user"})
     base = ["-C", str(config)]
     for args in (
-        ["setup", "creds", "list"],
-        ["creds", "list"],
-        ["setup", "--dry-run"],
-        ["setup", "install", "--dry-run"],
+        ["self-service", "creds", "list"],
+        ["self-service", "creds", "list"],
+        ["self-service", "tools", "--dry-run"],
+        ["self-service", "tools", "--dry-run"],
     ):
         result = runner.invoke(cli, [*base, *args])
         assert result.exit_code != 0 and "maintainer-only" in result.output
-    assert "creds" not in runner.invoke(cli, [*base, "setup", "--help"]).output
+    assert "creds" not in runner.invoke(cli, [*base, "self-service", "--help"]).output
     grant_maintainer(tmp_path)
     assert (
-        runner.invoke(cli, [*base, "creds", "list"], env={"PTK_ROLE": ""}).exit_code
+        runner.invoke(
+            cli, [*base, "self-service", "creds", "list"], env={"PTK_ROLE": ""}
+        ).exit_code
         == 0
     )
 
@@ -175,10 +184,10 @@ def test_developer_installation_credentials_and_read_commands_remain_available(
     config = project(tmp_path)
     runner = CliRunner(env={"PTK_ROLE": "user"})
     for args in (
-        ["setup", "install", "--allow-system", "--dry-run"],
-        ["setup", "--dry-run"],
-        ["setup", "creds", "list"],
-        ["setup", "config", "validate"],
+        ["self-service", "tools", "--allow-system", "--dry-run"],
+        ["self-service", "tools", "--dry-run"],
+        ["self-service", "creds", "list"],
+        ["validate"],
         ["variant", "show"],
     ):
         result = runner.invoke(cli, ["-C", str(config), *args])
@@ -192,23 +201,23 @@ def test_vmr_roles_do_not_leak_between_members_or_to_workspace(tmp_path, monkeyp
     runner = CliRunner(env={"PTK_ROLE": ""})
     before = snapshot(tmp_path)
     for prefix in ([], ["bootloader"]):
-        assert "vscode" not in runner.invoke(cli, [*prefix, "setup", "--help"]).output
-        result = runner.invoke(cli, [*prefix, "setup", "vscode"])
+        assert "maintainer" not in runner.invoke(cli, [*prefix, "--help"]).output
+        result = runner.invoke(cli, [*prefix, "maintainer", "sync", "tasks"])
         assert result.exit_code != 0 and "maintainer-only" in result.output
     assert snapshot(tmp_path) == before
-    result = runner.invoke(cli, ["firmware", "setup", "vscode", "tasks"])
+    result = runner.invoke(cli, ["firmware", "maintainer", "sync", "tasks"])
     assert result.exit_code == 0, result.output
     assert (a.parent / ".vscode/tasks.json").exists()
     assert not (b.parent / ".vscode").exists()
     grant_maintainer(tmp_path)
     before = snapshot(tmp_path)
-    result = runner.invoke(cli, ["setup", "vscode"])
+    result = runner.invoke(cli, ["maintainer", "sync", "tasks"])
     assert result.exit_code != 0 and "bootloader" in result.output, result.output
     assert (
         snapshot(tmp_path) == before
     )  # preflight before writing even permitted members
     grant_maintainer(b.parent)
-    result = runner.invoke(cli, ["setup", "vscode", "tasks"])
+    result = runner.invoke(cli, ["maintainer", "sync", "tasks"])
     assert result.exit_code == 0, result.output
     assert (tmp_path / ".vscode/tasks.json").exists()
 
@@ -234,9 +243,13 @@ def test_vmr_workspace_workflow_needs_its_own_list_and_member_roles(
     result = runner.invoke(cli, ["restricted", "--help"])
     assert result.exit_code != 0 and "maintainer-only" in result.output
     grant_maintainer(tmp_path)
-    assert "restricted" in runner.invoke(cli, ["--help"]).output
-    result = runner.invoke(cli, ["workflow", "dry-run", "restricted"])
+    assert "restricted" in runner.invoke(cli, ["maintainer", "--help"]).output
+    result = runner.invoke(
+        cli, ["maintainer", "workflow", "run", "restricted", "--dry-run"]
+    )
     assert result.exit_code != 0 and "maintainer-only" in result.output, result.output
     grant_maintainer(a.parent)
-    result = runner.invoke(cli, ["workflow", "dry-run", "restricted"])
+    result = runner.invoke(
+        cli, ["maintainer", "workflow", "run", "restricted", "--dry-run"]
+    )
     assert result.exit_code == 0, result.output

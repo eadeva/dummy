@@ -9,6 +9,7 @@ from click.testing import CliRunner
 
 from ptk.bootstrap import create_app
 from ptk.drivers.cli.main import cli
+from tests.conftest import grant_maintainer
 from tests.project_files import write_project
 
 AT = "2026-10-26T15:07:00+01:00"
@@ -54,13 +55,14 @@ def make_project(root, alias="demo", extra=None):
         "jobs": {"package": {"path": "packages/${run.variant}"}},
     }
     (config / "artifactory_paths.ptk.yml").write_text(yaml.safe_dump(structure))
+    grant_maintainer(root)
     return root
 
 
 def invoke(root, *args, env=None, variant=None):
     return CliRunner(
         env={
-            "PTK_ROLE": "user",
+            "PTK_ROLE": "",
             "PTK_CI": "0",
             "GITHUB_EVENT_PATH": "",
             "GITHUB_EVENT_NAME": "push",
@@ -76,6 +78,7 @@ def invoke(root, *args, env=None, variant=None):
             "-C",
             str(root / ".main.ptk.yml"),
             *(["-V", variant] if variant else []),
+            "maintainer",
             "artifacts",
             "destination",
             "--job",
@@ -175,7 +178,7 @@ def test_unknown_fields_and_template_typos_include_file_provenance(tmp_path):
     root = make_project(tmp_path)
     path = root / "config/artifactory_paths.ptk.yml"
     path.write_text(path.read_text().replace("date.timestamp", "date.timestmp"))
-    result = invoke(root)
+    result = CliRunner().invoke(cli, ["-C", str(root / ".main.ptk.yml"), "validate"])
     assert result.exit_code != 0
     assert (
         "artifactory_paths.ptk.yml" in result.output
@@ -184,7 +187,7 @@ def test_unknown_fields_and_template_typos_include_file_provenance(tmp_path):
     path.write_text(
         path.read_text().replace("date.timestmp", "date.timestamp") + "uploads: []\n"
     )
-    result = invoke(root)
+    result = CliRunner().invoke(cli, ["-C", str(root / ".main.ptk.yml"), "validate"])
     assert result.exit_code != 0 and "unknown key 'uploads'" in result.output
 
 
@@ -195,11 +198,12 @@ def test_vmr_member_uses_own_alias_and_version(tmp_path, monkeypatch):
     for name in ("one", "two"):
         make_project(tmp_path / name, name)
     monkeypatch.chdir(tmp_path)
-    runner = CliRunner(env={"PTK_ROLE": "user", "PTK_CI": "0", "GITHUB_EVENT_PATH": ""})
+    runner = CliRunner(env={"PTK_ROLE": "", "PTK_CI": "0", "GITHUB_EVENT_PATH": ""})
     result = runner.invoke(
         cli,
         [
             "two",
+            "maintainer",
             "artifacts",
             "destination",
             "--job",
@@ -219,9 +223,9 @@ def test_destination_command_and_job_audience_are_enforced(tmp_path):
     from tests.conftest import grant_maintainer
 
     root = make_project(
-        tmp_path, extra={"command_audience": {"artifacts": "maintainer"}}
+        tmp_path, extra={"command_audience": {"maintainer.artifacts": "maintainer"}}
     )
-    assert "maintainer-only" in invoke(root).output
+    assert "maintainer-only" in invoke(root, env={"PTK_ROLE": "user"}).output
     grant_maintainer(root)
     assert invoke(root, env={"PTK_ROLE": ""}).exit_code == 0
 
@@ -231,6 +235,7 @@ def test_published_example_is_packaged_and_resolves_without_github(tmp_path):
 
     example = Path(__file__).resolve().parents[1] / "examples/artifacts"
     shutil.copytree(example, tmp_path / "example")
+    grant_maintainer(tmp_path / "example")
     result = invoke(tmp_path / "example", "--event", "release")
     assert result.exit_code == 0, result.output
     assert "0001_0002_0003_v1.2.3" in result.output

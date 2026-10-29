@@ -71,7 +71,7 @@ def complete(args=(), incomplete="", shell="bash"):
 def test_registration_outside_project_and_file_output(tmp_path, monkeypatch, shell):
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    args = ["setup", "completion", shell]
+    args = ["self-service", "completion", shell]
     result = runner.invoke(cli, args)
     assert result.exit_code == 0, result.output
     assert "_PTK_COMPLETE" in result.output and f"{shell}_complete" in result.output
@@ -84,16 +84,18 @@ def test_registration_outside_project_and_file_output(tmp_path, monkeypatch, she
 
 @pytest.mark.parametrize("shell", ["bash", "powershell", "zsh", "fish"])
 def test_commands_options_and_typed_values(project, shell):
-    assert {"build", "all", "setup", "variant", "workflow"} <= complete(shell=shell)
+    assert {"build", "all", "self-service", "variant", "workflow"} <= complete(
+        shell=shell
+    )
     assert not {"publish", "private", "ci-only", "self-setup"} & complete(shell=shell)
     assert complete(incomplete="bu", shell=shell) == {"build"}
     assert {"--build-type", "--enabled", "--no-enabled", "--from"} <= complete(
         ["build"], "--", shell
     )
     assert complete(["build", "--build-type"], "D", shell) == {"Debug"}
-    assert complete(["dry-run", "build", "--from"], "con", shell) == {"configure"}
+    assert complete(["build", "--dry-run", "--from"], "con", shell) == {"configure"}
     assert complete(["build", "--to"], "com", shell) == {"compile"}
-    assert complete(["setup", "config", "show", "--format"], "j", shell) == {"json"}
+    assert complete(["maintainer", "config", "show", "--format"], "j", shell) == set()
 
 
 @pytest.mark.parametrize(
@@ -102,15 +104,14 @@ def test_commands_options_and_typed_values(project, shell):
         ["run"],
         ["report", "open"],
         ["report", "export"],
-        ["setup", "install", "--job"],
-        ["artifacts", "destination", "--job"],
+        ["self-service", "tools", "--job"],
     ],
 )
 def test_job_arguments_and_options(project, args):
     assert complete(args) == {"build"}
 
 
-@pytest.mark.parametrize("command", ["show", "run", "dry-run", "report"])
+@pytest.mark.parametrize("command", ["show", "run"])
 def test_workflow_names(project, command):
     assert complete(["workflow", command]) == {"all"}
 
@@ -120,7 +121,7 @@ def test_variants_aliases_and_comma_selections(project):
     assert complete(["--variant"], "debug,r") == {"debug,release"}
     assert "debug,debug" not in complete(["--variant"], "debug,")
     assert complete(["variant", "show"], "d") == {"debug", "dev"}
-    assert complete(["variant", "check", "debug"], "r") == {"release"}
+    assert complete(["--variant"], "r") == {"release"}
 
 
 def test_generic_parameters_never_complete_secrets(project, monkeypatch):
@@ -182,9 +183,9 @@ def test_registration_and_static_completions_with_broken_config(tmp_path, monkey
     ):
         if content:
             (tmp_path / ".main.ptk.yml").write_text(content)
-        assert {"setup", "variant"} <= complete()
-        assert "completion" in complete(["setup"])
-        result = CliRunner().invoke(cli, ["setup", "completion", "powershell"])
+        assert {"self-service", "variant"} <= complete()
+        assert "completion" in complete(["self-service"])
+        result = CliRunner().invoke(cli, ["self-service", "completion", "powershell"])
         assert result.exit_code == 0, result.output
 
 
@@ -192,8 +193,12 @@ def test_permission_changes_are_seen_on_next_completion(project, monkeypatch):
     assert "publish" not in complete()
     grant_maintainer(project.parent)
     monkeypatch.delenv("PTK_ROLE")
-    assert "publish" in complete()
-    assert "private" in complete(["workflow", "show"])
+    assert "publish" not in complete()
+    assert "publish" in complete(["maintainer"])
+    assert complete(["maintainer", "config", "show", "--format"], "j") == {"json"}
+    assert "build" in complete(["maintainer", "artifacts", "destination", "--job"])
+    assert "private" in complete(["maintainer", "workflow", "show"])
+    assert "private" not in complete(["workflow", "show"])
 
 
 @pytest.mark.parametrize("broken", ["member", "alias"])
@@ -203,10 +208,10 @@ def test_invalid_vmr_keeps_static_completion_available(tmp_path, monkeypatch, br
     if broken == "member":
         (a.parent / "config/project.ptk.yml").write_text("name: [")
     else:
-        a.write_text("repository: {alias: setup, config_path: config}")
-    assert {"setup", "workflow"} <= complete()
-    assert "completion" in complete(["setup"])
-    result = CliRunner().invoke(cli, ["setup", "completion", "powershell"])
+        a.write_text("repository: {alias: self-service, config_path: config}")
+    assert {"self-service", "workflow"} <= complete()
+    assert "completion" in complete(["self-service"])
+    result = CliRunner().invoke(cli, ["self-service", "completion", "powershell"])
     assert result.exit_code == 0, result.output
 
 
@@ -234,7 +239,7 @@ def test_vmr_repositories_jobs_workflows_and_variants(tmp_path, monkeypatch):
     assert complete(["firmware", "variant", "show"], "d") == {"debug", "dev"}
     assert complete(["workflow", "run"], "f") == {"firmware/all"}
     assert complete(["firmware", "workflow", "run"]) == {"all"}
-    result = CliRunner().invoke(cli, ["setup", "completion", "powershell"])
+    result = CliRunner().invoke(cli, ["self-service", "completion", "powershell"])
     assert result.exit_code == 0, result.output
 
 
@@ -271,7 +276,9 @@ def test_generated_bash_script_calls_real_ptk(project, tmp_path):
     )
     executable.chmod(0o755)
     script = tmp_path / "completion.bash"
-    result = CliRunner().invoke(cli, ["setup", "completion", "bash", "-o", str(script)])
+    result = CliRunner().invoke(
+        cli, ["self-service", "completion", "bash", "-o", str(script)]
+    )
     assert result.exit_code == 0, result.output
     result = subprocess.run(
         [
@@ -303,11 +310,13 @@ printf '%s\n' "${COMPREPLY[@]}"
 def test_powershell_double_tab_is_explicit_and_shell_specific(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    normal = runner.invoke(cli, ["setup", "completion", "powershell"])
+    normal = runner.invoke(cli, ["self-service", "completion", "powershell"])
     assert "Set-PSReadLineKeyHandler" not in normal.output
-    listing = runner.invoke(cli, ["setup", "completion", "powershell", "--double-tab"])
+    listing = runner.invoke(
+        cli, ["self-service", "completion", "powershell", "--double-tab"]
+    )
     assert listing.exit_code == 0, listing.output
     assert "Set-PSReadLineKeyHandler -Key Tab -Function Complete" in listing.output
     assert "Register-ArgumentCompleter" in listing.output
-    invalid = runner.invoke(cli, ["setup", "completion", "bash", "--double-tab"])
+    invalid = runner.invoke(cli, ["self-service", "completion", "bash", "--double-tab"])
     assert invalid.exit_code == 2 and "PowerShell option" in invalid.output

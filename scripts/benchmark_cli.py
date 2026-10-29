@@ -49,7 +49,7 @@ def scenarios(temporary: Path, repo: Path, sizes: list[int]):
     yield "version", empty, ["--version"]
     yield "no-project-help", empty, ["--help"]
     yield "ptk-project-help", repo, ["--help"]
-    yield "ptk-setup-help", repo, ["setup", "--help"]
+    yield "ptk-self-service-help", repo, ["self-service", "--help"]
     yield "ptk-job-help", repo, ["test", "--help"]
     broken = temporary / "broken"
     broken.mkdir()

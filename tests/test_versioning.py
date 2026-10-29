@@ -123,7 +123,7 @@ def test_dry_run_discovers_without_writing(write, load):
         },
     )
     result = CliRunner().invoke(
-        cli, ["-C", str(root / ".main.ptk.yml"), "dry-run", "go"]
+        cli, ["-C", str(root / ".main.ptk.yml"), "go", "--dry-run"]
     )
     assert result.exit_code == 0, result.output
     assert not list(root.rglob(".gen.version.ptk.yml"))
@@ -328,17 +328,20 @@ def test_cli_and_generated_input_exclusion(write):
     )
     runner = CliRunner()
     base = ["-C", str(root / ".main.ptk.yml")]
-    for cmd in ("show", "check"):
-        result = runner.invoke(cli, [*base, "version", cmd])
+    from tests.conftest import grant_maintainer
+
+    grant_maintainer(root)
+    for args in (["maintainer", "version", "show"], ["validate", "--versions"]):
+        result = runner.invoke(cli, [*base, *args])
         assert result.exit_code == 0, result.output
     path = root / ".gen.version.ptk.yml"
     assert (
         runner.invoke(
-            cli, [*base, "version", "generate", "--output", str(path)]
+            cli, [*base, "maintainer", "version", "generate", "--output", str(path)]
         ).exit_code
         == 0
     )
-    assert runner.invoke(cli, [*base, "setup", "config", "validate"]).exit_code == 0
+    assert runner.invoke(cli, [*base, "validate"]).exit_code == 0
     assert runner.invoke(cli, [*base, "version", "bump", "patch"]).exit_code != 0
 
 

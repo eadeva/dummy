@@ -63,7 +63,7 @@ def test_missing_index_does_not_fall_back_to_scanning(tmp_path, monkeypatch):
     assert "missing VMR project index" in result.output and "repo sync" in result.output
     # Init is independent of existing workspace discovery and uses its target.
     result = CliRunner().invoke(
-        cli, ["setup", "init", "new-member", "--config-dir", "ptk", "--yes"]
+        cli, ["init", "new-member", "--config-dir", "ptk", "--yes"]
     )
     assert result.exit_code == 0, result.output
     assert (tmp_path / "new-member/.main.ptk.yml").is_file()
@@ -79,7 +79,7 @@ def test_manual_marker_discovers_direct_children_only(tmp_path, monkeypatch):
     assert workspace_root(direct.parent) is None
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    for args in (["repos"], ["direct", "build"], ["setup", "config", "validate"]):
+    for args in (["repos"], ["direct", "build"], ["validate"]):
         result = runner.invoke(cli, args)
         assert result.exit_code == 0, result.output
     assert "hidden" not in runner.invoke(cli, ["repos"]).output

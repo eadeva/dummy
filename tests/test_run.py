@@ -183,7 +183,7 @@ def test_failure_stops_following_steps(project):
 def test_missing_secret_stops_before_anything_runs(project):
     with pytest.raises(PtkError, match="REPO_TOKEN is not set") as info:
         run(project, environ={"REPO_TOKEN": ""})
-    assert "ptk setup creds set repo" in str(info.value)
+    assert "ptk self-service creds set repo" in str(info.value)
     assert not (project / "_logs").exists()  # nothing was started
 
 

@@ -56,9 +56,9 @@ def invoke(write, monkeypatch):
             config["variants"] = {"default": "one", "variants": {"one": {}, "two": {}}}
         root = write(project_files(yaml.safe_dump(config)))
         args = ["--config", str(root / ".main.ptk.yml")]
-        if dry:
-            args.append("dry-run")
         args.append("check")
+        if dry:
+            args.append("--dry-run")
         if all_variants:
             args.append("--all-variants")
         env = {

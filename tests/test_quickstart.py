@@ -18,7 +18,7 @@ def test_quickstart(tmp_path, variant):
     shutil.copytree(EXAMPLE, root)
     base = ["-C", str(root / ".main.ptk.yml")]
     runner = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"})
-    preview = runner.invoke(cli, [*base, "-V", variant, "dry-run", "build"])
+    preview = runner.invoke(cli, [*base, "-V", variant, "build", "--dry-run"])
     assert preview.exit_code == 0, preview.output
     assert not (root / "_bin").exists()
     message = "Hello with spaces & punctuation"

@@ -76,7 +76,7 @@ def test_help_command_writes_page(tmp_path):
     for text in (
         "ptk build [OPTIONS]",
         "ptk variant show",
-        "ptk dry-run build",
+        "ptk build --dry-run",
         "customer_a_high",
     ):
         assert text in html
@@ -90,4 +90,4 @@ def test_help_without_project_still_lists_commands(tmp_path, monkeypatch):
     )
     assert result.exit_code == 0
     html = out.read_text()
-    assert "could not be loaded" in html and "ptk setup config validate" in html
+    assert "could not be loaded" in html and "ptk validate" in html

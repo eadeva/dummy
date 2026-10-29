@@ -66,7 +66,7 @@ def test_discovery_preview_then_sequential_calls_and_immutable_reports(tmp_path)
     assert "verify" in invoke(root, "workflow", "list").output
     assert "params:" in invoke(root, "workflow", "show", "verify").output
     before = sorted(p.relative_to(root) for p in root.rglob("*"))
-    preview = invoke(root, "workflow", "dry-run", "verify")
+    preview = invoke(root, "workflow", "run", "verify", "--dry-run")
     assert preview.exit_code == 0, preview.output
     assert sorted(p.relative_to(root) for p in root.rglob("*")) == before
     result = invoke(root, "workflow", "run", "verify")
@@ -179,7 +179,7 @@ def test_reject_parallel_output_and_uv_environment_collisions(tmp_path):
             "bad": {"parallel": True, "steps": [{"one": "build"}, {"two": "build"}]}
         },
     )
-    result = invoke(root, "workflow", "dry-run", "bad")
+    result = invoke(root, "workflow", "run", "bad", "--dry-run")
     assert result.exit_code != 0 and "parallel workflow branches share" in result.output
     a = command("pass")
     a["steps"][0]["run"]["python"] = {"project": "."}
@@ -199,7 +199,7 @@ def test_reject_parallel_output_and_uv_environment_collisions(tmp_path):
             )
         )["workflows"],
     )
-    result = invoke(root, "workflow", "dry-run", "bad")
+    result = invoke(root, "workflow", "run", "bad", "--dry-run")
     assert result.exit_code != 0 and "uv project environment" in result.output
 
 
@@ -245,9 +245,9 @@ def test_vmr_targets_keep_environment_and_reports_and_have_editor_tasks(
         ["workflow", "list"],
         ["workflow", "run", "all"],
         ["workflow", "run", "a/local"],
-        ["a", "workflow", "dry-run", "local"],
-        ["setup", "vscode", "tasks"],
-        ["a", "setup", "vscode", "tasks"],
+        ["a", "workflow", "run", "local", "--dry-run"],
+        ["maintainer", "sync", "tasks"],
+        ["a", "maintainer", "sync", "tasks"],
     ):
         result = runner.invoke(cli, args, catch_exceptions=False)
         assert result.exit_code == 0, result.output
@@ -288,14 +288,14 @@ def test_parallel_python_calls_use_their_resolved_venv_paths(tmp_path, level):
         jobs=jobs,
         workflows={"verify": {"parallel": True, "steps": [{"a": "a"}, {"b": "b"}]}},
     )
-    preview = invoke(root, "workflow", "dry-run", "verify")
+    preview = invoke(root, "workflow", "run", "verify", "--dry-run")
     assert preview.exit_code == 0, preview.output
     target = jobs["b"] if level == "job" else jobs["b"]["steps"][0]["run"]
     target["env"]["UV_PROJECT_ENVIRONMENT"] = "${project.root}/.ptk/venvs/b/../a"
     write_project(
         root / ".main.ptk.yml", {**read_project(root / ".main.ptk.yml"), "jobs": jobs}
     )
-    collision = invoke(root, "workflow", "dry-run", "verify")
+    collision = invoke(root, "workflow", "run", "verify", "--dry-run")
     assert collision.exit_code == 2 and "uv project environment" in collision.output
 
 
@@ -305,7 +305,7 @@ def test_source_locations_and_workflow_name_validation(tmp_path):
     folder.mkdir(exist_ok=True)
     file = folder / "verify.ptk.yml"
     file.write_text("steps:\n  - build: {acton: build}\n")
-    result = invoke(root, "setup", "config", "validate")
+    result = invoke(root, "validate")
     assert result.exit_code != 0
     assert "verify.ptk.yml:2" in result.output and "acton" in result.output
     file.unlink()
@@ -319,7 +319,7 @@ def test_source_locations_and_workflow_name_validation(tmp_path):
 @pytest.mark.parametrize("body", ["build", {"job": "build"}])
 def test_entry_named_name_is_a_normal_job_call(tmp_path, body):
     root = repository(tmp_path, workflows={"verify": {"steps": [{"name": body}]}})
-    result = invoke(root, "workflow", "dry-run", "verify")
+    result = invoke(root, "workflow", "run", "verify", "--dry-run")
     assert result.exit_code == 0 and "name: app/build" in result.output, result.output
 
 
@@ -362,14 +362,16 @@ def test_maintainer_workflows_are_protected_and_hidden_from_user_tasks(
     denied = invoke(root, "workflow", "run", "verify")
     assert denied.exit_code != 0 and "maintainer-only" in denied.output, denied.output
     grant_maintainer(root)
-    allowed = invoke(root, "workflow", "run", "verify", env={"PTK_ROLE": ""})
+    allowed = invoke(
+        root, "maintainer", "workflow", "run", "verify", env={"PTK_ROLE": ""}
+    )
     assert allowed.exit_code == 0, allowed.output
     for options, visible in (
         ([], True),
         (["--users-only"], False),
     ):
         result = invoke(
-            root, "setup", "vscode", "tasks", *options, env={"PTK_ROLE": ""}
+            root, "maintainer", "sync", "tasks", *options, env={"PTK_ROLE": ""}
         )
         assert result.exit_code == 0, result.output
         tasks = json.loads((root / ".vscode/tasks.json").read_text())["tasks"]
@@ -386,10 +388,12 @@ def test_workflow_tasks_are_idempotent_and_preserve_user_tasks(tmp_path):
         )
     )
     grant_maintainer(root)
-    assert invoke(root, "setup", "vscode", "tasks", env={"PTK_ROLE": ""}).exit_code == 0
+    assert (
+        invoke(root, "maintainer", "sync", "tasks", env={"PTK_ROLE": ""}).exit_code == 0
+    )
     assert (
         invoke(
-            root, "setup", "vscode", "tasks", "--check", env={"PTK_ROLE": ""}
+            root, "maintainer", "sync", "tasks", "--check", env={"PTK_ROLE": ""}
         ).exit_code
         == 0
     )
@@ -434,6 +438,6 @@ def test_workflow_execution_is_local_only(tmp_path, ci_args, env, opened_reports
     result = invoke(root, *ci_args, "workflow", "run", "verify", env=env)
     assert result.exit_code != 0 and "locally only" in result.output
     assert not (root / "ran").exists()
-    preview = invoke(root, *ci_args, "workflow", "dry-run", "verify", env=env)
+    preview = invoke(root, *ci_args, "workflow", "run", "verify", "--dry-run", env=env)
     assert preview.exit_code == 0, preview.output
     assert opened_reports == []

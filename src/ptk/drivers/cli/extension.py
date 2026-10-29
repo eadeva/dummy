@@ -18,7 +18,7 @@ def bundled_vsix():
     if not resource.is_file():
         raise ValueError(
             "This editable/source installation has no bundled VSIX. Build it with "
-            "'uv run ptk extension', then use 'ptk setup extension --vsix PATH --force', "
+            "'uv run ptk extension', then use 'ptk self-service extension --vsix PATH --force', "
             "or install a PTK wheel."
         )
     with as_file(resource) as path:
@@ -101,7 +101,7 @@ def extension_command(code, profile, force, if_available, vsix, output):
         raise click.UsageError("--output cannot be combined with installation options.")
     executable = shutil.which(code) if not output else None
     if not output and executable is None:
-        message = f"VS Code launcher '{code}' not found. Install VS Code/add it to PATH, then run 'ptk setup extension'."
+        message = f"VS Code launcher '{code}' not found. Install VS Code/add it to PATH, then run 'ptk self-service extension'."
         if if_available:
             click.echo("Skipping extension: " + message)
             return

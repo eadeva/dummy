@@ -203,7 +203,9 @@ def _job(job: HelpJob) -> str:
             "Needs the tools "
             + ", ".join(f"<code>{_e(t)}</code>" for t in job.requires_tools)
         )
-    notes.append(f"Preview without running: <code>ptk dry-run {_e(job.name)}</code>")
+    notes.append(
+        f"Preview without running: <code>ptk {'maintainer ' if job.audience == 'maintainer' else ''}{_e(job.name)} --dry-run</code>"
+    )
     if job.is_default:
         notes.append(
             "This is the default job: plain <code>ptk</code> or "
@@ -278,7 +280,7 @@ def render(doc: HelpDocument) -> str:
     hero.append(
         _cmd(
             "ptk                               # run the default job\n"
-            "ptk dry-run JOB                # see what would run\n"
+            "ptk JOB --dry-run                # see what would run\n"
             "ptk JOB --NAME VALUE           # run it with a parameter\n"
             "ptk JOB --from STEP -- ARGS\n"
             "ptk variant list"

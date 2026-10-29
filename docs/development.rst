@@ -15,7 +15,7 @@ Run from the repository root; the project uses its own PTK configuration in
 ``config/ptk`` with one ``default`` variant and no components::
 
    uv sync
-   uv run ptk setup config validate
+   uv run ptk validate
    uv run ptk test
    uv run ptk check
    uv run ptk docs
@@ -24,7 +24,7 @@ Run from the repository root; the project uses its own PTK configuration in
 Build the VS Code extension with ``uv run ptk extension`` (or ``ptk extension``
 with an installed CLI). This job needs Node.js 22+ and npm on PATH. It installs
 locked npm dependencies, runs extension checks and creates the VSIX under
-``extensions/project-toolkit``. ``ptk dry-run extension`` previews its steps.
+``extensions/project-toolkit``. ``ptk extension --dry-run`` previews its steps.
 
 An installed ``ptk`` can run the same jobs without the ``uv run`` prefix.
 Jobs using a Python runtime always select this checkout's uv project, with
@@ -54,7 +54,7 @@ This repository enables pre-commit through ``config/ptk/configs/configs.ptk.yml`
 Local jobs/workflows automatically install or repair the hooks. The committed
 ``.pre-commit-config.yaml`` combines PTK's base with its repository overlay;
 Ruff uses the existing ``pyproject.toml`` settings. Run
-``uv run ptk pre-commit check`` to check the whole checkout. The CI quality
+``uv run ptk pre-commit run --all-files`` to check the whole checkout. The CI quality
 job runs those hooks and checks that the generated configuration is current.
 PTK-run hooks clear caller Python environment selectors such as ``VIRTUAL_ENV``
 and ``UV_PROJECT_ENVIRONMENT`` and remove PTK's own virtualenv bin directory
@@ -62,7 +62,7 @@ from the hook PATH. This prevents inherited settings from redirecting a hook's
 ``uv sync`` into PTK's installation. Index, proxy, certificate and cache settings
 are retained. Hooks should declare their required runtime/dependencies.
 After changing the overlay, a maintainer runs
-``ptk setup configs sync pre-commit`` and commits both files.
+``ptk maintainer sync configs pre-commit`` and commits both files.
 
 Package builds and job runs use the same Git-managed PTK version configuration.
 Reachable ``v*`` tags take precedence; untagged/shallow checkouts use the explicit
@@ -134,7 +134,7 @@ Chocolatey command construction and administrator checks use a fake runner on
 both platforms; CI does not perform real machine-wide Chocolatey installations.
 
 ``tests/hooks`` uses real temporary Git repositories and the dev group's
-pre-commit installation. A local hook demonstrates that a failing check blocks
+pre-commit hook installation. A local hook demonstrates that a failing check blocks
 a real commit. Tests cover gitfiles, symlinks, linked worktrees, custom output
 paths, preserved hooks, broken runtimes, concurrent installation and VMR workflow
 preflight. Package acquisition is replaced in those tests; no remote hook repos

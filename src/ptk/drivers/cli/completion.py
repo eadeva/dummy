@@ -24,11 +24,16 @@ def jobs(ctx, param, incomplete):
     project = state.try_project()
     if project is None:
         return []
+    from .access import in_maintainer
+
+    execution = getattr(ctx.command, "name", None) == "run"
     return _items(
         {
             name: spec.help
             for name, spec in project.config.jobs.items()
-            if visible(spec.audience, state.role()) and (not spec.only_cx or project.ci)
+            if visible(spec.audience, state.role())
+            and (not spec.only_cx or project.ci)
+            and (not execution or (spec.audience == "maintainer") == in_maintainer(ctx))
         },
         incomplete,
     )
@@ -60,7 +65,7 @@ def _variant_projects(ctx):
 
 def variants(ctx, param, incomplete):
     # Comma-separated selections retain already entered variants. They are only
-    # accepted by the global option; variant show/check expect individual names.
+    # accepted by the global option; variant show/explain expect individual names.
     before, separator, partial = (
         incomplete.rpartition(",") if param.name == "variant" else ("", "", incomplete)
     )
@@ -83,7 +88,7 @@ def variants(ctx, param, incomplete):
 
 
 def workflows(ctx, param, incomplete):
-    from .workflows import can_view, catalog
+    from .workflows import can_view, catalog, matches_namespace
 
     try:
         parent, _, owners, available = catalog(ctx)
@@ -92,6 +97,10 @@ def workflows(ctx, param, incomplete):
                 name: spec.help
                 for name, (owner, spec, _) in available.items()
                 if can_view(parent, owners, owner, spec)
+                and (
+                    getattr(param, "name", None) == "workflow"
+                    or matches_namespace(ctx, owners, owner, spec)
+                )
             },
             incomplete,
         )
@@ -210,10 +219,10 @@ def completion_command(
 ):
     """Install or generate terminal Tab completion (no project required).
 
-    'ptk setup completion install' configures Bash/Git Bash and detected
+    'ptk self-service completion install' configures Bash/Git Bash and detected
     PowerShell editions for this user. Both installers do this automatically.
 
-    PowerShell: ptk setup completion powershell --double-tab | Out-String | Invoke-Expression
+    PowerShell: ptk self-service completion powershell --double-tab | Out-String | Invoke-Expression
 
     Use --install PROFILE with powershell to target just one profile.
     """

@@ -49,7 +49,7 @@ if TYPE_CHECKING:
         PrepareRun,
         RunJob,
     )
-    from .application.use_cases.setup import Doctor, Environment, SelfSetup
+    from .application.use_cases.setup import Doctor, Environment
     from .application.use_cases.tools import ToolService
     from .application.use_cases.variants import VariantService
     from .application.use_cases.vscode import VSCodeTasks
@@ -156,12 +156,6 @@ class App:
         return Doctor(
             self._environment, self.tools, self.shared_configs, self.version, self.hooks
         )
-
-    @cached_property
-    def self_setup(self) -> SelfSetup:
-        from .application.use_cases.setup import SelfSetup
-
-        return SelfSetup(self._environment, self.tools, self.shared_configs, self.hooks)
 
     @cached_property
     def build_help(self) -> BuildHelp:

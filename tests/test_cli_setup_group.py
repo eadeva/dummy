@@ -1,12 +1,13 @@
-"""Grouped setup navigation, compatibility, and side-effect boundaries."""
+"""Canonical navigation, removed aliases and read-only preview boundaries."""
 
 import json
-import re
 
 import pytest
 from click.testing import CliRunner
 from rich.text import Text
 
+from ptk.application.use_cases.hooks import EnsureHooks
+from ptk.application.use_cases.tools import ToolService
 from ptk.drivers.cli.main import cli
 from tests.conftest import grant_maintainer
 from tests.project_files import project_files
@@ -14,76 +15,122 @@ from tests.project_files import project_files
 
 @pytest.fixture
 def invoke(write):
-    root = write(project_files("project: {name: demo}\n"))
-
+    root = write(
+        project_files(
+            "project: {name: demo}\njobs: {build: {steps: [{hi: {uses: echo}}]}}\n"
+        )
+    )
     grant_maintainer(root)
 
     def call(*args):
-        return CliRunner(env={"PTK_CI": "0"}).invoke(
-            cli,
-            ["-C", str(root / ".main.ptk.yml"), *args],
-            catch_exceptions=False,
+        return CliRunner(env={"PTK_CI": "0", "PTK_ROLE": ""}).invoke(
+            cli, ["-C", str(root / ".main.ptk.yml"), *args], catch_exceptions=False
         )
 
     return call
 
 
-def test_setup_is_a_navigation_group(invoke):
-    result = invoke("setup")
-    assert result.exit_code == 0
-    text = Text.from_ansi(result.output).plain
-    for name in ("install", "config", "configs", "creds", "self", "doctor", "vscode"):
-        assert name in text
-    assert "would install" not in text
-    for old in ("config", "configs", "creds", "self-setup", "doctor", "vscode"):
-        assert cli.commands[old].hidden
-        assert (
-            not cli.commands["setup"]
-            .commands["self" if old == "self-setup" else old]
-            .hidden
-        )
+def test_groups_are_navigation_only(invoke):
+    for group, commands in (
+        (
+            "self-service",
+            ("tools", "creds", "completion", "extension", "doctor", "hooks"),
+        ),
+        ("maintainer", ("config", "sync", "version", "artifacts", "workflow")),
+    ):
+        result = invoke(group)
+        assert result.exit_code == 0, result.output
+        text = Text.from_ansi(result.output).plain
+        for command in commands:
+            assert command in text
+        assert "would install" not in text
+    assert "init" not in cli.commands["self-service"].commands
 
 
-@pytest.mark.parametrize("command", ["config", "configs", "creds", "vscode"])
-def test_nested_help_and_legacy_aliases(invoke, command):
-    assert invoke("setup", command, "--help").exit_code == 0
-    assert invoke(command, "--help").exit_code == 0
+@pytest.mark.parametrize(
+    "args",
+    [
+        ["setup"],
+        ["config", "show"],
+        ["configs", "sync"],
+        ["creds", "list"],
+        ["self-setup"],
+        ["doctor"],
+        ["vscode", "tasks"],
+        ["version", "show"],
+        ["artifacts", "destination"],
+        ["dry-run", "build"],
+        ["variant", "check"],
+        ["workflow", "dry-run", "verify"],
+        ["workflow", "report", "verify"],
+        ["pre-commit", "check"],
+        ["pre-commit", "install"],
+        ["maintainer", "version", "check"],
+        ["maintainer", "config", "validate"],
+    ],
+)
+def test_removed_commands_are_rejected(invoke, args):
+    result = invoke(*args)
+    assert result.exit_code == 2, result.output
+    assert "No such command" in result.output
 
 
-def test_nested_config_uses_root_options(invoke):
-    result = invoke("setup", "config", "show", "project", "--format", "json")
+def test_nested_config_and_validation_use_root_options(invoke):
+    result = invoke("maintainer", "config", "show", "project", "--format", "json")
     assert result.exit_code == 0
     assert json.loads(result.output)["name"] == "demo"
-    assert invoke("setup", "config", "validate").exit_code == 0
+    assert invoke("validate").exit_code == 0
+    assert invoke("validate", "--variants").exit_code == 0
 
 
-def test_legacy_install_options_and_canonical_install(invoke):
-    legacy = invoke("setup", "--dry-run")
-    canonical = invoke("setup", "install", "--dry-run")
-    assert legacy.exit_code == canonical.exit_code == 0
-    assert legacy.output == canonical.output
+def test_explicit_sync_target_and_option_scope(invoke):
+    assert invoke("maintainer", "sync").exit_code == 2
+    assert invoke("self-service", "--dry-run").exit_code == 2
+    assert invoke("self-service", "tools", "--dry-run").exit_code == 0
+    for args in (
+        ("skills", "ruff"),
+        ("skills", "--diff"),
+        ("configs", "--diff", "--check"),
+        ("configs", "--output", "tasks.json"),
+    ):
+        assert invoke("maintainer", "sync", *args).exit_code == 2
 
 
-def test_group_options_cannot_be_silently_ignored(invoke):
-    result = invoke("setup", "--allow-system", "config", "validate")
-    assert result.exit_code == 2
-    assert "after 'setup install'" in result.output
+def test_preview_never_installs_tools_or_hooks(invoke, monkeypatch):
+    def forbidden(*args, **kwargs):
+        raise AssertionError("preview attempted installation")
+
+    monkeypatch.setattr(ToolService, "setup", forbidden)
+    monkeypatch.setattr(EnsureHooks, "execute", forbidden)
+    for args in (
+        ("build", "--dry-run", "--setup"),
+        ("run", "build", "--dry-run", "--setup"),
+    ):
+        result = invoke(*args)
+        assert result.exit_code == 0, result.output
+    assert invoke("build", "--env").exit_code == 2
 
 
-def test_html_help_lists_canonical_tree(invoke, tmp_path):
-    output = tmp_path / "help.html"
-    result = invoke("help", "--no-open", "-o", str(output))
-    assert result.exit_code == 0
-    html = output.read_text()
-    assert "ptk setup config validate" in html
-    assert "ptk setup creds set" in html
-    assert 'id="cmd-config-validate"' not in html
-
-
-def test_root_help_hides_legacy_aliases(invoke):
+def test_html_and_terminal_help_expose_canonical_order(invoke, tmp_path):
     result = invoke("--help")
     assert result.exit_code == 0
-    output = Text.from_ansi(result.output).plain
-    assert re.search(r"(?m)^\s*[│|]?\s*setup\s{2,}", output)
-    for name in ("config", "configs", "creds", "self-setup", "doctor", "vscode"):
-        assert not re.search(rf"(?m)^\s*[│|]?\s*{name}\s{{2,}}", output), output
+    text = Text.from_ansi(result.output).plain
+    assert (
+        text.index("Jobs (from")
+        < text.index("Commands")
+        < text.index("Self-service")
+        < text.index("Maintenance")
+    )
+    assert cli.commands["run"].hidden and cli.commands["describe"].hidden
+    output = tmp_path / "help.html"
+    result = invoke("help", "--no-open", "-o", str(output))
+    assert result.exit_code == 0, result.output
+    html = output.read_text()
+    for command in (
+        "ptk validate",
+        "ptk self-service creds set",
+        "ptk maintainer sync",
+    ):
+        assert command in html
+    for command in ("ptk setup", "ptk dry-run", "ptk self-setup"):
+        assert command not in html

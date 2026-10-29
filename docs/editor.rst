@@ -6,7 +6,7 @@ Project Toolkit extension
 
 The ``project-toolkit`` extension in ``extensions/project-toolkit`` provides a
 sidebar for jobs, workflows, built-in commands, variants and configuration files.
-Run ``ptk setup extension`` to install the VSIX bundled with the Python package,
+Run ``ptk self-service extension`` to install the VSIX bundled with the Python package,
 then open a trusted PTK
 repository or VMR. PTK must be installed on the workspace host and support
 ``ptk describe --json``. The extension requires VS Code 1.96 or newer.
@@ -14,7 +14,7 @@ repository or VMR. PTK must be installed on the workspace host and support
 Both installers run extension setup automatically when ``code`` is available.
 Use ``install.ps1 -NoExtension`` or ``install.sh --no-extension`` to skip it.
 The setup command works outside projects and with broken configuration, and is
-available to every user. It is separate from maintainer-only ``setup vscode``,
+available to every user. It is separate from maintainer-only ``maintainer sync``,
 which writes shared project tasks and skills.
 
 Use ``--code code-insiders`` (or an absolute launcher path) for another VS Code
@@ -23,21 +23,21 @@ keeps an equal/newer installed extension; ``--force`` explicitly reinstalls or
 downgrades it. A retained newer extension still checks PTK's JSON interface when
 it loads. ``--output PATH`` exports the VSIX without starting VS Code and refuses
 to overwrite existing files. VSIX installations do not automatically follow
-Python upgrades: rerun the installer or ``ptk setup extension`` after upgrading
+Python upgrades: rerun the installer or ``ptk self-service extension`` after upgrading
 PTK. In remote workspaces run setup on the workspace host.
 
 Hover over a job to see Run, Dry Run, **Run Job with Parameters** (gear) and
 **Show Help** (question mark), each with a tooltip. The gear prompts for optional
 overrides; required non-secret parameters are prompted automatically. Help shows
 the job's ``--help`` without running it or asking for parameters.
-Dry Run calls ``ptk dry-run JOB`` or ``ptk workflow dry-run NAME`` and shows the
+Dry Run calls ``ptk JOB --dry-run`` or ``ptk workflow run --dry-run NAME`` and shows the
 planned steps without executing them.
 Provide secrets through their configured environment variables. Tasks execute
 PTK as a process and show output in the task terminal. Saved tasks preserve
 dry-run mode, parameters, variants and help requests.
 
-Expand **Built-in commands** to browse ``setup``, ``setup creds``, ``help`` and
-other permitted commands. Duplicate ``run``, ``dry-run`` and ``report`` branches,
+Expand **Built-in commands** to browse ``self-service``, ``maintainer``, ``help`` and
+other permitted commands. Duplicate ``run`` and ``report`` branches,
 including workflow equivalents, are omitted in favour of job/workflow actions.
 The remaining tree commands have Run, Options and Help icons. Required
 arguments are prompted automatically; the gear lets you supply optional values.
@@ -99,8 +99,8 @@ refreshes the tree. Click **PTK unavailable** to see the exact discovery error.
 
 Build from the repository root with ``ptk extension`` or ``uv run ptk extension``.
 The job checks Node.js 22+ and npm, installs the build dependencies, runs the
-checks and writes ``extensions/project-toolkit/project-toolkit-0.9.0.vsix``.
-Use ``ptk dry-run extension`` to preview it. Node.js and npm must be on PATH.
+checks and writes ``extensions/project-toolkit/project-toolkit-0.10.0.vsix``.
+Use ``ptk extension --dry-run`` to preview it. Node.js and npm must be on PATH.
 Set ``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
 integration tests. CI builds downloadable VSIX artifacts on Linux and Windows;
 Marketplace publication is separate. See the extension README for installation,
@@ -140,7 +140,7 @@ JavaScript, run ``npm run build`` and reload the development window.
 To install a development build into your normal VS Code instead::
 
    uv run ptk extension
-   uv run ptk setup extension --vsix extensions/project-toolkit/project-toolkit-0.9.0.vsix --force
+   uv run ptk self-service extension --vsix extensions/project-toolkit/project-toolkit-0.10.0.vsix --force
 
 Editable installs intentionally contain no built-in VSIX; supply ``--vsix`` for
 this workflow. Full ``uv run ptk package`` builds the release artifacts containing
@@ -156,15 +156,14 @@ surrounding text, cursor and unsaved draft and does not reload configuration.
 The installed PTK supplies the catalogue, field capabilities and current job's
 parameter names. Runtime availability is described rather than evaluated in
 the editor. Environment and credential values are never previewed.
-Update PTK and extension 0.9.0 together to use this feature.
+Update PTK and extension 0.10.0 together to use this feature.
 
 Generated tasks and offline resources
 -----------------------------------------
 
-Run ``ptk setup vscode`` to generate VS Code tasks and install PTK's project-facing
-skills. In a VMR, qualify the repository: ``ptk ALIAS setup vscode``.
-Use ``ptk setup vscode tasks`` for tasks only, or ``ptk setup vscode skills`` for
-skills and their reference files. ``ptk setup vscode skills --check`` checks drift
+Run ``ptk maintainer sync tasks`` to generate VS Code tasks. Run
+``ptk maintainer sync skills`` for
+skills and their reference files. ``ptk maintainer sync skills --check`` checks drift
 without writing (exit code 1 when an update is needed).
 
 Editor setup and all its subcommands are maintainer-only, including ``--check``.
@@ -199,16 +198,17 @@ Local workflows
 Workflow tasks call ``ptk workflow run NAME`` on the local machine; they do not
 invoke GitHub Actions. Repository task files include jobs and local workflows.
 Generated tasks use explicit ``ptk run JOB`` and ``ptk workflow run WORKFLOW``
-commands, so a shared name never triggers an interactive choice in an editor task.
-At a VMR root, ``ptk setup vscode tasks`` includes workspace-owned workflows and
-qualified member workflows. ``ptk setup vscode`` also installs each member's
-skills/tasks. VMR tasks run from the workspace root. See :doc:`workflows` for
+commands, prefixed with ``maintainer`` for restricted targets, so a shared name never triggers an interactive choice in an editor task.
+At a VMR root, ``ptk maintainer sync tasks`` includes workspace-owned workflows and
+qualified member workflows and each member's tasks. Use
+``ptk maintainer sync skills`` separately for member authoring resources.
+VMR tasks run from the workspace root. See :doc:`workflows` for
 parallelism, repository selection and CX restrictions.
 
 Workspace editor commands require membership in the VMR root's own
 ``maintainers.ptk.yml``. Commands updating member repositories also require
-membership in each target's list; combined setup checks every member before any
-write. Use ``ptk ALIAS setup vscode`` to update only a repository you maintain.
+membership in each target's list; synchronization checks every member before any
+write. Use ``ptk ALIAS maintainer sync tasks`` or ``ptk ALIAS maintainer sync skills`` to update only a repository you maintain.
 
 Report files
 ------------
@@ -220,8 +220,8 @@ latest saved aggregate report. Missing reports produce an informational message
 in the task terminal, without running anything. Saved tasks with ``report: true``
 remain report requests when rerun.
 
-Update PTK together with extension 0.3.2. The CLI operations are
-``ptk report open --if-exists JOB`` and ``ptk workflow report --if-exists NAME``.
+Update PTK together with extension 0.10.0. The CLI operations are
+``ptk report open --if-exists JOB`` and ``ptk report open --workflow NAME --if-exists``.
 Omitting ``--if-exists`` retains an error for missing reports. Configured
 ``open_report`` policies continue to open reports after local runs. Remote
 sessions open files on the machine running PTK.
@@ -261,7 +261,7 @@ Theme-aware colors distinguish jobs, workflows and configuration categories.
 Fingerprints reject stale edits, and dirty YAML must be saved first.
 
 Loading errors appear in the tree and Problems panel. Validate Configuration stays
-available even without a project, when it offers ``ptk setup init``. Use Raw YAML
+available even without a project, when it offers ``ptk init``. Use Raw YAML
 for aliases or values that the form cannot safely represent.
 
 The job parameter gear opens a single window with help, default values, text

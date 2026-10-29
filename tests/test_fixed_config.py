@@ -242,12 +242,12 @@ def test_validate_stays_available_to_users(write):
     root = write(
         files(
             **{
-                "config/project.ptk.yml": "name: demo\ncommand_audience: {setup: maintainer}"
+                "config/project.ptk.yml": "name: demo\ncommand_audience: {self-service: maintainer}"
             }
         )
     )
     result = CliRunner(env={"PTK_ROLE": "user"}).invoke(
-        cli, ["-C", str(root / ".main.ptk.yml"), "setup", "config", "validate"]
+        cli, ["-C", str(root / ".main.ptk.yml"), "validate"]
     )
     assert result.exit_code == 0, result.output
 

@@ -126,13 +126,13 @@ def invoke(write):
 
 def test_sync_check_diff(invoke):
     root = invoke.root
-    assert invoke("configs", "check").exit_code == 1
-    preview = invoke("configs", "sync", "--diff")
+    assert invoke("maintainer", "sync", "configs", "--check").exit_code == 1
+    preview = invoke("maintainer", "sync", "configs", "--diff")
     assert (
         "+++ b/.clang-format" in preview.output
         and not (root / ".clang-format").exists()
     )
-    synced = invoke("configs", "sync")
+    synced = invoke("maintainer", "sync", "configs")
     assert synced.exit_code == 0 and "new" in synced.output
     for name in (
         ".pre-commit-config.yaml",
@@ -151,28 +151,30 @@ def test_sync_check_diff(invoke):
         r["repo"] for r in pc["repos"]
     ]
     assert 'extend = "ruff-base.toml"' in (root / "ruff.toml").read_text()
-    assert invoke("configs", "check").exit_code == 0
+    assert invoke("maintainer", "sync", "configs", "--check").exit_code == 0
     # editing the overlay makes the effective file stale
     (root / "ptk/cf.yaml").write_text("ColumnLimit: 80\n")
-    stale = invoke("configs", "check")
+    stale = invoke("maintainer", "sync", "configs", "--check")
     assert stale.exit_code == 1 and "out of date" in stale.output
     assert (
         "-ColumnLimit: 120"
-        in invoke("configs", "sync", "--diff", "clang-format").output
+        in invoke("maintainer", "sync", "configs", "--diff", "clang-format").output
     )
 
 
 def test_existing_ruff_toml_is_left_alone(invoke):
     (invoke.root / "ruff.toml").write_text("line-length = 100\n")
-    result = invoke("configs", "sync", "ruff")
+    result = invoke("maintainer", "sync", "configs", "ruff")
     assert 'add extend = "ruff-base.toml"' in result.output
     assert (invoke.root / "ruff.toml").read_text() == "line-length = 100\n"
 
 
 def test_unknown_config_and_missing_overlay(invoke):
-    assert "not managed" in invoke("configs", "sync", "clangd").output
+    assert "not managed" in invoke("maintainer", "sync", "configs", "clangd").output
     (invoke.root / "ptk/pc.yaml").unlink()
-    assert "file not found: ptk/pc.yaml" in invoke("configs", "sync").output
+    assert (
+        "file not found: ptk/pc.yaml" in invoke("maintainer", "sync", "configs").output
+    )
 
 
 def test_ruff_overlay_is_a_config_error(write, load):
@@ -185,7 +187,7 @@ def test_ruff_overlay_is_a_config_error(write, load):
 
 @pytest.mark.skipif(shutil.which("ruff") is None, reason="ruff not installed")
 def test_generated_ruff_config_works(invoke):
-    invoke("configs", "sync")
+    invoke("maintainer", "sync", "configs")
     (invoke.root / "t.py").write_text("import sys, os\n")
     out = subprocess.run(
         ["ruff", "check", "--output-format", "concise", "t.py"],
@@ -201,7 +203,7 @@ def test_generated_ruff_config_works(invoke):
     shutil.which("clang-format") is None, reason="clang-format not installed"
 )
 def test_generated_clang_format_works(invoke):
-    invoke("configs", "sync")
+    invoke("maintainer", "sync", "configs")
     out = subprocess.run(
         ["clang-format", "--style=file", "--dump-config"],
         cwd=invoke.root,

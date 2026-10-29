@@ -47,16 +47,6 @@ def show(ctx, job):
     click.echo(yaml.safe_dump(snapshot, sort_keys=False))
 
 
-@version_group.command("check")
-@click.option("--job")
-@click.pass_context
-@guarded
-def check(ctx, job):
-    """Discover and validate versions without writing files."""
-    discover(ctx, state_of(ctx).variant, job)
-    click.echo("Version sources and resolved names are valid.")
-
-
 @version_group.command("generate")
 @click.option("--job")
 @click.option(

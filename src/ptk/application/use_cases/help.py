@@ -163,7 +163,7 @@ class BuildHelp:
                     passthrough=[
                         "/".join(path) for path, s in _walk(job.steps) if s.passthrough
                     ],
-                    usage=f"ptk {name} [OPTIONS]"
+                    usage=f"ptk {'maintainer ' if job.audience == 'maintainer' else ''}{name} [OPTIONS]"
                     + (
                         " [-- ARGS]"
                         if any(s.passthrough for _, s in _walk(job.steps))

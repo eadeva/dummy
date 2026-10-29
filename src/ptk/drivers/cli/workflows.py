@@ -19,7 +19,7 @@ from ...adapters.workflow_files import (
 from ...application.use_cases.role import command_allowed, visible
 from ...bootstrap import create_app
 from ...domain.errors import PtkError
-from .access import AccessGroup, denied_command
+from .access import AccessGroup, denied_command, in_maintainer
 from .completion import workflows as complete_workflows
 from .jobs import write_reports
 from .report_links import print_report
@@ -86,13 +86,29 @@ def can_view(parent, owners, owner, spec):
     return visible(spec.audience, role)
 
 
-def select(ctx, name):
+def matches_namespace(ctx, owners, owner, spec):
+    audience = spec.audience
+    if (
+        owner
+        and owners[owner].project().config.command_audience.get("workflow")
+        == "maintainer"
+    ):
+        audience = "maintainer"
+    return (audience == "maintainer") == in_maintainer(ctx)
+
+
+def select(ctx, name, *, report=False):
     parent, entries, owners, available = catalog(ctx)
     if name not in available:
         raise PtkError(f"unknown workflow {name!r}; use 'ptk workflow list'")
     owner, spec, root = available[name]
     if not can_view(parent, owners, owner, spec):
         raise PtkError(f"workflow {name!r} is maintainer-only")
+    if not report and not matches_namespace(ctx, owners, owner, spec):
+        prefix = "maintainer " if not in_maintainer(ctx) else ""
+        raise PtkError(
+            f"workflow {name!r} belongs under 'ptk {prefix}workflow run {name}'"
+        )
     return parent, entries, owner, spec, root
 
 
@@ -103,8 +119,8 @@ def workflow_group(ctx):
     """List, inspect and run sequential/parallel groups of repository jobs."""
     from .cleanup import mode
 
-    if mode(state_of(ctx)) and ctx.invoked_subcommand not in {"run", "dry-run"}:
-        raise PtkError("--clean and --re-run require workflow run or workflow dry-run")
+    if mode(state_of(ctx)) and ctx.invoked_subcommand != "run":
+        raise PtkError("--clean and --re-run require workflow run")
 
 
 @workflow_group.command("list")
@@ -113,7 +129,9 @@ def workflow_group(ctx):
 def list_workflows(ctx):
     parent, _, owners, available = catalog(ctx)
     for name, (owner, spec, _) in sorted(available.items()):
-        if can_view(parent, owners, owner, spec):
+        if can_view(parent, owners, owner, spec) and matches_namespace(
+            ctx, owners, owner, spec
+        ):
             click.echo(f"{name}: {spec.help}")
     if not available:
         click.echo("no workflows configured")
@@ -162,18 +180,9 @@ def report_directory(root, name, project=None):
     return report_root / "workflows" / name.split("/")[-1]
 
 
-@workflow_group.command("report")
-@click.argument("name", shell_complete=complete_workflows)
-@click.option(
-    "--if-exists",
-    is_flag=True,
-    help="Print an informational message if no report exists.",
-)
-@click.pass_context
-@guarded
-def open_workflow_report(ctx, name, if_exists):
+def open_workflow_report(ctx, name, if_exists=False):
     """Open the latest saved aggregate HTML report of a workflow."""
-    parent, entries, owner, _, root = select(ctx, name)
+    parent, entries, owner, _, root = select(ctx, name, report=True)
     project = None
     if owner is not None:
         project = create_app(host=parent.app.host).load_project.execute(
@@ -414,18 +423,13 @@ def execute_workflow(ctx, name, *, dry_run=False):
 
 @workflow_group.command("run")
 @click.argument("name", shell_complete=complete_workflows)
+@click.option(
+    "--dry-run", is_flag=True, help="Preview the workflow without executing jobs."
+)
 @click.pass_context
 @guarded
-def run_workflow(ctx, name):
-    execute_workflow(ctx, name)
-
-
-@workflow_group.command("dry-run")
-@click.argument("name", shell_complete=complete_workflows)
-@click.pass_context
-@guarded
-def preview_workflow(ctx, name):
-    execute_workflow(ctx, name, dry_run=True)
+def run_workflow(ctx, name, dry_run):
+    execute_workflow(ctx, name, dry_run=dry_run)
 
 
 def workflow_command(name, spec, *, hidden=False):
@@ -434,12 +438,17 @@ def workflow_command(name, spec, *, hidden=False):
 
     @click.pass_context
     @guarded
-    def run(ctx):
-        execute_workflow(ctx, name)
+    def run(ctx, dry_run):
+        execute_workflow(ctx, name, dry_run=dry_run)
 
     command = click.RichCommand(
         name,
         callback=run,
+        params=[
+            click.Option(
+                ["--dry-run"], is_flag=True, help="Preview without executing jobs."
+            )
+        ],
         help=f"{spec.help or f'Run workflow {name}.'} (local workflow)",
         hidden=hidden,
         context_settings={"help_option_names": ["-h", "--help"]},
@@ -456,77 +465,66 @@ def workspace_shortcuts(ctx):
             raise click.ClickException(str(exc)) from None
         ctx.meta["workflow_shortcuts"] = {
             name: workflow_command(
-                name, spec, hidden=not can_view(parent, owners, owner, spec)
+                name,
+                spec,
+                hidden=not (
+                    can_view(parent, owners, owner, spec)
+                    and matches_namespace(ctx, owners, owner, spec)
+                ),
             )
             for name, (owner, spec, _) in available.items()
         }
     return ctx.meta["workflow_shortcuts"]
 
 
-def workspace_vscode_group(root_ctx, entries):
+def workspace_sync(
+    ctx, entries, *, target, names, check, diff, command, users_only, output
+):
+    """Preflight every member before writing shared repository integrations."""
     from .workspace_commands import visit
 
-    def preflight_members():
-        _, _, owners, _ = catalog(root_ctx)
-        for alias in sorted(entries):
-            owner = owners[alias]
-            if not command_allowed(
-                "setup.vscode", owner.role(), owner.project().config.command_audience
-            ):
-                raise PtkError(f"{alias}: 'setup vscode' is a maintainer-only command")
-
-    @click.group("vscode", cls=AccessGroup, invoke_without_command=True)
-    @click.pass_context
-    @guarded
-    def group(ctx):
-        """Install member tasks/skills and workspace workflow tasks."""
-        if ctx.invoked_subcommand is None:
-            preflight_members()
-            visit(root_ctx, [(alias, ["setup", "vscode"]) for alias in sorted(entries)])
-            write_tasks(ctx, False, "ptk", False, None)
-
-    def write_tasks(ctx, check, command, users_only, output):
-        parent, _, owners, available = catalog(ctx)
-        workflows = []
-        for name, (owner, spec, _) in sorted(available.items()):
-            if not can_view(parent, owners, owner, spec):
-                continue
-            if users_only and (
-                spec.audience != "all"
-                or owner
-                and owners[owner].project().config.command_audience.get("workflow")
-                == "maintainer"
-            ):
-                continue
-            workflows.append((name, spec.help))
-        root = parent.app.workspace.root(Path.cwd())
-        result = parent.app.vscode_tasks.workflows(
-            workflows, root=root, command=command, path=output, check=check
+    root_ctx = ctx.find_root()
+    parent, _, owners, available = catalog(ctx)
+    for alias in sorted(entries):
+        owner = owners[alias]
+        if not command_allowed(
+            "maintainer.sync", owner.role(), owner.project().config.command_audience
+        ):
+            raise PtkError(f"{alias}: 'maintainer sync' is a maintainer-only command")
+    args = ["maintainer", "sync", target, *names]
+    if check:
+        args.append("--check")
+    if diff:
+        args.append("--diff")
+    if target != "tasks":
+        return visit(root_ctx, [(alias, args) for alias in sorted(entries)])
+    if output is None:
+        # Member tasks are generated in each repository; the workspace file holds workflow tasks.
+        task_args = [
+            *args,
+            "--command",
+            command,
+            *(["--users-only"] if users_only else []),
+        ]
+        visit(root_ctx, [(alias, task_args) for alias in sorted(entries)])
+    workflows = []
+    for name, (owner, spec, _) in sorted(available.items()):
+        if not can_view(parent, owners, owner, spec):
+            continue
+        restricted = spec.audience == "maintainer" or bool(
+            owner
+            and owners[owner].project().config.command_audience.get("workflow")
+            == "maintainer"
         )
-        click.echo(
-            f"{result.path}: {'up to date' if result.up_to_date else 'out of date' if check else 'updated'}"
-        )
-        if check and not result.up_to_date:
-            raise click.exceptions.Exit(1)
-
-    @group.command("tasks")
-    @click.option("--check", is_flag=True)
-    @click.option("--command", default="ptk")
-    @click.option("--users-only", is_flag=True)
-    @click.option("-o", "--output", type=click.Path(path_type=Path))
-    @click.pass_context
-    @guarded
-    def tasks(ctx, check, command, users_only, output):
-        """Generate workspace tasks for local and repository-qualified workflows."""
-        write_tasks(ctx, check, command, users_only, output)
-
-    @group.command("skills")
-    @click.option("--check", is_flag=True)
-    @guarded
-    def skills(check):
-        """Install offline authoring skills in each configured repository."""
-        preflight_members()
-        args = ["setup", "vscode", "skills", *(["--check"] if check else [])]
-        visit(root_ctx, [(alias, args) for alias in sorted(entries)])
-
-    return group
+        if users_only and restricted:
+            continue
+        workflows.append((name, spec.help, restricted))
+    root = parent.app.workspace.root(Path.cwd())
+    result = parent.app.vscode_tasks.workflows(
+        workflows, root=root, command=command, path=output, check=check
+    )
+    click.echo(
+        f"{result.path}: {'up to date' if result.up_to_date else 'out of date' if check else 'updated'}"
+    )
+    if check and not result.up_to_date:
+        raise click.exceptions.Exit(1)

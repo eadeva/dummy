@@ -87,9 +87,9 @@ component files describe an empty component and can be created when features are
 added. A directory can be registered once. Paths must remain inside the repository
 and cannot traverse symbolic links. The registration is literal, not a template.
 
-Every value retains its source file and line. ``ptk setup config validate`` checks
+Every value retains its source file and line. ``ptk validate`` checks
 individual documents and then references across the assembled model;
-``ptk setup config show --sources`` explains effective values. Commands and output
+``ptk maintainer config show --sources`` explains effective values. Commands and output
 paths remain relative to the repository root.
 
 Project discovery searches upwards and stops at a Git repository boundary.
@@ -104,7 +104,7 @@ cannot be overridden through CLI settings. Workspace orchestration uses
 The extension consumes PTK's schemas, document ownership, source locations and
 validation errors through ``describe --json --configuration``. It creates the
 owning file when needed and uses the correct section schema for raw-file forms.
-The root schema from ``ptk setup config schema`` describes the assembled model;
+The root schema from ``ptk maintainer config schema`` describes the assembled model;
 individual file schemas are exposed in the configuration inventory.
 
 Git substitutions
@@ -298,8 +298,8 @@ unavailable in CI. Supply secrets to individual steps using::
 Never interpolate secrets into command arguments, URLs or shared config files.
 A shell command that expands a secret environment variable into an argument
 still exposes that secret in the child's command line. Have the child program
-read its environment directly. Use ``creds setup``, ``creds list``, and
-``creds set NAME FIELD`` to diagnose or provision values. Do not include real
+read its environment directly. Use ``self-service creds setup``, ``self-service creds list``, and
+``self-service creds set NAME FIELD`` to diagnose or provision values. Do not include real
 credentials in examples, fixtures or documentation.
 
 Tools, configs and outputs
@@ -307,24 +307,24 @@ Tools, configs and outputs
 
 Declare tool version checks under ``tools`` and reference them in a job's
 ``requires_tools``. Missing tools block real execution. Preview installation
-with ``setup --dry-run``. System package managers require ``--allow-system``;
+with ``ptk self-service tools --dry-run``. System package managers require ``--allow-system``;
 Chocolatey bootstrap is explicit. Prefer checksummed downloads.
 
-Only entries under ``configs`` are managed. Preview ``configs sync --diff``;
-commit generated files and enforce ``configs check`` in CI. Ruff uses a generated
+Only entries under ``configs`` are managed. Preview ``ptk maintainer sync configs --diff``;
+commit generated files and enforce ``ptk validate --generated`` in CI. Ruff uses a generated
 ``ruff-base.toml`` and a project-owned ``ruff.toml`` extending it.
 
 Local Git hooks
 ~~~~~~~~~~~~~~~
 
-Enable automatic pre-commit installation in ``configs.ptk.yml`` inside your configuration
-folder, for example ``config/ptk/configs/configs.ptk.yml``::
+Enable automatic pre-commit hook installation in ``configs.ptk.yml`` inside your configuration
+folder, for example ``config/ptk/configs.ptk.yml``::
 
    # config/ptk/configs.ptk.yml
    pre-commit:
      enabled: true
 
-A maintainer runs ``ptk setup configs sync pre-commit`` and commits the generated
+A maintainer runs ``ptk maintainer sync configs pre-commit`` and commits the generated
 ``.pre-commit-config.yaml``. An optional ``output`` changes its location. Ordinary
 job execution never generates or rewrites this configuration. If it is missing,
 startup fails with instructions to ask a maintainer to synchronize it.
@@ -334,8 +334,8 @@ them when necessary. This is available to every developer, including
 non-maintainers. A local workflow checks each participating repository once,
 before starting any sequential or parallel jobs. Unrelated VMR repositories are
 not inspected. Missing/disabled ``configs.pre-commit`` entries, help, dry runs and
-CX/CI job execution do not install hooks. ``setup self`` uses the same installer;
-``setup doctor`` reports hook status without installing anything.
+CX/CI job execution do not install hooks. ``self-service hooks install`` uses the same installer;
+``self-service doctor`` reports hook status without installing anything.
 
 Detection uses Git's repository/common-directory queries, supporting ordinary
 checkouts, ``.git`` symlinks, ``gitdir:`` pointer files and linked worktrees. PTK
@@ -361,8 +361,8 @@ maintainer. Installation, validation or verification failures stop the job or
 workflow before its first step. Linked worktrees share hooks and should use the
 same relative pre-commit configuration path and installed hook types.
 
-Use ``ptk pre-commit install|uninstall|status`` for explicit hook management,
-``ptk pre-commit run`` for staged files and ``ptk pre-commit check`` for all tracked
+Use ``ptk self-service hooks install|uninstall|status`` for explicit hook management,
+``ptk pre-commit run`` for staged files and ``ptk pre-commit run --all-files`` for all tracked
 files. ``ptk pre-commit validate`` checks the hook configuration. These commands
 honor a custom ``configs.pre-commit.output`` and also work when automatic
 installation is disabled. See :doc:`cli` for file/ref selection and exit codes.
@@ -383,11 +383,11 @@ If a previous hook removed PTK, pull the fixed checkout and rerun
 Then check ``ptk --version`` and refresh the Project Toolkit extension.
 
 Automatic installation prevents forgotten setup. It cannot prevent deliberate
-local bypass such as ``git commit --no-verify``. Run ``ptk pre-commit check`` in CI
+local bypass such as ``git commit --no-verify``. Run ``ptk pre-commit run --all-files`` in CI
 and require that check through GitHub branch protection/rulesets.
-``ptk setup configs check`` verifies generated configuration freshness; it does
-not execute the hooks. Installation does not make ``setup self`` or
-``setup configs sync`` available to non-maintainers.
+``ptk validate --generated`` verifies generated configuration freshness without
+maintenance permissions; it does not execute hooks. Generating shared files
+requires ``ptk maintainer sync configs``.
 
 Build and report outputs
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -467,7 +467,7 @@ Locally PTK compares the OS login name with this list, case-insensitively. On
 GitHub Actions it uses ``GITHUB_TRIGGERING_ACTOR`` (the user starting a rerun),
 falling back to ``GITHUB_ACTOR``. Other CI systems use the OS login name. Git
 author names and email addresses do not grant maintainer status. Add both login
-IDs when someone's local and GitHub usernames differ. ``ptk setup doctor`` shows
+IDs when someone's local and GitHub usernames differ. ``ptk self-service doctor`` shows
 the detected user ID, role and identity-file path.
 
 Missing/empty lists grant no maintainer rights; malformed lists are configuration
@@ -475,42 +475,40 @@ errors. ``PTK_ROLE=user`` can reduce a listed maintainer's visibility for testin
 ``PTK_ROLE=maintainer`` no longer elevates anyone. Upgrade old entries such as
 ``- {name: Alice, email: alice@example.com, user: alice}`` to ``- alice``.
 
-The following built-ins are maintainer-only by default:
-
-* ``ptk setup configs sync`` and ``ptk setup self``;
-* ``ptk setup vscode``, including ``tasks`` and ``skills``.
-
+The ``maintainer`` group contains configuration inspection/schema export,
+shared configuration and editor generation, version discovery/snapshot generation,
+artifact destinations, and all jobs/workflows declared ``audience: maintainer``.
+These commands require a listed maintainer, including their ``--check``,
+``--diff`` and ``--dry-run`` modes. ``command_audience: all`` cannot relax this
+restriction. Invalid project configuration does not expose maintenance commands.
 The global ``--ci`` / ``--no-ci`` option is also maintainer-only. Automatic CI
-detection remains available to everyone without either switch.
+detection remains available without either switch.
 
-These commands are omitted from normal/HTML help and shell completion, and direct
-invocation is refused before writes. Aliases obey the same policy. A protected
-command remains restricted even with ``--check``, ``--diff`` or ``--dry-run``.
-``command_audience`` can restrict additional commands, but ``all`` cannot relax
-the built-in restrictions. Invalid project configuration does not expose them.
-
-Tool installation (including machine-wide installation), personal credential
-management, diagnostics, configuration inspection/validation, generated versions,
-reports and ordinary jobs/workflows remain available. Developers select variants
+Ordinary users retain tool installation, personal credential management,
+diagnostics, validation, reports and everyday jobs/workflows. ``ptk validate``
+is always available, even when configured policies restrict other commands.
+Use ``ptk validate --generated`` in CI to check shared configuration freshness
+without granting maintenance privileges. ``command_audience`` can restrict
+additional commands using their canonical paths, such as ``self-service.creds``.
+Developers select variants
 for a run with global ``-V NAME`` before the command. The variant CLI only
 inspects configuration; modify YAML directly to change definitions.
-``setup init`` remains available for unconfigured repositories, lists the creator
+``init`` remains available for unconfigured repositories, lists the creator
 as their initial maintainer, and refuses to overwrite existing configuration.
 In VMR initialization, configured repositories continue to be skipped.
 
 A job or workflow with ``audience: maintainer`` is likewise hidden and refused
 for normal users; maintainer jobs/workflows are excluded from user editor tasks.
-Use ``setup vscode tasks --users-only`` as a maintainer when committing shared
+Use ``maintainer sync tasks --users-only`` as a maintainer when committing shared
 tasks. For VMR workspace-level editor commands and workspace-owned restricted
 workflows, place a separate ``maintainers.ptk.yml`` at the VMR root. Workspace
-membership grants no privileges in member repositories, or vice versa. Combined
-editor setup preflights permissions for every member before writing anything.
+membership grants no privileges in member repositories, or vice versa. Workspace synchronization preflights permissions for every member before writing anything.
 
 These checks protect ordinary CLI use, not against someone editing their own
 checkout or process environment. Repository configuration and plugins remain
 trusted code; enforce release permissions and credentials in CI separately.
 
-Variant inspection, matrix runs and legacy CLI aliases are described in :doc:`cli`.
+Variant inspection, matrix runs and the command structure are described in :doc:`cli`.
 The installed plugin interfaces, generators and built-in command visibility are
 covered in :doc:`plugins`. Background process limitations are in :doc:`m11`.
 
@@ -595,10 +593,10 @@ changes nothing; a job's unmentioned global requirements remain inherited.
 List shorthand enables/adds named tools; mappings can enable, disable or override
 a named tool's settings. All referenced names must be declared under ``tools``.
 
-``setup install --job build`` uses that job's effective tool settings.
+``self-service tools --job build`` uses that job's effective tool settings.
 Selecting jobs that require conflicting settings for the same tool fails
 before installation; install for those jobs separately. Without ``--job``,
-``setup install`` uses global requirements when supplied, otherwise all declared
+``self-service tools`` uses global requirements when supplied, otherwise all declared
 tools. Declaring a tool alone does not make it a requirement of every job.
 
 Isolated job environments
@@ -658,7 +656,7 @@ Version discovery is documented in :doc:`versioning`. It uses a maintained
 Toolbase and Artifactory sources
 ========================================
 
-These sources participate in ``ptk setup install``, ``--setup`` and
+These sources participate in ``ptk self-service tools``, ``--setup`` and
 ``tools.ensure``. Job-level ``requires_tools`` overrides and VMR repository
 selection work as for other tools. Source order is custom installers, Toolbase
 (Windows), Artifactory, Chocolatey (Windows), uv, download, then opt-in apt/dnf.
@@ -757,7 +755,7 @@ The default is ``docker: false``: tools must normally be supplied by the image.
 Set ``docker: true`` on a tool to allow PTK to install it inside Docker. With ``false``,
 PTK still checks the tool and its version, includes it in reports, and activates
 any existing managed installation. Only installation is blocked, including
-``setup install``, ``--setup`` and ``tools.ensure``. A missing or incompatible
+``self-service tools``, ``--setup`` and ``tools.ensure``. A missing or incompatible
 tool remains an error; PTK explains that installation is disabled in Docker.
 Prepare the required tool in the image or mount an existing managed cache.
 If using an image tool outside the default OS PATH, add its directory to the
@@ -800,7 +798,7 @@ An existing ``reporting.dir`` override is also included in cleanup.
 
 All four categories use ``<variant>/<job>`` beneath their configured directory.
 Without variants, the variant directory is ``default``. This keeps selected-job
-cleanup from deleting another job's binaries. ``ptk setup init`` generates the
+cleanup from deleting another job's binaries. ``ptk init`` generates the
 folder configuration file for new repositories.
 
 Execution filters

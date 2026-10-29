@@ -75,8 +75,8 @@ ptk-docs-writing
 Using these skills
 ------------------
 
-Run ``ptk setup vscode`` to install tasks and project-facing skills in a consuming
-repository, or ``ptk setup vscode skills`` for the skills alone. The installer
+Run ``ptk maintainer sync skills`` to install project-facing skills in a consuming
+repository, or ``ptk maintainer sync skills`` for the skills alone. The installer
 copies skills into ``.github/skills`` and version-matched offline documentation,
 examples and the schema into ``.github/ptk``. It rewrites relative links for that
 layout; no PTK source checkout is required. See :doc:`editor` for update and check

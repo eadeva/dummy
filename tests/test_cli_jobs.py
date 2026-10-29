@@ -75,8 +75,8 @@ def test_job_help_has_typed_options(invoke):
 
 def test_typed_options_reach_the_steps(invoke):
     out = invoke(
-        "dry-run",
         "build",
+        "--dry-run",
         "--jobs",
         "5",
         "--mode",
@@ -89,7 +89,7 @@ def test_typed_options_reach_the_steps(invoke):
     ).output
     assert "jobs=5 mode=debug fast=true targets=fw docs bt=y" in out
     assert "jobs = 5 (command line)" in out and "mode = 'debug' (command line)" in out
-    defaults = invoke("dry-run", "build").output
+    defaults = invoke("build", "--dry-run").output
     assert "jobs=2 mode=release fast=false targets=all" in defaults
 
 
@@ -114,12 +114,12 @@ def test_unknown_command_suggests(invoke):
 def test_maintainer_jobs_hidden_and_refused_for_users(invoke):
     user_help = invoke("--help").output
     assert "build" in user_help and "publish" not in user_help
-    assert "publish" in invoke("--help", role="maintainer").output
+    assert "publish" in invoke("maintainer", "--help", role="maintainer").output
     refused = invoke("publish")
     assert refused.exit_code == 2 and "maintainer-only" in refused.output
     assert "maintainer-only" in invoke("run", "publish").output
     assert "maintainer-only" in invoke("publish", "--help").output
-    allowed = invoke("dry-run", "publish", role="maintainer")
+    allowed = invoke("maintainer", "publish", "--dry-run", role="maintainer")
     assert allowed.exit_code == 0 and "uploading" in allowed.output
 
 
@@ -170,9 +170,18 @@ def test_vscode_tasks_command(invoke):
     tasks_file.write_text(
         '{\n  // mine\n  "version": "2.0.0",\n  "tasks": [{"label": "lint"},],\n}\n'
     )
-    assert invoke("vscode", "tasks", "--check", role="maintainer").exit_code == 1
+    assert (
+        invoke("maintainer", "sync", "tasks", "--check", role="maintainer").exit_code
+        == 1
+    )
     result = invoke(
-        "vscode", "tasks", "--command", "uv run ptk", "--users-only", role="maintainer"
+        "maintainer",
+        "sync",
+        "tasks",
+        "--command",
+        "uv run ptk",
+        "--users-only",
+        role="maintainer",
     )
     assert (
         result.exit_code == 0
@@ -183,7 +192,8 @@ def test_vscode_tasks_command(invoke):
     assert data["tasks"][1]["command"] == "uv run ptk"
     assert (
         invoke(
-            "vscode",
+            "maintainer",
+            "sync",
             "tasks",
             "--check",
             "--command",
@@ -194,10 +204,10 @@ def test_vscode_tasks_command(invoke):
         == 0
     )
     # maintainers get their jobs too, unless --users-only
-    invoke("vscode", "tasks", role="maintainer")
+    invoke("maintainer", "sync", "tasks", role="maintainer")
     labels = [t["label"] for t in json.loads(tasks_file.read_text())["tasks"]]
     assert "ptk: publish" in labels
-    invoke("vscode", "tasks", "--users-only", role="maintainer")
+    invoke("maintainer", "sync", "tasks", "--users-only", role="maintainer")
     labels = [t["label"] for t in json.loads(tasks_file.read_text())["tasks"]]
     assert "ptk: publish" not in labels
 

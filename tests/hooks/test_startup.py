@@ -20,8 +20,8 @@ from .test_installation import hook_path
     [
         ["--help"],
         ["build", "--help"],
-        ["dry-run", "build"],
-        ["workflow", "dry-run", "verify"],
+        ["build", "--dry-run"],
+        ["workflow", "run", "verify", "--dry-run"],
         ["build"],
     ],
 )
@@ -153,11 +153,11 @@ def test_vmr_workflow_checks_each_participant_before_any_job(
 def test_doctor_reports_pointer_repo_without_installing(tmp_path, offline_engine):
     root = repository(tmp_path / "app")
     git(root, "init", "--separate-git-dir", str(tmp_path / "metadata"))
-    result = invoke(root, "setup", "doctor")
+    result = invoke(root, "self-service", "doctor")
     assert "missing or unusable" in result.output
     assert not offline_engine
     assert invoke(root, "build").exit_code == 0
-    result = invoke(root, "setup", "doctor")
+    result = invoke(root, "self-service", "doctor")
     assert "installed (pre-commit)" in result.output
 
 

@@ -2,7 +2,7 @@
 
 ``PrepareRun`` turns configuration + request into an :class:`JobPlan`
 (parameters, variant, environment, substituted steps, skip reasons); it has no
-side effects, so ``ptk dry-run`` is simply "prepare and show".
+side effects, so ``ptk JOB --dry-run`` is simply "prepare and show".
 ``RunJob`` executes a plan through the ports: sequential and parallel step
 sets, retries, timeouts, ``continue_on_error`` and cancellation (Ctrl+C).
 """
@@ -389,7 +389,7 @@ class PrepareRun:
                 lines = "\n".join(f"  - {s.name}: {s.problem}" for s in problems)
                 raise PtkError(
                     f"'{request.job}' needs tools that are missing or too old:\n{lines}\n"
-                    f"  install them with: ptk setup install --job {request.job} "
+                    f"  install them with: ptk self-service tools --job {request.job} "
                     f"(or run the job with --setup)"
                 )
 
@@ -615,7 +615,7 @@ class RunJob:
     def describe(
         self, prepared: PreparedRun, step: PlannedStep
     ) -> tuple[str, str | None]:
-        """(command line, python runtime description) without side effects - for ptk dry-run."""
+        """(command line, python runtime description) without side effects - for ptk JOB --dry-run."""
         if step.kind == "uses":
             return f"uses {step.spec.uses} {step.with_ or ''}".rstrip(), None
         runtime = (

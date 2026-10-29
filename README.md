@@ -19,8 +19,8 @@ uv run ruff check && uv run ruff format --check   # ruff default rules
 ## Create a project
 
 ```bash
-ptk setup init my-project --config-dir config/ptk --dry-run
-ptk setup init my-project --config-dir config/ptk
+ptk init my-project --config-dir config/ptk --dry-run
+ptk init my-project --config-dir config/ptk
 cd my-project
 ptk hello
 ```
@@ -33,7 +33,7 @@ From the repository root:
 
 ```bash
 uv sync
-uv run ptk -C examples/quickstart/.main.ptk.yml dry-run build
+uv run ptk -C examples/quickstart/.main.ptk.yml build --dry-run
 uv run ptk -C examples/quickstart/.main.ptk.yml -V debug build
 uv run ptk -C examples/quickstart/.main.ptk.yml -V release build
 ```
@@ -84,9 +84,9 @@ steps:
 - '...'
 ```
 
-Runs check `requires_tools` first; `ptk setup install` (or `ptk build --setup`) installs what is
+Runs check `requires_tools` first; `ptk self-service tools` (or `ptk build --setup`) installs what is
 missing - Chocolatey on Windows, `uv tool`, sha256-verified downloads, apt/dnf only with
-`--allow-system`. `ptk setup doctor` diagnoses a machine; `ptk setup self` gets it ready.
+`--allow-system`. `ptk self-service doctor` diagnoses a machine; `ptk self-service tools` installs required tools.
 Install or refresh ptk itself with `sh install/install.sh` or
 `powershell -ExecutionPolicy Bypass -File install/install.ps1`.
 When run from a checkout, both scripts install that checkout (relative to the
@@ -102,12 +102,12 @@ Bash login and non-login terminals load the same generated script. Profiles
 preserve other settings, retain backups and do not start Python at shell startup.
 Running `.\install\install.ps1` also enables completion in that session.
 Use `-NoCompletion` or `--no-completion` to opt out. To repair an existing setup,
-run `ptk setup completion install` and open a new terminal. PowerShell's double-Tab
+run `ptk self-service completion install` and open a new terminal. PowerShell's double-Tab
 binding applies to all commands in that shell. Zsh/Fish registration is explicit;
-see `ptk setup completion --help` and the CLI documentation.
+see `ptk self-service completion --help` and the CLI documentation.
 Installation reads only the marker, versioning and optional default-variant
 settings to determine the package version. Errors in other project files remain
-visible through `ptk setup config validate` and do not block installation.
+visible through `ptk validate` and do not block installation.
 
 ## Shared configs
 
@@ -123,9 +123,9 @@ clang-tidy:
 clangd: {}
 ```
 
-`ptk setup configs sync` merges ptk's base configs with your overlays into `.pre-commit-config.yaml`,
+`ptk maintainer sync configs` merges ptk's base configs with your overlays into `.pre-commit-config.yaml`,
 `.clang-format`, `.clang-tidy`, `.clangd` and `ruff-base.toml` (your `ruff.toml` extends it).
-Commit them; `ptk setup configs check` in CI catches stale files.
+Commit them; `ptk validate --generated` in CI catches stale files.
 
 When pre-commit is enabled, local jobs automatically install or repair its Git
 hooks for every developer. Workflows check each participating VMR repository
@@ -155,7 +155,7 @@ artifactory:
 ```
 
 Looked up in order `env -> keyring -> gopass -> vault -> prompt` (configurable per
-credential). `ptk setup creds set artifactory token` stores a value (typed hidden); the
+credential). `ptk self-service creds set artifactory token` stores a value (typed hidden); the
 built-in vault is an AES-GCM file protected by a master password - no external tool
 needed. Steps get secrets only as environment variables (`secrets: {TOKEN: artifactory.token}`),
 and ptk masks them in its execution output. Child programs must not expand them
@@ -192,7 +192,7 @@ component directories in `project.ptk.yml` and keep their definitions beside the
 are optional. PTK loads known locations only, with no includes or implicit file
 overrides. It validates each document and then references across the model.
 
-Use `ptk setup config show --sources` for provenance and `ptk setup config validate`
+Use `ptk maintainer config show --sources` for provenance and `ptk validate`
 for errors with source locations. Explicit `--set` overrides, shared defaults and
 variant inheritance remain available. The extension uses PTK's loading mechanism
 and document schemas. See [configuration authoring](docs/configuration.rst).
@@ -204,22 +204,25 @@ ptk [-c .main.ptk.yml] [--set PATH=VALUE]... [--ci/--no-ci] [-V VARIANT] [-v|-vv
 ptk                                  run the default job (project.default_job)
 ptk JOB [--PARAM VALUE]... [--from STEP] [--to STEP] [--params FILE]
            [-q] [--args-for STEP="ARGS"]... [-- ARGS]
-ptk dry-run [JOB [same options]] [--env]   what would run - nothing is executed
-ptk pre-commit run [HOOK] [--all-files]   run checks on staged or all tracked files
-ptk pre-commit check [HOOK]              run checks on all tracked files
-ptk pre-commit install | uninstall | status | validate
-ptk run [JOB] [-p NAME=VALUE]... [same options]   generic form for scripts and CI
-ptk workflow list | show NAME | dry-run NAME | run NAME | report NAME [--if-exists]
-ptk setup config validate | show [PATH] [--sources] [--format yaml|json] | schema [-o FILE]
-ptk variant list [--names] | show [NAME] [--json] [--all] | explain NAME FEATURE | check [NAMES] [--strict]
-ptk setup vscode tasks [--check] [--command "uv run ptk"] [--users-only]
-ptk setup vscode                 # tasks plus offline project skills/docs
-ptk setup vscode skills [--check]
-ptk setup creds setup [--vault] | set NAME [FIELD] [--store S] | list | test NAME | remove NAME
-ptk setup configs sync [NAMES] [--diff] | check [NAMES]
-ptk setup [--job A]... [--dry-run] [--allow-system] | ptk setup doctor | ptk setup self [--tools]
-ptk [-V v] report export [JOB] [--run ID] [-f FORMAT]... | open [JOB] [--run ID] [--if-exists]
-ptk help [--no-open] [-o FILE]       full help as an HTML page, opened in your browser
+ptk JOB [--dry-run] [--env]       # run a job or preview its expanded plan
+ptk WORKFLOW [--dry-run]         # workflows are direct commands too
+ptk workflow list | show NAME | run NAME [--dry-run]
+ptk variant list | show [NAME] | explain NAME FEATURE
+ptk validate [--variants] [--versions] [--generated]
+ptk report open [JOB] | open --workflow NAME | export [JOB]
+ptk pre-commit run [--all-files] | validate
+ptk init [DIRECTORY] --config-dir config/ptk
+ptk self-service tools [--job JOB] [--dry-run]
+ptk self-service creds setup | set | list | test | remove
+ptk self-service completion install | powershell | bash | zsh | fish
+ptk self-service extension | doctor
+ptk self-service hooks install | uninstall | status
+ptk maintainer config show [PATH] [--sources] | schema
+ptk maintainer sync configs | tasks | skills [--check]
+ptk maintainer version show | generate
+ptk maintainer artifacts destination --job JOB
+ptk maintainer JOB_OR_WORKFLOW [--dry-run]
+ptk help                        # full offline help in the browser
 ```
 
 Every job is a command with typed options for its parameters (`ptk build --help`
@@ -277,9 +280,9 @@ steps:
 * `python:` `uvx` (tool from PyPI), `venv` (cached in `.ptk/venvs/<hash>`), `project`
   (`uv run --project`), `interpreter: cli` (ptk's own) - nothing is ever activated
 * every command gets its own environment: `PTK_*`, `PTK_PARAM_*`, `VH_*`, job/step
-  `env`, then secrets; secrets are masked in console, logs and `ptk dry-run`
+  `env`, then secrets; secrets are masked in console, logs and `ptk JOB --dry-run`
 * working directory: project root; per-step folders `${run.build_dir}`, `${run.reports_dir}`
-* `ptk dry-run JOB` shows the expanded steps, conditions, final commands and where every
+* `ptk JOB --dry-run` shows the expanded steps, conditions, final commands and where every
   parameter value comes from
 * parameter precedence: `-p` > `--params FILE` > `env:` variable > `default:`; defaults can
   be changed explicitly with `--set` and may use `${env:..}`,
@@ -316,7 +319,7 @@ Dependencies point inwards only; the domain has no I/O.
 
 - `background: true` lets a finite `run` step overlap subsequent steps; PTK waits at
   the containing group's end and includes failures in the report.
-- `ptk variant list|show|explain|check` inspects variants without editing configuration.
+- `ptk variant list|show|explain` inspects variants without editing configuration.
   Select a variant before the command: `ptk -V debug build`.
 - `--ci/--no-ci` is maintainer-only. Automatic CI detection remains the default.
 
@@ -341,7 +344,7 @@ steps:
         job: lint
 ```
 
-Run `ptk workflow dry-run verify`, then `ptk verify` (or `ptk workflow run verify`). Each call keeps
+Run `ptk workflow run --dry-run verify`, then `ptk verify` (or `ptk workflow run verify`). Each call keeps
 its repository's tools, environment, credentials and reports. Calls can select a
 `repo`, `variant` and job `params`. PTK preflights every call before execution
 and rejects conflicting parallel outputs or shared uv project environments.
@@ -357,12 +360,12 @@ links to HTML reports; JSON files remain available for automation.
 If a job and workflow share a name, local interactive calls ask which to run;
 CX selects the job. Use `ptk run NAME` or `ptk workflow run NAME` to select
 explicitly. Reports print their file paths; use `ptk report open JOB` to open
-a job report explicitly, or `ptk workflow report NAME` for the latest aggregate
+a job report explicitly, or `ptk report open --workflow NAME` for the latest aggregate
 workflow report. Add `--if-exists` to get an informational message when there
 is no saved run/report. No local browser-link server is started.
 
 See [workflows](docs/workflows.rst) and `examples/workflows` for nested groups,
-VMR ownership, failure handling and reports. The later `ptk setup init --workflows`
+VMR ownership, failure handling and reports. The later `ptk init --workflows`
 generator will map job calls to GitHub jobs and their structure to `needs`;
 GitHub template generation and the generic PTK GitHub Action are not implemented yet.
 
@@ -376,10 +379,10 @@ workspace-root `.main.ptk.yml`; it checks direct children, or exact paths from a
 optional `members: [nested/repository, other]` list. Each participating repository
 still needs its own `.main.ptk.yml` with an alias and configuration path.
 
-In a `.repo` workspace, use `ptk repos`, shared `ptk setup creds list`,
-`ptk setup config validate`, `ptk setup doctor`, `ptk variant list/check`,
+In a `.repo` workspace, use `ptk repos`, shared `ptk self-service creds list`,
+`ptk validate`, `ptk self-service doctor`, `ptk variant list`, `ptk validate --variants`,
 and `ptk report list/summary`. Jobs and installation stay repository-specific:
-`ptk firmware build` and `ptk firmware setup install --job build`.
+`ptk firmware build` and `ptk firmware self-service tools --job build`.
 
 Commands receive a fresh isolated environment by default. Declare variables to
 keep explicitly; caller PATH is not inherited unless `environment.inherit_path`
@@ -390,15 +393,15 @@ shared host operations. See `docs/configuration.rst` and `docs/cli.rst`.
 For a complete tested starter, copy `examples/authoring`. For a plugin starter,
 use `examples/plugin`. The authoring skill catalog is in `docs/skills.rst`;
 the wheel bundles fourteen project-facing skills and lightweight offline references.
-Run `ptk setup vscode` in a consuming repository to create tasks, copy skills to
+Run `ptk maintainer sync tasks` to create tasks. Run `ptk maintainer sync skills` to copy skills to
 `.github/skills`, and install version-matched docs, examples and a configuration
 schema under `.github/ptk`. Relative links work without a PTK checkout or network
-access. `ptk setup vscode skills --check` checks drift; updates preserve custom
+access. `ptk maintainer sync skills --check` checks drift; updates preserve custom
 skills and refuse to overwrite local edits. See [editor setup](docs/editor.rst).
 
 ## Version discovery and initialization
 
-`ptk setup init` requires a configuration folder, supplied at the terminal prompt
+`ptk init` requires a configuration folder, supplied at the terminal prompt
 or with `--config-dir config/ptk`. The path is relative to the repository root;
 there is no implicit default. Scripts must supply `--config-dir`. It creates a minimal root entry and
 two runnable jobs in `jobs/hello.ptk.yml` and `jobs/build.ptk.yml`.
@@ -408,11 +411,11 @@ them; the conventional CX and maintainer entry files remain at the config root.
 A local `workflows/verify.ptk.yml` starter sequences the two generated jobs.
 Run `ptk hello` for messages and `ptk build` for generated version files. Existing files are protected; missing ignore rules are appended.
 
-In a VMR, `ptk setup init` initializes every checked-out member without a root
+In a VMR, `ptk init` initializes every checked-out member without a root
 `.main.ptk.yml`, skips configured repositories, and leaves the workspace root alone.
 The config folder is chosen once and applied relative to each new member's root.
-Preview with `ptk setup init --config-dir config/ptk --dry-run`; repeat the command safely as more repositories arrive.
-Use `ptk setup init DIRECTORY` to initialize just one project.
+Preview with `ptk init --config-dir config/ptk --dry-run`; repeat the command safely as more repositories arrive.
+Use `ptk init DIRECTORY` to initialize just one project.
 
 Versions can come from Git tags, manifests/text files, environment variables,
 commands or explicit values. Components inherit unless given a source. Every
@@ -420,7 +423,7 @@ configured job gets one ignored `.gen.version.ptk.yml` snapshot and qualified
 variables such as `PTK_VERSION_ENGINE` and `PTK_VERSION_ENGINE_COMPONENT_SDK`.
 `version.generate` produces C headers, CMake, MSBuild, Python or JSON files without
 rewriting unchanged content. See [versioning](docs/versioning.rst) for variant
-release lines, explicit VMR dependencies and `ptk version show/check/generate`.
+release lines, explicit VMR dependencies and `ptk maintainer version show/generate` and `ptk validate --versions`.
 
 ## Develop PTK using PTK
 
@@ -466,7 +469,7 @@ and optional job suffixes. PTK resolves the destination; GitHub workflows choose
 files, authenticate and upload:
 
 ```bash
-ptk artifacts destination --job package --format github
+ptk maintainer artifacts destination --job package --format github
 ```
 
 See [destination configuration and examples](docs/artifacts.rst) and

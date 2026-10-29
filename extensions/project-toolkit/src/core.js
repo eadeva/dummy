@@ -5,6 +5,7 @@ const path = require("node:path");
 
 const object = value => value !== null && typeof value === "object" && !Array.isArray(value);
 const absolute = value => typeof value === "string" && path.isAbsolute(value);
+const commandPath = value => Array.isArray(value) && value.length > 0 && value.every(word => typeof word === "string" && word.length > 0 && !word.startsWith("-"));
 const named = value => object(value) && typeof value.name === "string" && value.name.length > 0;
 
 function validBuiltinParam(param) {
@@ -28,8 +29,8 @@ function parseInventory(text) {
   try { doc = JSON.parse(text); } catch {
     throw new Error("PTK did not return JSON. Update PTK and Project Toolkit together.");
   }
-  if (!object(doc) || doc.schema_version !== 1 || !Array.isArray(doc.projects) ||
-      !Array.isArray(doc.workflows) || !doc.workflows.every(named) || !absolute(doc.root) || typeof doc.ci !== "boolean") {
+  if (!object(doc) || doc.schema_version !== 2 || !Array.isArray(doc.projects) ||
+      !Array.isArray(doc.workflows) || !doc.workflows.every(item => named(item) && commandPath(item.command)) || !absolute(doc.root) || typeof doc.ci !== "boolean") {
     throw new Error("Unsupported PTK inventory. Update PTK and Project Toolkit together.");
   }
   if (!validCommands(doc.commands)) throw new Error("Invalid PTK built-in command inventory.");
@@ -49,7 +50,8 @@ function parseInventory(text) {
     if (![project.jobs, project.workflows, project.variants].every(items => Array.isArray(items) && items.every(named)) ||
         !object(project.capabilities) || !["validate", "variants", "reports"].every(key => typeof project.capabilities[key] === "boolean") ||
         !Array.isArray(project.config_files) || !project.config_files.every(absolute) ||
-        !project.jobs.every(job => Array.isArray(job.params) && job.params.every(param => named(param) &&
+        !project.workflows.every(item => commandPath(item.command)) ||
+        !project.jobs.every(job => commandPath(job.command) && commandPath(job.help_command) && Array.isArray(job.params) && job.params.every(param => named(param) &&
           ["str", "int", "float", "bool", "path", "choice", "list"].includes(param.type) &&
           typeof param.required === "boolean" && Array.isArray(param.choices) && param.choices.every(c => typeof c === "string")))) {
       throw new Error("Incomplete PTK project inventory.");
@@ -152,11 +154,16 @@ function argsFor(target, { variant, preview = false, params = {}, help = false, 
   if (target.kind === "job" && Object.keys(params).some(key => !target.spec.params.some(p => p.name === key))) {
     throw new Error("Task contains an unknown or secret parameter. Use PTK's credential environment or terminal prompt for secrets.");
   }
+  if (target.kind === "job") {
+    for (const [key, value] of Object.entries(params)) {
+      if (target.spec.params.find(param => param.name === key)?.type === "bool" && !["true", "false"].includes(value)) throw new Error(`Boolean parameter ${key} must be true or false.`);
+    }
+  }
   const args = target.project ? ["--config", target.project.entry_file] : [];
   if (typeof report !== "boolean") throw new Error("Report mode must be a boolean.");
   if (report) {
     if (preview || help || clean || reRun) throw new Error("Open a report separately from run, help or cleanup actions.");
-    if (target.kind === "workflow") return [...args, "workflow", "report", "--if-exists", "--", target.name];
+    if (target.kind === "workflow") return [...args, "report", "open", "--if-exists", "--workflow", target.name];
     if (target.kind !== "job") throw new Error("Reports apply to jobs and workflows.");
     if (variant) args.push("--variant", variant);
     return [...args, "report", "open", "--if-exists", "--", target.name];
@@ -165,38 +172,30 @@ function argsFor(target, { variant, preview = false, params = {}, help = false, 
   if (!help && clean) args.push("--clean");
   if (!help && reRun) args.push("--re-run");
   if (help) {
-    if (target.kind === "job") return [...args, target.name, "--help"];
-    if (target.kind === "workflow") return [...args, "workflow", "run", target.name, "--help"];
+    if (target.kind === "job") return [...args, ...target.spec.help_command, "--help"];
+    if (target.kind === "workflow") return [...args, ...target.spec.command, "--help"];
     if (target.kind === "builtin") return [...args, ...target.spec.path, "--help"];
   }
   switch (target.kind) {
     case "init":
-      return ["setup", "init", "--config-dir", configDir, "--", target.root];
+      return ["init", "--config-dir", configDir, "--", target.root];
     case "builtin":
       if (preview) throw new Error("Built-in commands do not support generic dry runs. Use their --dry-run option where available.");
       if (!target.spec.runnable) throw new Error("Choose a subcommand or open this command's help.");
       args.push(...target.spec.path, ...builtinArgs(target.spec, inputs));
       break;
     case "job":
-      args.push(...(preview ? ["dry-run", target.name] : ["run", target.name]));
-      for (const [key, value] of Object.entries(params)) {
-        // Generic run accepts --param. A dry-run job has generated typed options.
-        if (!preview) args.push("--param", `${key}=${value}`);
-        else {
-          const spec = target.spec.params.find(p => p.name === key);
-          const option = key.replaceAll("_", "-");
-          if (spec?.type === "bool") {
-            if (!["true", "false"].includes(value)) throw new Error(`Boolean parameter ${key} must be true or false.`);
-            args.push(value === "true" ? `--${option}` : `--no-${option}`);
-          }
-          else args.push(`--${option}`, String(value));
-        }
-      }
+      args.push(...target.spec.command);
+      if (preview) args.push("--dry-run");
+      for (const [key, value] of Object.entries(params)) args.push("--param", `${key}=${value}`);
       break;
-    case "workflow": args.push("workflow", preview ? "dry-run" : "run", target.name); break;
+    case "workflow":
+      args.push(...target.spec.command);
+      if (preview) args.push("--dry-run");
+      break;
     case "variant": args.push("variant", "show", target.name); break;
     case "report": args.push("report", "open", target.name); break;
-    case "validate": args.push("setup", "config", "validate"); break;
+    case "validate": args.push("validate"); break;
     default: throw new Error(`Unsupported PTK operation: ${target.kind}`);
   }
   return args;
@@ -250,7 +249,7 @@ function canOpenReport(target) {
   if (target.kind === "job" && !target.project?.capabilities.reports) return false;
   const commands = target.project?.commands ?? target.commands;
   if (!commands) return false;
-  const name = target.kind === "job" ? "report open" : "workflow report";
+  const name = "report open";
   return builtinTargets({}, commands).some(command => command.name === name && command.spec.runnable);
 }
 

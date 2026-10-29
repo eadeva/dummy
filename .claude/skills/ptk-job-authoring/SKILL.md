@@ -6,7 +6,7 @@ description: Add or modify ptk jobs, parameters, nested steps, conditions and ma
 
 # ptk-job-authoring
 
-1. Read [docs/configuration.rst](../../../docs/configuration.rst) and use `ptk setup config schema` for exact fields.
+1. Read [docs/configuration.rst](../../../docs/configuration.rst) and use `ptk maintainer config schema` for exact fields.
 
 2. Use ordered, uniquely named steps with exactly one of `run`, `uses`, or `steps`.
 
@@ -20,15 +20,15 @@ description: Add or modify ptk jobs, parameters, nested steps, conditions and ma
 
 7. Read the built-in contracts in [docs/plugins.rst](../../../docs/plugins.rst); including echo, wait, report.import, configs.sync, tools.ensure, files.copy, files.clean variant.generate and version.generate.
 
-8. Preview `ptk -V VARIANT dry-run JOB`; check `ptk JOB --help` and top-level `--from/--to` boundaries.
+8. Preview `ptk -V VARIANT JOB --dry-run`; check `ptk JOB --help` and top-level `--from/--to` boundaries.
 
 9. After changes, run the affected job in a disposable example and inspect logs and reports.
 
-10. Regenerate `ptk setup vscode tasks --users-only` if committing tasks; verify maintainer-only jobs stay hidden for users.
+10. Regenerate `ptk maintainer sync tasks --users-only` if committing tasks; verify maintainer-only jobs stay hidden for users.
 
 11. Background processes are finite and joined at their containing group boundary. Group retries repeat all children; Python handlers must cooperate with deadlines. Use `files.clean` only within generated workspace folders.
 
-For version discovery, read [docs/versioning.rst](../../../docs/versioning.rst). Keep `.main.ptk.yml` minimal; use `ptk setup init --config-dir PATH` for starter documents. Maintain `versioning.ptk.yml`, never commit `.gen.version.ptk.yml`. Use `PTK_VERSION_ALIAS_COMPONENT_NAME` and `${version.projects.alias.value}`; generators consume the run snapshot. Declare VMR version dependencies and their variants explicitly. Do not add bump/tag operations.
+For version discovery, read [docs/versioning.rst](../../../docs/versioning.rst). Keep `.main.ptk.yml` minimal; use `ptk init --config-dir PATH` for starter documents. Maintain `versioning.ptk.yml`, never commit `.gen.version.ptk.yml`. Use `PTK_VERSION_ALIAS_COMPONENT_NAME` and `${version.projects.alias.value}`; generators consume the run snapshot. Declare VMR version dependencies and their variants explicitly. Do not add bump/tag operations.
 
 
 To combine existing jobs locally, use [workflow configuration](../../../docs/workflows.rst) and the `ptk-workflow-authoring` skill. Put each workflow body in `workflows/<name>.ptk.yml` under the configured folder; workspace workflows use the same directory at the VMR root. Workflows preserve each call's repository settings and never run wholesale on CX. GitHub job/template generation is deferred.

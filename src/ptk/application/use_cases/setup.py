@@ -1,9 +1,8 @@
-"""``ptk setup doctor`` (diagnose) and ``ptk setup self`` (get a machine ready)."""
+"""Diagnose the local development environment with ``ptk self-service doctor``."""
 
 from __future__ import annotations
 
 import platform
-from collections.abc import Callable
 from dataclasses import dataclass
 
 from ...domain.errors import PtkError
@@ -131,7 +130,7 @@ class Doctor:
                     f"tool {status.name}",
                     FAIL,
                     status.problem,
-                    f"ptk setup (or install {status.name} yourself)",
+                    f"ptk self-service tools (or install {status.name} yourself)",
                 )
             )
         if credentials is not None:
@@ -143,7 +142,7 @@ class Doctor:
                         f"credential {row.key.ref}",
                         WARN,
                         "not available",
-                        f"ptk setup creds set {row.key.credential} {row.key.field}",
+                        f"ptk self-service creds set {row.key.credential} {row.key.field}",
                     )
                 )
         try:
@@ -154,7 +153,7 @@ class Doctor:
                         f"config {item.path.name}",
                         state,
                         item.status,
-                        "" if state == OK else "ptk setup configs sync",
+                        "" if state == OK else "ptk maintainer sync configs",
                     )
                 )
         except PtkError as exc:
@@ -174,75 +173,4 @@ class Doctor:
                 )
         except PtkError as exc:
             checks.append(Check("pre-commit hook", FAIL, str(exc)))
-        return checks
-
-
-class SelfSetup:
-    def __init__(
-        self,
-        env: Environment,
-        tools: ToolService,
-        configs: SharedConfigs,
-        hooks: EnsureHooks,
-    ):
-        self._env = env
-        self._tools = tools
-        self._configs = configs
-        self._hooks = hooks
-
-    def run(
-        self,
-        project: Project,
-        credentials: CredentialService,
-        *,
-        install_tools: bool,
-        allow_system: bool,
-        out: Callable[[str], None],
-    ) -> list[Check]:
-        checks: list[Check] = []
-        for name, argv in (
-            ("uv", [self._env.uv, "--version"]),
-            ("git", ["git", "--version"]),
-        ):
-            found = self._env.output(argv)
-            checks.append(
-                Check(name, OK, found)
-                if found
-                else Check(name, FAIL, "not found", f"install {name}")
-            )
-        if project.config.configs:
-            items = self._configs.sync(project)
-            changed = [i.path.name for i in items if i.status != "up to date"]
-            checks.append(
-                Check(
-                    "shared configs",
-                    OK,
-                    f"updated {', '.join(changed)}" if changed else "up to date",
-                )
-            )
-        if self._hooks.config(project) is not None and not project.ci:
-            try:
-                self._hooks.execute(project, out)
-                checks.append(Check("pre-commit hook", OK, "installed"))
-            except PtkError as exc:
-                checks.append(Check("pre-commit hook", FAIL, str(exc)))
-        if install_tools and project.config.tools:
-            for result in self._tools.setup(
-                project, list(project.config.tools), allow_system=allow_system, out=out
-            ):
-                checks.append(
-                    Check(
-                        f"tool {result.name}", OK if result.ok else FAIL, result.outcome
-                    )
-                )
-        for row in credentials.status():
-            if row.provider is None:
-                checks.append(
-                    Check(
-                        f"credential {row.key.ref}",
-                        WARN,
-                        "not available",
-                        f"ptk setup creds set {row.key.credential} {row.key.field}",
-                    )
-                )
         return checks

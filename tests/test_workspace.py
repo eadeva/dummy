@@ -103,7 +103,7 @@ def test_vmr_cli_isolates_repositories_and_preserves_commands(tmp_path, monkeypa
     assert "firmware" in help_result.output and "bootloader" in help_result.output
     assert runner.invoke(cli, []).exit_code == 0
     for alias, entry in [("firmware", a), ("bootloader", b)]:
-        for command in [["--help"], ["setup", "config", "validate"], ["build"], []]:
+        for command in [["--help"], ["validate"], ["build"], []]:
             result = runner.invoke(cli, [alias, *command])
             assert result.exit_code == 0, result.output
         assert (entry.parent / "_logs").is_dir()
@@ -122,15 +122,15 @@ def test_vmr_permissions_are_per_repository(tmp_path, monkeypatch):
     a, _b = workspace(tmp_path)
     grant_maintainer(a.parent)
     data = read_project(a)
-    data["command_audience"] = {"setup.config": "maintainer"}
+    data["command_audience"] = {"maintainer.config": "maintainer"}
     write_project(a, yaml.safe_dump(data))
     monkeypatch.chdir(tmp_path)
     runner = CliRunner(env={"PTK_ROLE": "user"})
-    result = runner.invoke(cli, ["firmware", "setup", "config", "validate"])
+    result = runner.invoke(cli, ["firmware", "validate"])
     assert result.exit_code == 0, result.output
-    result = runner.invoke(cli, ["firmware", "setup", "config", "show"])
+    result = runner.invoke(cli, ["firmware", "maintainer", "config", "show"])
     assert result.exit_code != 0 and "maintainer-only" in result.output
-    result = runner.invoke(cli, ["bootloader", "setup", "config", "validate"])
+    result = runner.invoke(cli, ["bootloader", "validate"])
     assert result.exit_code == 0, result.output
 
 
@@ -234,7 +234,7 @@ def test_vmr_help_tasks_and_read_only_variants(tmp_path, monkeypatch):
     result = runner.invoke(cli, ["firmware", "help", "--no-open"])
     assert result.exit_code == 0, (result.output, result.exception)
     assert "ptk firmware build" in (a.parent / ".ptk/help.html").read_text()
-    result = runner.invoke(cli, ["firmware", "setup", "vscode", "tasks"])
+    result = runner.invoke(cli, ["firmware", "maintainer", "sync", "tasks"])
     assert result.exit_code == 0, result.output
     tasks = json.loads((a.parent / ".vscode/tasks.json").read_text())
     task = tasks["tasks"][0]
@@ -257,27 +257,30 @@ def test_unselected_repository_missing_job_does_not_block_command(
     monkeypatch.chdir(tmp_path)
     result = CliRunner().invoke(cli, ["firmware", "build"])
     assert result.exit_code == 0, result.output
-    result = CliRunner().invoke(cli, ["bootloader", "setup", "config", "validate"])
+    result = CliRunner().invoke(cli, ["bootloader", "validate"])
     assert result.exit_code != 0 and "unknown job" in result.output
 
 
 def test_shared_workspace_views_and_no_global_installer(tmp_path, monkeypatch):
-    workspace(tmp_path)
+    a, b = workspace(tmp_path)
+    grant_maintainer(tmp_path)
+    grant_maintainer(a.parent)
+    grant_maintainer(b.parent)
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
     for args in (
         ["repos"],
-        ["setup", "config", "validate"],
-        ["setup", "config", "show", "project.name"],
+        ["validate"],
+        ["maintainer", "config", "show", "project.name"],
         ["variant", "list"],
         ["report", "list"],
         ["report", "summary"],
     ):
         result = runner.invoke(cli, args)
         assert result.exit_code == 0, (args, result.output, result.exception)
-    result = runner.invoke(cli, ["setup", "install"])
+    result = runner.invoke(cli, ["self-service", "tools"])
     assert result.exit_code != 0
-    result = runner.invoke(cli, ["setup", "config", "show", "project.name"])
+    result = runner.invoke(cli, ["maintainer", "config", "show", "project.name"])
     assert "[firmware]" in result.output and "[bootloader]" in result.output
 
 
@@ -296,7 +299,7 @@ def test_shared_credentials_merge_conflicts_and_namespace(tmp_path, monkeypatch)
     monkeypatch.setenv("PTK_VAULT_FILE", str(tmp_path / "vault.json"))
     monkeypatch.setenv("PTK_VAULT_PASSWORD", "synthetic-password")
     runner = CliRunner()
-    result = runner.invoke(cli, ["setup", "creds", "list"])
+    result = runner.invoke(cli, ["self-service", "creds", "list"])
     assert result.exit_code == 0, result.output
     assert (
         "firmware/different" in result.output
@@ -305,17 +308,17 @@ def test_shared_credentials_merge_conflicts_and_namespace(tmp_path, monkeypatch)
     assert "shared.token [bootloader, firmware]" in result.output
     assert (
         runner.invoke(
-            cli, ["setup", "creds", "set", "different"], input="ambiguous\n"
+            cli, ["self-service", "creds", "set", "different"], input="ambiguous\n"
         ).exit_code
         != 0
     )
     result = runner.invoke(
-        cli, ["setup", "creds", "set", "shared"], input="shared-synthetic\n"
+        cli, ["self-service", "creds", "set", "shared"], input="shared-synthetic\n"
     )
     assert result.exit_code == 0, (result.output, result.exception)
     result = runner.invoke(
         cli,
-        ["setup", "creds", "set", "firmware/different"],
+        ["self-service", "creds", "set", "firmware/different"],
         input="private-synthetic\n",
     )
     assert result.exit_code == 0, result.output
@@ -333,6 +336,6 @@ def test_shared_credentials_merge_conflicts_and_namespace(tmp_path, monkeypatch)
     )
     # Listing a locked vault must not retrieve or prompt for a value.
     monkeypatch.delenv("PTK_VAULT_PASSWORD")
-    result = runner.invoke(cli, ["setup", "creds", "list"])
+    result = runner.invoke(cli, ["self-service", "creds", "list"])
     assert result.exit_code == 0 and "not read or verified" in result.output
     assert "shared-synthetic" not in result.output

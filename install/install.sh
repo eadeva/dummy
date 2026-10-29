@@ -77,19 +77,19 @@ if [ "$no_extension" = 0 ] || [ "$no_completion" = 0 ]; then
     if [ ! -x "$ptk_executable" ]; then say "PTK installed, but cannot find its executable in $tool_bin"; exit 1; fi
 fi
 if [ "$no_extension" = 0 ]; then
-    set -- setup extension --if-available
+    set -- self-service extension --if-available
     if [ "$force_extension" = 1 ]; then set -- "$@" --force; fi
     if ! "$ptk_executable" "$@"; then
-        say 'PTK installed, but extension setup failed; retry: ptk setup extension'
+        say 'PTK installed, but extension setup failed; retry: ptk self-service extension'
         exit 1
     fi
 fi
 
 if [ "$no_completion" = 0 ]; then
-    if ! "$ptk_executable" setup completion install --executable "$ptk_executable"; then
-        say 'PTK installed, but completion setup failed; retry: ptk setup completion install'
+    if ! "$ptk_executable" self-service completion install --executable "$ptk_executable"; then
+        say 'PTK installed, but completion setup failed; retry: ptk self-service completion install'
         exit 1
     fi
 fi
 
-say "done - open a new terminal, then run: ptk setup doctor"
+say "done - open a new terminal, then run: ptk self-service doctor"

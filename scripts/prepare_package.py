@@ -100,7 +100,7 @@ def smoke(wheel: Path, temporary: Path) -> None:
     )
     project = temporary / "consumer"
     project.mkdir()
-    # Export before project initialization: setup extension is host-level and the
+    # Export before project initialization: self-service extension is host-level and the
     # wheel must carry the VSIX without Node.js or access to the source checkout.
     exported = temporary / "bundled-extension.vsix"
     run(
@@ -108,7 +108,7 @@ def smoke(wheel: Path, temporary: Path) -> None:
         "-c",
         SMOKE,
         str(installed),
-        "setup",
+        "self-service",
         "extension",
         "--output",
         str(exported),
@@ -118,10 +118,11 @@ def smoke(wheel: Path, temporary: Path) -> None:
         archive.getinfo("extension/package.json")
         archive.getinfo("extension/dist/extension.js")
     for args in (
-        ["setup", "init", "--config-dir", "config/ptk", "--yes"],
-        ["setup", "config", "validate"],
-        ["setup", "vscode"],
-        ["setup", "vscode", "skills", "--check"],
+        ["init", "--config-dir", "config/ptk", "--yes"],
+        ["validate"],
+        ["maintainer", "sync", "tasks"],
+        ["maintainer", "sync", "skills"],
+        ["maintainer", "sync", "skills", "--check"],
     ):
         run("-I", "-c", SMOKE, str(installed), *args, cwd=project)
     assert (project / ".github/skills/ptk-config-authoring/SKILL.md").is_file()

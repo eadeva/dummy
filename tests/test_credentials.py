@@ -1,4 +1,4 @@
-"""Credential chain: env, keyring, gopass, vault, prompt; ptk setup creds commands."""
+"""Credential chain: env, keyring, gopass, vault, prompt; ptk self-service creds commands."""
 
 from __future__ import annotations
 
@@ -130,7 +130,7 @@ def test_missing_lists_what_was_tried(tmp_path):
     text = str(info.value)
     assert "env: PTK_CRED_ART_USER is not set" in text
     assert "vault: no vault yet" in text and "prompt: not interactive" in text
-    assert "ptk setup creds set art user" in text
+    assert "ptk self-service creds set art user" in text
 
 
 def test_prompt_is_last_and_only_interactive(tmp_path):
@@ -294,30 +294,30 @@ def cli_env(write, tmp_path):
 
 @pytest.mark.skipif(not POSIX, reason="POSIX shell")
 def test_creds_cli_end_to_end(cli_env):
-    missing = cli_env("creds", "list")
+    missing = cli_env("self-service", "creds", "list")
     assert "missing" in missing.output
-    stored = cli_env("creds", "set", "art", input="vault-secret-1\n")
+    stored = cli_env("self-service", "creds", "set", "art", input="vault-secret-1\n")
     assert stored.exit_code == 0 and "stored art.token in vault" in stored.output
-    listing = cli_env("creds", "list")
+    listing = cli_env("self-service", "creds", "list")
     assert "vault" in listing.output and "vault-secret-1" not in listing.output
-    tested = cli_env("creds", "test", "art")
+    tested = cli_env("self-service", "creds", "test", "art")
     assert tested.exit_code == 0 and "token is ********" in tested.output
     ran = cli_env("go")
     assert ran.exit_code == 0 and "got ********" in ran.output
     assert "vault-secret-1" not in ran.output
     log = (cli_env.root / "_logs/default/go/use.log").read_text()
     assert "vault-secret-1" not in log
-    setup = cli_env("creds", "setup")
+    setup = cli_env("self-service", "creds", "setup")
     assert "vault" in setup.output and "ready" in setup.output
-    removed = cli_env("creds", "remove", "art")
+    removed = cli_env("self-service", "creds", "remove", "art")
     assert "art.token from vault" in removed.output
 
 
 def test_creds_setup_creates_vault(cli_env):
-    result = cli_env("creds", "setup", "--vault")
+    result = cli_env("self-service", "creds", "setup", "--vault")
     assert result.exit_code == 0 and "vault created" in result.output
     assert Path(cli_env.env["PTK_VAULT_FILE"]).is_file()
-    again = cli_env("creds", "setup", "--vault")
+    again = cli_env("self-service", "creds", "setup", "--vault")
     assert again.exit_code == 2 and "already exists" in again.output
 
 
@@ -332,5 +332,5 @@ def test_locked_vault_without_terminal(cli_env, tmp_path):
 
 
 def test_dry_run_needs_no_secrets(cli_env):
-    result = cli_env("dry-run")
+    result = cli_env("run", "--dry-run")
     assert result.exit_code == 0 and "T=********" in result.output

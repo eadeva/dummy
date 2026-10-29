@@ -8,23 +8,26 @@ from ...bootstrap import create_app
 from .access import AccessGroup
 from .state import CliState, guarded, state_of
 
-RESERVED = {
-    "setup",
+RESERVED = (
+    "init",
     "variant",
     "report",
+    "validate",
     "help",
     "repos",
     "workflow",
+    "self-service",
+    "maintainer",
     "describe",
     "vmr-clean-all",
-}
+)
 
 
 def invoke_repository(root, alias, args):
     command = root.command.get_command(root, alias)
     with command.make_context(alias, list(args), parent=root) as child:
         if (
-            args[:2] in (["variant", "list"], ["variant", "check"])
+            args[:2] == ["variant", "list"]
             and state_of(child).project().config.variants is None
         ):
             click.echo("no variants configured")
@@ -95,7 +98,8 @@ def build_commands(root, entries):
             project = state.project()
             policies = project.config.command_audience
             if state.role() != "maintainer" and any(
-                policies.get(k) == "maintainer" for k in ("setup", "setup.creds")
+                policies.get(k) == "maintainer"
+                for k in ("self-service", "self-service.creds")
             ):
                 continue
             for name, spec in project.config.credentials.items():
@@ -110,27 +114,37 @@ def build_commands(root, entries):
         return catalog
 
     setup = AccessGroup(
-        "setup",
-        help="Initialize missing configs; shared credentials, validation and diagnostics. Install tools under a repository.",
+        "self-service",
+        invoke_without_command=True,
+        callback=originals["self-service"].callback,
+        help="Shared credentials and diagnostics; install tools under a repository.",
     )
-    setup.add_command(originals["setup"].commands["init"])
-    setup.add_command(originals["setup"].commands["completion"])
-    config = click.RichGroup(
-        "config", help="Inspect and validate all repository configurations."
-    )
-    for name in ("show", "validate"):
-        config.add_command(
-            ForwardCommand(
-                originals["setup"].commands["config"].commands[name],
-                ["setup", "config", name],
-                entries,
-            )
-        )
-    config.add_command(originals["setup"].commands["config"].commands["schema"])
-    setup.add_command(config)
-    from .workflows import workspace_vscode_group
+    setup.add_command(originals["self-service"].commands["completion"])
+    setup.add_command(originals["self-service"].commands["extension"])
+    validate = ForwardCommand(originals["validate"], ["validate"], entries)
+    from .jobs import ProjectGroup
 
-    setup.add_command(workspace_vscode_group(root, entries))
+    maintainer = ProjectGroup(
+        "maintainer",
+        audience="maintainer",
+        invoke_without_command=True,
+        callback=originals["maintainer"].callback,
+        help="Maintain the workspace and its repositories.",
+    )
+    config = AccessGroup(
+        "config", help="Inspect repository configurations and export the schema."
+    )
+    config.add_command(
+        ForwardCommand(
+            originals["maintainer"].commands["config"].commands["show"],
+            ["maintainer", "config", "show"],
+            entries,
+        )
+    )
+    config.add_command(originals["maintainer"].commands["config"].commands["schema"])
+    maintainer.add_command(config)
+    maintainer.add_command(originals["maintainer"].commands["sync"])
+    maintainer.add_command(originals["workflow"])
 
     @setup.command("doctor")
     @guarded
@@ -145,7 +159,8 @@ def build_commands(root, entries):
             project = state.project()
             policies = project.config.command_audience
             if state.role() != "maintainer" and any(
-                policies.get(k) == "maintainer" for k in ("setup", "setup.doctor")
+                policies.get(k) == "maintainer"
+                for k in ("self-service", "self-service.doctor")
             ):
                 continue
             click.echo(f"[{alias}]")
@@ -165,7 +180,7 @@ def build_commands(root, entries):
         "creds",
         help="Combined credential definitions; conflicting names use REPOSITORY/NAME.",
     )
-    creds.add_command(originals["setup"].commands["creds"].commands["setup"])
+    creds.add_command(originals["self-service"].commands["creds"].commands["setup"])
 
     @creds.command("list")
     @click.argument("name", required=False)
@@ -174,7 +189,7 @@ def build_commands(root, entries):
         catalog = credentials()
         if name and name not in catalog:
             raise click.ClickException(
-                f"unknown or ambiguous credential {name!r}; use setup creds list"
+                f"unknown or ambiguous credential {name!r}; use self-service creds list"
             )
         for key in [name] if name else sorted(catalog):
             original, owners = catalog[key]
@@ -188,7 +203,7 @@ def build_commands(root, entries):
             click.echo("no accessible credentials configured")
 
     def credential_command(operation):
-        original = originals["setup"].commands["creds"].commands[operation]
+        original = originals["self-service"].commands["creds"].commands[operation]
 
         @click.pass_context
         @guarded
@@ -200,7 +215,7 @@ def build_commands(root, entries):
                     f"unknown or ambiguous credential {name!r}; use REPOSITORY/NAME for conflicts"
                 )
             actual, owners = catalog[name]
-            args = ["setup", "creds", operation, actual]
+            args = ["self-service", "creds", operation, actual]
             if options.get("field"):
                 args.append(options["field"])
             if options.get("store"):
@@ -216,10 +231,8 @@ def build_commands(root, entries):
     for name in ("set", "remove", "test"):
         creds.add_command(credential_command(name))
     setup.add_command(creds)
-    variant = click.RichGroup(
-        "variant", help="List and validate variants in every repository."
-    )
-    for name in ("list", "check"):
+    variant = click.RichGroup("variant", help="List variants in every repository.")
+    for name in ("list",):
         variant.add_command(
             ForwardCommand(
                 originals["variant"].commands[name], ["variant", name], entries
@@ -229,6 +242,8 @@ def build_commands(root, entries):
         "report",
         help="Read workspace-wide run status; exports remain repository-specific.",
     )
+
+    report.add_command(originals["report"].commands["open"])
 
     def summaries(history=False):
         from ...application.use_cases.run import layout_of
@@ -280,7 +295,10 @@ def build_commands(root, entries):
     return {
         c.name: c
         for c in (
+            originals["init"],
             setup,
+            maintainer,
+            validate,
             variant,
             report,
             list_repositories,

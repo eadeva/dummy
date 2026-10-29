@@ -43,19 +43,20 @@ class MaintainerOption(click.Option):
         self._hidden = value
 
 
-ALIASES = {
-    "config": "setup.config",
-    "configs": "setup.configs",
-    "creds": "setup.creds",
-    "vscode": "setup.vscode",
-    "self-setup": "setup.self",
-    "doctor": "setup.doctor",
-    "init": "setup.init",
-}
+def in_maintainer(ctx):
+    while ctx is not None and not getattr(ctx.command, "repository_boundary", False):
+        if ctx.info_name == "maintainer":
+            return True
+        ctx = ctx.parent
+    return False
 
 
 def allowed(ctx, name):
-    if ctx.meta.get("host_setup") and name in {"setup", "completion", "extension"}:
+    if ctx.meta.get("host_setup") and name in {
+        "self-service",
+        "completion",
+        "extension",
+    }:
         return True
     state = state_of(ctx)
     parts = [name]
@@ -64,8 +65,6 @@ def allowed(ctx, name):
     ):
         parts.insert(0, ctx.info_name)
         ctx = ctx.parent
-    if parts[0] in ALIASES:
-        parts = ALIASES[parts[0]].split(".") + parts[1:]
     if (
         not getattr(ctx.command, "repository_boundary", False)
         and ctx.meta.get("vmr_repositories") is not None
@@ -126,7 +125,7 @@ class AccessGroup(click.RichGroup):
         return result
 
     def list_commands(self, ctx):
-        return [n for n in super().list_commands(ctx) if allowed(ctx, n)]
+        return [n for n in self.commands if allowed(ctx, n)]
 
     def get_command(self, ctx, cmd_name):
         command = super().get_command(ctx, cmd_name)

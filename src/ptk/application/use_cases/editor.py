@@ -71,10 +71,10 @@ def describe_project(project, role, *, configuration=False, environment_names=()
     capabilities = {
         name: command_allowed(path, role, config.command_audience)
         for name, path in {
-            "validate": "setup.config.validate",
+            "validate": "validate",
             "variants": "variant",
             "reports": "report",
-            "setup_vscode": "setup.vscode",
+            "maintenance": "maintainer.sync",
         }.items()
     }
     variants = VariantService(project)
@@ -108,6 +108,15 @@ def describe_project(project, role, *, configuration=False, environment_names=()
             {
                 "name": name,
                 "help": spec.help,
+                "command": [
+                    *(["maintainer"] if spec.audience == "maintainer" else []),
+                    "run",
+                    name,
+                ],
+                "help_command": [
+                    *(["maintainer"] if spec.audience == "maintainer" else []),
+                    name,
+                ],
                 "default": name == config.project.default_job,
                 "params": [
                     {
@@ -128,7 +137,21 @@ def describe_project(project, role, *, configuration=False, environment_names=()
             if visible(spec.audience, role) and (not spec.only_cx or project.ci)
         ],
         "workflows": [
-            {"name": name, "help": spec.help}
+            {
+                "name": name,
+                "help": spec.help,
+                "command": [
+                    *(
+                        ["maintainer"]
+                        if spec.audience == "maintainer"
+                        or config.command_audience.get("workflow") == "maintainer"
+                        else []
+                    ),
+                    "workflow",
+                    "run",
+                    name,
+                ],
+            }
             for name, spec in config.workflows.items()
             if visible(spec.audience, role)
             and command_allowed("workflow", role, config.command_audience)

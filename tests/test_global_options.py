@@ -64,7 +64,7 @@ def test_ci_detection_remains_available_to_everyone(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "command", [[], ["run", "go"], ["go"], ["dry-run"], ["dry-run", "go"]]
+    "command", [[], ["run", "go"], ["go"], ["run", "--dry-run"], ["go", "--dry-run"]]
 )
 def test_global_variant_reaches_default_generic_and_shortcut_jobs(tmp_path, command):
     config = setup(tmp_path)
@@ -83,9 +83,7 @@ def test_global_variant_display_and_irrelevant_commands(tmp_path):
     assert json.loads(result.output)["name"] == "large"
     result = runner.invoke(cli, [*base, "variant", "show", "small", "--json"])
     assert json.loads(result.output)["name"] == "small"
-    result = runner.invoke(
-        cli, ["-C", str(config), "-V", "irrelevant", "setup", "config", "validate"]
-    )
+    result = runner.invoke(cli, ["-C", str(config), "-V", "irrelevant", "validate"])
     assert result.exit_code == 0, result.output
     result = runner.invoke(cli, [*base, "go", "--all-variants"])
     assert result.exit_code == 2 and "not both" in result.output
@@ -110,9 +108,9 @@ def test_vmr_ci_switch_uses_selected_repository_role(tmp_path, monkeypatch):
     grant_maintainer(a.parent)
     monkeypatch.chdir(tmp_path)
     runner = CliRunner(env={"PTK_ROLE": "", "PTK_CI": "0"})
-    result = runner.invoke(cli, ["--ci", "firmware", "setup", "config", "validate"])
+    result = runner.invoke(cli, ["--ci", "firmware", "validate"])
     assert result.exit_code == 0, result.output
-    for args in (["bootloader", "setup", "config", "validate"], ["repos"]):
+    for args in (["bootloader", "validate"], ["repos"]):
         result = runner.invoke(cli, ["--ci", *args])
         assert result.exit_code != 0 and "maintainer-only" in result.output
     grant_maintainer(tmp_path)

@@ -21,7 +21,7 @@ Workflows and jobs have separate namespaces::
 
    ptk workflow list
    ptk workflow show verify
-   ptk workflow dry-run verify
+   ptk workflow run --dry-run verify
    ptk workflow run verify
    ptk verify
 
@@ -166,7 +166,7 @@ to newer logs. Workflow reports use colored status cards and per-column filters.
 Open a child report for its project versions, tool dependencies and test details.
 Workflow history is retained until explicitly removed; it has no automatic rotation.
 
-Use ``ptk workflow report NAME`` to reopen the latest saved aggregate HTML report.
+Use ``ptk report open --workflow NAME`` to reopen the latest saved aggregate HTML report.
 At a VMR root, use a workspace workflow name or qualify a member workflow as
 ``ALIAS/NAME``. The extension's report icon uses this operation. Add
 ``--if-exists`` to print an informational message instead of failing when no
@@ -200,22 +200,23 @@ trigger a cascade of child tabs. The summary table links only child HTML reports
 JSON files remain available for automation. Workflow ``on-errors`` uses a hyphen; job ``on_errors``
 retains its existing spelling.
 
-``ptk setup vscode tasks`` adds ``ptk: workflow NAME`` tasks alongside job tasks.
+``ptk maintainer sync tasks`` adds ``ptk: workflow NAME`` tasks alongside job tasks.
 Generated workflow tasks use the owner repository's default variant and its
 repository mappings. The Project Toolkit extension also offers an owner variant
 selector. Regeneration preserves user tasks and is checked with ``--check``.
 
-At VMR level, ``ptk setup vscode tasks`` generates workspace tasks for workspace
-and repository-qualified workflows. ``ptk ALIAS setup vscode tasks`` generates
-that member's job and workflow tasks. ``ptk setup vscode`` installs member
-skills/tasks and the workspace workflow tasks. The generated VMR tasks set their
+At VMR level, ``ptk maintainer sync tasks`` generates workspace tasks for workspace
+and repository-qualified workflows. ``ptk ALIAS maintainer sync tasks`` generates
+that member's job and workflow tasks. Workspace task synchronization updates
+member tasks too; synchronize authoring resources separately with
+``ptk maintainer sync skills``. The generated VMR tasks set their
 working directory to the workspace root. Offline skills and examples are installed
 with the normal authoring bundle; see :doc:`editor`.
 
 Planned GitHub template generation (not implemented)
 ----------------------------------------------------
 
-The next phase will add ``ptk setup init --workflows``. Each job call becomes
+The next phase will add ``ptk init --workflows``. Each job call becomes
 one GitHub job using a generic PTK run-job GitHub Action; a local workflow
 is not executed wholesale on a CX runner. The job records that call's repository,
 job, variant and parameters.

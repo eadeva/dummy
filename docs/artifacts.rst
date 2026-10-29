@@ -65,9 +65,9 @@ CLI and workflow outputs
 
 Resolve JSON, GitHub step-output lines or just the URL::
 
-   ptk -V default artifacts destination --job package
-   ptk artifacts destination --job package --format github
-   ptk artifacts destination --job package --format url
+   ptk -V default maintainer artifacts destination --job package
+   ptk maintainer artifacts destination --job package --format github
+   ptk maintainer artifacts destination --job package --format url
 
 JSON and GitHub formats contain ``url``, ``repository`` and ``path``. GitHub output
 is printed to stdout; the workflow explicitly appends it to its output file:
@@ -76,7 +76,7 @@ is printed to stdout; the workflow explicitly appends it to its output file:
 
    - name: Resolve upload destination
      id: destination
-     run: ptk artifacts destination --job package --format github >> "$GITHUB_OUTPUT"
+     run: ptk maintainer artifacts destination --job package --format github >> "$GITHUB_OUTPUT"
 
 Subsequent workflow steps can read ``steps.destination.outputs.url`` or ``path``.
 Keep authentication and actual uploading in those steps. This example uses a
@@ -85,14 +85,14 @@ publication protocol and metadata. Event activity filters such as
 ``release: {types: [published]}`` belong in the GitHub workflow.
 
 From a VMR root select the repository explicitly, for example
-``ptk firmware artifacts destination --job package``. Each member owns its rules,
+``ptk firmware maintainer artifacts destination --job package``. Each member owns its rules,
 alias, variants and version sources. No project settings or tool environments
 are merged across members.
 
 Local preview works without GitHub or network access::
 
-   ptk -C examples/artifacts/.main.ptk.yml artifacts destination --job package --event release
-   ptk -C examples/artifacts/.main.ptk.yml artifacts destination --job package --event release --at 2026-10-26T15:07:00+01:00
+   ptk -C examples/artifacts/.main.ptk.yml maintainer artifacts destination --job package --event release
+   ptk -C examples/artifacts/.main.ptk.yml maintainer artifacts destination --job package --event release --at 2026-10-26T15:07:00+01:00
 
 ``--event`` overrides the detected event for routing. ``--at`` accepts a
 timezone-aware ISO timestamp and fixes all date placeholders for this resolution.

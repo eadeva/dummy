@@ -249,7 +249,7 @@ class InitProject:
             except PtkError as exc:
                 raise PtkError(
                     f"{exc}\nInitialized {len(results)} repositories before this error; "
-                    "rerun setup init to initialize the remaining repositories."
+                    "rerun init to initialize the remaining repositories."
                 ) from None
             results[directory] = InitResult(plan.files, kept, False)
         return results

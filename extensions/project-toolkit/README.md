@@ -7,11 +7,11 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
 
 1. Install PTK using `install/install.ps1` or `install/install.sh`. Both install
    the extension bundled in the Python package when VS Code is available. The CLI must
-   support `ptk describe --json` (inventory schema version 1).
-2. If PTK was installed directly with uv, run `ptk setup extension` afterwards.
+   support `ptk describe --json` (inventory schema version 2).
+2. If PTK was installed directly with uv, run `ptk self-service extension` afterwards.
    Alternatively, in VS Code run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.9.0.vsix`. You can also use
-   `code --install-extension project-toolkit-0.9.0.vsix`.
+   `project-toolkit-0.10.0.vsix`. You can also use
+   `code --install-extension project-toolkit-0.10.0.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -19,7 +19,7 @@ VS Code 1.96 or newer is required. The extension runs on the workspace host;
 for SSH, WSL or Dev Containers, install PTK on that host. The extension is
 distributed as a VSIX, without a Marketplace publication.
 
-`ptk setup extension` works without a project, preserves equal/newer extension
+`ptk self-service extension` works without a project, preserves equal/newer extension
 versions, and accepts `--force` for a deliberate reinstall/downgrade,
 `--profile NAME`, `--code code-insiders`, and `--output PATH` for offline export.
 Rerun it after upgrading the Python package to apply the bundled extension.
@@ -28,7 +28,7 @@ extension executable at its `.venv/Scripts/ptk.exe` or `.venv/bin/ptk`.
 For extension development, open this folder, run `npm ci --include=dev`, then F5.
 The launch configuration builds the extension and starts a Development Host.
 Rebuild and reload that window after edits. To update normal VS Code, build the
-VSIX and run `uv run ptk setup extension --vsix PATH --force` from the PTK root.
+VSIX and run `uv run ptk self-service extension --vsix PATH --force` from the PTK root.
 
 If PTK is not on the extension host's PATH, set **Project Toolkit: Executable**
 to its absolute path. To use a uv-managed project, run `uv sync` in its root once
@@ -42,7 +42,7 @@ to prepare the environment, then configure:
 ```
 
 The extension adds `--no-sync` to existing `uv`/`uv.exe` settings beginning with
-`run`, for both discovery and tasks. This prevents a version check, tree refresh,
+`run`, for both discovery and tasks. This prevents a validate --versions, tree refresh,
 help request or other command from reinstalling the environment that runs PTK.
 Run `uv sync` explicitly after changing dependencies. Job steps can still prepare
 their own Python runtimes normally; the extension does not set `UV_NO_SYNC`.
@@ -62,7 +62,7 @@ reloading the form or losing unfinished text. Environment placeholders select
 the name for editing. The installed PTK supplies the catalogue and tells the
 form which fields support templates. Job parameters are scoped to their job;
 credential references are only offered for step environment values. No resolved
-environment or credential values are displayed. Update PTK and extension 0.9.0
+environment or credential values are displayed. Update PTK and extension 0.10.0
 together.
 
 PTK resolves `${git.branch}`, `${git.commit}`, `${git.short_commit}`, `${git.tag}`,
@@ -82,7 +82,7 @@ labels and icon shapes also identify each category.
   has a tooltip. Output appears in VS Code's task terminal; **Tasks: Terminate
   Task** stops a running task. Help displays the job's `--help` without running it
   or asking for parameters.
-  **Dry Run** calls `ptk dry-run JOB` or `ptk workflow dry-run NAME`: it shows what
+  **Dry Run** calls `ptk JOB --dry-run` or `ptk workflow run --dry-run NAME`: it shows what
   would run without executing the job or workflow steps.
 - Click **Open Latest Job or Workflow Report** (preview icon) on a job or
   workflow. Jobs open the report for the selected variant; workflows open the
@@ -108,7 +108,7 @@ labels and icon shapes also identify each category.
 - Expand **Workflows** to run or dry-run local workflows. Workflows retain their
   owner variant and its repository variant mappings. On CI, workflows can only be dry-run; individual
   jobs remain runnable. The help icon displays workflow usage.
-- Expand **Built-in commands** to browse the CLI tree, including **setup > creds**,
+- Expand **Built-in commands** to browse the CLI tree, including **self-service > creds**,
   configuration, variants and **help**. **CLI help** displays `ptk --help`;
   **help** runs PTK's HTML help command. Use the play icon to run a command, the
   gear to choose options/arguments, or the question mark for its usage. Required
@@ -139,7 +139,7 @@ and `preview` fields. Supply required parameters in `params`, or launch through
 the Project Toolkit commands to get interactive prompts. Only non-secret string
 values belong in task parameters.
 Built-in tasks use `kind: "builtin"`, the full command path as `name` (for example
-`"setup config show"`), and an `inputs` mapping of CLI parameter names to arrays of
+`"maintainer config show"`), and an `inputs` mapping of CLI parameter names to arrays of
 literal strings (for example `{"path": ["project.name"], "fmt": ["json"]}`).
 Saved tasks with `help: true` remain help requests on rerun. Built-in commands are
 available from the sidebar/palette and are not automatically added to Run Task.
@@ -197,7 +197,7 @@ aliases or complex values that the form cannot safely edit.
 
 Loading errors appear in the tree and Problems panel, with links to their source.
 The **Validate Configuration** toolbar action is always available. A workspace
-without `.main.ptk.yml` displays **No PTK project found** and offers **PTK setup init**,
+without `.main.ptk.yml` displays **No PTK project found** and offers **PTK init**,
 which asks for the configuration directory.
 
 Expand a job or repository workflow to see variant checkboxes, or use its existing
@@ -231,7 +231,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.9.0.vsix`. Use `ptk dry-run extension`
+`extensions/project-toolkit/project-toolkit-0.10.0.vsix`. Use `ptk extension --dry-run`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:
@@ -257,8 +257,8 @@ workspace trust, multi-root selection and cancellation; they are not graphical
 extension-host acceptance tests. For a manual smoke test, install the VSIX, open
 `examples/quickstart`, dry-run and run a job, select a variant, and run the same
 task again through **Tasks: Run Task**. Hover over the job icons to check their
-tooltips, open job help and reports, and expand **Built-in commands > setup > creds** to inspect
-help and run `list`. Check **setup > config > show** with the gear to select a
+tooltips, open job help and reports, and expand **Built-in commands > self-service > creds** to inspect
+help and run `list`. Check **maintainer > config > show** with the gear to select a
 configuration path and JSON output.
 Before the first run, click a job/workflow's report icon and check the informational
 terminal message; after a run, check that the matching report opens. Repeat with

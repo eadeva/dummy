@@ -80,7 +80,7 @@ class CredentialService:
         raise PtkError(
             f"credential '{key.ref}' is not available:\n  - "
             + "\n  - ".join(notes)
-            + f"\n  store it with: ptk setup creds set {key.credential}"
+            + f"\n  store it with: ptk self-service creds set {key.credential}"
             + (f" {key.field}" if len(self.spec(key.credential).fields) > 1 else "")
         )
 
@@ -123,7 +123,7 @@ class CredentialService:
                         or usable is None
                         or not usable.available()[0]
                     ):
-                        continue  # 'ptk setup creds setup' explains unavailable providers
+                        continue  # 'ptk self-service creds setup' explains unavailable providers
                     if provider == "env":
                         if self._try(provider, key, notes):
                             supplier = provider

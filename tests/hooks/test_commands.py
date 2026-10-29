@@ -20,15 +20,17 @@ from .test_installation import hook_path
 def test_help_inventory_and_status_have_no_side_effects(tmp_path, offline_engine):
     root = repository(tmp_path / "repo")
     before = snapshot(root)
-    commands = {"run", "check", "install", "uninstall", "status", "validate"}
+    commands = {"run", "validate"}
     for args in [[], ["--help"], *[[name, "--help"] for name in commands]]:
         result = invoke(root, "pre-commit", *args)
         assert result.exit_code == 0, result.output
+    for name in ("install", "uninstall", "status"):
+        assert invoke(root, "self-service", "hooks", name, "--help").exit_code == 0
     inventory = invoke(root, "describe", "--json")
     tree = json.loads(inventory.output)["projects"][0]["commands"]
     group = next(c for c in tree if c["name"] == "pre-commit")
     assert {c["name"] for c in group["children"]} == commands
-    result = invoke(root, "pre-commit", "status")
+    result = invoke(root, "self-service", "hooks", "status")
     assert result.exit_code == 1 and "missing or unusable" in result.output
     assert snapshot(root) == before
     assert offline_engine == []
@@ -45,11 +47,11 @@ def test_install_uninstall_restores_legacy_and_all_configured_types(tmp_path):
     hook = hook_path(root)
     hook.write_text(previous)
     hook.chmod(0o755)
-    result = invoke(root, "pre-commit", "install")
+    result = invoke(root, "self-service", "hooks", "install")
     assert result.exit_code == 0, result.output
     assert hook_path(root, "pre-push").is_file()
-    assert invoke(root, "pre-commit", "status").exit_code == 0
-    result = invoke(root, "pre-commit", "uninstall")
+    assert invoke(root, "self-service", "hooks", "status").exit_code == 0
+    result = invoke(root, "self-service", "hooks", "uninstall")
     assert result.exit_code == 0, result.output
     assert "next local job" in result.output
     assert hook.read_text() == previous
@@ -59,7 +61,7 @@ def test_install_uninstall_restores_legacy_and_all_configured_types(tmp_path):
     assert not (root / "hook-ran").exists()
     assert not (root / "job-ran").exists()
     # An unrelated hook remains untouched on repeated uninstall.
-    assert invoke(root, "pre-commit", "uninstall").exit_code == 0
+    assert invoke(root, "self-service", "hooks", "uninstall").exit_code == 0
     assert hook.read_text() == previous
 
 
@@ -93,7 +95,11 @@ def test_run_selects_staged_all_explicit_files_and_refs(tmp_path):
 
     assert selected("run", "proof") == {"staged.txt"}
     assert (root / "other name.txt").read_text() == "unstaged change\n"
-    assert selected("check") == {"staged.txt", "other name.txt", "-dash.txt"}
+    assert selected("run", "--all-files") == {
+        "staged.txt",
+        "other name.txt",
+        "-dash.txt",
+    }
     assert selected("run", "proof", "--file", "other name.txt", "--file=-dash.txt") == {
         "other name.txt",
         "-dash.txt",
@@ -126,7 +132,7 @@ def test_invalid_selections_fail_before_runtime_setup(tmp_path, offline_engine, 
 def test_failed_hooks_return_their_exit_code_without_running_a_job(tmp_path):
     root = repository(tmp_path / "repo")
     (root / "block-commit").touch()
-    result = invoke(root, "pre-commit", "check", "proof")
+    result = invoke(root, "pre-commit", "run", "--all-files", "proof")
     assert result.exit_code == 1, result.output
     assert "Failed" in result.output
     assert (root / "hook-ran").exists()
@@ -161,10 +167,10 @@ def test_explicit_checks_work_without_automatic_installation(tmp_path, mode):
         write_project(path, data)
     if mode == "ci":
         result = CliRunner(env={"PTK_CI": "1", "PTK_ROLE": "user"}).invoke(
-            cli, ["-C", str(root / ".main.ptk.yml"), "pre-commit", "check"]
+            cli, ["-C", str(root / ".main.ptk.yml"), "pre-commit", "run", "--all-files"]
         )
     else:
-        result = invoke(root, "pre-commit", "check")
+        result = invoke(root, "pre-commit", "run", "--all-files")
     assert result.exit_code == 0, result.output
     assert not hook_path(root).exists()
     assert (root / "hook-ran").exists()
@@ -177,9 +183,9 @@ def test_custom_hooks_path_allows_checks_but_blocks_hook_mutations(tmp_path):
     original = custom / "pre-commit"
     original.write_text("custom hook\n")
     git(root, "config", "core.hooksPath", str(custom))
-    assert invoke(root, "pre-commit", "check").exit_code == 0
+    assert invoke(root, "pre-commit", "run", "--all-files").exit_code == 0
     for action in ("install", "uninstall"):
-        result = invoke(root, "pre-commit", action)
+        result = invoke(root, "self-service", "hooks", action)
         assert result.exit_code == 2 and "core.hooksPath" in result.output
     assert original.read_text() == "custom hook\n"
 
@@ -188,11 +194,19 @@ def test_group_policy_hides_commands_and_refuses_mutations(tmp_path, offline_eng
     root = repository(tmp_path / "repo")
     config = root / ".main.ptk.yml"
     data = read_project(config)
-    data["command_audience"] = {"pre-commit": "maintainer"}
+    data["command_audience"] = {
+        "pre-commit": "maintainer",
+        "self-service.hooks": "maintainer",
+    }
     write_project(config, data)
     before = snapshot(root)
-    for action in ("install", "uninstall", "run", "check", "validate", "status"):
-        result = invoke(root, "pre-commit", action)
+    for action in ("install", "uninstall", "run", "validate", "status"):
+        prefix = (
+            ["pre-commit"]
+            if action in {"run", "validate"}
+            else ["self-service", "hooks"]
+        )
+        result = invoke(root, *prefix, action)
         assert result.exit_code == 2 and "maintainer-only" in result.output
     doc = json.loads(invoke(root, "describe", "--json").output)
     assert "pre-commit" not in {c["name"] for c in doc["projects"][0]["commands"]}
@@ -206,7 +220,7 @@ def test_vmr_commands_use_only_the_selected_member(tmp_path, monkeypatch):
     (tmp_path / ".main.ptk.yml").write_text("virtual_monorepo: true\nmembers: [a, b]\n")
     monkeypatch.chdir(tmp_path)
     result = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"}).invoke(
-        cli, ["alpha", "pre-commit", "check"], catch_exceptions=False
+        cli, ["alpha", "pre-commit", "run", "--all-files"], catch_exceptions=False
     )
     assert result.exit_code == 0, result.output
     assert (a / "hook-ran").exists() and not (b / "hook-ran").exists()
@@ -219,10 +233,10 @@ def test_worktree_checks_use_its_files_and_uninstall_shared_hooks(tmp_path):
     git(root, "commit", "-m", "initial")
     linked = tmp_path / "linked"
     git(root, "worktree", "add", "-b", "linked", str(linked))
-    assert invoke(root, "pre-commit", "install").exit_code == 0
-    result = invoke(linked, "pre-commit", "check")
+    assert invoke(root, "self-service", "hooks", "install").exit_code == 0
+    result = invoke(linked, "pre-commit", "run", "--all-files")
     assert result.exit_code == 0, result.output
     assert (linked / "hook-ran").exists() and not (root / "hook-ran").exists()
-    result = invoke(linked, "pre-commit", "uninstall")
+    result = invoke(linked, "self-service", "hooks", "uninstall")
     assert result.exit_code == 0, result.output
     assert not hook_path(root).exists()

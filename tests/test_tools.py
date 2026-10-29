@@ -1,4 +1,4 @@
-"""Tools: version checks, install methods, ptk setup, --setup, doctor, self-setup."""
+"""Tools: version checks, install methods, self-service tools, --setup and doctor."""
 
 from __future__ import annotations
 
@@ -181,16 +181,16 @@ def test_missing_tool_blocks_run(project):
     assert result.exit_code == 2
     assert (
         "mytool: not found" in result.output
-        and "ptk setup install --job build" in result.output
+        and "ptk self-service tools --job build" in result.output
     )
-    assert project("dry-run", "build").exit_code == 0  # dry runs never block
+    assert project("build", "--dry-run").exit_code == 0  # dry runs never block
 
 
 @posix_only
 def test_setup_installs_download_and_puts_it_on_path(project):
-    preview = project("setup", "--job", "build", "--dry-run")
+    preview = project("self-service", "tools", "--job", "build", "--dry-run")
     assert "would install via download" in preview.output and not project.tools.exists()
-    result = project("setup", "--job", "build")
+    result = project("self-service", "tools", "--job", "build")
     assert result.exit_code == 0, result.output
     assert "mytool 1.2.3" in result.output and "installed via download" in result.output
     assert len(list((project.tools / "mytool").glob("*/bin/mytool"))) == 1
@@ -208,13 +208,13 @@ def test_run_with_setup_flag(project):
 @posix_only
 def test_checksum_mismatch(project):
     project.write_sha("0" * 64)
-    result = project("setup", "--job", "build")
+    result = project("self-service", "tools", "--job", "build")
     assert result.exit_code == 1 and "sha256 mismatch" in result.output
 
 
 @posix_only
 def test_wrong_version_and_system_packages(project):
-    result = project("setup", "--job", "other")
+    result = project("self-service", "tools", "--job", "other")
     assert result.exit_code == 1
     assert (
         "does not match >=99" in result.output or "no install method" in result.output
@@ -224,13 +224,13 @@ def test_wrong_version_and_system_packages(project):
 
 @posix_only
 def test_doctor_reports_tool_problems(project):
-    result = project("doctor")
+    result = project("self-service", "doctor")
     assert result.exit_code == 1
-    assert "tool mytool" in result.output and "ptk setup" in result.output
+    assert "tool mytool" in result.output and "ptk self-service tools" in result.output
 
 
 @posix_only
-def test_self_setup(project):
+def test_maintainer_syncs_shared_config(project):
     write_project(
         project.root / ".main.ptk.yml",
         {
@@ -239,9 +239,9 @@ def test_self_setup(project):
         },
     )
     grant_maintainer(project.root)
-    result = project("self-setup", role="")
+    result = project("maintainer", "sync", "configs", role="")
     assert (
-        "shared configs" in result.output and (project.root / ".clang-format").is_file()
+        "clang-format" in result.output and (project.root / ".clang-format").is_file()
     )
 
 

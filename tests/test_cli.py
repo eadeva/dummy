@@ -5,10 +5,23 @@ import pytest
 from click.testing import CliRunner
 
 from ptk.drivers.cli.main import cli
-from tests.conftest import DEMO
+from tests.conftest import DEMO, grant_maintainer
 from tests.project_files import project_files
 
 CONFIG = ["--config", str(DEMO / ".main.ptk.yml")]
+
+
+@pytest.fixture(autouse=True)
+def demo_checkout(tmp_path, monkeypatch):
+    demo = tmp_path / "cli-demo"
+    shutil.copytree(
+        DEMO,
+        demo,
+        ignore=shutil.ignore_patterns("_logs", "_reports", "_builds", "_bin", ".ptk"),
+    )
+    grant_maintainer(demo)
+    monkeypatch.setitem(globals(), "CONFIG", ["--config", str(demo / ".main.ptk.yml")])
+    monkeypatch.delenv("PTK_ROLE", raising=False)
 
 
 def run(*args):
@@ -18,17 +31,19 @@ def run(*args):
 
 
 def test_config_validate_and_show():
-    result = run("config", "validate")
+    result = run("validate")
     assert result.exit_code == 0, result.output
     assert "configuration is valid" in result.output
-    show = run("config", "show", "jobs.build.params.jobs", "--format", "json")
+    show = run(
+        "maintainer", "config", "show", "jobs.build.params.jobs", "--format", "json"
+    )
     assert json.loads(show.output) == {
         "type": "int",
         "default": 8,
         "env": "PTK_JOBS",
         "help": "Parallel jobs",
     }
-    sources = run("config", "show", "project", "--sources")
+    sources = run("maintainer", "config", "show", "project", "--sources")
     assert "config/ptk/project.ptk.yml:2" in sources.output
 
 
@@ -36,6 +51,7 @@ def test_set_override():
     result = run(
         "--set",
         "jobs.build.params.jobs.default=3",
+        "maintainer",
         "config",
         "show",
         "jobs.build.params.jobs.default",
@@ -44,7 +60,7 @@ def test_set_override():
 
 
 def test_schema_contains_step_entry():
-    schema = json.loads(run("config", "schema").output)
+    schema = json.loads(run("maintainer", "config", "schema").output)
     assert "StepEntry" in schema["$defs"] and "StepSpec" not in schema["$defs"]
 
 
@@ -55,7 +71,7 @@ def test_variant_commands():
     assert show.exit_code == 0 and "MAP_REGION" in show.output
     explain = run("variant", "explain", "2", "NAV_3D")
     assert "NOT satisfied" in explain.output
-    assert run("variant", "check").exit_code == 0
+    assert run("validate", "--variants").exit_code == 0
 
 
 def test_errors_exit_2():
@@ -93,8 +109,8 @@ def test_dry_run_of_demo_shows_plan_without_executing(tmp_path, existing_logs):
             str(demo / ".main.ptk.yml"),
             "-V",
             "b_us",
-            "dry-run",
             "build",
+            "--dry-run",
             "--jobs",
             "3",
             "--env",
@@ -109,12 +125,12 @@ def test_dry_run_of_demo_shows_plan_without_executing(tmp_path, existing_logs):
 
 
 def test_run_errors_are_clean():
-    assert "did you mean 'build'" in run("dry-run", "biuld").output
+    assert "did you mean 'build'" in run("biuld", "--dry-run").output
     bad = run("run", "build", "-p", "jobs=lots")
     assert bad.exit_code == 2 and "parameter 'jobs'" in bad.output
-    typed = run("dry-run", "build", "--jobs", "lots")
+    typed = run("build", "--dry-run", "--jobs", "lots")
     assert typed.exit_code == 2 and "not a valid integer" in typed.output
-    assert "no selected step" in run("dry-run", "build", "--", "-x").output
+    assert "no selected step" in run("build", "--dry-run", "--", "-x").output
 
 
 def test_run_executes_and_returns_exit_code(write):

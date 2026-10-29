@@ -82,8 +82,9 @@ def invoke(write):
                 "-C",
                 str(root / ".main.ptk.yml"),
                 "workflow",
-                mode,
+                "run",
                 "verify",
+                *(["--dry-run"] if mode == "dry-run" else []),
             ],
             catch_exceptions=False,
         )
@@ -209,11 +210,14 @@ def test_explicit_workflow_report_opens_latest_aggregate_only(
         workflows={"verify": {"open_report": None, "steps": [{"build": "build"}]}},
         extra={"reporting": {"dir": "custom-reports"}} if custom else {},
     )
-    missing = invoke(root, "workflow", "report", "--if-exists", "verify")
+    missing = invoke(root, "report", "open", "--if-exists", "--workflow", "verify")
     assert missing.exit_code == 0 and "Info:" in missing.output
     assert "hasn't run yet" in missing.output and opened_reports == []
-    assert invoke(root, "workflow", "report", "verify").exit_code != 0
-    assert invoke(root, "workflow", "report", "--if-exists", "unknown").exit_code != 0
+    assert invoke(root, "report", "open", "--workflow", "verify").exit_code != 0
+    assert (
+        invoke(root, "report", "open", "--if-exists", "--workflow", "unknown").exit_code
+        != 0
+    )
     assert invoke(root, "workflow", "run", "verify").exit_code == 0
     assert opened_reports == []
     folder = root / ("custom-reports" if custom else "_reports") / "workflows/verify"
@@ -221,7 +225,10 @@ def test_explicit_workflow_report_opens_latest_aggregate_only(
     os.utime(report, (1, 1))
     assert invoke(root, "workflow", "run", "verify").exit_code == 0
     latest = next(p for p in folder.glob("*/workflow.html") if p != report)
-    assert invoke(root, "workflow", "report", "--if-exists", "verify").exit_code == 0
+    assert (
+        invoke(root, "report", "open", "--if-exists", "--workflow", "verify").exit_code
+        == 0
+    )
     assert opened_reports == [latest]
 
 
@@ -254,7 +261,9 @@ def test_workspace_report_respects_owner_and_member_report_policy(
         reports.append(report)
     for name in ["verify", "alpha/verify"]:
         result = runner.invoke(
-            cli, ["workflow", "report", "--if-exists", name], catch_exceptions=False
+            cli,
+            ["report", "open", "--if-exists", "--workflow", name],
+            catch_exceptions=False,
         )
         assert result.exit_code == 0, result.output
     assert opened_reports == reports
@@ -262,6 +271,8 @@ def test_workspace_report_respects_owner_and_member_report_policy(
     data = read_project(config)
     data["command_audience"] = {"workflow": "maintainer"}
     write_project(config, data)
-    denied = runner.invoke(cli, ["workflow", "report", "--if-exists", "alpha/verify"])
+    denied = runner.invoke(
+        cli, ["report", "open", "--if-exists", "--workflow", "alpha/verify"]
+    )
     assert denied.exit_code != 0 and "maintainer-only" in denied.output
     assert opened_reports == reports

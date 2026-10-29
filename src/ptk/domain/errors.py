@@ -51,5 +51,9 @@ class ConfigError(PtkError):
         return "\n".join(str(p) for p in self.problems)
 
 
+class ProjectNotFoundError(ConfigError):
+    """No project marker exists within the repository search boundary."""
+
+
 class UnknownNameError(PtkError):
     """An unknown job, variant, feature, ... (message contains suggestions)."""

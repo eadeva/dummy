@@ -1,71 +1,94 @@
 CLI command groups
 ==================
 
-Use ``ptk setup`` to display the setup overview. Viewing this overview does not
-install tools or change configuration. Project jobs remain top-level commands.
-Help and completion show only commands available to the current user. The table
-below includes maintainer commands for reference; see :doc:`configuration` for
-the login-ID list and default restrictions.
+PTK separates everyday work, local self-service and project maintenance.
+Jobs and workflows are both direct commands: ``ptk build`` and ``ptk verify``.
+Use ``ptk maintainer NAME`` for jobs and workflows declared with
+``audience: maintainer``. If a job and workflow share a name, choose explicitly
+with ``run NAME`` or ``workflow run NAME`` within the same namespace.
 
-Help shows separate boxes for Options, Jobs, Workflows and Commands, in that
-order, omitting empty groups. At a VMR root, Repositories replaces Jobs.
+Help shows Jobs, Workflows, everyday Commands, Self-service and Maintenance in
+that order. At a VMR root, Repositories replaces Jobs. Maintenance is visible
+only to maintainers listed by the owning project or workspace. Group help and
+Tab completion follow the same permissions and ordering.
 
 .. list-table::
    :header-rows: 1
-   :widths: 40 60
+   :widths: 45 55
 
    * - Command
      - Purpose
-   * - ``ptk setup init [DIRECTORY]``
-     - Initialize missing VMR configs, or create one project at DIRECTORY
-   * - ``ptk setup completion powershell|bash|zsh|fish``
-     - Generate shell Tab completion, even outside a PTK project
-   * - ``ptk setup completion install``
-     - Persist completion for this user's Bash/Git Bash and detected PowerShell editions
-   * - ``ptk setup config show|validate|schema``
-     - Inspect, validate and export project configuration
-   * - ``ptk setup configs sync|check``
-     - Generate and verify shared tool configurations
-   * - ``ptk pre-commit run|check|install|uninstall|status|validate``
-     - Run repository checks and manage local Git hooks
-   * - ``ptk setup install``
-     - Check tools and install missing or outdated versions
-   * - ``ptk setup creds setup|set|list|test|remove``
-     - Configure and manage credential providers
-   * - ``ptk setup self``
-     - Set up project configs and hooks; optionally tools
-   * - ``ptk setup doctor``
-     - Diagnose the local installation and project
-   * - ``ptk setup vscode tasks``
-     - Generate editor tasks
-   * - ``ptk setup vscode`` / ``ptk setup vscode skills [--check]``
-     - Set up tasks and offline skills/docs, or manage the skills alone
-   * - ``ptk variant list|show|explain|check``
-     - Inspect the product line
-   * - ``ptk report open|export``
-     - View and regenerate reports
-   * - ``ptk workflow list|show|dry-run|run|report``
-     - Inspect or execute local workflows, or open their latest report (execution is disabled on CX)
-   * - ``ptk artifacts destination --job JOB``
-     - Resolve Artifactory URL/repository/path for an external uploader; see :doc:`artifacts`
-   * - ``ptk JOB`` / ``ptk run JOB``
-     - Execute project jobs
-   * - ``ptk dry-run JOB``
-     - Preview execution
+   * - ``ptk init [DIRECTORY]``
+     - Create project configuration, or initialize missing VMR members; no existing project or maintainer role is required
+   * - ``ptk NAME [--dry-run]``
+     - Run or preview a project job or workflow
+   * - ``ptk variant list|show|explain``
+     - Inspect the product line and explain resolved feature values
+   * - ``ptk validate [--variants] [--versions] [--generated]``
+     - Validate PTK configuration; optionally check concrete variants, version sources or generated shared configuration
+   * - ``ptk report open JOB`` / ``ptk report open --workflow NAME``
+     - Open the latest saved job or workflow report
+   * - ``ptk report export JOB``
+     - Regenerate a job report from recorded results
+   * - ``ptk pre-commit run [--all-files]`` / ``ptk pre-commit validate``
+     - Run repository checks or validate the pre-commit configuration
+   * - ``ptk clean-all``
+     - Remove project outputs, with confirmation
+   * - ``ptk self-service tools``
+     - Install missing or outdated tools; optionally select ``--job JOB`` or preview with ``--dry-run``
+   * - ``ptk self-service creds setup|set|list|test|remove``
+     - Manage personal credential providers and stored values
+   * - ``ptk self-service completion install|powershell|bash|zsh|fish``
+     - Persist or generate shell completion, even outside a project
+   * - ``ptk self-service extension``
+     - Install or export the bundled VS Code extension, even outside a project
+   * - ``ptk self-service doctor``
+     - Diagnose the local environment and project
+   * - ``ptk self-service hooks install|uninstall|status``
+     - Manage this repository's local Git hooks
+   * - ``ptk maintainer config show|schema``
+     - Inspect effective configuration and sources, or export its JSON schema
+   * - ``ptk maintainer sync configs|tasks|skills [--check]``
+     - Regenerate one explicitly selected integration, or check it without writing
+   * - ``ptk maintainer version show|generate``
+     - Inspect discovered versions or generate a version snapshot
+   * - ``ptk maintainer artifacts destination --job JOB``
+     - Resolve an artifact destination for external upload automation
+   * - ``ptk maintainer NAME [--dry-run]``
+     - Run or preview a maintainer job or workflow
 
-Put global options before the group, and installation options after ``install``::
+``self-service`` and ``maintainer`` without a subcommand show help without
+changing files. ``maintainer sync`` requires a target; it never generates
+unrequested integrations. Config names may follow ``sync configs``;
+``--diff`` previews shared configuration changes. Tasks accept ``--command``,
+``--users-only`` and ``--output``. Skills and tasks both support ``--check``.
 
-   uv run ptk -C examples/quickstart/.main.ptk.yml setup config validate
-   uv run ptk -C examples/quickstart/.main.ptk.yml setup install --job build --dry-run
-   uv run ptk -C examples/quickstart/.main.ptk.yml setup creds list
+``validate`` is always available. With no project it reports
+"No PTK project found" and suggests ``ptk init``. Ordinary validation only
+loads local configuration. ``--variants --strict`` treats variant warnings as
+errors; ``--versions`` opts into version discovery and accepts ``--job`` for
+explicit version dependencies. ``--generated`` checks shared configuration
+without writing and is available to CI users without maintenance permissions.
 
-The ``ptk init`` alias also remains available.
+Global options precede commands and repository aliases::
 
-The former top-level ``config``, ``configs``, ``creds``, ``self-setup``, ``doctor``
-and ``vscode`` commands remain callable aliases, hidden from help and completion.
-Legacy ``ptk setup --job JOB --dry-run`` also remains supported. Bare
-``ptk setup`` now shows help; use ``ptk setup install`` to install all configured
-tools. Do not combine legacy installation options with a setup subcommand.
+   ptk -V debug build --dry-run
+   ptk -V debug verify --dry-run
+   ptk firmware maintainer publish --dry-run
+   ptk self-service tools --job build --dry-run
+   ptk maintainer sync configs --check
+
+There are no legacy command aliases. The previous ``setup`` group, standalone
+``dry-run``, ``self-setup``, and top-level configuration/tooling aliases have
+been removed. Previews use ``--dry-run``; the flag also works with generic
+``run NAME --param KEY=VALUE`` and explicit ``workflow run NAME``.
+
+``run`` remains a supported generic job interface for scripts, and
+``describe --json --configuration`` provides the versioned extension interface.
+Both are hidden from normal help and completion. The inventory supplies the
+exact job/workflow command paths, including the maintainer namespace, so the
+extension does not infer command routing. Update PTK and its bundled extension
+together when upgrading this command interface.
 
 Terminal Tab completion
 -----------------------
@@ -75,7 +98,7 @@ environment. Completion is a shell feature: both installers persist it for
 Bash/Git Bash and every detected PowerShell edition. For an existing installation,
 install or repair all registrations with::
 
-   ptk setup completion install
+   ptk self-service completion install
 
 This locates the shared launcher using ``uv tool dir --bin`` rather than an
 activated venv's PTK. ``--executable PATH`` explicitly selects another shared
@@ -103,7 +126,7 @@ session. If you launch the installer in a separate process with ``powershell
 
 To target just one PowerShell profile instead of all shells::
 
-   ptk setup completion powershell --double-tab --install $PROFILE.CurrentUserAllHosts
+   ptk self-service completion powershell --double-tab --install $PROFILE.CurrentUserAllHosts
 
 This updates one marked PTK block, preserves the rest of the profile and its
 encoding, and keeps a ``.ptk.bak`` backup of an existing profile before the first
@@ -115,7 +138,7 @@ detected editions.
 
 Open a new terminal, or activate completion immediately in the current shell::
 
-   ptk setup completion powershell --double-tab | Out-String | Invoke-Expression
+   ptk self-service completion powershell --double-tab | Out-String | Invoke-Expression
 
 ``--double-tab`` uses PSReadLine's ``Complete`` binding: Tab completes the unique
 prefix; another Tab lists the remaining matches. This changes Tab for **all
@@ -128,23 +151,23 @@ not change that policy. Terminals started with ``-NoProfile`` do not load it.
 
 To remove permanent completion, remove only the managed PTK block with::
 
-   ptk setup completion powershell --uninstall $PROFILE.CurrentUserAllHosts
+   ptk self-service completion powershell --uninstall $PROFILE.CurrentUserAllHosts
 
 Then open a new terminal. Removal does not reset bindings already active in the
 current session or remove activation lines you previously added by hand.
 
 For Bash (4.4 or later), enable completion with::
 
-   eval "$(ptk setup completion bash)"
+   eval "$(ptk self-service completion bash)"
 
-Use ``ptk setup completion install`` for future Bash terminals. Bash normally
+Use ``ptk self-service completion install`` for future Bash terminals. Bash normally
 lists multiple matches on the second Tab. For Zsh, after your usual ``compinit`` initialization::
 
-   eval "$(ptk setup completion zsh)"
+   eval "$(ptk self-service completion zsh)"
 
 For Fish::
 
-   ptk setup completion fish | source
+   ptk self-service completion fish | source
 
 You can save a generated script with ``--output PATH`` and source that file from
 your shell profile instead. Its directory must already exist. Zsh and Fish use
@@ -167,7 +190,7 @@ Examples (``<Tab>`` means press the key)::
 Job names also complete after ``run``, report commands and ``--job`` options.
 VMR completion includes repository aliases and repository-qualified workflows.
 Suggestions respect command visibility and the current project configuration;
-hidden aliases and maintainer-only commands remain hidden from ordinary users.
+integration commands and the maintainer namespace remain hidden from ordinary users.
 Type ``-`` to request option names. Choice and path parameters use native shell
 completion; free-text and secret values are not guessed.
 
@@ -185,15 +208,15 @@ and, in a VMR, before the repository alias::
 
    ptk -V debug build
    ptk -V debug run build
-   ptk -V debug dry-run build
+   ptk -V debug build --dry-run
    ptk -V debug firmware build
    ptk -V debug variant show
    ptk -V debug report open build
 
 It selects the variant for jobs, version discovery/generation, report commands,
 artifact destinations and ``variant show`` when NAME is omitted. An explicit
-NAME on ``variant show`` takes precedence. It is irrelevant to setup/config/help/pre-commit,
-variant list/check/explain (which have their own explicit selection), describe,
+NAME on ``variant show`` takes precedence. It is irrelevant to self-service/config/help/pre-commit,
+variant list/explain (which have their own explicit selection), describe,
 and workflow list/show. Workflow execution selects the owner variant and resolves
 other repositories through its ``repo_variants`` mappings.
 The option is no longer accepted after a job or subcommand.
@@ -204,7 +227,7 @@ users. In a VMR, a repository-qualified command checks that member's maintainer
 list; workspace commands check the root list. Member operations also enforce
 their own permissions. The default mode remains automatically detected.
 
-``variant list``, ``show``, ``explain`` and ``check`` are read-only. Edit the YAML
+``variant list``, ``show`` and ``explain`` are read-only. Edit the YAML
 configuration directly to change the product line or configured default.
 Persistent variant editing commands and the desktop editor have been removed.
 
@@ -224,13 +247,13 @@ There is no implicit operation across all repositories.
      - Behavior
    * - ``ptk pre-commit run [HOOK]``
      - Run checks on staged files; optionally select one hook ID
-   * - ``ptk pre-commit check [HOOK]``
+   * - ``ptk pre-commit run --all-files [HOOK]``
      - Run checks on all tracked files, equivalent to ``run --all-files``
-   * - ``ptk pre-commit install``
+   * - ``ptk self-service hooks install``
      - Install or repair every configured Git hook type
-   * - ``ptk pre-commit uninstall``
+   * - ``ptk self-service hooks uninstall``
      - Remove pre-commit scripts and restore their saved legacy hooks
-   * - ``ptk pre-commit status``
+   * - ``ptk self-service hooks status``
      - Inspect installation without changing anything; exit 1 when missing/unusable
    * - ``ptk pre-commit validate``
      - Validate the configuration with pre-commit's schema without running checks
@@ -238,19 +261,19 @@ There is no implicit operation across all repositories.
 Examples::
 
    ptk pre-commit run
-   ptk pre-commit check --show-diff-on-failure
+   ptk pre-commit run --all-files --show-diff-on-failure
    ptk pre-commit run ruff-check --all-files
    ptk pre-commit run --file src/main.py --file "tests/example test.py"
    ptk pre-commit run --from-ref origin/main --to-ref HEAD
-   ptk pre-commit check --hook-stage manual --verbose
-   ptk firmware pre-commit status
+   ptk pre-commit run --all-files --hook-stage manual --verbose
+   ptk firmware self-service hooks status
 
 ``--file`` is repeatable; paths are relative to the repository root and must stay
 inside it. File selection, ``--all-files`` and a ref pair are mutually exclusive;
 ``--from-ref`` and ``--to-ref`` must be supplied together. ``--hook-stage`` supports
 ``pre-commit``, ``pre-push`` and ``manual``. Hook output is streamed, and failed
 checks retain pre-commit's nonzero exit code. Hooks may format or otherwise modify
-files; ``check`` is not a dry run.
+files; ``run --all-files`` is not a dry run.
 
 Explicit commands honor ``configs.pre-commit.output`` even when automatic
 installation is disabled. Without an entry, they use ``.pre-commit-config.yaml``.
@@ -263,8 +286,8 @@ If ``configs.pre-commit.enabled`` is true, the next local job installs hooks aga
 
 These commands do not regenerate configuration or change hook revisions.
 Maintainers change the owning project configuration file and run
-``ptk setup configs sync pre-commit``; PTK upgrades supply newer base revisions.
-``ptk setup configs check pre-commit`` checks whether the generated file is current.
+``ptk maintainer sync configs pre-commit``; PTK upgrades supply newer base revisions.
+``ptk maintainer sync configs --check pre-commit`` checks whether the generated file is current.
 Use ``command_audience: {pre-commit: maintainer}`` to restrict the whole group.
 The VS Code extension discovers these built-ins automatically after updating PTK
 and refreshing projects.
@@ -276,12 +299,12 @@ Variant matrices
 ``ptk -V small,large build`` selects a subset, deduplicating aliases. All selections
 are prepared before the first run; each receives its own logs and report. Failures
 produce an overall nonzero exit code; cancellation stops the remaining selection.
-The same selection works with ``dry-run``.
+The same selection works with ``--dry-run``.
 
-``--feature SIZE=4`` (legacy ``-bo SIZE=4``) overrides a feature for this invocation.
-Global ``--set vh.SIZE=4`` is also supported. ``-mp jobs=4`` is the compatibility
-spelling for declared job parameters. Generated typed options take precedence
-when both spellings supply a value. These overrides do not edit configuration files.
+``--feature SIZE=4`` overrides a feature for this invocation. Global
+``--set vh.SIZE=4`` is also supported. Use generated typed job options or
+``ptk run JOB --param NAME=VALUE`` for parameter overrides. These overrides do
+not edit configuration files. The old ``-bo`` and ``-mp`` spellings are removed.
 
 Virtual monorepositories (VMR)
 ------------------------------
@@ -327,7 +350,7 @@ Commands are grouped under the configured repository alias::
    ptk --help
    ptk firmware --help
    ptk firmware build
-   ptk firmware setup install
+   ptk firmware self-service tools
    ptk bootloader variant list
    ptk --set vars.mode=debug firmware build
 
@@ -344,11 +367,11 @@ Shared VMR commands
 -------------------
 
 Alongside repository aliases, the VMR root exposes ``repos``, ``help``,
-``setup init``, ``setup config show/validate/schema``, ``setup doctor``, ``setup creds``,
-``variant list/check`` and ``report list/summary``. ``report list --history``
+``init``, ``validate``, ``maintainer config show/schema``, ``self-service doctor``, ``self-service creds``,
+``variant list`` and ``report list/summary``. ``report list --history``
 includes retained historical runs. Configuration and variant output is labelled
 by repository; projects without variants are skipped. Doctor checks the host
-once and then each repository. There is no root ``setup install``.
+once and then each repository. There is no root ``self-service tools``.
 
 Credentials with identical definitions and names are combined. Different
 definitions use ``ALIAS/NAME`` at the workspace level. Provisioning a shared
@@ -365,7 +388,7 @@ share a scope; conflicting definitions cannot overwrite each other in the vault
 or keyring. Moving a workspace or changing a definition changes its automatic
 scope: provision again or configure a stable namespace. Explicit env and gopass
 mappings are honored and may intentionally share external storage. Default env
-variable names are shown by ``setup creds list``.
+variable names are shown by ``self-service creds list``.
 
 Listing only reads environment values and provider availability. Other stores
 are labelled as unverified; listing never retrieves values or unlocks a vault.
@@ -380,11 +403,11 @@ by a local lock; different jobs or repositories may run concurrently.
 Version commands
 ----------------
 
-``ptk version show/check/generate`` discovers versions and optionally writes an
+``ptk maintainer version show/generate`` discovers versions and optionally writes an
 ignored snapshot. There are no bump/set/tag commands. In VMR mode use
-``ptk ALIAS version ...``. See :doc:`versioning` for sources and generators.
+``ptk ALIAS maintainer version ...``. See :doc:`versioning` for sources and generators.
 
-``ptk setup init`` requires a configuration directory supplied by the user.
+``ptk init`` requires a configuration directory supplied by the user.
 Enter it at the terminal prompt or pass ``--config-dir PATH``; there is no
 default. Scripts and ``--yes`` require the option. The path is relative to each
 repository root. Root metadata stays minimal; initial
@@ -398,10 +421,10 @@ a git-repo member's subdirectory. Existing entry files are skipped, even when
 their configuration is invalid, and the workspace root is not scaffolded.
 Running the command again skips the newly configured repositories::
 
-   ptk setup init --config-dir config/ptk --dry-run
-   ptk setup init --config-dir config/ptk --yes
+   ptk init --config-dir config/ptk --dry-run
+   ptk init --config-dir config/ptk --yes
    ptk repos
-   ptk firmware setup config validate
+   ptk firmware validate
 
 The configuration directory is prompted once and applied relative to each new
 repository root: ``config/ptk`` becomes ``<repo>/config/ptk`` in every new member,
@@ -425,7 +448,7 @@ Existing ``.gitignore`` content is preserved, with only missing rules appended.
 
 An explicit DIRECTORY always selects one project, even from inside a VMR::
 
-   ptk setup init path/to/new-repository --name firmware --config-dir config/ptk --yes
+   ptk init path/to/new-repository --name firmware --config-dir config/ptk --yes
 
 Outside VMR mode, omitting DIRECTORY continues to initialize the current directory.
 
@@ -438,8 +461,8 @@ Global options precede the command (and a VMR repository alias)::
    ptk -V debug,release -c build
    ptk -V debug --re-run build
    ptk -V debug -rr firmware workflow run verify
-   ptk -V debug --clean dry-run build
-   ptk -V debug --re-run workflow dry-run verify
+   ptk -V debug --clean build --dry-run
+   ptk -V debug --re-run workflow run --dry-run verify
 
 ``--clean`` / ``-c`` deletes the selected jobs' folders in all four output
 categories (binaries, builds, logs and reports), then stops. ``--re-run`` / ``-rr``

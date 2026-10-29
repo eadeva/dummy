@@ -49,11 +49,20 @@ def setup(tmp_path):
     return file
 
 
-def test_all_variants_and_override_aliases(tmp_path):
+def test_all_variants_and_typed_overrides(tmp_path):
     file = setup(tmp_path)
     result = CliRunner().invoke(
         cli,
-        ["-C", str(file), "go", "--all-variants", "-bo", "SIZE=3", "-mp", "who=team"],
+        [
+            "-C",
+            str(file),
+            "go",
+            "--all-variants",
+            "--feature",
+            "SIZE=3",
+            "--who",
+            "team",
+        ],
     )
     assert result.exit_code == 0, result.output
     summaries = [
@@ -71,7 +80,7 @@ def test_variant_selection_preflight_and_dry_run(tmp_path):
     assert result.exit_code == 2
     assert not (tmp_path / "_logs").exists()
     preview = runner.invoke(
-        cli, ["-C", str(file), "-V", "small,large", "dry-run", "go"]
+        cli, ["-C", str(file), "-V", "small,large", "go", "--dry-run"]
     )
     assert preview.exit_code == 0, preview.output
     assert not (tmp_path / "_logs").exists()

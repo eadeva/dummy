@@ -2,12 +2,11 @@
 
 Thin layer: parse options, call use cases, present results. The configured
 jobs are generated commands (see :mod:`.jobs`); ``ptk run JOB`` is
-the generic form and ``ptk dry-run JOB`` previews either.
+the generic form; ``--dry-run`` previews jobs and workflows.
 """
 
 from __future__ import annotations
 
-import copy
 import json
 import sys
 from contextlib import suppress
@@ -20,13 +19,19 @@ from rich.markup import escape
 from rich.table import Table
 
 from ... import __version__
-from ...domain.errors import ConfigError, PtkError, RunNotFoundError
-from .access import AccessGroup, MaintainerOption, can_switch_ci, require
+from ...domain.errors import (
+    ConfigError,
+    ProjectNotFoundError,
+    PtkError,
+    RunNotFoundError,
+)
+from .access import AccessGroup, MaintainerOption, can_switch_ci
 from .artifacts import artifacts_group
 from .completion import completion_command
 from .completion import jobs as complete_jobs
 from .completion import parameters as complete_parameters
 from .completion import variants as complete_variants
+from .completion import workflows as complete_workflows
 from .editor import describe
 from .extension import extension_command
 from .hooks import pre_commit_group
@@ -99,7 +104,7 @@ click.rich_click.SHOW_ARGUMENTS = True
     "-V",
     "--variant",
     shell_complete=complete_variants,
-    help="Variant name/alias (comma-separated for jobs). Used by jobs, variant show, versions, reports and artifact destinations. Workflows map the owner variant to repository variants. Ignored by setup, config, pre-commit and help.",
+    help="Variant name/alias (comma-separated for jobs). Used by jobs, variant show, versions, reports and artifact destinations. Workflows map the owner variant to repository variants. Ignored by self-service, config inspection, pre-commit, init and help.",
 )
 @click.option(
     "--clean",
@@ -146,7 +151,11 @@ def cli(
 
     if mode(state) and ctx.invoked_subcommand is not None:
         name = ctx.invoked_subcommand
-        if name in ctx.command.commands and name not in {"run", "dry-run", "workflow"}:
+        if name in ctx.command.commands and name not in {
+            "run",
+            "workflow",
+            "maintainer",
+        }:
             raise PtkError("--clean and --re-run apply only to jobs and workflows")
     if ctx.invoked_subcommand is not None:
         return
@@ -180,21 +189,65 @@ cli.add_command(pre_commit_group)
 # --------------------------------------------------------------------------- config
 
 
-@cli.group("config", cls=AccessGroup)
+@click.group("config", cls=AccessGroup)
 def config_group() -> None:
-    """Inspect and validate the configuration."""
+    """Inspect effective configuration and export its schema."""
 
 
-@config_group.command("validate")
+@cli.command("validate")
+@click.option(
+    "--variants",
+    is_flag=True,
+    help="Also validate concrete variants (all, or selected by -V).",
+)
+@click.option(
+    "--generated",
+    is_flag=True,
+    help="Check generated shared configurations without writing.",
+)
+@click.option(
+    "--versions", is_flag=True, help="Also resolve and validate version sources."
+)
+@click.option(
+    "--strict",
+    is_flag=True,
+    help="Treat variant warnings as errors (requires --variants).",
+)
+@click.option(
+    "--job",
+    shell_complete=complete_jobs,
+    help="Version dependency context (requires --versions).",
+)
 @click.pass_context
 @guarded
-def config_validate(ctx: click.Context) -> None:
-    """Validate every discovered configuration file in the PTK project."""
-    project = _state(ctx).project()
+def config_validate(ctx, variants, versions, generated, strict, job):
+    """Validate PTK configuration; broader checks are explicitly opt-in."""
+    if strict and not variants:
+        raise click.UsageError("--strict requires --variants")
+    if job and not versions:
+        raise click.UsageError("--job requires --versions")
+    state = _state(ctx)
+    try:
+        project = state.project()
+    except ProjectNotFoundError:
+        raise PtkError(
+            "No PTK project found (.main.ptk.yml). Run 'ptk init' to create one."
+        ) from None
     console.print(
         f"[green]configuration is valid[/] ({len(project.files)} file(s), "
         f"layers: {', '.join(project.layers)})"
     )
+    if variants and project.config.variants is not None:
+        check_variants(
+            ctx, tuple(state.variant.split(",")) if state.variant else (), strict
+        )
+    if versions:
+        from .versioning import discover
+
+        discover(ctx, state.variant, job)
+        click.echo("Version sources and resolved names are valid.")
+    if generated:
+        ctx.invoke(configs_check, names=())
 
 
 @config_group.command("show")
@@ -364,12 +417,7 @@ def variant_explain(ctx: click.Context, name: str, feature: str) -> None:
     click.echo("\n".join(service.explain(name, feature)))
 
 
-@variant_group.command("check")
-@click.argument("names", nargs=-1, shell_complete=complete_variants)
-@click.option("--strict", is_flag=True, help="Treat warnings as errors.")
-@click.pass_context
-@guarded
-def variant_check(ctx: click.Context, names: tuple[str, ...], strict: bool) -> None:
+def check_variants(ctx: click.Context, names: tuple[str, ...], strict: bool) -> None:
     """Validate variants (default: all buildable). Exit code 1 on errors."""
     service = _state(ctx).app.variants(_state(ctx).project())
     results = service.check(list(names) or None)
@@ -381,13 +429,14 @@ def variant_check(ctx: click.Context, names: tuple[str, ...], strict: bool) -> N
         console.print(f"{name:<30} {status}")
         for issue in resolved.issues:
             console.print(f"    {issue}", highlight=False)
-    sys.exit(1 if failed else 0)
+    if failed:
+        ctx.exit(1)
 
 
 # --------------------------------------------------------------------------- run
 
 
-@cli.command("run")
+@cli.command("run", hidden=True)
 @click.argument("job", required=False, shell_complete=complete_jobs)
 @click.option(
     "-p",
@@ -414,48 +463,24 @@ def run_command(
     quiet = options.pop("quiet", False)
     setup = options.pop("setup", False)
     extra = options.pop("extra", ())
+    show_env = options.pop("show_env", False)
     if job is not None and job.startswith("-"):
         # "ptk run -- -k x": click put the first pass-through word into JOB
         extra, job = (job, *extra), None
     request = build_request(
         ctx, job, params=pairs(params, "--param"), extra=extra, **options
     )
-    execute(ctx, request, quiet=quiet, setup=setup)
+    execute(ctx, request, quiet=quiet, setup=setup, show_env=show_env)
 
 
 # the same options as the generated job commands (incl. the trailing [-- ARGS])
-run_command.params.extend(common_options(dry_run=False))
-
-
-@cli.group("dry-run", cls=ProjectGroup, dry_run=True, invoke_without_command=True)
-@click.pass_context
-@guarded
-def dry_run_group(ctx: click.Context, **options: Any) -> None:
-    """Show what a job would do, without running anything.
-
-    [bold]ptk dry-run JOB [OPTIONS][/] takes exactly the options of
-    [bold]ptk JOB[/] and prints the steps with conditions evaluated, the final
-    command of every step, Python runtimes, the step environment (secrets masked)
-    and where every parameter value comes from. Without JOB: the default job.
-    """
-    if ctx.invoked_subcommand is None:
-        show_env = options.pop("show_env", False)
-        options.pop("extra", None)
-        execute(
-            ctx, build_request(ctx, None, dry_run=True, **options), show_env=show_env
-        )
-
-
-# without JOB, "ptk -V x dry-run" previews the default job with these options
-dry_run_group.params.extend(
-    p for p in common_options(dry_run=True) if p.name not in ("extra", "args_for")
-)
+run_command.params.extend(common_options())
 
 
 # --------------------------------------------------------------------------- creds
 
 
-@cli.group("creds", cls=AccessGroup)
+@click.group("creds", cls=AccessGroup)
 def creds_group() -> None:
     """Credentials: env -> keyring -> gopass -> vault -> prompt. Values are never shown."""
 
@@ -467,7 +492,7 @@ def _read_secret(ctx: click.Context, question: str) -> str:
     if not sys.stdin.isatty():
         return sys.stdin.read().rstrip("\r\n")  # e.g. piped from a secret manager
     raise PtkError(
-        "no terminal: pipe the value in, e.g. 'gopass show -o x | ptk setup creds set NAME'"
+        "no terminal: pipe the value in, e.g. 'gopass show -o x | ptk self-service creds set NAME'"
     )
 
 
@@ -493,7 +518,9 @@ def creds_list(ctx: click.Context, name: str | None) -> None:
         table.add_row(row.key.ref, supplier, row.key.env_var, escape(details))
     console.print(table)
     if missing:
-        console.print("[dim]store a value with: ptk setup creds set NAME [FIELD][/]")
+        console.print(
+            "[dim]store a value with: ptk self-service creds set NAME [FIELD][/]"
+        )
 
 
 @creds_group.command("set")
@@ -570,10 +597,10 @@ def creds_setup(ctx: click.Context, create_vault: bool) -> None:
         console.print(f"[green]vault created[/] at {escape(str(vault.path))}")
     table = Table("provider", "status", "notes", box=None, pad_edge=False)
     hints = {
-        "env": "CI: set the variables shown by 'ptk setup creds list'",
+        "env": "CI: set the variables shown by 'ptk self-service creds list'",
         "keyring": "OS keyring: Windows Credential Manager, macOS Keychain, Linux desktop",
         "gopass": "recommended for teams: gopass setup --crypto age (no gpg needed)",
-        "vault": "built-in encrypted file: ptk setup creds setup --vault",
+        "vault": "built-in encrypted file: ptk self-service creds setup --vault",
         "prompt": "asks in the terminal, never stored",
     }
     for name, provider in providers.items():
@@ -586,7 +613,7 @@ def creds_setup(ctx: click.Context, create_vault: bool) -> None:
 # --------------------------------------------------------------------------- setup
 
 
-@click.command("install")
+@click.command("tools")
 @click.option(
     "-a",
     "--job",
@@ -643,7 +670,7 @@ def _print_checks(checks: list[Any]) -> bool:
     return not any(c.status == "problem" for c in checks)
 
 
-@cli.command("doctor")
+@click.command("doctor")
 @click.pass_context
 def doctor_command(ctx: click.Context) -> None:
     """Diagnose this machine and project: uv, git, configuration, tools, credentials, configs."""
@@ -660,41 +687,6 @@ def doctor_command(ctx: click.Context) -> None:
     sys.exit(0 if _print_checks(checks) else 1)
 
 
-@cli.command("self-setup")
-@click.option(
-    "--tools/--no-tools",
-    default=False,
-    show_default=True,
-    help="Also install the configured tools.",
-)
-@click.option(
-    "--allow-system", is_flag=True, help="Allow apt/dnf for tools (needs sudo rights)."
-)
-@click.pass_context
-@guarded
-def self_setup_command(ctx: click.Context, tools: bool, allow_system: bool) -> None:
-    """Get this machine ready: check uv and git, sync shared configs, install the
-    pre-commit hooks, report missing credentials (and install tools with --tools)."""
-    state = _state(ctx)
-    project = state.project()
-    checks = state.app.self_setup.run(
-        project,
-        state.app.credentials(project),
-        install_tools=tools,
-        allow_system=allow_system,
-        out=lambda line: console.print(f"  [dim]{escape(line)}[/]", highlight=False),
-    )
-    sys.exit(0 if _print_checks(checks) else 1)
-
-
-# --------------------------------------------------------------------------- configs
-
-
-@cli.group("configs", cls=AccessGroup)
-def configs_group() -> None:
-    """Shared base configs (pre-commit, ruff, clang-format, clang-tidy, clangd) + overlays."""
-
-
 def _show_config_results(items: list[Any], root: Path) -> None:
     for item in items:
         colour = {"up to date": "green", "new": "cyan"}.get(item.status, "yellow")
@@ -709,7 +701,7 @@ def _show_config_results(items: list[Any], root: Path) -> None:
             console.print(f"            [yellow]{escape(note)}[/]", highlight=False)
 
 
-@configs_group.command("sync")
+@click.command("configs-sync")
 @click.argument("names", nargs=-1)
 @click.option(
     "--diff", is_flag=True, help="Only show what would change (unified diff)."
@@ -737,7 +729,7 @@ def configs_sync(ctx: click.Context, names: tuple[str, ...], diff: bool) -> None
     _show_config_results(items, project.root)
 
 
-@configs_group.command("check")
+@click.command("configs-check")
 @click.argument("names", nargs=-1)
 @click.pass_context
 @guarded
@@ -747,7 +739,7 @@ def configs_check(ctx: click.Context, names: tuple[str, ...]) -> None:
     items = _state(ctx).app.shared_configs.plan(project, list(names) or None)
     _show_config_results(items, project.root)
     if any(item.status != "up to date" for item in items):
-        console.print("run 'ptk setup configs sync' and commit the result")
+        console.print("run 'ptk maintainer sync configs' and commit the result")
         sys.exit(1)
 
 
@@ -809,6 +801,11 @@ def report_export(
 
 
 @report_group.command("open")
+@click.option(
+    "--workflow",
+    shell_complete=complete_workflows,
+    help="Open a workflow report instead of a job report.",
+)
 @click.argument("job", required=False, shell_complete=complete_jobs)
 @click.option(
     "--if-exists", is_flag=True, help="Print an informational message if no run exists."
@@ -819,9 +816,19 @@ def report_export(
 @click.pass_context
 @guarded
 def report_open(
-    ctx: click.Context, job: str | None, run_id: str | None, if_exists: bool = False
+    ctx: click.Context,
+    job: str | None,
+    run_id: str | None,
+    if_exists: bool = False,
+    workflow: str | None = None,
 ) -> None:
     """Open the HTML report of the latest (or a given) run of JOB in the browser."""
+    if workflow is not None:
+        if job or run_id:
+            raise click.UsageError("--workflow cannot be combined with JOB or --run")
+        from .workflows import open_workflow_report
+
+        return open_workflow_report(ctx, workflow, if_exists)
     project, name = _report_target(ctx, job)
     service = _state(ctx).app.reports
     try:
@@ -856,21 +863,7 @@ def report_open(
 # --------------------------------------------------------------------------- vscode
 
 
-@cli.group("vscode", cls=AccessGroup, invoke_without_command=True)
-@click.pass_context
-@guarded
-def vscode_group(ctx: click.Context) -> None:
-    """Set up tasks and offline project skills; subcommands update either part."""
-    if ctx.invoked_subcommand is None:
-        # Preflight skills before changing tasks if managed files conflict.
-        _state(ctx).app.setup_authoring.execute(_state(ctx).project().root, check=True)
-        ctx.invoke(
-            vscode_tasks, check=False, command="ptk", users_only=False, output=None
-        )
-        ctx.invoke(vscode_skills, check=False)
-
-
-@vscode_group.command("skills")
+@click.command("skills")
 @click.option(
     "--check",
     is_flag=True,
@@ -895,7 +888,7 @@ def vscode_skills(ctx: click.Context, check: bool) -> None:
         )
 
 
-@vscode_group.command("tasks")
+@click.command("tasks")
 @click.option(
     "--check",
     is_flag=True,
@@ -957,7 +950,7 @@ def vscode_tasks(
             )
             return
         console.print(
-            f"[red]{escape(str(result.path))} is out of date[/] - run 'ptk setup vscode tasks'",
+            f"[red]{escape(str(result.path))} is out of date[/] - run 'ptk maintainer sync tasks'",
             highlight=False,
         )
         sys.exit(1)
@@ -1160,7 +1153,7 @@ def init_command(
                 members,
                 config_path=config_dir,
                 dry_run=dry_run,
-                reserved=WORKSPACE_COMMANDS | {"init"},
+                reserved=set(WORKSPACE_COMMANDS),
             )
             if pending
             else {}
@@ -1178,7 +1171,7 @@ def init_command(
         )
         if not dry_run and results:
             console.print(
-                "Next: run 'ptk repos', then 'ptk ALIAS setup config validate' and 'ptk ALIAS hello'."
+                "Next: run 'ptk repos', then 'ptk ALIAS validate' and 'ptk ALIAS hello'."
             )
         return
     result = state.app.init_project.execute(
@@ -1187,7 +1180,7 @@ def init_command(
     _show_init_result(target, result)
     if not dry_run:
         console.print(
-            "Next: change to the project directory, then run 'ptk setup config validate', 'ptk hello' and 'ptk build'."
+            "Next: change to the project directory, then run 'ptk validate', 'ptk hello' and 'ptk build'."
         )
 
 
@@ -1207,66 +1200,141 @@ def _show_init_result(target: Path, result: InitResult) -> None:
         )
 
 
+@click.command("sync")
+@click.argument("target", type=click.Choice(["configs", "tasks", "skills"]))
+@click.argument("names", nargs=-1)
+@click.option(
+    "--check",
+    is_flag=True,
+    help="Check generated files without writing; exit 1 if outdated.",
+)
+@click.option(
+    "--diff", is_flag=True, help="Preview shared configuration changes (configs only)."
+)
+@click.option(
+    "--command", default="ptk", help="PTK launcher for generated tasks (tasks only)."
+)
+@click.option(
+    "--users-only",
+    is_flag=True,
+    help="Exclude maintainer jobs and workflows from tasks.",
+)
+@click.option(
+    "-o",
+    "--output",
+    type=click.Path(path_type=Path, dir_okay=False),
+    help="Tasks destination (tasks only).",
+)
 @click.pass_context
-def _setup_dispatch(ctx: click.Context, **options: Any) -> None:
-    """Group configuration, installation and credential management."""
-    supplied = any(
-        ctx.get_parameter_source(name) == click.core.ParameterSource.COMMANDLINE
-        for name in options
+@guarded
+def sync_command(ctx, target, names, check, diff, command, users_only, output):
+    """Regenerate one explicitly selected kind of project integration."""
+    if names and target != "configs":
+        raise click.UsageError("NAMES apply only to configs")
+    if diff and (target != "configs" or check):
+        raise click.UsageError(
+            "--diff requires configs and cannot be combined with --check"
+        )
+    if target != "tasks" and (
+        users_only
+        or output
+        or ctx.get_parameter_source("command") == click.core.ParameterSource.COMMANDLINE
+    ):
+        raise click.UsageError(
+            "--command, --users-only and --output apply only to tasks"
+        )
+    root = ctx.find_root()
+    current = ctx
+    member = False
+    while current is not None:
+        member |= getattr(current.command, "repository_boundary", False)
+        current = current.parent
+    entries = root.meta.get("vmr_repositories") if not member else None
+    if entries is not None:
+        from .workflows import workspace_sync
+
+        return workspace_sync(
+            ctx,
+            entries,
+            target=target,
+            names=names,
+            check=check,
+            diff=diff,
+            command=command,
+            users_only=users_only,
+            output=output,
+        )
+    if target == "configs":
+        return (
+            ctx.invoke(configs_check, names=names)
+            if check
+            else ctx.invoke(configs_sync, names=names, diff=diff)
+        )
+    if target == "skills":
+        return ctx.invoke(vscode_skills, check=check)
+    return ctx.invoke(
+        vscode_tasks, check=check, command=command, users_only=users_only, output=output
     )
-    if ctx.invoked_subcommand is not None:
-        if supplied:
-            raise click.UsageError(
-                "Put installation options after 'setup install', "
-                "not before a setup subcommand.",
-                ctx,
-            )
-        return
-    if supplied:
-        # Compatibility: ptk setup --job A --dry-run.
-        require(ctx, "install")
-        ctx.invoke(setup_command, **options)
-    else:
+
+
+@click.group("self-service", cls=AccessGroup, invoke_without_command=True)
+@click.pass_context
+def self_service(ctx):
+    """Prepare and diagnose your local development environment."""
+    if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
 
 
-def _group_setup_commands() -> None:
-    setup = AccessGroup(
-        "setup",
-        callback=_setup_dispatch,
-        help="Configure the project, install tools and manage credentials.",
-        invoke_without_command=True,
-        params=list(setup_command.params),
-        epilog="Use 'ptk setup install' for tool installation. "
-        "Legacy 'ptk setup --job A' remains supported.",
+@click.group(
+    "maintainer", cls=ProjectGroup, audience="maintainer", invoke_without_command=True
+)
+@click.pass_context
+def maintainer_group(ctx):
+    """Maintain the project and run maintainer jobs and workflows."""
+    if ctx.invoked_subcommand is None:
+        click.echo(ctx.get_help())
+
+
+from .hooks import hooks_group
+
+for command in (
+    setup_command,
+    creds_group,
+    completion_command,
+    extension_command,
+    doctor_command,
+    hooks_group,
+):
+    self_service.add_command(command)
+for command in (
+    config_group,
+    sync_command,
+    version_group,
+    artifacts_group,
+    run_command,
+    workflow_group,
+):
+    maintainer_group.add_command(command)
+cli.add_command(init_command)
+cli.add_command(self_service)
+cli.add_command(maintainer_group)
+cli.commands = {
+    name: cli.commands[name]
+    for name in (
+        "workflow",
+        "variant",
+        "report",
+        "validate",
+        "pre-commit",
+        "clean-all",
+        "help",
+        "init",
+        "self-service",
+        "maintainer",
+        "run",
+        "describe",
     )
-    setup.add_command(setup_command, "install")
-    setup.add_command(completion_command)
-    setup.add_command(extension_command)
-    setup.add_command(init_command, "init")
-    alias = copy.copy(init_command)
-    alias.hidden = True
-    cli.add_command(alias, "init")
-    for old, new in (
-        ("config", "config"),
-        ("configs", "configs"),
-        ("creds", "creds"),
-        ("self-setup", "self"),
-        ("doctor", "doctor"),
-        ("vscode", "vscode"),
-    ):
-        command = cli.commands[old]
-        setup.add_command(command, new)
-        # Separate object: hiding the legacy alias must not hide the new command.
-        alias = copy.copy(command)
-        alias.hidden = True
-        cli.add_command(alias, old)
-    cli.add_command(setup)
-
-
-_group_setup_commands()
-cli.add_command(version_group)
-cli.add_command(artifacts_group)
+}
 
 
 def main() -> None:

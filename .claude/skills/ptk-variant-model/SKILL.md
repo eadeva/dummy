@@ -6,7 +6,7 @@ description: Add or change ptk components, features, inherited variants, aliases
 
 # ptk-variant-model
 
-1. Read [docs/configuration.rst](../../../docs/configuration.rst) and inspect the variant models in `ptk setup config schema`.
+1. Read [docs/configuration.rst](../../../docs/configuration.rst) and inspect the variant models in `ptk maintainer config schema`.
 
 2. Register component directories in `project.ptk.yml`. Put features, dependencies and local constraints in `component.variants.ptk.yml` beside the component code. Put the project default and global constraints in `project.variants.ptk.yml`, and each variant body in `variants/<name>.ptk.yml`.
 
@@ -18,7 +18,7 @@ description: Add or change ptk components, features, inherited variants, aliases
 
 5. Update conditions and substitutions when renaming a feature or variant.
 
-6. Run `ptk variant list`, `ptk variant check --strict`, and `ptk variant show NAME`.
+6. Run `ptk variant list`, `ptk validate --variants --strict`, and `ptk variant show NAME`.
 
 7. Explain surprising values with `ptk variant explain NAME FEATURE` before changing dependency rules.
 

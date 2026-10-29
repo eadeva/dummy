@@ -332,8 +332,8 @@ test("parameterized previews stay previews after task restoration", async t => {
   assert.deepEqual(restored.execution.args, original.execution.args);
   assert.equal(restored.definition.preview, true);
   assert.equal(restored.definition.params.output_path, "folder with spaces;$(untouched)");
-  assert.equal(restored.execution.args.includes("run"), false);
-  assert.equal(restored.execution.args.includes("dry-run"), true);
+  assert.equal(restored.execution.args.includes("run"), true);
+  assert.equal(restored.execution.args.includes("--dry-run"), true);
 });
 
 test("required parameter cancellation does not execute anything", async t => {
@@ -365,7 +365,7 @@ test("workflow and job name collisions dispatch explicitly and CI allows preview
   assert.equal(h.tasks.length, 0);
   assert.match(h.errors[0], /locally only/);
   await h.command("preview", h.target("workflow"));
-  assert.deepEqual(h.tasks[0].execution.args.slice(2), ["--variant", "small", "workflow", "dry-run", "build"]);
+  assert.deepEqual(h.tasks[0].execution.args.slice(2), ["--variant", "small", "workflow", "run", "build", "--dry-run"]);
   const restored = await h.api.taskProvider.resolveTask(h.tasks[0]);
   assert.deepEqual(restored.execution.args, h.tasks[0].execution.args);
   assert.equal((await h.api.taskProvider.provideTasks()).some(task => task.definition.kind === "workflow"), false);
@@ -411,11 +411,11 @@ test("report permissions and capability checks apply to palette commands", async
 test("workspace workflows use the workspace root without a member config", async t => {
   const doc = inventory();
   doc.mode = "workspace";
-  doc.workflows = [{ name: "all" }];
+  doc.workflows = [{ name: "all", command: ["workflow", "run", "all"] }];
   const h = harness(t, [doc]);
   await h.controller.ready();
   await h.command("preview", { kind: "workflow", name: "all", root: doc.root });
-  assert.deepEqual(h.tasks[0].execution.args, ["workflow", "dry-run", "all"]);
+  assert.deepEqual(h.tasks[0].execution.args, ["workflow", "run", "all", "--dry-run"]);
 });
 
 test("refreshes are serialized and intermediate requests are coalesced", async t => {
@@ -483,9 +483,9 @@ test("every task entry point uses the non-syncing uv launcher, including help an
   for (const target of core.builtinTargets({ ...h.target(), folder: h.api.workspace.workspaceFolders[0] }, inventory().projects[0].commands)) {
     await h.command("showHelp", target);
   }
-  await h.command("runBuiltin", { ...h.target("builtin"), name: "version check" });
+  await h.command("runBuiltin", { ...h.target("builtin"), name: "validate" });
   h.picks.push(() => []);
-  await h.command("runBuiltinWithParameters", { ...h.target("builtin"), name: "version check" });
+  await h.command("runBuiltinWithParameters", { ...h.target("builtin"), name: "validate" });
   for (const task of h.tasks) {
     assert.deepEqual(task.execution.args.slice(0, 3), ["run", "--no-sync", "ptk"]);
     assert.equal(task.execution.options.env, undefined); // Do not leak UV_NO_SYNC into job steps.
@@ -514,14 +514,14 @@ test("tree omits duplicate run and report commands in repositories and workspace
   const doc = inventory();
   doc.mode = "workspace";
   doc.commands = builtinCommands();
-  doc.workflows = [{ name: "all" }];
+  doc.workflows = [{ name: "all", command: ["workflow", "run", "all"] }];
   const h = harness(t, [doc]);
   await h.controller.ready();
   const root = h.controller.provider.getChildren()[0];
   const project = root.children.find(node => node.project);
   for (const owner of [root, project]) {
     const builtins = owner.children.find(node => node.label === "Built-in commands");
-    assert.deepEqual(builtins.children.map(node => node.label), ["CLI help", "help", "version", "workflow", "setup"]);
+    assert.deepEqual(builtins.children.map(node => node.label), ["CLI help", "help", "validate", "workflow", "self-service", "maintainer"]);
     assert.deepEqual(builtins.children.find(node => node.label === "workflow").children.map(node => node.label), ["list", "show"]);
   }
   for (const label of ["Jobs", "Workflows"]) {
@@ -530,7 +530,7 @@ test("tree omits duplicate run and report commands in repositories and workspace
   }
   assert.equal(root.children[0].children[0].contextValue, "workflow-report");
   // Removing the duplicate rows does not remove CLI operations or saved tasks.
-  await h.command("runBuiltin", { ...h.target("builtin"), name: "run" });
+  await h.command("runBuiltin", { ...h.target("builtin"), name: "workflow run" });
   assert.equal(h.tasks[0].execution.args.at(-1), "run");
 });
 
@@ -539,7 +539,7 @@ test("report actions target job variants and aggregate workflows without running
   doc.ci = true;
   doc.mode = "workspace";
   doc.commands = builtinCommands();
-  doc.workflows = [{ name: "all" }];
+  doc.workflows = [{ name: "all", command: ["workflow", "run", "all"] }];
   doc.projects[0].jobs[0].params[0].required = true;
   const h = harness(t, [doc]);
   await h.controller.ready();
@@ -550,15 +550,15 @@ test("report actions target job variants and aggregate workflows without running
   await h.command("openReport", h.target("workflow"));
   await h.command("openReport", { kind: "workflow", name: "all", root: doc.root });
   assert.deepEqual(h.tasks[0].execution.args.slice(2), ["--variant", "large", "report", "open", "--if-exists", "--", "build"]);
-  assert.deepEqual(h.tasks[1].execution.args.slice(2), ["workflow", "report", "--if-exists", "--", "build"]);
-  assert.deepEqual(h.tasks[2].execution.args, ["workflow", "report", "--if-exists", "--", "all"]);
+  assert.deepEqual(h.tasks[1].execution.args.slice(2), ["report", "open", "--if-exists", "--workflow", "build"]);
+  assert.deepEqual(h.tasks[2].execution.args, ["report", "open", "--if-exists", "--workflow", "all"]);
   for (const task of h.tasks) {
     assert.equal(task.definition.report, true);
     assert.deepEqual((await h.api.taskProvider.resolveTask(task)).execution.args, task.execution.args);
   }
   assert.deepEqual(h.errors, []);
   const stale = h.target("workflow");
-  doc.projects[0].commands.find(spec => spec.name === "workflow").children = [];
+  doc.projects[0].commands.find(spec => spec.name === "report").children = [];
   await h.controller.refresh();
   await h.command("openReport", stale);
   assert.equal(h.tasks.length, 3);
@@ -593,7 +593,7 @@ test("built-ins form a collapsible command tree with CLI help and credential act
   await h.controller.ready();
   const project = h.controller.provider.getChildren()[0].children[0];
   const builtins = project.children.find(node => node.label === "Built-in commands");
-  const setup = builtins.children.find(node => node.label === "setup");
+  const setup = builtins.children.find(node => node.label === "self-service");
   const creds = setup.children.find(node => node.label === "creds");
   assert.equal(h.controller.provider.getTreeItem(setup).state, h.api.TreeItemCollapsibleState.Collapsed);
   assert.equal(creds.contextValue, "builtin-group");
@@ -603,18 +603,18 @@ test("built-ins form a collapsible command tree with CLI help and credential act
   await h.command("showHelp", help.command.arguments[0]);
   await h.command("showHelp", creds);
   assert.deepEqual(h.tasks[0].execution.args.slice(2), ["--help"]);
-  assert.deepEqual(h.tasks[1].execution.args.slice(2), ["setup", "creds", "--help"]);
+  assert.deepEqual(h.tasks[1].execution.args.slice(2), ["self-service", "creds", "--help"]);
 });
 
 test("built-in required input cancellation prevents execution; secret entry stays in the terminal", async t => {
   const h = harness(t);
   await h.controller.ready();
-  const target = { ...h.target("builtin"), name: "setup creds set" };
+  const target = { ...h.target("builtin"), name: "self-service creds set" };
   await h.command("runBuiltin", target);
   assert.equal(h.tasks.length, 0);
   h.inputs.push("service name");
   await h.command("runBuiltin", target);
-  assert.deepEqual(h.tasks[0].execution.args.slice(2), ["setup", "creds", "set", "--", "service name"]);
+  assert.deepEqual(h.tasks[0].execution.args.slice(2), ["self-service", "creds", "set", "--", "service name"]);
   assert.deepEqual(h.tasks[0].definition.inputs, { name: ["service name"] });
   assert.equal(h.tasks[0].presentationOptions.focus, true);
   assert.deepEqual((await h.api.taskProvider.resolveTask(h.tasks[0])).execution.args, h.tasks[0].execution.args);
@@ -626,8 +626,8 @@ test("built-in option prompts preserve choices and positional values", async t =
   await h.controller.ready();
   h.picks.push(items => items, items => items.find(item => item === "json"));
   h.inputs.push("project.name");
-  await h.command("runBuiltinWithParameters", { ...h.target("builtin"), name: "setup config show" });
-  assert.deepEqual(h.tasks[0].execution.args.slice(2), ["setup", "config", "show", "--format=json", "--", "project.name"]);
+  await h.command("runBuiltinWithParameters", { ...h.target("builtin"), name: "maintainer config show" });
+  assert.deepEqual(h.tasks[0].execution.args.slice(2), ["maintainer", "config", "show", "--format=json", "--", "project.name"]);
   assert.deepEqual(h.errors, []);
 });
 
@@ -635,7 +635,7 @@ test("built-in execution rechecks workspace trust and refreshed command permissi
   const doc = inventory();
   const h = harness(t, [doc]);
   await h.controller.ready();
-  const target = { ...h.target("builtin"), name: "setup creds list" };
+  const target = { ...h.target("builtin"), name: "self-service creds list" };
   h.api.workspace.isTrusted = false;
   await h.command("runBuiltin", target);
   assert.match(h.errors.pop(), /Trust this workspace/);
@@ -653,8 +653,8 @@ test("VMR root built-ins omit member configuration and member help selects its r
   doc.commands = builtinCommands();
   const h = harness(t, [doc]);
   await h.controller.ready();
-  await h.command("runBuiltin", { kind: "builtin", root: doc.root, name: "setup creds list" });
-  assert.deepEqual(h.tasks[0].execution.args, ["setup", "creds", "list"]);
+  await h.command("runBuiltin", { kind: "builtin", root: doc.root, name: "self-service creds list" });
+  assert.deepEqual(h.tasks[0].execution.args, ["self-service", "creds", "list"]);
   const project = h.controller.provider.getChildren()[0].children[0];
   const commands = project.children.find(node => node.label === "Built-in commands").children;
   await h.command("showHelp", commands[0]);
@@ -697,7 +697,7 @@ test("parameter form can choose a preview and does not override omitted defaults
   assert.equal(h.formRequests[0].options.variant, "small");
   assert.equal(h.tasks[0].definition.preview, true);
   assert.equal(h.tasks[0].definition.params, undefined);
-  assert.ok(h.tasks[0].execution.args.includes("dry-run"));
+  assert.ok(h.tasks[0].execution.args.includes("--dry-run"));
 });
 
 test("a job removed while its parameter form is open cannot launch", async t => {
@@ -739,7 +739,7 @@ test("configuration files and validation remain available after an invalid save 
   const warning = h.controller.provider.getChildren()[0];
   assert.ok(warning.children.some(node => node.label === "Validate configuration"));
   await h.editorActions.validate({ fsPath: file });
-  assert.deepEqual(h.tasks[0].execution.args.slice(-3), ["setup", "config", "validate"]);
+  assert.deepEqual(h.tasks[0].execution.args.slice(-1), ["validate"]);
   assert.equal(h.tasks[0].execution.args[1], h.target().project.entry_file);
 });
 
@@ -772,7 +772,7 @@ test("validation on an empty workspace offers init using an explicit config dire
   h.picks.push(actions => actions[0]); h.inputs.push("configuration");
   await h.command("validate");
   assert.ok(h.logs.some(message => /No PTK project found/.test(message)));
-  assert.deepEqual(h.tasks[0].execution.args, ["setup", "init", "--config-dir", "configuration", "--", doc.root]);
+  assert.deepEqual(h.tasks[0].execution.args, ["init", "--config-dir", "configuration", "--", doc.root]);
 });
 
 test("initial invalid project exposes diagnostics and validation without prior inventory", async t => {

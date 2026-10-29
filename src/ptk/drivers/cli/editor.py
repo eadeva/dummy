@@ -17,7 +17,7 @@ def describe_commands(ctx, commands=None, path=()):
     result = []
     if commands is None:
         commands = getattr(ctx.command, "commands", {})
-    for name, command in sorted(commands.items()):
+    for name, command in commands.items():
         if command.hidden or not allowed(ctx, name):
             continue
         params = []
@@ -65,7 +65,7 @@ def describe_commands(ctx, commands=None, path=()):
     return result
 
 
-@click.command("describe")
+@click.command("describe", hidden=True)
 @click.option(
     "--json",
     "as_json",
@@ -143,7 +143,16 @@ def describe(ctx, as_json, configuration):
         path = root / "workflows"
         if path.is_dir():
             workflows = [
-                {"name": name, "help": spec.help}
+                {
+                    "name": name,
+                    "help": spec.help,
+                    "command": [
+                        *(["maintainer"] if spec.audience == "maintainer" else []),
+                        "workflow",
+                        "run",
+                        name,
+                    ],
+                }
                 for name, spec in read_workflows(path).workflows.items()
                 if visible(spec.audience, role)
             ]
@@ -190,7 +199,7 @@ def describe(ctx, as_json, configuration):
             if item:
                 projects.append(item)
     result = {
-        "schema_version": 1,
+        "schema_version": 2,
         "ptk_version": parent.app.version,
         "mode": "workspace" if workspace else "repository",
         "root": str(root),

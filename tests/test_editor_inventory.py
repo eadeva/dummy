@@ -48,16 +48,27 @@ def test_inventory_is_read_only_filters_roles_and_omits_secret_values(tmp_path):
         ).invoke(cli, base)
         assert result.exit_code == 0, result.output
         doc = json.loads(result.output)
-        assert doc["schema_version"] == 1 and doc["mode"] == "repository"
+        assert doc["schema_version"] == 2 and doc["mode"] == "repository"
         project = doc["projects"][0]
         commands = command_paths(project["commands"])
-        assert {"help", "setup", "setup creds", "setup creds set"} <= commands.keys()
-        assert ("setup vscode" in commands) is (role == "")
-        assert ("setup configs sync" in commands) is (role == "")
-        assert "creds" not in commands  # Hidden compatibility alias.
+        assert {
+            "help",
+            "self-service",
+            "self-service creds",
+            "self-service creds set",
+        } <= commands.keys()
+        assert ("maintainer sync" in commands) is (role == "")
+        if role == "":
+            target = next(
+                p
+                for p in commands["maintainer sync"]["params"]
+                if p["name"] == "target"
+            )
+            assert target["choices"] == ["configs", "tasks", "skills"]
+        assert "creds" not in commands  # Obsolete alias is not registered.
         assert "go" not in commands  # Jobs have their own section.
         assert [j["name"] for j in project["jobs"]] == expected
-        assert project["capabilities"]["setup_vscode"] is (role == "")
+        assert project["capabilities"]["maintenance"] is (role == "")
         assert project["default_variant"] == "small"
         assert (
             "SECRET_VALUE" not in result.output
@@ -77,7 +88,7 @@ def test_inventory_respects_group_policies(tmp_path):
         "variant": "maintainer",
         "report": "maintainer",
         "workflow": "maintainer",
-        "setup.config": "maintainer",
+        "maintainer.config": "maintainer",
     }
     data["workflows"] = {"verify": {"steps": [{"go": "go"}]}}
     write_project(entry, yaml.safe_dump(data))
@@ -93,11 +104,11 @@ def test_inventory_respects_group_policies(tmp_path):
     commands = command_paths(project["commands"])
     assert not any(
         path.startswith(("variant", "report", "workflow", "setup config "))
-        and path != "setup config validate"
+        and path != "validate"
         for path in commands
     )
-    assert "setup config validate" in commands
-    assert "setup creds list" in commands
+    assert "validate" in commands
+    assert "self-service creds list" in commands
 
 
 def test_vmr_inventory_retains_healthy_members_when_one_is_invalid(
@@ -126,7 +137,7 @@ def test_vmr_inventory_retains_healthy_members_when_one_is_invalid(
     assert "repos" in command_paths(doc["commands"])
     healthy = next(p for p in doc["projects"] if p["alias"] == "firmware")
     assert "repos" not in command_paths(healthy["commands"])
-    assert "setup creds set" in command_paths(healthy["commands"])
+    assert "self-service creds set" in command_paths(healthy["commands"])
     result = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"}).invoke(
         cli, ["firmware", "describe", "--json"]
     )
@@ -138,7 +149,7 @@ def test_command_metadata_does_not_resolve_defaults_or_invoke_callbacks(
     tmp_path, monkeypatch
 ):
     entry = setup(tmp_path)
-    command = cli.commands["setup"].commands["creds"].commands["set"]
+    command = cli.commands["self-service"].commands["creds"].commands["set"]
 
     def forbidden(*args, **kwargs):
         raise AssertionError("Discovery must not resolve defaults or invoke commands")
@@ -154,18 +165,21 @@ def test_command_metadata_does_not_resolve_defaults_or_invoke_callbacks(
             click.Option(["--hidden"], hidden=True),
         ],
     )
+    grant_maintainer(tmp_path)
     before = snapshot(tmp_path)
-    result = CliRunner(env={"PTK_ROLE": "user"}).invoke(
+    result = CliRunner(env={"PTK_ROLE": ""}).invoke(
         cli, ["-C", str(entry), "describe", "--json"]
     )
     assert result.exit_code == 0, result.output
     commands = command_paths(json.loads(result.output)["projects"][0]["commands"])
-    params = {p["name"]: p for p in commands["setup creds set"]["params"]}
+    params = {p["name"]: p for p in commands["self-service creds set"]["params"]}
     assert set(params) == {"name", "field", "store"}
     assert params["name"]["kind"] == "argument" and params["name"]["required"]
     assert params["store"]["option"] == "--store"
     assert "default" not in params["name"]
-    fmt = next(p for p in commands["setup config show"]["params"] if p["name"] == "fmt")
+    fmt = next(
+        p for p in commands["maintainer config show"]["params"] if p["name"] == "fmt"
+    )
     assert fmt["choices"] == ["yaml", "json"]
     assert "SECRET_DEFAULT" not in result.output
     assert snapshot(tmp_path) == before

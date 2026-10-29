@@ -40,7 +40,7 @@ def test_clean_scope_no_execution_or_required_parameters(tmp_path):
     repository(tmp_path, jobs={"build": job}, extra=variant_config())
     deleted = seed(tmp_path)
     kept = seed(tmp_path, "release") + seed(tmp_path, job="other")
-    preview = invoke(tmp_path, "-V", "debug", "-c", "dry-run", "build")
+    preview = invoke(tmp_path, "-V", "debug", "-c", "build", "--dry-run")
     assert preview.exit_code == 0, preview.output
     assert all(p.exists() for p in deleted + kept)
     result = invoke(tmp_path, "-V", "debug", "-c", "build")
@@ -185,7 +185,7 @@ def test_job_filters_error_steps_skip_and_only_cx_hidden(tmp_path):
     assert "ci" not in [
         j["name"] for j in json.loads(result.output)["projects"][0]["jobs"]
     ]
-    result = invoke(tmp_path, "dry-run", "check")
+    result = invoke(tmp_path, "check", "--dry-run")
     assert (
         result.exit_code == 0
         and "omit_variants" in result.output
@@ -200,7 +200,7 @@ def test_old_workflow_variant_rejected(tmp_path):
             "verify": {"steps": [{"bad": {"job": "build", "variant": "debug"}}]}
         },
     )
-    result = invoke(tmp_path, "workflow", "dry-run", "verify")
+    result = invoke(tmp_path, "workflow", "run", "verify", "--dry-run")
     assert result.exit_code == 2 and "variant" in result.output
 
 
@@ -232,7 +232,7 @@ def test_inherited_mapping_and_workflow_rerun(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     runner = CliRunner(env={"PTK_CI": "0"})
     result = runner.invoke(
-        cli, ["-V", "debug", "-rr", "workflow", "dry-run", "a/verify"]
+        cli, ["-V", "debug", "-rr", "workflow", "run", "a/verify", "--dry-run"]
     )
     assert result.exit_code == 0, result.output
     assert all(p.exists() for p in paths)

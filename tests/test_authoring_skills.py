@@ -40,8 +40,8 @@ def test_authoring_starter_runs_from_its_configuration_directory(tmp_path, monke
     monkeypatch.chdir(destination / "config")
     runner = CliRunner()
     for args in (
-        ["setup", "config", "validate"],
-        ["-V", "debug", "dry-run", "build"],
+        ["validate"],
+        ["-V", "debug", "build", "--dry-run"],
         ["build", "--all-variants"],
     ):
         result = runner.invoke(cli, args)

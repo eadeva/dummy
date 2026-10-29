@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.0
+
+- Follow PTK's canonical job/workflow command paths, including maintainer-only targets, using inventory protocol 2.
+- Use `ptk init`, `ptk validate`, `ptk self-service …` and `ptk maintainer …` throughout commands and task restoration.
+- Use the same generic parameter interface for execution and `--dry-run`; workflow reports now use `report open --workflow`.
+- Discover the reordered command groups from the installed PTK without exposing duplicate run commands in the sidebar.
+- Update PTK and the bundled extension together; obsolete CLI aliases are removed.
+
 ## 0.9.0
 
 - Select multiple job variants using tree checkboxes or the variant picker; run them in parallel with separate tasks and terminals. Repository workflows retain one owner variant.

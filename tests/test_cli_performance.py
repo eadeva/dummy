@@ -58,14 +58,14 @@ def test_help_loads_project_plugins_and_identity_once_per_invocation(
     monkeypatch.setattr(App, "configure_project", configure)
     monkeypatch.setattr(SystemHost, "user_id", user_id)
     runner = CliRunner(env={"PTK_ROLE": ""})
-    args = ["-C", str(file), "setup", "--help"]
+    args = ["-C", str(file), "--help"]
     result = runner.invoke(cli, args)
-    assert result.exit_code == 0 and "vscode" in result.output, result.output
+    assert result.exit_code == 0 and "maintainer" in result.output, result.output
     assert calls == {"load": 1, "configure": 1, "identity": 1}
     # Permissions and configuration must be reread on the next invocation.
     (tmp_path / "maintainers.ptk.yml").write_text("maintainers: []\n")
     result = runner.invoke(cli, args)
-    assert result.exit_code == 0 and "vscode" not in result.output, result.output
+    assert result.exit_code == 0 and "maintainer" not in result.output, result.output
     assert calls == {"load": 2, "configure": 2, "identity": 2}
 
 
@@ -93,7 +93,9 @@ def test_failed_configuration_is_loaded_once_but_retry_next_invocation(
     assert len(calls) == 2
 
 
-@pytest.mark.parametrize("args", [["--help"], ["setup", "--help"], ["build", "--help"]])
+@pytest.mark.parametrize(
+    "args", [["--help"], ["self-service", "--help"], ["build", "--help"]]
+)
 def test_help_does_not_import_or_construct_runtime_services(tmp_path, args):
     file = make_project(tmp_path)
     code = """

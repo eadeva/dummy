@@ -10,10 +10,10 @@ Create your own project
 
 From the installed CLI, preview and initialize a new directory::
 
-   ptk setup init my-project --name "My project" --config-dir config/ptk --dry-run
-   ptk setup init my-project --name "My project" --config-dir config/ptk
+   ptk init my-project --name "My project" --config-dir config/ptk --dry-run
+   ptk init my-project --name "My project" --config-dir config/ptk
    cd my-project
-   ptk setup config validate
+   ptk validate
    ptk hello --message "It works"
    ptk -V release build
 
@@ -50,7 +50,7 @@ rules are appended. The project name defaults to the destination directory name.
 The command works without an existing project, including inside a directory
 whose parent contains a ptk project. ``DIRECTORY`` is the initialization target;
 do not combine this command with global ``--config`` or ``--set`` options.
-Outside a VMR, ``ptk setup init`` initializes the current directory. In a VMR,
+Outside a VMR, ``ptk init`` initializes the current directory. In a VMR,
 it initializes all checked-out members without a root ``.main.ptk.yml``, skips
 configured repositories, and asks for the common config folder once.
 Use an explicit DIRECTORY to initialize only one project. ``ptk init`` is an alias.
@@ -63,7 +63,7 @@ compiler, credentials, or network connection once ptk is installed. Commands
 below work from the repository root on Linux and Windows::
 
    uv run ptk -C examples/quickstart/.main.ptk.yml config validate
-   uv run ptk -C examples/quickstart/.main.ptk.yml -V debug dry-run build
+   uv run ptk -C examples/quickstart/.main.ptk.yml -V debug build --dry-run
    uv run ptk -C examples/quickstart/.main.ptk.yml -V debug build --message "Hello from ptk"
    uv run ptk -C examples/quickstart/.main.ptk.yml -V release build
 
@@ -108,6 +108,6 @@ its configuration directory explicitly:
 .. literalinclude:: ../examples/authoring/.main.ptk.yml
    :language: yaml
 
-From that repository, run ``ptk setup config validate``, ``ptk dry-run build``
+From that repository, run ``ptk validate``, ``ptk build --dry-run``
 and ``ptk build --all-variants``. These commands are exercised by the authoring
 skill tests, including invocation from the configuration subdirectory.

@@ -3,7 +3,7 @@
 Every job becomes a command with real, typed options for its parameters::
 
     ptk -V b_us build --jobs 4 --build-type Debug --from compile -- extra args
-    ptk dry-run build --jobs 4            # same options, nothing is executed
+    ptk build --dry-run --jobs 4            # same options, nothing is executed
 
 Option values are only passed on when given; defaults are resolved by the
 use case (so per-variant defaults and sources work the same everywhere).
@@ -26,7 +26,7 @@ from rich.markup import escape
 from ...domain.config.model import JobSpec, ParamSpec
 from ...domain.errors import PtkError
 from ...domain.suggest import did_you_mean
-from .access import AccessGroup, denied_command
+from .access import AccessGroup, denied_command, in_maintainer
 from .completion import steps as complete_steps
 from .report_links import print_report
 from .state import console, err_console, guarded, report_error, state_of
@@ -113,22 +113,16 @@ def param_option(name: str, spec: ParamSpec) -> click.Option:
     )
 
 
-def common_options(*, dry_run: bool) -> list[click.Parameter]:
+def common_options() -> list[click.Parameter]:
     params: list[click.Parameter] = [
         click.Option(
             ["--all-variants"], is_flag=True, help="Run all concrete variants."
         ),
         click.Option(
-            ["--feature", "-bo", "features"],
+            ["--feature", "features"],
             multiple=True,
             metavar="FEATURE=VALUE",
             help="Override a variant feature for this invocation.",
-        ),
-        click.Option(
-            ["-mp", "legacy_params"],
-            multiple=True,
-            metavar="NAME=VALUE",
-            help="Compatibility alias for declared job parameter values.",
         ),
         click.Option(
             ["--from", "start"],
@@ -154,29 +148,30 @@ def common_options(*, dry_run: bool) -> list[click.Parameter]:
             help="Extra arguments for one step with passthrough: true (STEP is a/b).",
         ),
     ]
-    if dry_run:
-        params.append(
+    params.extend(
+        [
+            click.Option(
+                ["--dry-run"],
+                is_flag=True,
+                help="Preview execution without running steps or installing tools.",
+            ),
             click.Option(
                 ["--env", "show_env"],
                 is_flag=True,
-                help="Also show the generated PTK_/VH_ variables.",
-            )
-        )
-    else:
-        params.append(
+                help="Include generated PTK_/VH_ variables in a dry run.",
+            ),
             click.Option(
                 ["-q", "--quiet"],
                 is_flag=True,
                 help="Only warnings and errors; command output is still logged.",
-            )
-        )
-        params.append(
+            ),
             click.Option(
                 ["--setup"],
                 is_flag=True,
-                help="Install missing or outdated tools of the job first (ptk setup install).",
-            )
-        )
+                help="Install required tools before running (self-service tools).",
+            ),
+        ]
+    )
     params.append(
         click.Argument(
             ["extra"], nargs=-1, type=click.UNPROCESSED, metavar="[-- ARGS]..."
@@ -196,7 +191,6 @@ def build_request(
     extra: tuple[str, ...] = (),
     all_variants: bool = False,
     features: tuple[str, ...] = (),
-    legacy_params: tuple[str, ...] = (),
     start: str | None = None,
     end: str | None = None,
     params_path: Path | None = None,
@@ -205,6 +199,15 @@ def build_request(
 ) -> RunRequest:
     from ...application.use_cases.run import RunRequest
 
+    project = state_of(ctx).project()
+    name = job or project.config.project.default_job
+    spec = project.config.jobs.get(name)
+    if spec is not None and (spec.audience == "maintainer") != in_maintainer(ctx):
+        if spec.audience == "maintainer":
+            raise PtkError(
+                f"{name!r} is a maintainer-only job; use 'ptk maintainer run {name}'"
+            )
+        raise PtkError(f"{name!r} is an everyday job; use 'ptk {name}'")
     return RunRequest(
         job=job,
         variant=state_of(ctx).variant,
@@ -220,7 +223,7 @@ def build_request(
             ),
             **pairs(features, "--feature"),
         },
-        params={**pairs(legacy_params, "--param"), **(params or {})},
+        params=params or {},
         params_file=params_file(params_path),
         start=start,
         end=end,
@@ -259,7 +262,9 @@ def execute(
     from .cleanup import clean_selected, mode
 
     cleaning = mode(state)
-    if setup and not state.clean:
+    if show_env and not request.dry_run:
+        raise PtkError("--env requires --dry-run")
+    if setup and not state.clean and not request.dry_run:
         job = request.job or project.config.project.default_job
         if job:
             install_tools(state, project, [job])
@@ -442,11 +447,10 @@ def write_reports(
 # --------------------------------------------------------------------------- commands
 
 
-def job_command(
-    name: str, spec: JobSpec, *, dry_run: bool, hidden: bool
-) -> click.Command:
+def job_command(name: str, spec: JobSpec, *, hidden: bool) -> click.Command:
     def callback(**options: Any) -> None:
         ctx = click.get_current_context()
+        dry_run = options.pop("dry_run", False)
         given = {
             key[len(PARAM_PREFIX) :]: value
             for key, value in options.items()
@@ -469,14 +473,12 @@ def job_command(
     help_text = spec.help or f"Run the '{name}' job."
     if spec.audience == "maintainer":
         help_text += " [dim](maintainers only)[/]"
-    if dry_run:
-        help_text = f"Show what '{name}' would do, without running anything."
     command = click.RichCommand(
         name,
         callback=guarded(callback),
         params=[
             *(param_option(p, s) for p, s in spec.params.items()),
-            *common_options(dry_run=dry_run),
+            *common_options(),
         ],
         help=help_text,
         short_help=spec.help.splitlines()[0] if spec.help else None,
@@ -498,12 +500,12 @@ def _broken(name: str, exc: PtkError) -> click.Command:
 class ProjectGroup(AccessGroup):
     """A group whose commands include the jobs of the current project.
 
-    ``dry_run=True`` makes the job commands preview instead of run.
+    The audience selects everyday or maintainer commands.
     """
 
-    def __init__(self, *args: Any, dry_run: bool = False, **kwargs: Any):
+    def __init__(self, *args: Any, audience: str = "all", **kwargs: Any):
         super().__init__(*args, **kwargs)
-        self.dry_run = dry_run
+        self.audience = audience
 
     def _jobs(self, ctx: click.Context) -> dict[str, JobSpec]:
         project = state_of(ctx).try_project()
@@ -518,8 +520,18 @@ class ProjectGroup(AccessGroup):
         )
 
     def _workflows(self, ctx):
-        if self.dry_run:
-            return {}
+        if ctx.find_root().meta.get("vmr_repositories") is not None and not any(
+            getattr(c.command, "repository_boundary", False) for c in ancestors(ctx)
+        ):
+            from .workflows import can_view, catalog, matches_namespace
+
+            parent, _, owners, available = catalog(ctx)
+            return {
+                name: spec
+                for name, (owner, spec, _) in available.items()
+                if can_view(parent, owners, owner, spec)
+                and matches_namespace(ctx, owners, owner, spec)
+            }
         state = state_of(ctx)
         project = state.try_project()
         if project is None:
@@ -527,11 +539,13 @@ class ProjectGroup(AccessGroup):
         return {
             name: spec
             for name, spec in project.config.workflows.items()
-            if state.role() == "maintainer"
-            or (
-                spec.audience == "all"
-                and project.config.command_audience.get("workflow") != "maintainer"
+            if (
+                "maintainer"
+                if project.config.command_audience.get("workflow") == "maintainer"
+                else spec.audience
             )
+            == self.audience
+            and (self.audience == "all" or state.role() == "maintainer")
         }
 
     def list_commands(self, ctx: click.Context) -> list[str]:
@@ -540,17 +554,26 @@ class ProjectGroup(AccessGroup):
         jobs = [
             n
             for n, spec in self._jobs(ctx).items()
-            if spec.audience == "all" or role == "maintainer"
+            if spec.audience == self.audience
+            and (self.audience == "all" or role == "maintainer")
         ]
         return [
+            *sorted(set(jobs) - set(self.commands)),
+            *sorted(self._workflows(ctx).keys() - set(jobs) - set(self.commands)),
             *builtins,
-            *sorted((set(jobs) | self._workflows(ctx).keys()) - set(self.commands)),
         ]
 
     def get_command(self, ctx: click.Context, cmd_name: str) -> click.Command | None:
         builtin = super().get_command(ctx, cmd_name)
         if builtin is not None:
             return builtin
+        if ctx.find_root().meta.get("vmr_repositories") is not None and not any(
+            getattr(c.command, "repository_boundary", False) for c in ancestors(ctx)
+        ):
+            from .workflows import workflow_command
+
+            spec = self._workflows(ctx).get(cmd_name)
+            return workflow_command(cmd_name, spec) if spec else None
         state = state_of(ctx)
         try:
             project = state.project()
@@ -561,25 +584,22 @@ class ProjectGroup(AccessGroup):
             return None
         workflow = self._workflows(ctx).get(cmd_name)
         if workflow is not None and (
-            spec is None
-            or (
-                spec.audience == "maintainer"
-                and state.role() != "maintainer"
-                and not project.ci
-            )
+            spec is None or (spec.audience != self.audience and not project.ci)
         ):
             from .workflows import workflow_command
 
             return workflow_command(cmd_name, workflow)
         if spec is None:
             return None
-        hidden = spec.audience == "maintainer" and state.role() != "maintainer"
+        hidden = spec.audience != self.audience or (
+            spec.audience == "maintainer" and state.role() != "maintainer"
+        )
         if hidden:
             return denied_command(cmd_name, "job")
-        command = job_command(cmd_name, spec, dry_run=self.dry_run, hidden=hidden)
+        command = job_command(cmd_name, spec, hidden=hidden)
         if workflow is not None:
             command.short_help = f"{spec.help or cmd_name} (job / workflow)"
-            command.help += f"\n\nAlso a local workflow. Choose explicitly with 'ptk run {cmd_name}' or 'ptk workflow run {cmd_name}'. CX always runs the job."
+            command.help += f"\n\nAlso a local workflow. Choose explicitly with 'ptk {'maintainer ' if self.audience == 'maintainer' else ''}run {cmd_name}' or 'ptk {'maintainer ' if self.audience == 'maintainer' else ''}workflow run {cmd_name}'. CX always runs the job."
         return command
 
     def format_help(self, ctx: click.Context, formatter: Any) -> None:
@@ -587,13 +607,11 @@ class ProjectGroup(AccessGroup):
         all_builtins = super().list_commands(ctx)
         builtins = [n for n in all_builtins if not self.commands[n].hidden]
         shortcuts = [n for n in self.list_commands(ctx) if n not in self.commands]
-        role = state_of(ctx).role()
         job_specs = self._jobs(ctx)
         jobs = [
             n
             for n in shortcuts
-            if n in job_specs
-            and (job_specs[n].audience == "all" or role == "maintainer")
+            if n in job_specs and job_specs[n].audience == self.audience
         ]
         workflow_specs = self._workflows(ctx)
         workflows = [n for n in shortcuts if n in workflow_specs]
@@ -614,8 +632,16 @@ class ProjectGroup(AccessGroup):
                     "deduplicate": False,
                 }
             )
-        if builtins:
-            groups.append({"name": "Commands", "commands": builtins})
+        for title, names in (
+            (
+                "Commands",
+                [n for n in builtins if n not in {"self-service", "maintainer"}],
+            ),
+            ("Self-service", [n for n in builtins if n == "self-service"]),
+            ("Maintenance", [n for n in builtins if n == "maintainer"]),
+        ):
+            if names:
+                groups.append({"name": title, "commands": names})
         config = getattr(formatter, "config", None)
         if config is not None and groups:
             config.command_groups = {ctx.command_path: groups}
@@ -633,12 +659,12 @@ class ProjectGroup(AccessGroup):
             if (
                 not ctx.resilient_parsing
                 and not state.project().ci
-                and (job.audience == "all" or state.role() == "maintainer")
+                and job.audience == self.audience
                 and not any(arg in ("-h", "--help") for arg in args[1:])
             ):
                 if not sys.stdin.isatty():
                     ctx.fail(
-                        f"'{name}' names both a job and a workflow; use 'ptk run {name}' or 'ptk workflow run {name}' in non-interactive calls."
+                        f"'{name}' names both a job and a workflow; use 'ptk {'maintainer ' if self.audience == 'maintainer' else ''}run {name}' or 'ptk {'maintainer ' if self.audience == 'maintainer' else ''}workflow run {name}' in non-interactive calls."
                     )
                 choice = click.prompt(
                     f"'{name}' is both a job and a workflow. Run which",
@@ -662,3 +688,9 @@ class ProjectGroup(AccessGroup):
                 f"No such command '{name}'{did_you_mean(name, self.list_commands(ctx))}."
             )
         return super().resolve_command(ctx, args)
+
+
+def ancestors(ctx):
+    while ctx is not None:
+        yield ctx
+        ctx = ctx.parent

@@ -9,7 +9,7 @@ from .state import guarded, state_of
 @click.group("pre-commit", cls=AccessGroup, invoke_without_command=True)
 @click.pass_context
 def pre_commit_group(ctx):
-    """Run checks and manage this repository's local Git hooks."""
+    """Run repository checks or validate their configuration."""
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
 
@@ -53,18 +53,12 @@ def run(ctx, **options):
     ctx.exit(state.app.hooks.run(project, click.echo, **options))
 
 
-@pre_commit_group.command("check")
-@run_options
-@click.pass_context
-@guarded
-def check(ctx, **options):
-    """Run checks on all tracked files (run --all-files). Hooks may fix files."""
-    state = state_of(ctx)
-    project = state.project()
-    ctx.exit(state.app.hooks.run(project, click.echo, all_files=True, **options))
+@click.group("hooks", cls=AccessGroup)
+def hooks_group():
+    """Install, remove or inspect local Git hooks."""
 
 
-@pre_commit_group.command("install")
+@hooks_group.command("install")
 @click.pass_context
 @guarded
 def install(ctx):
@@ -75,7 +69,7 @@ def install(ctx):
     click.echo(state.app.hooks.inspect(project).detail)
 
 
-@pre_commit_group.command("uninstall")
+@hooks_group.command("uninstall")
 @click.pass_context
 @guarded
 def uninstall(ctx):
@@ -93,7 +87,7 @@ def uninstall(ctx):
         )
 
 
-@pre_commit_group.command("status")
+@hooks_group.command("status")
 @click.pass_context
 @guarded
 def status(ctx):
