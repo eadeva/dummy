@@ -1,0 +1,50 @@
+@startuml artifactory_downloader
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam handwritten false
+skinparam shadowing false
+
+title XC-CE Utils — ArtifactoryStep download flow (steps/artifactory_steps.py)
+
+participant "ExecutionAction /\nStepExecutor" as action
+participant "ArtifactoryStep\n(art_downloader_setup)" as setup_step
+participant "shared resource pool\n(adapters/execution/resource_manager.py)" as pool
+participant "ArtifactoryStep\n(art_download / art_download_central)" as dl_step
+participant "artifactory_utils\n.ArtifactoryDownloader" as downloader
+participant "Artifactory Server" as server
+
+action -> setup_step : run()\n(config: id, base_url, repository,\ndownload_path [optional])
+setup_step -> pool : register downloader instance\nunder config['id']
+pool --> setup_step : registered
+
+action -> dl_step : run()\n(config: step_type, downloader_id,\ntype, art_rel_path or properties,\ndownload_path/download_id/latest/\noutput_variable/central_path/target_dir)
+dl_step -> pool : resolve downloader\nby downloader_id
+pool --> dl_step : ArtifactoryDownloader instance
+
+alt properties provided (search mode)
+  dl_step -> downloader : search(properties)
+  downloader -> server : AQL / property search
+  server --> downloader : matching artifact path(s)
+else art_rel_path provided
+  dl_step -> downloader : resolve(art_rel_path[, latest])
+end
+
+dl_step -> downloader : download(resolved_path, target)
+note right
+  target = download_path (step) or
+  downloader's download_path or
+  step_build_folder; central_path=true
+  (or step_type == art_download_central)
+  redirects under C:\tools/<target_dir>
+end note
+downloader -> server : GET artifact
+server --> downloader : artifact bytes
+downloader --> dl_step : local file path
+
+opt output_variable set
+  dl_step -> action : set_global_variable(output_variable, path)
+end
+
+dl_step --> action : status = EXECUTE_SUCCESS
+
+@enduml

@@ -1,0 +1,76 @@
+@startuml build_flow_diagram
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam shadowing false
+
+title XC-CE Utils — ExecutionAction.run() flow (application/orchestration/action_orchestrator.py)
+
+start
+
+:build.ps1 / build.sh;
+note right: Entry point wrapper (consumer repo)
+
+:cli/variant_executor.execute_action_with_arguments(...);
+note right
+  Resolves variant(s), expands
+  --from/--to phase window
+end note
+
+:ExecutionAction(config).run();
+
+partition "run() -- try / except BuildError / finally: _release_resources()" {
+
+  partition "setup()  [run_setup_use_case]" {
+    :ToolRequiresInstaller\n(platform tool-requires install);
+    :adapters.execution.resource_manager\n.initialize_resource_pool();
+    if (config.clean?) then (yes)
+      :Clean build/log/report dirs;
+      stop
+    endif
+  }
+
+  partition "execute_action()  [run_execute_action_use_case]" {
+    :_collect_action_sections();
+    note right
+      StepExecutor.create_step() / create_execution_set()
+      per PHASES / SETS entry (~90 registered step types)
+    end note
+
+    while (more phases / sets?) is (yes)
+      if (ExecutionSet?) then (yes)
+        :Execute child steps\n(sequential or parallel,\nexecute_if / game_stopper);
+      else (no)
+        :ExecutionStep.run()\n(validate -> pre -> execute -> post);
+      endif
+      if (step failed?) then (yes)
+        :application/orchestration/error_recovery\n(ABORT vs CONTINUE_WITH_ERRORS);
+      endif
+    endwhile (no)
+
+    if (exception propagated?) then (yes)
+      :_release_resources();
+      :raise BuildError;
+    endif
+  }
+
+  partition "finally: _run_unified_reporting()" {
+    :reporting.adapters.execution_log_reporter\n.ExecutionLogReporter.run_unified_reporting();
+    note right
+      Always runs (success or failure).
+      Writes _unified/log-findings.canonical.json,
+      then invokes ReportingPipeline for the final
+      <action>-report.{canonical.json,html,xml}.
+    end note
+  }
+}
+
+if (BuildError raised?) then (yes)
+  :application/orchestration/debug_artifact_uploader\n.DebugArtifactUploader\n[run_upload_debug_artifacts_use_case];
+  note right: CI-only debug-artifact upload on failure
+endif
+
+:adapters.execution.resource_manager\n.release_all_resources()\n(run()'s own finally);
+
+stop
+
+@enduml

@@ -1,0 +1,7 @@
+url: "https://artifactory.boschdevcloud.com"
+repository: "xc-ce-toyota-cgw-generic-local"
+events:
+  pull_request:
+    path: "PRs"
+base_path: "toyota_cgw"
+jobs: { check: { path: "${date.timestamp}" }, extension: { path: "test" } }

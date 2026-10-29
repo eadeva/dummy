@@ -1,0 +1,145 @@
+@startuml core_engine_architecture
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+title XC-CE Utils — core_engine Hexagonal / Clean Architecture
+
+package "Entry Points" {
+  [build.ps1 / build.sh\n(consumer repo)] as entry
+  [xc_ce_utils.py\n(console-script main)] as main
+}
+
+package "core_engine.cli\n(the ONLY driving adapter)" as cli_pkg {
+  [entrypoint\n(create_dynamic_cli)] as cli_entry
+  [platform_setup] as platform_setup
+  [environment_setup_orchestrator] as env_orch
+  [generator\n(DynamicCLIGenerator)] as cli_gen
+  [root_group / command_factory] as cli_root
+  [variant_executor] as cli_vexec
+  [action_introspection\noption_parser\nrole_gating\nvscode_commands] as cli_misc
+}
+
+package "core_engine.application\n(public API = the ONLY import surface\nfor any driving adapter)" as app_pkg {
+  [application/__init__.py\n(curated public exports)] as app_api
+  package "orchestration" {
+    [ExecutionAction\n(action_orchestrator)] as orch_action
+    [StepExecutor] as orch_stepexec
+    [error_recovery] as orch_recovery
+    [ToolRequiresInstaller] as orch_toolreq
+    [DebugArtifactUploader] as orch_debugup
+  }
+  package "facades" {
+    [execution.py] as fac_exec
+    [runtime.py] as fac_runtime
+  }
+  package "use_cases" {
+    [execution.py] as uc_exec
+  }
+}
+
+package "core_engine.domain\n(zero outward dependencies)" as domain_pkg {
+  [step_registry] as dom_registry
+  [variant_matrix] as dom_matrix
+  [exceptions] as dom_exc
+  [runtime_context] as dom_ctx
+  [layered_config] as dom_layered
+  [comparison] as dom_cmp
+  [env_manager] as dom_env
+}
+
+package "core_engine.adapters\n(driven adapters)" as adapters_pkg {
+  package "execution" {
+    [resource_manager] as ad_resmgr
+    [tool_installer_adapter] as ad_toolinst
+    [debug_upload_adapter] as ad_debugup
+  }
+  package "deployment" {
+    [artifactory_deployer] as ad_deploy
+  }
+  package "dev_tooling" {
+    [adapter + ports] as ad_devtool
+  }
+}
+
+package "core_engine.reporting\n(own domain/application/adapters)" as reporting_pkg {
+  [ExecutionLogReporter] as rep_logrep
+  [ReportingPipeline] as rep_pipeline
+  [CanonicalReport (domain)] as rep_model
+  [12 importers / 3 exporters] as rep_io
+}
+
+package "core_engine.steps\n(~90 ExecutionStep leaf types)" as steps_pkg {
+  [ExecutionStep / ExecutionSet\n(steps/base.py)] as step_base
+  [*_steps.py per category] as step_impls
+}
+
+package "core_engine.setup" {
+  [EnvironmentSetup] as setup_env
+  [12 SetupPhase classes\n(setup/phases/*)] as setup_phases
+}
+
+package "core_engine.wrappers" {
+  [RBCMakeWrapper\nRBBazelWrapper\nRBMakeWrapper\nRBScriptRunner\nCcacheManager] as wrap_all
+}
+
+package "core_engine.config" {
+  [ActionConfiguration\n+ Pydantic v2 models] as cfg_models
+}
+
+entry --> main
+main --> platform_setup
+main --> env_orch
+main --> cli_entry
+cli_entry --> cli_gen
+cli_gen --> cfg_models
+cli_gen --> dom_matrix
+cli_gen --> cli_root
+cli_root --> cli_vexec
+cli_vexec --> app_api : "driving-port rule:\ncli/ imports ONLY\napplication.__init__ + domain"
+env_orch --> setup_env
+setup_env --> setup_phases
+
+app_api --> fac_exec
+app_api --> fac_runtime
+app_api --> uc_exec
+app_api ..> adapters_pkg : "dev-tooling re-exports"
+fac_exec --> orch_action
+orch_action --> orch_stepexec
+orch_action --> orch_recovery
+orch_action --> orch_toolreq
+orch_action --> orch_debugup
+orch_action --> rep_logrep : "unified reporting\n(finally block)"
+orch_stepexec --> step_base
+orch_toolreq --> ad_toolinst
+orch_debugup --> ad_debugup
+orch_action --> ad_resmgr
+
+step_base --> step_impls
+step_impls --> wrap_all
+step_impls --> dom_exc
+
+rep_logrep --> rep_pipeline
+rep_pipeline --> rep_io
+rep_io --> rep_model
+
+adapters_pkg --> domain_pkg
+app_pkg --> domain_pkg
+steps_pkg --> domain_pkg
+reporting_pkg --> domain_pkg : "(own domain, see reporting/domain/)"
+
+note bottom of cli_pkg
+  Driving-port pattern (ADR-2): cli/ is the sole driving
+  adapter today; a future GUI would plug in at the exact
+  same application.__init__ boundary without touching
+  application/, adapters/, or domain/.
+end note
+
+note bottom of domain_pkg
+  domain/ has ZERO imports from application/, adapters/,
+  cli/, or reporting/ — enforced by
+  tests/unit/test_architecture_boundaries.py
+end note
+
+@enduml

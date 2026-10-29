@@ -1,0 +1,115 @@
+@startuml
+!theme cerulean-outline
+
+skinparam class {
+    BackgroundColor<<Main>> LightBlue
+    BackgroundColor<<Step>> LightGreen
+    BorderColor Black
+    ArrowColor Black
+}
+
+title Bazel Wrapper Architecture
+
+package "Bazel Integration" {
+    class RBBazelWrapper <<Main>> {
+        - workspace_dir: Path
+        - log_folder: Path
+        - output_base: Optional[Path]
+        - bazel_cache: Optional[Path]
+        __
+        + __init__(log_folder, workspace_dir, output_base, bazel_cache)
+        + build(target, compilation_mode, additional_args)
+        + test(target, test_output, additional_args)
+        + run(target, args, additional_bazel_args)
+        + clean(expunge)
+        + query(query_expression, output_format, additional_args)
+        + info(key)
+        __
+        - _get_common_args(): List[str]
+    }
+
+    class BazelExecutionStep <<Step>> {
+        + validate()
+        + execute()
+    }
+
+    class BazelTestStep <<Step>> {
+        + validate()
+        + execute()
+    }
+
+    class BazelRunStep <<Step>> {
+        + validate()
+        + execute()
+    }
+
+    class BazelCleanStep <<Step>> {
+        + validate()
+        + execute()
+    }
+
+    class BazelQueryStep <<Step>> {
+        + validate()
+        + execute()
+    }
+}
+
+package "Build System Core" {
+    class ExecutionAction {
+        + setup()
+        + execute_action()
+        - _clean_build()
+    }
+
+    abstract class _BazelStepBase {
+        + validate()
+        + execute()
+    }
+}
+
+package "External Tools" {
+    class BazelCLI {
+        + bazel build
+        + bazel test
+        + bazel run
+        + bazel clean
+        + bazel query
+    }
+}
+
+' Relationships
+RBBazelWrapper ..> BazelCLI : uses
+BazelExecutionStep ..|> _BazelStepBase
+BazelTestStep ..|> _BazelStepBase
+BazelRunStep ..|> _BazelStepBase
+BazelCleanStep ..|> _BazelStepBase
+BazelQueryStep ..|> _BazelStepBase
+
+BazelExecutionStep ..> RBBazelWrapper : creates
+BazelTestStep ..> RBBazelWrapper : creates
+BazelRunStep ..> RBBazelWrapper : creates
+BazelCleanStep ..> RBBazelWrapper : creates
+BazelQueryStep ..> RBBazelWrapper : creates
+
+ExecutionAction ..> BazelExecutionStep : executes
+ExecutionAction ..> BazelTestStep : executes
+ExecutionAction ..> BazelRunStep : executes
+ExecutionAction ..> BazelCleanStep : executes
+ExecutionAction ..> BazelQueryStep : executes
+ExecutionAction ..> RBBazelWrapper : clean uses
+
+note right of RBBazelWrapper
+    Wrapper provides unified interface
+    for Bazel operations with:
+    - Automatic path resolution
+    - Comprehensive logging
+    - Error handling
+    - Support for all major Bazel commands
+end note
+
+note bottom of BazelCLI
+    External Bazel CLI tool
+    executed via subprocess
+end note
+
+@enduml

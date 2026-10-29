@@ -1,0 +1,4 @@
+{
+  "projectToolkit.executable": "uv",
+  "projectToolkit.arguments": ["run", "ptk"]
+}

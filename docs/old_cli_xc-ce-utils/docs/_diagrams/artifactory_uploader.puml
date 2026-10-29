@@ -1,0 +1,44 @@
+@startuml artifactory_uploader
+!theme plain
+skinparam backgroundColor #FEFEFE
+skinparam handwritten false
+skinparam shadowing false
+
+title XC-CE Utils — Deployer.deploy() (adapters/deployment/artifactory_deployer.py)
+
+participant "deploy step\n(steps/deploy_steps.py)" as step
+participant "Deployer" as deployer
+participant "ArtifactoryUploader\n(artifactory_utils)" as uploader
+participant "Artifactory Server" as server
+participant "GitHub PR API" as gh
+
+step -> deployer: Deployer(repo_root, build_conf).deploy(deployments)
+activate deployer
+
+deployer -> deployer : determine branch / tag / PR\nfrom git + CI env vars
+deployer -> deployer : __set_base_upload_path()\n(target folder from branch/tag/PR)
+
+loop for each entry in deployments dict
+  deployer -> deployer : validate deployment params\n('path' mandatory, 'artifactory' mandatory,\n'repository_full_path' repo-relative if given)
+  deployer -> deployer : rmtree(deploy_folder) if exists
+  alt zip: true
+    deployer -> deployer : zip_folder(path, zip_name)
+  end
+  deployer -> uploader : upload(files, repository,\nrepository_full_path or upload_folder,\nartifact_properties)
+  uploader -> server : PUT artifact + properties
+  server --> uploader : upload result
+  uploader --> deployer : uploaded path(s)
+  deployer -> deployer : collect (label, url)\ninto comment_links
+end
+
+alt pull_request and comment_links non-empty
+  deployer -> gh : _fetch_single_comment() / list PR comments
+  gh --> deployer : existing marker comment (if any)
+  deployer -> gh : _post_github_pr_comment(links)\n(create or update)
+  gh --> deployer : 200/201
+end
+
+deployer --> step : deployment summary
+deactivate deployer
+
+@enduml

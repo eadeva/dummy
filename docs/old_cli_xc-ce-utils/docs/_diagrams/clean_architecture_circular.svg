@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900" font-family="Arial, Helvetica, sans-serif">
+  <title>core_engine — Clean Architecture (Uncle Bob concentric rings)</title>
+
+  <!-- Ring 4 (outer): Frameworks &amp; Drivers -->
+  <circle cx="450" cy="450" r="420" fill="#FDEBD0" stroke="#B9770E" stroke-width="2"/>
+  <!-- Ring 3: Interface Adapters -->
+  <circle cx="450" cy="450" r="320" fill="#D6EAF8" stroke="#1B4F72" stroke-width="2"/>
+  <!-- Ring 2: Application (Use Cases) -->
+  <circle cx="450" cy="450" r="210" fill="#D5F5E3" stroke="#1E8449" stroke-width="2"/>
+  <!-- Ring 1 (center): Domain (Entities) -->
+  <circle cx="450" cy="450" r="105" fill="#FADBD8" stroke="#943126" stroke-width="2"/>
+
+  <!-- Ring labels -->
+  <text x="450" y="60" text-anchor="middle" font-size="22" font-weight="bold" fill="#7D3C98">
+    core_engine — Clean Architecture (Uncle Bob)
+  </text>
+
+  <text x="450" y="105" text-anchor="middle" font-size="15" font-weight="bold" fill="#B9770E">
+    Frameworks &amp; Drivers
+  </text>
+  <text x="450" y="126" text-anchor="middle" font-size="12" fill="#7E5109">
+    core_engine.cli (sole driving adapter) · setup/ · steps/ · wrappers/ · config/
+  </text>
+
+  <text x="450" y="163" text-anchor="middle" font-size="14" font-weight="bold" fill="#1B4F72">
+    Interface Adapters
+  </text>
+  <text x="450" y="182" text-anchor="middle" font-size="11" fill="#1B4F72">
+    core_engine.adapters (execution / deployment / dev_tooling) · reporting.adapters
+  </text>
+
+  <text x="450" y="268" text-anchor="middle" font-size="14" font-weight="bold" fill="#1E8449">
+    Application
+  </text>
+  <text x="450" y="286" text-anchor="middle" font-size="11" fill="#1E8449">
+    application.__init__ (public API) · orchestration · facades · use_cases
+  </text>
+
+  <text x="450" y="445" text-anchor="middle" font-size="14" font-weight="bold" fill="#943126">
+    Domain
+  </text>
+  <text x="450" y="463" text-anchor="middle" font-size="11" fill="#943126">
+    step_registry · variant_matrix · exceptions ·
+  </text>
+  <text x="450" y="478" text-anchor="middle" font-size="11" fill="#943126">
+    runtime_context · layered_config
+  </text>
+  <text x="450" y="493" text-anchor="middle" font-size="10" fill="#943126">
+    (zero outward dependencies)
+  </text>
+
+  <!-- Dependency Rule arrows: point INWARD, drawn along the vertical radius below center -->
+  <defs>
+    <marker id="arrowIn" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L6,3 L0,6 Z" fill="#4A235A"/>
+    </marker>
+  </defs>
+  <line x1="450" y1="855" x2="450" y2="565" stroke="#4A235A" stroke-width="3" marker-end="url(#arrowIn)"/>
+  <text x="465" y="700" font-size="12" fill="#4A235A" font-weight="bold">Dependency Rule:</text>
+  <text x="465" y="718" font-size="12" fill="#4A235A">source-code dependencies</text>
+  <text x="465" y="734" font-size="12" fill="#4A235A">point inward only</text>
+
+  <!-- Mapping legend -->
+  <text x="450" y="800" text-anchor="middle" font-size="11" fill="#555555">
+    Driving-port pattern (ADR-2): cli/ imports ONLY application.__init__ (public API) + domain — never adapters/ internals directly.
+  </text>
+  <text x="450" y="820" text-anchor="middle" font-size="11" fill="#555555">
+    reporting/ is a sibling subsystem with its own domain/application/adapters layering (not shown as a separate ring).
+  </text>
+</svg>

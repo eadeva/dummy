@@ -1,0 +1,76 @@
+@startuml step_lifecycle
+title ExecutionStep / WrappedStep lifecycle
+
+skinparam shadowing false
+
+start
+
+:ExecutionAction iterates configured steps;
+:Resolve **type** via StepRegistry.get(type);
+note right
+  type -> step class
+  metadata: category,
+  config_fields, recovery
+end note
+:Instantiate step\n``StepClass(name, config, context)``;
+note right
+  self.config is wrapped in
+  _ConfigAccessTrackingDict so
+  unused keys can be detected later
+end note
+
+if (omit_variants / only_variants /\nonly_cx_pipelines / execute_if match?) then (skip)
+  :status = NOT_EXECUTED;
+  stop
+else (run)
+endif
+
+:**validate()**\n(check required config_fields,\nresolve paths, parse test: block);
+
+if (config error?) then (yes)
+  :raise RuntimeConfigError;
+  stop
+endif
+
+:**_validate_unknown_config_keys()**\n(fail on unread top-level keys unless\n``allow_unknown_config_keys: true``);
+
+:**pre_processing()**\n(open log file, start timers,\nresource acquisition);
+
+partition "WrappedStep only" {
+  :wrapper_cls = self.get_wrapper()\n-> WrapperRegistry.get(WRAPPER_NAME);
+  note right
+    cmake / conan / bazel /
+    make / script
+  end note
+}
+
+:**execute()**\n(do the actual work);
+
+if (raises AbortError?) then (yes)
+  :propagate -> caller\n(application/orchestration/error_recovery:\nABORT);
+  stop
+elseif (raises ContinueWithErrorsError?) then (yes)
+  :log error, continue\n(application/orchestration/error_recovery:\nCONTINUE_WITH_ERRORS);
+elseif (raises other Exception?) then (yes)
+  :wrap as ExecutionStepError\n(default = ABORT);
+  stop
+endif
+
+note right
+  Recovery routing (ABORT vs.
+  CONTINUE_WITH_ERRORS) is decided by
+  application/orchestration/error_recovery.py
+  in the calling StepExecutor, NOT inside
+  ExecutionStep.run() itself — the step's own
+  run() only re-raises after logging.
+end note
+
+:**post_processing()**\n(close log, stop timers,\nreport JUnit if test: block,\nrelease resources);
+
+if (self.test_results populated?) then (yes)
+  :self.report_results()\n-> JUnit XML;
+endif
+
+:status = EXECUTE_SUCCESS;
+stop
+@enduml

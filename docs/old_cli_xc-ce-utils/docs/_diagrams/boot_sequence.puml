@@ -1,0 +1,64 @@
+@startuml boot_sequence
+title XC-CE Utils boot sequence (build.ps1 -> action execution)
+
+skinparam responseMessageBelowArrow true
+hide footbox
+
+actor Developer as Dev
+participant "build.ps1\n(wrapper)" as Wrapper
+participant "xc-ce-utils.exe\n(main)" as Exe
+participant "platform_setup" as Plat
+participant "environment_setup_\norchestrator" as Orch
+participant "EnvironmentSetup" as Setup
+participant "DynamicCLIGenerator" as CLI
+participant "ConfigLoader" as Cfg
+participant "VariantMatrix" as VM
+participant "click root group\n(create_root_group)" as Root
+participant "command_factory" as CmdF
+participant "variant_executor\n.execute_action_*" as VExec
+participant "ExecutionAction" as Action
+
+Dev -> Wrapper : ./build.ps1 -var pl9 build
+Wrapper -> Wrapper : resolve XC_CE_UTILS_VERSION\nfrom main_conf.yml
+Wrapper -> Wrapper : ensure exe present\n(download from artifactory if missing)
+Wrapper -> Exe : exec with forwarded args
+
+Exe -> Plat : ensure_utf8_stdout()
+note right of Plat
+  Windows only: reconfigures sys.stdout/stderr
+  to UTF-8 so emoji/box-drawing chars render
+  correctly under CP1252 consoles.
+end note
+
+Exe -> Orch : run_environment_setup()
+Orch -> Orch : REPO_PATH = os.environ\nor Path.cwd()
+Orch -> Orch : _should_skip_environment_setup()\n(argv in {--help, -h, --version,\nclean-older-versions, force-setup,\nfull-setup, clang-setup, hooks-setup,\nrefresh-bazel-cache, devmate-setup})
+
+alt fast help/version/setup-subcommand path
+  Orch --> Exe : return early\n(EnvironmentSetup never imported)
+else full setup path
+  Orch -> Setup : ensure_conan_env(repo_path)
+  note right of Setup
+    Sets CONAN_HOME / CONAN_USER_HOME
+    BEFORE any conan import.
+  end note
+  Orch -> Orch : XC_CE_SETUP_DONE\nalready set?
+  alt not yet done this process
+    Orch -> Setup : EnvironmentSetup(repo_path).run_setup()
+    Setup -> Setup : iterate default_setup_phases()\n(12 phases, see setup_phases.puml)
+    Orch -> Orch : os.environ['XC_CE_SETUP_DONE'] = '1'
+  end
+end
+
+Exe -> CLI : create_dynamic_cli(repo_root)
+CLI -> Cfg : load main_conf.yml (recursive include)
+CLI -> VM : VariantMatrix(project_config)
+CLI -> Root : create_root_group(self)
+CLI -> CmdF : per-action command factory
+CLI --> Exe : click.Group
+
+Exe -> Root : invoke (parsed argv)
+Root -> VExec : execute_action_with_arguments(\n  generator, ctx, action, opts)
+VExec -> Action : ExecutionAction(...).run()
+Action --> Dev : result + summary
+@enduml

@@ -1,0 +1,59 @@
+@startuml setup_phases
+title EnvironmentSetup chain-of-responsibility (run_setup)
+
+skinparam shadowing false
+skinparam ArrowColor #555
+skinparam state {
+  BackgroundColor<<phase>>     #FDF6E3
+  BorderColor<<phase>>         #A0A0A0
+  BackgroundColor<<context>>   #E8F4FD
+  BorderColor<<context>>       #6BA4D9
+}
+
+state "SetupContext" as ctx <<context>> {
+  ctx : setup           : EnvironmentSetup
+  ctx : config          : Dict[str, Any]
+  ctx : state           : Dict[str, Any]  (persisted JSON)
+  ctx : first_time_setup: bool
+  ctx : force           : bool
+  ctx : is_ci           : bool
+  ctx : needs_credential_check : bool
+}
+
+state "run_setup(force=False)" as runsetup {
+  state "1. CredentialValidationPhase"        as p1 <<phase>>
+  state "2. CredentialRenewalReminderPhase"   as p2 <<phase>>
+  state "3. ConanSetupPhase"                  as p3 <<phase>>
+  state "4. ConanToolsPhase"                  as p4 <<phase>>
+  state "5. GitHooksMigrationPhase"           as p5 <<phase>>
+  state "6. GitHooksPhase"                    as p6 <<phase>>
+  state "7. ClangSetupPhase"                  as p7 <<phase>>
+  state "8. ApplyConanEnvPhase"               as p8 <<phase>>
+  state "9. BazelDiskCachePhase"              as p9 <<phase>>
+  state "10. BazelRemoteCachePhase"           as p10 <<phase>>
+  state "11. VSCodeExtensionsPhase"           as p11 <<phase>>
+  state "12. DevmatePATPhase"                 as p12 <<phase>>
+
+  p1 --> p2 : if should_run(ctx)\n   run(ctx)
+  p2 --> p3
+  p3 --> p4
+  p4 --> p5
+  p5 --> p6
+  p6 --> p7
+  p7 --> p8
+  p8 --> p9
+  p9 --> p10
+  p10 --> p11
+  p11 --> p12
+}
+
+ctx --> p1 : shared
+
+note bottom of runsetup
+  Each phase reads/mutates **ctx.state**.
+  After the loop, state is persisted to
+  ``.xc_ce_setup_state.json`` so the next
+  invocation can skip phases whose work
+  has not changed.
+end note
+@enduml
