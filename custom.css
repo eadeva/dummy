@@ -1,0 +1,19 @@
+.wy-nav-content {
+    max-width: 1600px !important;
+}
+
+.tight-table td {
+    white-space: normal !important;
+}
+
+/* Fix a rendering bug in the layout of sphinx-needs needtable directives */
+/* Without this, the table appears between the controls above the table,  */
+/* and is too narrow to be practical.                                     */
+.wy-table-responsive {
+    clear: both;
+}
+
+/* Hide internal schema version metadata injected by sphinx-needs */
+.needs___schema_version {
+    display: none !important;
+}
