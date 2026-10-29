@@ -34,6 +34,29 @@ async function form(t, value = { vars: { first: "original", second: "other", unu
   return { page, field, edits, state, value };
 }
 
+test("form orders scalar fields first, follows root priorities and preserves step order", options, async t => {
+  const h = await form(t, { workflows: {}, project: { name: "Demo" }, jobs: { build: { env: {}, steps: [{ zeta: { run: "echo first" } }, { alpha: { run: "echo second" } }], audience: "all", help: "Build" } }, repository: { alias: "demo" }, ptk_version: ">=1" }, []);
+  assert.deepEqual(await h.page.locator("label.name").allTextContents(), ["ptk_version", "repository", "project", "jobs", "workflows"]);
+  const navigate = selection => h.page.evaluate(selection => window.dispatchEvent(new MessageEvent("message", { data: { type: "navigate", selection } })), selection);
+  await navigate(["jobs", "build"]);
+  assert.deepEqual(await h.page.locator("label.name").allTextContents(), ["help", "audience", "env", "steps"]);
+  const options = await h.page.getByRole("combobox", { name: "Optional field", exact: true }).locator("option").allTextContents();
+  assert.ok(options.indexOf("open_report") < options.indexOf("only_variants"));
+  await navigate(["jobs", "build", "steps"]);
+  assert.deepEqual(await h.page.locator("label.name").allTextContents(), ["zeta", "alpha"]);
+  assert.deepEqual(await h.edits(), []);
+});
+
+test("parameter form names all parallel variants without pre-filling dynamic overrides", options, async t => {
+  const h = await form(t);
+  await h.state({ mode: "parameters", name: "build", project: "demo", variants: ["small", "large"], params: [{ name: "output", type: "str", default: "${vh.variant}", default_is_template: true }] });
+  assert.match(await h.page.locator("header").innerText(), /Variants \(parallel\): small, large/);
+  assert.match(await h.page.locator("main").innerText(), /resolved separately for each run/);
+  assert.equal(await h.page.getByRole("checkbox", { name: "Override output" }).isChecked(), false);
+  await h.page.getByRole("button", { name: "Run job", exact: true }).click();
+  assert.deepEqual(await h.page.evaluate(() => window.messages.at(-1).params), {});
+});
+
 test("compact rows fit more fields and schema help is accessible without editing", options, async t => {
   const h = await form(t, { jobs: { build: { help: "Build the project", only_cx: false, audience: "all", open_report: "on_errors", env: {}, params: {}, requires_tools: {}, steps: [{ compile: { run: "make" } }] } } }, ["jobs", "build"]);
   const rows = await h.page.locator(".field").evaluateAll(rows => rows.map(row => row.getBoundingClientRect().height));

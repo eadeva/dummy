@@ -3,6 +3,7 @@ from tests.project_files import write_workflows
 """The editor consumes PTK's permissions/discovery, never a second YAML parser."""
 
 import json
+from pathlib import Path
 
 import rich_click as click
 import yaml
@@ -238,3 +239,25 @@ def test_exported_configuration_fields_have_model_owned_help():
         )
     assert "error" in JobSpec.model_fields["only_variants"].description
     assert "skip" in StepSpec.model_fields["only_variants"].description
+
+
+def test_schema_field_order_survives_sorted_serialization():
+    from ptk.application.use_cases.project import ExportSchema
+    from ptk.domain.config.layout import Document, document_schema
+    from ptk.domain.config.model import PtkConfig
+
+    schema = json.loads(json.dumps(ExportSchema().execute(), sort_keys=True))
+    order = schema["x-ptk-field-order"]
+    assert order == PtkConfig.model_config["json_schema_extra"]["x-ptk-field-order"]
+    assert order.index("project") < order.index("jobs") < order.index("artifactory")
+    for model in schema["$defs"].values():
+        if "properties" in model:
+            assert set(model["x-ptk-field-order"]) == set(model["properties"])
+    main = document_schema(
+        schema,
+        Document(
+            Path(".main.ptk.yml"),
+            fields={"repository": ("repository",), "ptk_version": ("ptk_version",)},
+        ),
+    )
+    assert main["x-ptk-field-order"] == ["ptk_version", "repository"]

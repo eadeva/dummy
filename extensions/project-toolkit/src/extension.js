@@ -3,6 +3,7 @@
 const path = require("node:path");
 const core = require("./core");
 const presentation = require("../media/presentation");
+const schemaTools = require("../media/schema");
 const { createEditors } = require("./editors");
 const { validateParameters } = require("./parameters");
 
@@ -145,7 +146,18 @@ function createController(vscode, context, editorFactory = createEditors) {
   }
 
   const variantKey = target => `variant:${target.project.entry_file}:${target.kind}:${target.name}`;
-  const variantFor = target => core.selectedVariant(target.project, context.workspaceState.get(variantKey(target)));
+  const explicitVariants = target => {
+    const saved = context.workspaceState.get(variantKey(target));
+    const names = Array.isArray(saved) ? saved : typeof saved === "string" ? [saved] : [];
+    return [...new Set(names)].filter(name => target.project.variants.some(item => !item.abstract && item.name === name));
+  };
+  const variantsFor = target => {
+    const names = explicitVariants(target);
+    if (names.length) return target.kind === "job" ? names : names.slice(0, 1);
+    const fallback = core.selectedVariant(target.project);
+    return fallback ? [fallback] : [];
+  };
+  const variantDescription = target => variantsFor(target).join(", ");
   const targetNodes = new Map();
   const title = target => `${target.project?.alias || path.basename(target.root)} / ${target.kind} / ${target.name}`;
 
@@ -160,7 +172,7 @@ function createController(vscode, context, editorFactory = createEditors) {
       kind: "variant-choice", target, icon: "layers",
       contextValue: item.variantName ? "variant" : "variant-default",
       id: JSON.stringify([target.folder.uri.fsPath, variantKey(target), "choice", item.variantName ?? null]),
-      tooltip: [item.description, `Select one variant for ${target.kind} ${target.name}. Other jobs and workflows keep their own selection.`].filter(Boolean).join("\n"),
+      tooltip: [item.description, target.kind === "job" ? `Select variants for job ${target.name}. Selected variants run in parallel. Use project default clears the explicit selection.` : `Select one variant for workflow ${target.name}. Other jobs and workflows keep their own selection.`].filter(Boolean).join("\n"),
     }));
   }
 
@@ -177,19 +189,25 @@ function createController(vscode, context, editorFactory = createEditors) {
     for (const [element, state] of event.items) {
       if (element.kind !== "variant-choice") continue;
       const key = variantKey(element.target);
-      const previous = choices.get(key);
-      // A checked option wins if VS Code delivers sibling updates together.
-      if (!previous || state === vscode.TreeItemCheckboxState.Checked) choices.set(key, { element, state });
+      const updates = choices.get(key) || [];
+      updates.push({ element, state });
+      choices.set(key, updates);
     }
-    for (const { element, state } of choices.values()) {
-      const target = await chooseTarget(element.target);
-      const checked = state === vscode.TreeItemCheckboxState.Checked;
-      const name = checked ? element.variantName : undefined;
-      if (name && !target.project.variants.some(item => !item.abstract && item.name === name)) {
-        throw new Error("This variant is no longer available. Refresh projects and choose a variant.");
+    for (const updates of choices.values()) {
+      const target = await chooseTarget(updates[0].element.target);
+      const names = new Set(explicitVariants(target));
+      for (const { element, state } of updates) {
+        const checked = state === vscode.TreeItemCheckboxState.Checked;
+        const name = element.variantName;
+        if (checked && name && !target.project.variants.some(item => !item.abstract && item.name === name)) {
+          throw new Error("This variant is no longer available. Refresh projects and choose a variant.");
+        }
+        if (checked) {
+          if (!name || target.kind !== "job") names.clear();
+          if (name) names.add(name);
+        } else if (name) names.delete(name);
       }
-      const saved = context.workspaceState.get(variantKey(target));
-      if (checked || saved === element.variantName) await context.workspaceState.update(variantKey(target), name);
+      await context.workspaceState.update(variantKey(target), names.size ? target.kind === "job" ? [...names] : [...names][0] : undefined);
       variantChanged(target);
     }
   }
@@ -240,12 +258,12 @@ function createController(vscode, context, editorFactory = createEditors) {
         tooltip: source ? `${source.file}:${source.line}` : "Not configured",
         description: value === undefined ? "not configured" : object || typeof configPath.at(-1) === "number" ? "" : String(value),
       };
-      if (object) node.children = Object.entries(value).filter(([key]) => !(key === "components" && configPath.length === 1 && ["project", "variants"].includes(configPath[0]))).map(([key, child]) => field(child, [...configPath, Array.isArray(value) ? Number(key) : key], Array.isArray(value) ? presentation.listLabel(child, [...configPath, Number(key)]) : key));
+      if (object) node.children = schemaTools.orderedEntries(schemaTools.at(config.schema, config.value, configPath, config.schema), value, config.schema).filter(([key]) => !(key === "components" && configPath.length === 1 && ["project", "variants"].includes(configPath[0]))).map(([key, child]) => field(child, [...configPath, Array.isArray(value) ? Number(key) : key], Array.isArray(value) ? presentation.listLabel(child, [...configPath, Number(key)]) : key));
       node.command = { command: "project-toolkit.openConfig", title: "Edit configuration", arguments: [node] };
       return node;
     }
     const value = config.value || {};
-    const keys = [...new Set([...Object.keys(config.schema.properties || {}).filter(key => key !== "members"), ...Object.keys(value)])];
+    const keys = schemaTools.orderedEntries(config.schema, value, config.schema, { includeMissing: true }).map(([key]) => key).filter(key => key !== "members" || Object.hasOwn(value, key));
     const node = field(value, [], "Configuration");
     node.children = keys.map(key => field(value[key], [key], key));
     const components = field(value.project?.components || {}, ["project", "components"], "Components");
@@ -255,7 +273,9 @@ function createController(vscode, context, editorFactory = createEditors) {
       component.children = [field(value.project.components[name].path, ["project", "components", name, "path"], "Directory"), ...(component.children || [])];
       return component;
     });
-    node.children.push(components);
+    const variantsIndex = node.children.findIndex(child => child.configPath[0] === "variants");
+    const projectIndex = node.children.findIndex(child => child.configPath[0] === "project");
+    node.children.splice(Math.max(variantsIndex, projectIndex) + 1, 0, components);
     return node;
   }
 
@@ -275,7 +295,7 @@ function createController(vscode, context, editorFactory = createEditors) {
         const target = { ...common, kind, name: spec.name, spec };
         const node = { ...target, label: spec.name, tooltip: spec.help,
           contextValue: core.canOpenReport(target) ? `${kind}-report` : kind,
-          description: [variantFor(target), kind === "workflow" && common.ci ? "dry-run only on CI" : spec.default ? "default" : ""].filter(Boolean).join(" · "),
+          description: [variantDescription(target), kind === "workflow" && common.ci ? "dry-run only on CI" : spec.default ? "default" : ""].filter(Boolean).join(" · "),
           icon: kind === "job" ? "play-circle" : "git-merge",
           collapsed: true, children: variantChildren(target),
         };
@@ -332,13 +352,13 @@ function createController(vscode, context, editorFactory = createEditors) {
       item.contextValue = element.contextValue;
       item.command = element.command;
       if (["job", "workflow"].includes(element.kind) && element.project) {
-        item.description = [variantFor(element), element.kind === "workflow" && element.ci ? "dry-run only on CI" : element.spec.default ? "default" : ""].filter(Boolean).join(" · ");
+        item.description = [variantDescription(element), element.kind === "workflow" && element.ci ? "dry-run only on CI" : element.spec.default ? "default" : ""].filter(Boolean).join(" · ");
       }
       if (element.kind === "variant-choice") {
-        const saved = context.workspaceState.get(variantKey(element.target));
-        const validSaved = element.project.variants.some(item => !item.abstract && item.name === saved) ? saved : undefined;
+        const selected = explicitVariants(element.target);
+        const checked = element.variantName ? selected.includes(element.variantName) : !selected.length;
         item.checkboxState = {
-          state: validSaved === element.variantName ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
+          state: checked ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
           tooltip: element.tooltip,
           accessibilityInformation: { label: `${element.label}, variant for ${element.target.kind} ${element.target.name}` },
         };
@@ -406,6 +426,15 @@ function createController(vscode, context, editorFactory = createEditors) {
       return;
     }
     const choices = target.project.variants.filter(v => !v.abstract);
+    if (target.kind === "job") {
+      const current = explicitVariants(target);
+      const selected = await vscode.window.showQuickPick(choices.map(v => ({ label: v.name, description: v.description, name: v.name, picked: current.includes(v.name) })),
+        { canPickMany: true, placeHolder: `Variants for job ${target.name} · run in parallel · clear all to use project default` });
+      if (!selected) return;
+      await context.workspaceState.update(variantKey(target), selected.length ? selected.map(item => item.name) : undefined);
+      variantChanged(target);
+      return variantsFor(target);
+    }
     const selected = await vscode.window.showQuickPick([
       { label: "Use project default", description: target.project.default_variant || "No default configured", reset: true },
       ...choices.map(v => ({ label: v.name, description: v.description, name: v.name })),
@@ -413,7 +442,7 @@ function createController(vscode, context, editorFactory = createEditors) {
     if (!selected) return;
     await context.workspaceState.update(variantKey(target), selected.reset ? undefined : selected.name);
     variantChanged(target);
-    return variantFor(target);
+    return variantsFor(target);
   }
 
   async function builtinParameters(target, editOptional) {
@@ -466,7 +495,7 @@ function createController(vscode, context, editorFactory = createEditors) {
     if (options.help !== undefined) definition.help = options.help;
     if (options.report !== undefined) definition.report = options.report;
     if (options.inputs && Object.keys(options.inputs).length) definition.inputs = options.inputs;
-    const task = new vscode.Task(definition, target.folder, `${options.report ? "Report " : options.help ? "Help " : options.preview ? "Dry Run " : options.clean ? "Clean " : options.reRun ? "Re-run " : ""}${title(target)}`, "project-toolkit",
+    const task = new vscode.Task(definition, target.folder, `${options.report ? "Report " : options.help ? "Help " : options.preview ? "Dry Run " : options.clean ? "Clean " : options.reRun ? "Re-run " : ""}${title(target)}${options.variant ? ` [${options.variant}]` : ""}`, "project-toolkit",
       new vscode.ProcessExecution(config.executable, core.launchArgs(config, core.argsFor(target, options)), { cwd: target.root }), []);
     task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Dedicated, clear: false, focus: target.kind === "builtin" && !options.help };
     return task;
@@ -475,16 +504,16 @@ function createController(vscode, context, editorFactory = createEditors) {
   async function run(element, preview = false, editOptional = false, cleanup = {}) {
     const target = await chooseTarget(element, editOptional);
     if (!target) return;
-    let variant;
+    let variants = [];
     let params = {};
     if (target.project && ["job", "workflow"].includes(target.kind)) {
-      variant = variantFor(target);
-      if (!variant && target.project.variants.some(v => !v.abstract)) {
-        variant = await selectVariant(target);
-        if (!variant) return;
+      variants = variantsFor(target);
+      if (!variants.length && target.project.variants.some(v => !v.abstract)) {
+        variants = await selectVariant(target);
+        if (!variants?.length) return;
       }
       if (target.kind === "job" && !cleanup.clean && (editOptional || (target.spec.params || []).some(spec => spec.required))) {
-        const result = await editors.parameters(target, { preview, variant, ...cleanup });
+        const result = await editors.parameters(target, { preview, variant: variants.length === 1 ? variants[0] : undefined, variants, ...cleanup });
         if (!result) return;
         params = result.params;
         preview = result.preview;
@@ -493,8 +522,11 @@ function createController(vscode, context, editorFactory = createEditors) {
     // A form may remain open while discovery, permissions or the configuration changes.
     const current = await chooseTarget(target);
     if (current.kind === "job" && !cleanup.clean) validateParameters(current.spec.params || [], params);
-    if (variant && current.project && !current.project.variants.some(item => item.name === variant && !item.abstract)) throw new Error("This variant is no longer available. Refresh projects and choose a variant.");
-    return vscode.tasks.executeTask(makeTask(current, { preview, variant, params, ...cleanup }));
+    if (variants.some(variant => !current.project?.variants.some(item => item.name === variant && !item.abstract))) throw new Error("A selected variant is no longer available. Refresh projects and choose variants.");
+    // Construct and validate the whole batch before starting anything. Each
+    // definition retains its own variant for task reruns and dedicated terminals.
+    const tasks = (variants.length ? variants : [undefined]).map(variant => makeTask(current, { preview, variant, params, ...cleanup }));
+    return Promise.all(tasks.map(task => vscode.tasks.executeTask(task)));
   }
 
   function command(name, callback) {
@@ -531,15 +563,15 @@ function createController(vscode, context, editorFactory = createEditors) {
   command("showVariant", async element => {
     const owner = await chooseProject(element, "variants");
     if (!owner) return;
-    const name = element?.name || core.selectedVariant(owner.project) || await selectVariant(owner);
+    const name = element?.name || core.selectedVariant(owner.project) || (await vscode.window.showQuickPick(owner.project.variants.filter(item => !item.abstract).map(item => ({ label: item.name, name: item.name })), { placeHolder: "Display variant" }))?.name;
     if (name) return vscode.tasks.executeTask(makeTask({ ...owner, kind: "variant", name }));
   });
   command("openReport", async element => {
     const target = await chooseTarget(element);
     if (!target) return;
-    return vscode.tasks.executeTask(makeTask(target, {
-      report: true, variant: target.kind === "job" ? variantFor(target) : undefined,
-    }));
+    const variants = target.kind === "job" ? variantsFor(target) : [];
+    const tasks = (variants.length ? variants : [undefined]).map(variant => makeTask(target, { report: true, variant }));
+    return Promise.all(tasks.map(task => vscode.tasks.executeTask(task)));
   });
   async function validateConfiguration(element = {}) {
     trusted();
@@ -591,7 +623,10 @@ function createController(vscode, context, editorFactory = createEditors) {
       if (!vscode.workspace.isTrusted) return [];
       await settled();
       return core.availableTargets(records).filter(t => !(t.kind === "workflow" && t.ci) && !(t.spec.params || []).some(p => p.required && !p.env))
-        .map(t => makeTask(t, { variant: t.project ? variantFor(t) : undefined }));
+        .flatMap(t => {
+          const variants = t.project ? variantsFor(t) : [];
+          return (variants.length ? variants : [undefined]).map(variant => makeTask(t, { variant }));
+        });
     },
     async resolveTask(task) {
       if (!vscode.workspace.isTrusted) return;
@@ -606,7 +641,7 @@ function createController(vscode, context, editorFactory = createEditors) {
         return;
       }
       const resolved = makeTask(target, {
-        variant: target.project && !d.help ? d.variant || variantFor(target) : undefined,
+        variant: target.project && !d.help ? d.variant || core.selectedVariant(target.project) : undefined,
         preview: d.preview, params: d.params, help: d.help, inputs: d.inputs, clean: d.clean, reRun: d.reRun, report: d.report,
       });
       resolved.definition = task.definition;

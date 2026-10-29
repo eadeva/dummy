@@ -7,7 +7,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
-const { spawnSync } = require("node:child_process");
+const { spawn, spawnSync } = require("node:child_process");
 const core = require("../src/core");
 
 const python = process.env.PTK_TEST_PYTHON;
@@ -52,6 +52,42 @@ function project(root, alias) {
     workflows: { verify: { steps: [{ build: "build" }] } },
   });
 }
+
+test("separate variant tasks execute real PTK processes concurrently with isolated outputs", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk parallel variants "));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  project(root, "demo");
+  const script = path.join(root, "barrier.py");
+  fs.writeFileSync(script, [
+    "import json, sys, time", "from pathlib import Path",
+    "root, name, output, parameter = Path(sys.argv[1]), sys.argv[2], Path(sys.argv[3]), sys.argv[4]",
+    "(root / ('started-' + name)).write_text('ready')",
+    "deadline = time.monotonic() + 10",
+    "while not all((root / ('started-' + v)).exists() for v in ['small', 'large']):",
+    "    if time.monotonic() > deadline: raise RuntimeError('variants did not overlap')",
+    "    time.sleep(0.02)",
+    "output.mkdir(parents=True, exist_ok=True)",
+    "(output / 'result.txt').write_text(parameter)",
+    "(root / ('done-' + name)).write_text(json.dumps({'output': str(output), 'parameter': parameter}))",
+  ].join("\n"));
+  fs.writeFileSync(path.join(root, "jobs/build.ptk.yml"), JSON.stringify({
+    params: { output: { default: "${vh.variant}" } },
+    steps: [{ overlap: { run: [python, script, root, "${run.variant}", "${run.bin_dir}", "${params.output}"], timeout: 20 } }],
+  }));
+  const doc = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));
+  const target = core.availableTargets([{ inventory: doc }]).find(item => item.kind === "job");
+  const results = await Promise.all(["small", "large"].map(variant => new Promise((resolve, reject) => {
+    const child = spawn(python, ["-m", "ptk", ...core.argsFor(target, { variant })], { cwd: root, env, timeout: 30000 });
+    let output = "";
+    child.stdout.on("data", chunk => output += chunk);
+    child.stderr.on("data", chunk => output += chunk);
+    child.on("error", reject);
+    child.on("close", code => code === 0 ? resolve(JSON.parse(fs.readFileSync(path.join(root, `done-${variant}`), "utf8"))) : reject(new Error(`${variant}: ${output}`)));
+  })));
+  assert.deepEqual(results.map(result => result.parameter), ["small", "large"]);
+  assert.notEqual(results[0].output, results[1].output);
+  for (const result of results) assert.equal(fs.readFileSync(path.join(result.output, "result.txt"), "utf8"), result.parameter);
+});
 
 test("installed PTK supplies the variable catalogue and raw job field capabilities", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk variables "));

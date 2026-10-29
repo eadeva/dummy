@@ -3,6 +3,27 @@ const test = require("node:test"), assert = require("node:assert/strict");
 const S = require("../media/schema");
 const schema = require("../media/config-schema.json");
 
+test("field ordering survives alphabetized JSON and keeps scalars before nested values", () => {
+  function alphabetize(value) {
+    return Array.isArray(value) ? value.map(alphabetize) : value && typeof value === "object"
+      ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, child]) => [key, alphabetize(child)])) : value;
+  }
+  const sorted = alphabetize(schema);
+  const job = { steps: [{ z: "first" }, { a: "second" }], env: {}, audience: "all", help: "Build" };
+  assert.deepEqual(S.orderedEntries(sorted.$defs.JobSpec, job, sorted).map(([key]) => key), ["help", "audience", "env", "steps"]);
+  assert.deepEqual(S.orderedEntries(sorted, { workflows: {}, project: {}, artifactory: {}, jobs: {}, repository: {}, ptk_version: ">=1" }, sorted).map(([key]) => key), ["ptk_version", "repository", "project", "jobs", "workflows", "artifactory"]);
+  const steps = S.at(sorted, { jobs: { build: job } }, ["jobs", "build", "steps"], sorted);
+  assert.deepEqual(S.orderedEntries(steps, job.steps, sorted), [["0", job.steps[0]], ["1", job.steps[1]]]);
+  assert.deepEqual(Object.keys(job), ["steps", "env", "audience", "help"], "presentation does not mutate the configuration");
+});
+
+test("ordering handles missing optional fields, references, null and dictionaries", () => {
+  const properties = { nested: { $ref: "#/$defs/Child" }, nullable: { anyOf: [{ type: "object" }, { type: "null" }] }, scalar: { type: "string" } };
+  const spec = { type: "object", properties, "x-ptk-field-order": ["nested", "nullable", "scalar"], $defs: { Child: { type: "object" } } };
+  assert.deepEqual(S.orderedEntries(spec, { nullable: null }, spec, { includeMissing: true }).map(([key]) => key), ["nullable", "scalar", "nested"]);
+  assert.deepEqual(S.orderedEntries({}, { z: "first", a: "second", group: {} }, {}).map(([key]) => key), ["z", "a", "group"]);
+});
+
 test("field help preserves context through references and includes defaults and limits", () => {
   const root = { $defs: { Nested: { type: "object", description: "Generic model help" } } };
   const spec = { description: "Purpose of this field", anyOf: [{ $ref: "#/$defs/Nested" }, { type: "null" }], default: null };

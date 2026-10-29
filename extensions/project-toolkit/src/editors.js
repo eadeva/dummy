@@ -216,7 +216,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
           trusted();
           if (message.type === "ready") return panel.webview.postMessage({ type: "state", mode: "parameters", name: target.name,
             project: target.project?.alias, help: target.spec.help, params: (target.spec.params || []).filter(spec => spec.type !== "secret"),
-            preview: options.preview, variant: options.variant, reRun: !!options.reRun });
+            preview: options.preview, variant: options.variant, variants: options.variants, reRun: !!options.reRun });
           if (message.type === "cancel") return finish();
           if (message.type === "submit") {
             if (typeof message.preview !== "boolean") throw new Error("Invalid run action.");

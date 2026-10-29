@@ -10,8 +10,8 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
    support `ptk describe --json` (inventory schema version 1).
 2. If PTK was installed directly with uv, run `ptk setup extension` afterwards.
    Alternatively, in VS Code run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.8.0.vsix`. You can also use
-   `code --install-extension project-toolkit-0.8.0.vsix`.
+   `project-toolkit-0.9.0.vsix`. You can also use
+   `code --install-extension project-toolkit-0.9.0.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -62,7 +62,7 @@ reloading the form or losing unfinished text. Environment placeholders select
 the name for editing. The installed PTK supplies the catalogue and tells the
 form which fields support templates. Job parameters are scoped to their job;
 credential references are only offered for step environment values. No resolved
-environment or credential values are displayed. Update PTK and extension 0.8.0
+environment or credential values are displayed. Update PTK and extension 0.9.0
 together.
 
 PTK resolves `${git.branch}`, `${git.commit}`, `${git.short_commit}`, `${git.tag}`,
@@ -98,8 +98,9 @@ labels and icon shapes also identify each category.
   expressions and resolved when PTK runs. Choose **Run job**, **Dry run** or
   **Cancel**. Lists use comma-separated values. Secret parameters stay in their
   declared credential environment and are excluded from the form.
-- Expand a job or repository workflow to select a variant with its checkbox. One
-  choice is active at a time; checking another variant switches to it. Selection is
+- Expand a job to check one or more variants. Run starts them in parallel, each
+  with a named task and dedicated terminal. Repository workflows select one owner
+  variant. Selection is
   stored independently for that row in VS Code workspace state. Choose
   **Use project default** to clear it. PTK configuration files are unchanged.
 - Use **Display Variant** to inspect resolved features. Edit variant definitions
@@ -171,6 +172,12 @@ or activate **?** with the mouse or keyboard to expand help, defaults and constr
 Descriptions come from Pydantic field metadata in the installed PTK schema,
 including context-specific meanings such as job restrictions versus skipped steps.
 The optional-field selector previews this help before adding a field.
+Both tree and form show scalar fields before objects and lists. Schema order
+groups the root into identity, variants/components, jobs/workflows, execution
+settings, tools/credentials, artifacts/versioning and output settings. Root scalar
+metadata comes first. PTK carries explicit field-order metadata so sorted JSON
+cannot turn this into alphabetical order. List items retain their authored order,
+including executable steps; display ordering never rewrites YAML.
 Edits go to the owning document supplied by PTK. Adding a job, workflow or variant
 creates its conventional file. Components are registered in project settings;
 their features and dependencies live in `component.variants.ptk.yml` beside their
@@ -194,11 +201,20 @@ without `.main.ptk.yml` displays **No PTK project found** and offers **PTK setup
 which asks for the configuration directory.
 
 Expand a job or repository workflow to see variant checkboxes, or use its existing
-variant selector. Check one variant to activate it; other choices clear automatically.
-**Use project default** follows the configured default. Unchecking an explicit
-selection also returns to this default. Abstract variants cannot be selected.
-The selected value appears beside the parent row and is remembered independently
-per target. Checkbox changes update that branch without reloading PTK or the form.
+variant selector. Jobs accept multiple variants; workflows retain one owner variant.
+**Use project default** clears explicit selections and follows the configured default.
+Unchecking the last selected variant also restores this default. Abstract variants
+cannot be selected. Selected names appear beside the parent row and are remembered
+independently per target. Checkbox changes update that branch without reloading PTK
+or the form.
+
+Run, Dry Run, Clean and Re-run start a separate task for every selected job variant
+in parallel. The parameter form opens once; explicit overrides apply to all selected
+variants, while omitted values and template defaults resolve independently in PTK.
+Canceling the form launches nothing. Open Report opens each selected variant's report.
+Tasks have variant-qualified names and preserve their explicit variant when rerun.
+The task picker lists each selected variant separately. A hand-written task without
+an explicit variant uses the project default rather than the tree's multi-selection.
 Repository workflows use PTK's existing repository variant mappings; workspace
 workflows retain the variants configured on their steps. There is no separate
 Variants group. Variant definitions remain editable under Configuration.
@@ -215,7 +231,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.8.0.vsix`. Use `ptk dry-run extension`
+`extensions/project-toolkit/project-toolkit-0.9.0.vsix`. Use `ptk dry-run extension`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.9.0
+
+- Select multiple job variants using tree checkboxes or the variant picker; run them in parallel with separate tasks and terminals. Repository workflows retain one owner variant.
+- Apply parameter overrides once across the selected variants, preserve each variant on task reruns, and use the same selection for dry-run, cleanup and reports.
+- Order scalar configuration fields before nested objects/lists in both tree and form, with a meaningful root order supplied by PTK's schema. Preserve authored list and step order.
+
 ## 0.8.0
 
 - Use compact configuration rows with responsive layout and inline variable insertion.

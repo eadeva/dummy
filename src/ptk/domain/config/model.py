@@ -856,6 +856,37 @@ class ReportingSpec(_Strict):
 
 
 class PtkConfig(_Strict):
+    model_config = ConfigDict(
+        extra="forbid",
+        populate_by_name=True,
+        json_schema_extra={
+            "x-ptk-field-order": [
+                "schema_version",
+                "ptk_version",
+                "virtual_monorepo",
+                "repository",
+                "members",
+                "project",
+                "variants",
+                "jobs",
+                "workflows",
+                "vars",
+                "param_defaults",
+                "environment",
+                "requires_tools",
+                "tools",
+                "credentials",
+                "artifactory",
+                "versioning",
+                "layout",
+                "configs",
+                "logging",
+                "reporting",
+                "plugins",
+                "command_audience",
+            ]
+        },
+    )
     artifactory: ArtifactoryStructure | None = Field(
         default=None,
         description="Artifact destination rules by event, branch/tag and job. Configure downloads for tools in tools instead.",

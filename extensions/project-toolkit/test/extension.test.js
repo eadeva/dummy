@@ -99,7 +99,116 @@ function jobNode(h, label = "Jobs") {
   return h.controller.provider.getChildren()[0].children[0].children.find(node => node.label === label).children[0];
 }
 
-test("job variant checkboxes choose one variant without discovery or changing configuration", async t => {
+async function selectAllJobVariants(h) {
+  const node = jobNode(h);
+  await h.checkbox(node.children.filter(item => item.variantName).map(item => [item, 1]));
+  return node;
+}
+
+test("job variants launch concurrently with independent task identities and terminals", async t => {
+  const h = harness(t);
+  await h.controller.ready();
+  const node = await selectAllJobVariants(h);
+  const releases = [];
+  t.mock.method(h.api.tasks, "executeTask", task => {
+    h.tasks.push(task);
+    return new Promise(resolve => releases.push(() => resolve(task)));
+  });
+  const run = h.command("run", node);
+  await new Promise(resolve => setImmediate(resolve));
+  try {
+    assert.equal(h.tasks.length, 2, "both tasks start before either launch promise resolves");
+    assert.deepEqual(h.tasks.map(task => task.definition.variant), ["small", "large"]);
+    assert.equal(new Set(h.tasks.map(task => task.name)).size, 2);
+    for (const task of h.tasks) {
+      assert.ok(task.name.includes(`[${task.definition.variant}]`));
+      assert.equal(task.presentationOptions.panel, h.api.TaskPanelKind.Dedicated);
+    }
+  } finally { releases.forEach(release => release()); await run; }
+  const automatic = (await h.api.taskProvider.provideTasks()).filter(task => task.definition.kind === "job");
+  assert.deepEqual(automatic.map(task => task.definition.variant), ["small", "large"]);
+  // Rerunning a task keeps its own variant after the checkbox selection changes.
+  await h.checkbox([[node.children[0], 1]]);
+  for (const task of h.tasks) {
+    const resolved = await h.api.taskProvider.resolveTask(task);
+    assert.deepEqual(resolved.execution.args, task.execution.args);
+  }
+});
+
+test("multi-variant parameter overrides are collected once and cancellation launches nothing", async t => {
+  const h = harness(t);
+  await h.controller.ready();
+  const node = await selectAllJobVariants(h);
+  h.forms.push((_target, options) => {
+    assert.deepEqual(options.variants, ["small", "large"]);
+    return { params: { output_path: "folder with spaces" }, preview: true };
+  });
+  await h.command("runWithParameters", node);
+  assert.equal(h.formRequests.length, 1);
+  assert.equal(h.tasks.length, 2);
+  for (const task of h.tasks) {
+    assert.equal(task.definition.preview, true);
+    assert.deepEqual(task.definition.params, { output_path: "folder with spaces" });
+  }
+  h.forms.push(() => undefined);
+  await h.command("runWithParameters", node);
+  assert.equal(h.tasks.length, 2);
+});
+
+test("multi-variant actions preflight the whole selection and retain cleanup/report semantics", async t => {
+  const doc = inventory(), h = harness(t, [doc]);
+  await h.controller.ready();
+  const node = await selectAllJobVariants(h);
+  for (const [command, property] of [["preview", "preview"], ["clean", "clean"], ["reRun", "reRun"], ["openReport", "report"]]) {
+    const before = h.tasks.length;
+    await h.command(command, node);
+    assert.deepEqual(h.tasks.slice(before).map(task => [task.definition.variant, task.definition[property]]), [["small", true], ["large", true]]);
+  }
+  const before = h.tasks.length;
+  h.forms.push(async () => {
+    doc.projects[0].variants = doc.projects[0].variants.filter(item => item.name !== "large");
+    await h.controller.refresh();
+    return { params: {}, preview: false };
+  });
+  await h.command("runWithParameters", node);
+  assert.equal(h.tasks.length, before);
+  assert.match(h.errors.at(-1), /selected variant is no longer available/);
+});
+
+test("job quick pick supports multiple checks, defaults and cancellation; workflows stay single", async t => {
+  const h = harness(t);
+  await h.controller.ready();
+  h.picks.push((items, options) => { assert.equal(options.canPickMany, true); return items; });
+  await h.command("selectVariant", h.target());
+  await h.command("run", h.target());
+  assert.deepEqual(h.tasks.map(task => task.definition.variant), ["small", "large"]);
+  h.picks.push(() => undefined);
+  await h.command("selectVariant", h.target());
+  assert.match(h.controller.provider.getTreeItem(jobNode(h)).description, /small, large/);
+  const workflow = jobNode(h, "Workflows");
+  await h.checkbox(workflow.children.filter(item => item.variantName).map(item => [item, 1]));
+  assert.equal(workflow.children.filter(item => h.controller.provider.getTreeItem(item).checkboxState.state === 1).length, 1);
+  await h.checkbox([[jobNode(h).children[0], 1]]);
+  assert.equal(h.controller.provider.getTreeItem(jobNode(h)).description, "small");
+});
+
+test("configuration tree uses meaningful root order and scalar fields before collections", async t => {
+  const doc = inventory();
+  doc.projects[0].configuration.schema = require("../media/config-schema.json");
+  doc.projects[0].configuration.value = {
+    jobs: { build: { env: {}, steps: [{ zeta: "echo first" }, { alpha: "echo second" }], help: "Build", audience: "all" } },
+    project: { components: {}, description: "Demo", name: "Project" }, repository: { config_path: "config", alias: "demo" },
+  };
+  const h = harness(t, [doc]);
+  await h.controller.ready();
+  const config = h.controller.provider.getChildren()[0].children[0].children.find(item => item.label === "Configuration");
+  assert.deepEqual(config.children.slice(0, 10).map(item => item.label), ["schema_version", "ptk_version", "virtual_monorepo", "repository", "project", "variants", "Components", "jobs", "workflows", "vars"]);
+  const job = config.children.find(item => item.label === "jobs").children[0];
+  assert.deepEqual(job.children.map(item => item.label), ["help", "audience", "env", "steps"]);
+  assert.deepEqual(job.children.at(-1).children.map(item => item.configPath.at(-1)), [0, 1]);
+});
+
+test("job variant checkboxes keep multiple choices without discovery or changing configuration", async t => {
   const h = harness(t);
   await h.controller.ready();
   assert.equal(h.treeOptions().manageCheckboxStateManually, true);
@@ -117,10 +226,16 @@ test("job variant checkboxes choose one variant without discovery or changing co
   assert.equal(h.tasks[0].definition.variant, "large");
   assert.equal(h.calls.length, calls);
   assert.equal(JSON.stringify(node.project.configuration), before);
+  await h.checkbox([[choices.find(item => item.variantName === "small"), 1]]);
+  assert.deepEqual(checked(), ["small", "large"]);
+  await h.command("run", node);
+  assert.deepEqual(h.tasks.slice(1).map(task => task.definition.variant), ["large", "small"]);
   await h.checkbox([[choices.find(item => item.variantName === "large"), 0]]);
+  assert.deepEqual(checked(), ["small"]);
+  await h.checkbox([[choices.find(item => item.variantName === "small"), 0]]);
   assert.deepEqual(checked(), ["Use project default"]);
   await h.command("run", node);
-  assert.equal(h.tasks[1].definition.variant, "small");
+  assert.equal(h.tasks.at(-1).definition.variant, "small");
 });
 
 test("checkbox selections remain independent for jobs, workflows and repositories", async t => {
@@ -143,7 +258,7 @@ test("checkboxes serialize rapid changes and reject removed or abstract variants
   const choices = jobNode(h).children;
   await Promise.all([h.checkbox([[choices.find(item => item.variantName === "large"), 1]]), h.checkbox([[choices.find(item => item.variantName === "small"), 1]])]);
   await h.command("run", h.target());
-  assert.equal(h.tasks[0].definition.variant, "small");
+  assert.deepEqual(h.tasks.map(task => task.definition.variant), ["large", "small"]);
   doc.projects[0].variants.find(item => item.name === "large").abstract = true;
   await h.controller.refresh();
   await h.checkbox([[choices.find(item => item.variantName === "large"), 1]]);
@@ -193,11 +308,11 @@ test("untrusted workspaces never discover or run PTK", async t => {
 test("variant choices are workspace state only and can return to the configured default", async t => {
   const h = harness(t);
   await h.controller.ready();
-  h.picks.push(items => items.find(item => item.name === "large"));
+  h.picks.push(items => items.filter(item => item.name === "large"));
   await h.command("selectVariant", h.target());
   await h.command("run", h.target());
   assert.equal(h.tasks[0].definition.variant, "large");
-  h.picks.push(items => items.find(item => item.reset));
+  h.picks.push(() => []);
   await h.command("selectVariant", h.target());
   await h.command("run", h.target());
   assert.equal(h.tasks[1].definition.variant, "small");
@@ -259,7 +374,7 @@ test("workflow and job name collisions dispatch explicitly and CI allows preview
 test("multi-root projects keep independent variant selections", async t => {
   const h = harness(t, [inventory(path.resolve("first")), inventory(path.resolve("second"))]);
   await h.controller.ready();
-  h.picks.push(items => items.find(item => item.name === "large"));
+  h.picks.push(items => items.filter(item => item.name === "large"));
   await h.command("selectVariant", h.target("job", 0));
   await h.command("run", h.target("job", 1));
   await h.command("run", h.target("job", 0));
@@ -428,7 +543,7 @@ test("report actions target job variants and aggregate workflows without running
   doc.projects[0].jobs[0].params[0].required = true;
   const h = harness(t, [doc]);
   await h.controller.ready();
-  h.picks.push(items => items.find(item => item.name === "large"));
+  h.picks.push(items => items.filter(item => item.name === "large"));
   await h.command("selectVariant", h.target());
   h.api.window.showQuickPick = h.api.window.showInputBox = () => assert.fail("Report actions must not prompt for run parameters");
   await h.command("openReport", h.target());
@@ -639,7 +754,7 @@ test("logical configuration paths have unique identities across projects", async
 test("jobs and workflows select variants independently with no Variants group", async t => {
   const h = harness(t);
   await h.controller.ready();
-  h.picks.push(items => items.find(item => item.name === "large"));
+  h.picks.push(items => items.filter(item => item.name === "large"));
   await h.command("selectVariant", h.target());
   await h.command("run", h.target());
   await h.command("run", h.target("workflow"));

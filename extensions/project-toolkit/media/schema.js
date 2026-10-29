@@ -43,6 +43,21 @@
     for (const key of path) { schema = child(schema, value, key, root); value = value?.[key]; }
     return schema;
   }
+  function orderedEntries(schema, value, root, { includeMissing = false } = {}) {
+    const entries = Object.entries(value || {});
+    // Lists are execution/data order, never a presentation sort.
+    if (Array.isArray(value)) return entries;
+    const spec = effective(schema, value, root);
+    if (includeMissing) for (const key of Object.keys(spec.properties || {})) {
+      if (!Object.hasOwn(value || {}, key)) entries.push([key, undefined]);
+    }
+    const order = spec["x-ptk-field-order"] || Object.keys(spec.properties || {});
+    const ranks = new Map(order.map((key, index) => [key, index]));
+    const nested = ([key, current]) => current === undefined
+      ? choices(child(schema, value, key, root), root).some(item => ["object", "array"].includes(item.type))
+      : current !== null && typeof current === "object";
+    return entries.sort((a, b) => Number(nested(a)) - Number(nested(b)) || (ranks.get(a[0]) ?? order.length) - (ranks.get(b[0]) ?? order.length));
+  }
   function initial(schema, root, context = {}) {
     const object = value => value !== null && typeof value === "object" && !Array.isArray(value);
     const uniqueName = (base, used) => {
@@ -102,5 +117,5 @@
     }
     return create(schema, undefined, 0, context.existing || []);
   }
-  return { type, resolve, choices, effective, help, child, at, initial };
+  return { type, resolve, choices, effective, help, child, at, orderedEntries, initial };
 });

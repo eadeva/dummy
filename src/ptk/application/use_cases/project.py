@@ -598,6 +598,11 @@ class ExportSchema:
         ]
         schema["title"] = "ptk configuration (*.ptk.yml)"
         schema["$schema"] = "https://json-schema.org/draft/2020-12/schema"
+        # JSON object member order is not a UI contract. Carry declaration order
+        # explicitly so editors can recover it even after sorted serialization.
+        for model in [schema, *schema.get("$defs", {}).values()]:
+            if "properties" in model:
+                model.setdefault("x-ptk-field-order", list(model["properties"]))
         from ...domain.config.template_variables import annotate_schema
 
         annotate_schema(schema)

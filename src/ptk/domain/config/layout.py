@@ -162,9 +162,13 @@ def document_schema(schema, doc):
             "type": "object",
             "additionalProperties": False,
             "properties": properties,
+            "x-ptk-field-order": list(properties),
         }
         if doc.file.name == "project.ptk.yml":
             result["required"] = ["name"]
         elif doc.file.name == ".main.ptk.yml":
             result["required"] = ["repository"]
+            result["x-ptk-field-order"] = [
+                key for key in schema["x-ptk-field-order"] if key in properties
+            ]
     return result

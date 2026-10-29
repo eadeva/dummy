@@ -188,7 +188,7 @@
       } else if (value === null || typeof value !== "object") {
         main.append(el("p", "PTK configuration files must contain a mapping. Use Raw YAML to correct this document.", { className: "notice" }));
       } else {
-        const entries = Object.entries(value);
+        const entries = S.orderedEntries(spec, value, schema);
         if (!entries.length) main.append(el("p", "No fields yet. Add a field below to get started.", { className: "empty" }));
         entries.forEach(([key, current]) => {
           const index = Array.isArray(value) ? Number(key) : key;
@@ -403,7 +403,7 @@
     const isJobs = selected.length === 1 && selected[0] === "jobs";
     box.append(el("legend", isJobs ? "Add a job" : isList ? "Add an item" : "Add a field"));
     const row = el("div", undefined, { className: "row" });
-    let name, options = Object.keys(resolved.properties || {}).filter(key => !Object.hasOwn(value, key));
+    let name, options = S.orderedEntries(spec, {}, schema, { includeMissing: true }).map(([key]) => key).filter(key => !Object.hasOwn(value, key));
     if (!isList && resolved.additionalProperties === false) {
       if (!options.length) return;
       name = el("select", undefined, { "aria-label": "Optional field" });
@@ -452,12 +452,14 @@
     app.replaceChildren();
     app.className = "parameter-editor";
     const header = el("header");
-    header.append(el("div", "PTk / Job parameters", { className: "brand" }), el("h1", state.name), el("p", [state.project, state.variant && `Variant: ${state.variant}`].filter(Boolean).join(" · "), { className: "muted" }));
+    const variants = state.variants || (state.variant ? [state.variant] : []);
+    header.append(el("div", "PTk / Job parameters", { className: "brand" }), el("h1", state.name), el("p", [state.project, variants.length && `${variants.length > 1 ? "Variants (parallel)" : "Variant"}: ${variants.join(", ")}`].filter(Boolean).join(" · "), { className: "muted" }));
     app.append(header);
     const main = el("main", undefined, { className: "parameters" });
     notice(main);
     if (state.help) main.append(el("p", state.help));
     main.append(el("p", "Enable an override to supply a value. Otherwise PTK uses the configured environment or default when the job runs.", { className: "muted" }));
+    if (variants.length > 1) main.append(el("p", "Overrides apply to every selected variant. Omitted values and template defaults are resolved separately for each run.", { className: "help" }));
     const controls = [];
     for (const spec of state.params) {
       const id = `parameter-${spec.name}`;

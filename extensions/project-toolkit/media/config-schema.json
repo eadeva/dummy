@@ -101,7 +101,19 @@
         "url": "https://artifactory.example.invalid/artifactory",
         "repository": "tools",
         "name": "tool.zip"
-      }
+      },
+      "x-ptk-field-order": [
+        "url",
+        "repository",
+        "path",
+        "name",
+        "properties",
+        "select",
+        "token_env",
+        "sha256",
+        "extract",
+        "bin"
+      ]
     },
     "ArtifactoryStructure": {
       "additionalProperties": false,
@@ -151,7 +163,14 @@
       "x-ptk-initial": {
         "url": "https://artifactory.example.invalid/artifactory",
         "repository": "artifacts"
-      }
+      },
+      "x-ptk-field-order": [
+        "url",
+        "repository",
+        "base_path",
+        "events",
+        "jobs"
+      ]
     },
     "ChocoSource": {
       "additionalProperties": false,
@@ -179,7 +198,11 @@
         "package"
       ],
       "title": "ChocoSource",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "package",
+        "version"
+      ]
     },
     "ComponentRegistration": {
       "additionalProperties": false,
@@ -196,7 +219,10 @@
       ],
       "title": "ComponentRegistration",
       "type": "object",
-      "x-ptk-directory-template": "components/{name}"
+      "x-ptk-directory-template": "components/{name}",
+      "x-ptk-field-order": [
+        "path"
+      ]
     },
     "ComponentSpec": {
       "additionalProperties": false,
@@ -233,7 +259,13 @@
         }
       },
       "title": "ComponentSpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "description",
+        "requires_components",
+        "constraints",
+        "features"
+      ]
     },
     "Constraint": {
       "additionalProperties": false,
@@ -257,7 +289,11 @@
       "type": "object",
       "x-ptk-initial": {
         "expr": "true"
-      }
+      },
+      "x-ptk-field-order": [
+        "expr",
+        "message"
+      ]
     },
     "CredentialSpec": {
       "additionalProperties": false,
@@ -332,7 +368,16 @@
         }
       },
       "title": "CredentialSpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "namespace",
+        "description",
+        "fields",
+        "providers",
+        "env",
+        "gopass",
+        "test"
+      ]
     },
     "DownloadSource": {
       "additionalProperties": false,
@@ -379,7 +424,13 @@
         "url"
       ],
       "title": "DownloadSource",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "url",
+        "sha256",
+        "extract",
+        "bin"
+      ]
     },
     "EnvironmentSpec": {
       "additionalProperties": false,
@@ -441,7 +492,16 @@
         }
       },
       "title": "EnvironmentSpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "isolate",
+        "inherit_path",
+        "keep",
+        "set",
+        "unset",
+        "path_prepend",
+        "path_append"
+      ]
     },
     "EventRoute": {
       "additionalProperties": false,
@@ -501,7 +561,13 @@
         }
       },
       "title": "EventRoute",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "path",
+        "repository",
+        "branch",
+        "tag"
+      ]
     },
     "FeatureSpec": {
       "additionalProperties": false,
@@ -609,7 +675,18 @@
         }
       },
       "title": "FeatureSpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "type",
+        "help",
+        "default",
+        "values",
+        "min",
+        "max",
+        "depends_on",
+        "requires",
+        "conflicts"
+      ]
     },
     "FeatureType": {
       "enum": [
@@ -634,7 +711,10 @@
         "path"
       ],
       "title": "GopassSpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "path"
+      ]
     },
     "JobDestination": {
       "additionalProperties": false,
@@ -647,7 +727,10 @@
         }
       },
       "title": "JobDestination",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "path"
+      ]
     },
     "JobSpec": {
       "additionalProperties": false,
@@ -784,7 +867,21 @@
         "steps"
       ],
       "title": "JobSpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "only_cx",
+        "only_variants",
+        "omit_variants",
+        "open_report",
+        "version_dependencies",
+        "environment",
+        "help",
+        "audience",
+        "params",
+        "requires_tools",
+        "env",
+        "steps"
+      ]
     },
     "LayoutSpec": {
       "additionalProperties": false,
@@ -822,7 +919,14 @@
         }
       },
       "title": "LayoutSpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "root",
+        "builds",
+        "bin",
+        "logs",
+        "reports"
+      ]
     },
     "LoggingSpec": {
       "additionalProperties": false,
@@ -849,7 +953,11 @@
         }
       },
       "title": "LoggingSpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "level",
+        "keep_history"
+      ]
     },
     "ParamSpec": {
       "additionalProperties": false,
@@ -920,7 +1028,15 @@
         }
       },
       "title": "ParamSpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "type",
+        "default",
+        "choices",
+        "help",
+        "required",
+        "env"
+      ]
     },
     "PathRoute": {
       "additionalProperties": false,
@@ -948,7 +1064,11 @@
         "path"
       ],
       "title": "PathRoute",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "path",
+        "repository"
+      ]
     },
     "ProductLineSpec": {
       "additionalProperties": false,
@@ -996,7 +1116,14 @@
         }
       },
       "title": "ProductLineSpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "default",
+        "components",
+        "variants",
+        "constraints",
+        "env"
+      ]
     },
     "ProjectSpec": {
       "additionalProperties": false,
@@ -1044,7 +1171,13 @@
         "name"
       ],
       "title": "ProjectSpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "name",
+        "description",
+        "default_job",
+        "components"
+      ]
     },
     "PythonSpec": {
       "additionalProperties": false,
@@ -1122,7 +1255,15 @@
       "type": "object",
       "x-ptk-initial": {
         "interpreter": "cli"
-      }
+      },
+      "x-ptk-field-order": [
+        "uvx",
+        "with",
+        "venv",
+        "project",
+        "groups",
+        "interpreter"
+      ]
     },
     "ReportingSpec": {
       "additionalProperties": false,
@@ -1150,7 +1291,11 @@
         }
       },
       "title": "ReportingSpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "formats",
+        "dir"
+      ]
     },
     "RepositorySpec": {
       "additionalProperties": false,
@@ -1173,7 +1318,11 @@
         "config_path"
       ],
       "title": "RepositorySpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "alias",
+        "config_path"
+      ]
     },
     "SharedConfigSpec": {
       "additionalProperties": false,
@@ -1212,7 +1361,12 @@
         }
       },
       "title": "SharedConfigSpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "enabled",
+        "overlay",
+        "output"
+      ]
     },
     "ToolSpec": {
       "additionalProperties": false,
@@ -1389,7 +1543,22 @@
         }
       },
       "title": "ToolSpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "description",
+        "docker",
+        "installers",
+        "version",
+        "check",
+        "version_regex",
+        "choco",
+        "toolbase",
+        "artifactory",
+        "uv_tool",
+        "download",
+        "apt",
+        "dnf"
+      ]
     },
     "ToolbaseSource": {
       "additionalProperties": false,
@@ -1432,7 +1601,13 @@
       "x-ptk-initial": {
         "package": "tool",
         "version": "1.0.0"
-      }
+      },
+      "x-ptk-field-order": [
+        "package",
+        "version",
+        "environment",
+        "bin"
+      ]
     },
     "VariantEnvSpec": {
       "additionalProperties": false,
@@ -1451,7 +1626,11 @@
         }
       },
       "title": "VariantEnvSpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "prefix",
+        "legacy_bo"
+      ]
     },
     "VariantSpec": {
       "additionalProperties": false,
@@ -1534,7 +1713,17 @@
         }
       },
       "title": "VariantSpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "repo_variants",
+        "description",
+        "abstract",
+        "extends",
+        "aliases",
+        "components",
+        "features",
+        "data"
+      ]
     },
     "VenvSpec": {
       "additionalProperties": false,
@@ -1570,7 +1759,12 @@
         }
       },
       "title": "VenvSpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "requirements",
+        "packages",
+        "python"
+      ]
     },
     "VersionDependency": {
       "additionalProperties": false,
@@ -1590,7 +1784,10 @@
         }
       },
       "title": "VersionDependency",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "variant"
+      ]
     },
     "VersionOverride": {
       "additionalProperties": false,
@@ -1617,7 +1814,11 @@
         }
       },
       "title": "VersionOverride",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "project",
+        "components"
+      ]
     },
     "VersionSource": {
       "additionalProperties": false,
@@ -1789,7 +1990,24 @@
       "x-ptk-initial": {
         "source": "literal",
         "version": "0.1.0"
-      }
+      },
+      "x-ptk-field-order": [
+        "source",
+        "version",
+        "match",
+        "strip_prefix",
+        "first_parent",
+        "dirty",
+        "allow_shallow",
+        "path",
+        "format",
+        "key",
+        "regex",
+        "variable",
+        "command",
+        "timeout",
+        "fallback"
+      ]
     },
     "VersioningSpec": {
       "additionalProperties": false,
@@ -1835,7 +2053,13 @@
       "type": "object",
       "x-ptk-initial": {
         "project": {}
-      }
+      },
+      "x-ptk-field-order": [
+        "project",
+        "components",
+        "variants",
+        "dependencies"
+      ]
     },
     "WorkflowSpec": {
       "additionalProperties": false,
@@ -1901,7 +2125,15 @@
         "steps"
       ],
       "title": "WorkflowSpec",
-      "type": "object"
+      "type": "object",
+      "x-ptk-field-order": [
+        "help",
+        "audience",
+        "open_report",
+        "parallel",
+        "max_workers",
+        "steps"
+      ]
     },
     "StepBody": {
       "additionalProperties": false,
@@ -2110,7 +2342,29 @@
       "type": "object",
       "x-ptk-initial": {
         "run": "echo Hello"
-      }
+      },
+      "x-ptk-field-order": [
+        "only_cx",
+        "only_variants",
+        "omit_variants",
+        "title",
+        "run",
+        "uses",
+        "with",
+        "steps",
+        "parallel",
+        "background",
+        "when",
+        "continue_on_error",
+        "timeout",
+        "retries",
+        "cwd",
+        "env",
+        "secrets",
+        "python",
+        "passthrough",
+        "report"
+      ]
     },
     "StepEntry": {
       "type": "object",
@@ -2220,7 +2474,15 @@
       "type": "object",
       "x-ptk-initial": {
         "job": "hello"
-      }
+      },
+      "x-ptk-field-order": [
+        "job",
+        "repo",
+        "params",
+        "steps",
+        "parallel",
+        "continue_on_error"
+      ]
     },
     "WorkflowEntry": {
       "default": {
@@ -2484,6 +2746,31 @@
   "required": [],
   "title": "ptk configuration (*.ptk.yml)",
   "type": "object",
+  "x-ptk-field-order": [
+    "schema_version",
+    "ptk_version",
+    "virtual_monorepo",
+    "repository",
+    "members",
+    "project",
+    "variants",
+    "jobs",
+    "workflows",
+    "vars",
+    "param_defaults",
+    "environment",
+    "requires_tools",
+    "tools",
+    "credentials",
+    "artifactory",
+    "versioning",
+    "layout",
+    "configs",
+    "logging",
+    "reporting",
+    "plugins",
+    "command_audience"
+  ],
   "allOf": [
     {
       "if": {

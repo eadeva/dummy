@@ -75,10 +75,11 @@ test("opening a tree field navigates an existing form and never creates an arbit
 test("parameter window validates values, filters secrets, and resolves only once", async () => {
   const h = harness();
   const target = { name: "build", spec: { params: [{ name: "count", type: "int", required: true }, { name: "password", type: "secret" }] } };
-  const result = h.editors.parameters(target, { preview: false });
+  const result = h.editors.parameters(target, { preview: false, variants: ["small", "large"] });
   const p = h.panels[0];
   await p.receive({ type: "ready" });
   assert.equal(p.messages.at(-1).params.length, 1);
+  assert.deepEqual(p.messages.at(-1).variants, ["small", "large"]);
   await p.receive({ type: "submit", params: { count: "no" }, preview: false });
   assert.equal(p.isDisposed, false);
   assert.match(p.messages.at(-1).issue, /whole number/);
