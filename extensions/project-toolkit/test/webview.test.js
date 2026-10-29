@@ -34,6 +34,38 @@ async function form(t, value = { vars: { first: "original", second: "other", unu
   return { page, field, edits, state, value };
 }
 
+test("compact rows fit more fields and schema help is accessible without editing", options, async t => {
+  const h = await form(t, { jobs: { build: { help: "Build the project", only_cx: false, audience: "all", open_report: "on_errors", env: {}, params: {}, requires_tools: {}, steps: [{ compile: { run: "make" } }] } } }, ["jobs", "build"]);
+  const rows = await h.page.locator(".field").evaluateAll(rows => rows.map(row => row.getBoundingClientRect().height));
+  assert.ok(rows.every(height => height <= 55), JSON.stringify(rows));
+  assert.equal(await h.page.getByRole("button", { name: "Add field", exact: true }).isVisible(), true);
+  const toggle = h.page.getByRole("button", { name: "Help for only_cx", exact: true });
+  assert.equal(await toggle.getAttribute("aria-expanded"), "false");
+  await toggle.focus(); await toggle.press("Enter");
+  assert.equal(await toggle.getAttribute("aria-expanded"), "true");
+  const section = h.page.locator(".field").filter({ has: h.field("only_cx") });
+  assert.match(await section.locator(".field-help").innerText(), /hidden from local command/);
+  assert.match(await section.locator(".field-help").innerText(), /Default: false/);
+  const described = (await h.field("only_cx").getAttribute("aria-describedby")).split(" ");
+  assert.ok(described.includes(await section.locator(".field-help").getAttribute("id")));
+  await h.state();
+  assert.equal(await toggle.getAttribute("aria-expanded"), "true");
+  assert.equal((await h.edits()).length, 0);
+});
+
+test("compact configuration reflows in narrow editors and displays optional-field help", options, async t => {
+  const h = await form(t, { jobs: { build: { steps: [{ compile: { run: "make", timeout: 30, retries: 2 } }] } } }, ["jobs", "build", "steps", 0, "compile"]);
+  await h.page.setViewportSize({ width: 380, height: 850 });
+  await h.page.getByRole("combobox", { name: "Optional field", exact: true }).selectOption("passthrough");
+  assert.match(await h.page.locator(".add .help").innerText(), /--args-for/);
+  assert.equal(await h.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+  const label = await h.page.locator("label.name").filter({ hasText: /^run$/ }).boundingBox();
+  const input = await h.field("run").boundingBox();
+  assert.ok(input.y >= label.y + label.height);
+  await h.page.getByRole("button", { name: "Help for timeout", exact: true }).click();
+  assert.match(await h.page.locator(".field-help:not([hidden])").innerText(), /seconds/);
+});
+
 test("slow typing stays local until blur and the editor has no duplicate navigation sidebar", options, async t => {
   const h = await form(t);
   assert.equal(await h.page.locator("nav").count(), 0);

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.0
+
+- Use compact configuration rows with responsive layout and inline variable insertion.
+- Add keyboard-accessible field help, defaults and constraints from the installed PTK schema. PTK's model now describes every configuration field.
+- Add variant checkbox children under jobs and repository workflows. One selection is active per target; clearing it restores the project default.
+- Update only the selected tree branch, retaining independent selections and avoiding configuration reloads.
+- Preserve editing drafts, queued additions, required-field cues and help expansion during save acknowledgements.
+
 ## 0.7.0
 
 - Add variable insertion and `${` autocomplete using the installed PTK's catalogue and template field capabilities.

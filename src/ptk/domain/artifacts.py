@@ -11,18 +11,33 @@ from .config.template_variables import GIT_FIELDS, GITHUB_FIELDS
 
 class PathRoute(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    path: str
-    repository: str | None = None
+    path: str = Field(
+        description="Relative destination path for this route. Supports PTK variables."
+    )
+    repository: str | None = Field(
+        default=None, description="Override the Artifactory repository for this route."
+    )
 
 
 class EventRoute(BaseModel):
     model_config = ConfigDict(
         extra="forbid", json_schema_extra={"default": {"path": ""}}
     )
-    path: str | None = None
-    repository: str | None = None
-    branch: PathRoute | None = None
-    tag: PathRoute | None = None
+    path: str | None = Field(
+        default=None,
+        description="Relative path for this event. Choose a single path or separate branch/tag routes.",
+    )
+    repository: str | None = Field(
+        default=None, description="Override the Artifactory repository for this event."
+    )
+    branch: PathRoute | None = Field(
+        default=None,
+        description="Destination for a push to a branch. Only valid for the push event.",
+    )
+    tag: PathRoute | None = Field(
+        default=None,
+        description="Destination for a push of a tag. Only valid for the push event.",
+    )
 
     @model_validator(mode="after")
     def shape(self):
@@ -33,16 +48,32 @@ class EventRoute(BaseModel):
 
 class JobDestination(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    path: str = ""
+    path: str = Field(
+        default="",
+        description="Job-specific path appended after the base and event destination paths.",
+    )
 
 
 class ArtifactoryStructure(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    url: str
-    repository: str
-    base_path: str = ""
-    events: dict[str, EventRoute] = Field(min_length=1)
-    jobs: dict[str, JobDestination] = Field(default_factory=dict)
+    url: str = Field(
+        description="HTTPS Artifactory base URL without credentials, query or fragment."
+    )
+    repository: str = Field(
+        description="Default Artifactory repository for uploaded artifacts."
+    )
+    base_path: str = Field(
+        default="",
+        description="Relative path prefix shared by all artifact destinations.",
+    )
+    events: dict[str, EventRoute] = Field(
+        description="Destination routes keyed by event name, for example push or pull_request.",
+        min_length=1,
+    )
+    jobs: dict[str, JobDestination] = Field(
+        description="Optional destination suffixes keyed by job name.",
+        default_factory=dict,
+    )
 
     @model_validator(mode="after")
     def event_routes(self):

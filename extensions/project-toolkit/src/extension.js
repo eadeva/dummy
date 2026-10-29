@@ -146,7 +146,53 @@ function createController(vscode, context, editorFactory = createEditors) {
 
   const variantKey = target => `variant:${target.project.entry_file}:${target.kind}:${target.name}`;
   const variantFor = target => core.selectedVariant(target.project, context.workspaceState.get(variantKey(target)));
+  const targetNodes = new Map();
   const title = target => `${target.project?.alias || path.basename(target.root)} / ${target.kind} / ${target.name}`;
+
+  function variantChildren(target) {
+    const variants = target.project.variants.filter(item => !item.abstract);
+    if (!variants.length) return [];
+    return [
+      { label: "Use project default", variantName: undefined, description: target.project.default_variant || "No default configured" },
+      ...variants.map(item => ({ label: item.name, name: item.name, variantName: item.name, description: item.description })),
+    ].map(item => ({
+      ...item, project: target.project, folder: target.folder, root: target.root,
+      kind: "variant-choice", target, icon: "layers",
+      contextValue: item.variantName ? "variant" : "variant-default",
+      id: JSON.stringify([target.folder.uri.fsPath, variantKey(target), "choice", item.variantName ?? null]),
+      tooltip: [item.description, `Select one variant for ${target.kind} ${target.name}. Other jobs and workflows keep their own selection.`].filter(Boolean).join("\n"),
+    }));
+  }
+
+  function variantChanged(target) {
+    // Only refresh the affected job/workflow, keeping the configuration editor
+    // and other expanded branches undisturbed. No PTK discovery is needed.
+    changed.fire(targetNodes.get(variantKey(target)));
+  }
+
+  async function changeVariantCheckboxes(event) {
+    trusted();
+    await settled();
+    const choices = new Map();
+    for (const [element, state] of event.items) {
+      if (element.kind !== "variant-choice") continue;
+      const key = variantKey(element.target);
+      const previous = choices.get(key);
+      // A checked option wins if VS Code delivers sibling updates together.
+      if (!previous || state === vscode.TreeItemCheckboxState.Checked) choices.set(key, { element, state });
+    }
+    for (const { element, state } of choices.values()) {
+      const target = await chooseTarget(element.target);
+      const checked = state === vscode.TreeItemCheckboxState.Checked;
+      const name = checked ? element.variantName : undefined;
+      if (name && !target.project.variants.some(item => !item.abstract && item.name === name)) {
+        throw new Error("This variant is no longer available. Refresh projects and choose a variant.");
+      }
+      const saved = context.workspaceState.get(variantKey(target));
+      if (checked || saved === element.variantName) await context.workspaceState.update(variantKey(target), name);
+      variantChanged(target);
+    }
+  }
 
   function builtinTree(owner, commands) {
     // Dedicated job/workflow actions replace these generic tree entries only.
@@ -227,11 +273,16 @@ function createController(vscode, context, editorFactory = createEditors) {
     for (const kind of ["job", "workflow"]) {
       const children = project[`${kind}s`].map(spec => {
         const target = { ...common, kind, name: spec.name, spec };
-        return { ...target, label: spec.name, tooltip: spec.help,
+        const node = { ...target, label: spec.name, tooltip: spec.help,
           contextValue: core.canOpenReport(target) ? `${kind}-report` : kind,
           description: [variantFor(target), kind === "workflow" && common.ci ? "dry-run only on CI" : spec.default ? "default" : ""].filter(Boolean).join(" · "),
           icon: kind === "job" ? "play-circle" : "git-merge",
+          collapsed: true, children: variantChildren(target),
         };
+        const nodes = targetNodes.get(variantKey(target)) || [];
+        nodes.push(node);
+        targetNodes.set(variantKey(target), nodes);
+        return node;
       });
       if (children.length) groups.push({ label: kind === "job" ? "Jobs" : "Workflows", icon: kind === "job" ? "tasklist" : "git-merge", children });
     }
@@ -251,6 +302,7 @@ function createController(vscode, context, editorFactory = createEditors) {
     onDidChangeTreeData: changed.event,
     getChildren(element) {
       if (element) return element.children || [];
+      targetNodes.clear();
       if (loading && !records.length) return [{ label: "Loading PTK configuration…", icon: "sync" }];
       return records.map(record => identified((() => {
         if (record.error) return {
@@ -279,13 +331,33 @@ function createController(vscode, context, editorFactory = createEditors) {
       item.tooltip = element.tooltip;
       item.contextValue = element.contextValue;
       item.command = element.command;
+      if (["job", "workflow"].includes(element.kind) && element.project) {
+        item.description = [variantFor(element), element.kind === "workflow" && element.ci ? "dry-run only on CI" : element.spec.default ? "default" : ""].filter(Boolean).join(" · ");
+      }
+      if (element.kind === "variant-choice") {
+        const saved = context.workspaceState.get(variantKey(element.target));
+        const validSaved = element.project.variants.some(item => !item.abstract && item.name === saved) ? saved : undefined;
+        item.checkboxState = {
+          state: validSaved === element.variantName ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
+          tooltip: element.tooltip,
+          accessibilityInformation: { label: `${element.label}, variant for ${element.target.kind} ${element.target.name}` },
+        };
+      }
       if (element.icon) item.iconPath = new vscode.ThemeIcon(
         element.icon, iconColors[element.icon] ? new vscode.ThemeColor(iconColors[element.icon]) : undefined
       );
       return item;
     },
   };
-  context.subscriptions.push(vscode.window.registerTreeDataProvider("project-toolkit.projects", provider));
+  const tree = vscode.window.createTreeView("project-toolkit.projects", { treeDataProvider: provider, manageCheckboxStateManually: true });
+  let checkboxChanges = Promise.resolve();
+  context.subscriptions.push(tree, tree.onDidChangeCheckboxState(event => {
+    checkboxChanges = checkboxChanges.then(() => changeVariantCheckboxes(event)).catch(async error => {
+      changed.fire();
+      await vscode.window.showErrorMessage(error.message);
+    });
+    return checkboxChanges;
+  }));
 
   async function chooseProject(element, capability) {
     trusted();
@@ -340,7 +412,7 @@ function createController(vscode, context, editorFactory = createEditors) {
     ], { placeHolder: `Variant for ${target.kind} ${target.name}${target.kind === "workflow" ? " (repository mappings apply)" : ""}` });
     if (!selected) return;
     await context.workspaceState.update(variantKey(target), selected.reset ? undefined : selected.name);
-    changed.fire();
+    variantChanged(target);
     return variantFor(target);
   }
 

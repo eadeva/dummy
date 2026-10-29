@@ -11,13 +11,33 @@ NAME = r"^[a-z][a-z0-9-]*$"
 
 class WorkflowNode(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    name: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
-    job: str | None = Field(default=None, pattern=NAME)
-    repo: str | None = Field(default=None, pattern=NAME)
-    params: dict[str, Any] = Field(default_factory=dict)
-    steps: list[WorkflowNode] | None = Field(default=None, min_length=1)
-    parallel: bool = False
-    continue_on_error: bool = False
+    name: str = Field(
+        description="Unique name of this workflow entry, written as the YAML mapping key.",
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+    )
+    job: str | None = Field(
+        description="Job to call. Choose either a job call or a group of child steps.",
+        default=None,
+        pattern=NAME,
+    )
+    repo: str | None = Field(
+        description="Repository alias owning the job. Omit for the workflow’s own repository.",
+        default=None,
+        pattern=NAME,
+    )
+    params: dict[str, Any] = Field(
+        description="Parameter values supplied to the called job.", default_factory=dict
+    )
+    steps: list[WorkflowNode] | None = Field(
+        description="Nested workflow entries in this group.", default=None, min_length=1
+    )
+    parallel: bool = Field(
+        default=False,
+        description="Run the child entries concurrently. Only valid for groups.",
+    )
+    continue_on_error: bool = Field(
+        default=False, description="Continue the workflow after this entry fails."
+    )
 
     @field_validator("steps", mode="before")
     @classmethod
@@ -65,12 +85,31 @@ def entries(value):
 
 class WorkflowSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    help: str = ""
-    audience: Literal["all", "maintainer"] = "all"
-    open_report: Literal["always", "on-errors"] | None = "always"
-    parallel: bool = False
-    max_workers: int = Field(default=4, ge=1, le=32)
-    steps: list[WorkflowNode] = Field(min_length=1)
+    help: str = Field(
+        default="",
+        description="Workflow description shown in command help and the extension.",
+    )
+    audience: Literal["all", "maintainer"] = Field(
+        default="all",
+        description="Choose whether everyone or only maintainers can access this workflow.",
+    )
+    open_report: Literal["always", "on-errors"] | None = Field(
+        default="always",
+        description="Open the aggregate report after every run (always), only on failures (on-errors), or disable automatic opening (null).",
+    )
+    parallel: bool = Field(
+        default=False, description="Run top-level workflow entries concurrently."
+    )
+    max_workers: int = Field(
+        description="Maximum number of concurrent workflow workers.",
+        default=4,
+        ge=1,
+        le=32,
+    )
+    steps: list[WorkflowNode] = Field(
+        description="Ordered job calls or nested groups. At least one entry is required.",
+        min_length=1,
+    )
 
     @field_validator("steps", mode="before")
     @classmethod
@@ -80,7 +119,9 @@ class WorkflowSpec(BaseModel):
 
 class WorkflowFile(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    workflows: dict[str, WorkflowSpec] = Field(default_factory=dict)
+    workflows: dict[str, WorkflowSpec] = Field(
+        description="Named workflows defined in this document.", default_factory=dict
+    )
 
     @field_validator("workflows")
     @classmethod

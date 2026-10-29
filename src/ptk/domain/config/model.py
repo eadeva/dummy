@@ -94,14 +94,22 @@ def _listify(value: Any) -> Any:
 
 
 class RepositorySpec(_Strict):
-    alias: str = Field(pattern=r"^[a-z][a-z0-9-]*$")
-    config_path: str = Field(min_length=1)
+    alias: str = Field(
+        description="Short repository name used in VMR commands and workflow repository references. Use lowercase letters, digits and hyphens.",
+        pattern=r"^[a-z][a-z0-9-]*$",
+    )
+    config_path: str = Field(
+        description="Configuration directory relative to .main.ptk.yml. PTK loads the conventional configuration files from this directory.",
+        min_length=1,
+    )
 
 
 class WorkspaceSpec(_Strict):
     """A manual VMR entry file; paths are relative to its containing directory."""
 
-    virtual_monorepo: StrictBool
+    virtual_monorepo: StrictBool = Field(
+        description="Set true to make this .main.ptk.yml a workspace marker instead of a repository configuration."
+    )
     members: list[str] | None = Field(
         default=None,
         description="Exact workspace-relative repository paths; omission checks direct children only.",
@@ -120,14 +128,28 @@ class ComponentRegistration(_Strict):
         extra="forbid",
         json_schema_extra={"x-ptk-directory-template": "components/{name}"},
     )
-    path: str = Field(min_length=1)
+    path: str = Field(
+        description="Component directory relative to the repository root. Its component.variants.ptk.yml lives here, beside the build definition.",
+        min_length=1,
+    )
 
 
 class ProjectSpec(_Strict):
-    name: str
-    description: str = ""
-    default_job: str | None = None
-    components: dict[str, ComponentRegistration] = Field(default_factory=dict)
+    name: str = Field(
+        description="Human-readable project name shown in reports and the extension."
+    )
+    description: str = Field(
+        default="",
+        description="Short explanation of the project for users and reports.",
+    )
+    default_job: str | None = Field(
+        default=None,
+        description="Job used when PTK is invoked without a command. Choose a job defined in this repository.",
+    )
+    components: dict[str, ComponentRegistration] = Field(
+        description="Register component names and their source directories. Each component owns its local variant and feature definitions.",
+        default_factory=dict,
+    )
 
 
 # --------------------------------------------------------------------------- params
@@ -144,12 +166,30 @@ class ParamSpec(_Strict):
     such defaults are resolved and type-checked when the job runs.
     """
 
-    type: ParamType = "str"
-    default: Any = None
-    choices: list[str] | None = None
-    help: str = ""
-    required: bool = False
-    env: str | None = None  # read the value from this environment variable
+    type: ParamType = Field(
+        default="str",
+        description="Value type accepted by this job parameter. Use choice for a fixed list, path for a filesystem path, or secret for hidden input.",
+    )
+    default: Any = Field(
+        default=None,
+        description="Value used when no explicit argument or environment value is supplied. Supports PTK variables resolved when the job runs. Required and secret parameters cannot have defaults.",
+    )
+    choices: list[str] | None = Field(
+        default=None,
+        description="Allowed values for a choice parameter. Required only when type is choice.",
+    )
+    help: str = Field(
+        default="",
+        description="Explanation shown in command help and the job parameter form.",
+    )
+    required: bool = Field(
+        default=False,
+        description="Require a value when the job runs. Cannot be combined with a default.",
+    )
+    env: str | None = Field(
+        default=None,
+        description="Name of the environment variable supplying this parameter. Explicit arguments take precedence; the configured default is used if the environment value is absent.",
+    )  # read the value from this environment variable
 
     @model_validator(mode="after")
     def _check(self) -> ParamSpec:
@@ -214,9 +254,18 @@ class ParamSpec(_Strict):
 
 
 class VenvSpec(_Strict):
-    requirements: list[str] = Field(default_factory=list)  # requirement files
-    packages: list[str] = Field(default_factory=list)  # extra packages
-    python: str | None = None
+    requirements: list[str] = Field(
+        description="Requirement files to install in this step’s isolated Python environment.",
+        default_factory=list,
+    )  # requirement files
+    packages: list[str] = Field(
+        description="Additional Python package requirements to install, for example pytest>=8.",
+        default_factory=list,
+    )  # extra packages
+    python: str | None = Field(
+        default=None,
+        description="Python interpreter or version requested for this environment.",
+    )
 
     @field_validator("requirements", "packages", mode="before")
     @classmethod
@@ -225,16 +274,31 @@ class VenvSpec(_Strict):
 
 
 class PythonSpec(_Strict):
-    uvx: str | None = None  # "ruff==0.6.9"
+    uvx: str | None = Field(
+        default=None,
+        description="Python tool requirement to run with uvx, for example ruff==0.6.9. Choose exactly one of uvx, venv, project or interpreter.",
+    )  # "ruff==0.6.9"
     with_: list[str] = Field(
-        default_factory=list, alias="with"
+        description="Additional Python packages supplied to uvx. Only valid with uvx.",
+        default_factory=list,
+        alias="with",
     )  # extra packages for uvx
-    venv: VenvSpec | None = None
-    project: str | None = None  # uv run --project <dir>
+    venv: VenvSpec | None = Field(
+        default=None,
+        description="Create an isolated environment with the specified requirements, packages and Python version.",
+    )
+    project: str | None = Field(
+        default=None,
+        description="Python project directory passed to uv run --project. Uses that project’s dependencies.",
+    )  # uv run --project <dir>
     groups: list[str] = Field(
-        default_factory=list
+        description="Dependency groups to include with uv run. Only valid with project mode.",
+        default_factory=list,
     )  # dependency groups for project mode
-    interpreter: Literal["cli"] | None = None  # ptk's own environment
+    interpreter: Literal["cli"] | None = Field(
+        default=None,
+        description="Use cli to run with PTK’s own Python environment. Choose exactly one Python execution mode.",
+    )  # ptk's own environment
 
     @field_validator("with_", "groups", mode="before")
     @classmethod
@@ -281,27 +345,88 @@ def normalize_step_entry(raw: Any) -> Any:
 
 
 class StepSpec(_Strict):
-    only_cx: bool = False
-    only_variants: list[str] = Field(default_factory=list)
-    omit_variants: list[str] = Field(default_factory=list)
-    name: str
-    title: str | None = None
-    run: str | list[str] | None = None
-    uses: str | None = None
-    with_: dict[str, Any] = Field(default_factory=dict, alias="with")
-    steps: list[StepSpec] | None = None
-    parallel: bool = False
-    background: bool = False
-    when: str | None = None
-    continue_on_error: bool = False
-    timeout: float | None = Field(default=None, gt=0)
-    retries: int = Field(default=0, ge=0)
-    cwd: str | None = None
-    env: dict[str, str] = Field(default_factory=dict)
-    secrets: dict[str, str] = Field(default_factory=dict)  # ENV_VAR: credential.field
-    python: PythonSpec | None = None
-    passthrough: bool = False
-    report: bool = True
+    only_cx: bool = Field(
+        default=False, description="Skip this step outside CX/CI execution."
+    )
+    only_variants: list[str] = Field(
+        description="Run this step only for these variants. Other variants skip it; this does not select a variant.",
+        default_factory=list,
+    )
+    omit_variants: list[str] = Field(
+        description="Skip this step for these variants. This does not change the job’s selected variant.",
+        default_factory=list,
+    )
+    name: str = Field(
+        description="Unique step name within its group. Written as the YAML mapping key."
+    )
+    title: str | None = Field(
+        default=None, description="Readable title used to describe this step."
+    )
+    run: str | list[str] | None = Field(
+        default=None,
+        description="Command string or argument list to execute. A list preserves spaces within arguments. Choose exactly one of run, uses or steps.",
+    )
+    uses: str | None = Field(
+        default=None,
+        description="Registered plugin that executes this step. Supply its inputs in with.",
+    )
+    with_: dict[str, Any] = Field(
+        description="Inputs passed to the plugin named in uses.",
+        default_factory=dict,
+        alias="with",
+    )
+    steps: list[StepSpec] | None = Field(
+        default=None,
+        description="Ordered child steps in this group. Enable parallel to run them concurrently.",
+    )
+    parallel: bool = Field(
+        default=False,
+        description="Run child steps concurrently. Only valid for a group containing steps.",
+    )
+    background: bool = Field(
+        default=False,
+        description="Start this command in the background. Only valid with run.",
+    )
+    when: str | None = Field(
+        default=None,
+        description="Condition evaluated against PTK execution symbols. The step is skipped when the expression is false.",
+    )
+    continue_on_error: bool = Field(
+        default=False, description="Allow execution to continue after this step fails."
+    )
+    timeout: float | None = Field(
+        description="Maximum time for the step in seconds. Must be greater than zero.",
+        default=None,
+        gt=0,
+    )
+    retries: int = Field(
+        description="Number of additional attempts after a failed step. Zero means no retries.",
+        default=0,
+        ge=0,
+    )
+    cwd: str | None = Field(
+        default=None,
+        description="Working directory for this step. Supports PTK variable expressions.",
+    )
+    env: dict[str, str] = Field(
+        description="Environment variables added or overridden for this step. Values support PTK variables.",
+        default_factory=dict,
+    )
+    secrets: dict[str, str] = Field(
+        description="Map environment variable names to credential fields, for example TOKEN: artifactory.token. Store references here, not secret values.",
+        default_factory=dict,
+    )  # ENV_VAR: credential.field
+    python: PythonSpec | None = Field(
+        default=None,
+        description="Python environment used for this command step. Choose one execution mode.",
+    )
+    passthrough: bool = Field(
+        default=False,
+        description="Accept extra command-line arguments passed after -- or targeted with --args-for. Only valid with run.",
+    )
+    report: bool = Field(
+        default=True, description="Include this step in the job report."
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -362,18 +487,54 @@ def _unique(names: list[str], where: str) -> None:
 
 
 class JobSpec(_Strict):
-    only_cx: bool = False
-    only_variants: list[str] = Field(default_factory=list)
-    omit_variants: list[str] = Field(default_factory=list)
-    open_report: Literal["always", "on_errors"] | None = None
-    version_dependencies: dict[str, VersionDependency] = Field(default_factory=dict)
-    environment: EnvironmentSpec | None = None
-    help: str = ""
-    audience: Literal["all", "maintainer"] = "all"
-    params: dict[str, ParamSpec] = Field(default_factory=dict)
-    requires_tools: dict[str, bool | ToolSpec] = Field(default_factory=dict)
-    env: dict[str, str] = Field(default_factory=dict)
-    steps: list[StepSpec] = Field(min_length=1)
+    only_cx: bool = Field(
+        default=False,
+        description="Expose this job only during CX/CI execution. It is hidden from local command and extension listings.",
+    )
+    only_variants: list[str] = Field(
+        description="Allow this job only for these variants. Running it with another variant is a configuration error; this does not select a variant.",
+        default_factory=list,
+    )
+    omit_variants: list[str] = Field(
+        description="Disallow this job for these variants. Running it with an omitted variant is an error.",
+        default_factory=list,
+    )
+    open_report: Literal["always", "on_errors"] | None = Field(
+        default=None,
+        description="Open the report after every run (always), only after failures (on_errors), or leave automatic opening disabled (null).",
+    )
+    version_dependencies: dict[str, VersionDependency] = Field(
+        description="Other repositories whose versions this job needs, with optional variant selections.",
+        default_factory=dict,
+    )
+    environment: EnvironmentSpec | None = Field(
+        default=None,
+        description="Override environment isolation and PATH settings for this job.",
+    )
+    help: str = Field(
+        default="",
+        description="Job description shown in the tree, command help and parameter form.",
+    )
+    audience: Literal["all", "maintainer"] = Field(
+        default="all",
+        description="Choose whether everyone or only configured maintainers can access this job.",
+    )
+    params: dict[str, ParamSpec] = Field(
+        description="Named parameters accepted by this job. Define their types, help, choices and defaults.",
+        default_factory=dict,
+    )
+    requires_tools: dict[str, bool | ToolSpec] = Field(
+        description="Tools required before the job runs. Reference a registered tool, disable it with false, or supply an inline tool definition.",
+        default_factory=dict,
+    )
+    env: dict[str, str] = Field(
+        description="Environment variables supplied to this job’s steps. Step settings can override them.",
+        default_factory=dict,
+    )
+    steps: list[StepSpec] = Field(
+        description="Ordered steps executed by this job. At least one step is required.",
+        min_length=1,
+    )
 
     @field_validator("requires_tools", mode="before")
     @classmethod
@@ -410,84 +571,205 @@ class JobSpec(_Strict):
 
 
 class EnvironmentSpec(_Strict):
-    isolate: bool = True  # start from a minimal OS environment
-    inherit_path: bool = False  # opt in to caller PATH
-    keep: list[str] = Field(default_factory=list)
-    set: dict[str, str] = Field(default_factory=dict)
-    unset: list[str] = Field(default_factory=list)
-    path_prepend: list[str] = Field(default_factory=list)
-    path_append: list[str] = Field(default_factory=list)
+    isolate: bool = Field(
+        default=True,
+        description="Start from a minimal operating-system environment instead of copying the caller’s full environment.",
+    )  # start from a minimal OS environment
+    inherit_path: bool = Field(
+        default=False,
+        description="Include the caller’s PATH when creating an isolated environment.",
+    )  # opt in to caller PATH
+    keep: list[str] = Field(
+        description="Environment variable names to preserve from the caller when isolation is enabled.",
+        default_factory=list,
+    )
+    set: dict[str, str] = Field(
+        description="Environment variable values to add or override.",
+        default_factory=dict,
+    )
+    unset: list[str] = Field(
+        description="Environment variable names to remove.", default_factory=list
+    )
+    path_prepend: list[str] = Field(
+        description="Directories placed before the existing PATH entries, in this order.",
+        default_factory=list,
+    )
+    path_append: list[str] = Field(
+        description="Directories placed after the existing PATH entries, in this order.",
+        default_factory=list,
+    )
 
 
 class ChocoSource(_Strict):
-    package: str
-    version: str | None = None
+    package: str = Field(description="Chocolatey package ID used on Windows.")
+    version: str | None = Field(
+        default=None,
+        description="Exact Chocolatey package version to install. Omit to use the installer default.",
+    )
 
 
 class DownloadSource(_Strict):
-    url: str
-    sha256: str | None = None
-    extract: bool = True
-    bin: str | None = None  # sub folder with the executables
+    url: str = Field(description="Download URL for the tool archive or executable.")
+    sha256: str | None = Field(
+        default=None, description="Expected SHA-256 digest used to verify the download."
+    )
+    extract: bool = Field(
+        default=True,
+        description="Extract the downloaded archive before using the tool.",
+    )
+    bin: str | None = Field(
+        default=None,
+        description="Subdirectory containing executables inside the downloaded tool.",
+    )  # sub folder with the executables
 
 
 class ToolbaseSource(_Strict):
-    package: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
-    version: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
-    environment: str = Field(default="ptk", pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
-    bin: list[str] = Field(default_factory=lambda: ["."], min_length=1)
+    package: str = Field(
+        description="Toolbase package identifier.",
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+    )
+    version: str = Field(
+        description="Toolbase package version to install.",
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+    )
+    environment: str = Field(
+        description="Toolbase environment name used for this installation.",
+        default="ptk",
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+    )
+    bin: list[str] = Field(
+        description="Executable directories relative to the installed package. A dot means the package root.",
+        default_factory=lambda: ["."],
+        min_length=1,
+    )
 
 
 class ArtifactorySource(_Strict):
-    url: str  # Artifactory base URL, including /artifactory when applicable
-    repository: str = Field(pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
-    path: str = "."  # directory, or AQL directory pattern
-    name: str  # file name or AQL pattern
-    properties: dict[str, str] = Field(default_factory=dict)
-    select: Literal["unique", "latest"] = "unique"
-    token_env: str | None = None  # bearer token; never store the value in YAML
-    sha256: str | None = Field(default=None, pattern=r"^[a-fA-F0-9]{64}$")
-    extract: bool = True
-    bin: str | None = None
+    url: str = Field(
+        description="Artifactory base URL, including /artifactory when required by the server."
+    )  # Artifactory base URL, including /artifactory when applicable
+    repository: str = Field(
+        description="Artifactory repository containing the tool.",
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+    )
+    path: str = Field(
+        default=".",
+        description="Directory or AQL directory pattern used to locate the tool archive.",
+    )  # directory, or AQL directory pattern
+    name: str = Field(
+        description="Archive filename or AQL filename pattern."
+    )  # file name or AQL pattern
+    properties: dict[str, str] = Field(
+        description="Artifact properties required when searching for the download.",
+        default_factory=dict,
+    )
+    select: Literal["unique", "latest"] = Field(
+        default="unique",
+        description="Require exactly one matching artifact (unique), or choose the latest match (latest).",
+    )
+    token_env: str | None = Field(
+        default=None,
+        description="Name of the environment variable holding the bearer token. Do not put the token value in configuration.",
+    )  # bearer token; never store the value in YAML
+    sha256: str | None = Field(
+        description="Expected 64-character SHA-256 digest used to verify the download.",
+        default=None,
+        pattern=r"^[a-fA-F0-9]{64}$",
+    )
+    extract: bool = Field(default=True, description="Extract the downloaded archive.")
+    bin: str | None = Field(
+        default=None,
+        description="Subdirectory containing executables inside the installed tool.",
+    )
 
 
 class ToolSpec(_Strict):
-    description: str = ""
-    docker: bool = False  # false: disable installation inside Docker, keep checks
-    installers: dict[str, dict[str, Any]] = Field(default_factory=dict)
-    version: str | None = None  # PEP 440 style range: ">=3.28,<4"
-    check: str | None = None  # command printing the version
-    version_regex: str = r"(\d+\.\d+(?:\.\d+)?)"
-    choco: str | ChocoSource | None = None  # Windows
-    toolbase: ToolbaseSource | None = None
+    description: str = Field(
+        default="", description="Short explanation of the tool and why it is needed."
+    )
+    docker: bool = Field(
+        default=False,
+        description="Allow installation inside Docker. When false, installation is skipped in containers but version checks still run.",
+    )  # false: disable installation inside Docker, keep checks
+    installers: dict[str, dict[str, Any]] = Field(
+        description="Custom installer definitions keyed by installer or platform.",
+        default_factory=dict,
+    )
+    version: str | None = Field(
+        default=None, description="Accepted tool version range, for example >=3.28,<4."
+    )  # PEP 440 style range: ">=3.28,<4"
+    check: str | None = Field(
+        default=None, description="Command that prints the installed tool version."
+    )  # command printing the version
+    version_regex: str = Field(
+        default=r"(\d+\.\d+(?:\.\d+)?)",
+        description="Regular expression used to extract a version from the check command output.",
+    )
+    choco: str | ChocoSource | None = Field(
+        default=None,
+        description="Windows installation through Chocolatey, using a package ID or package/version settings.",
+    )  # Windows
+    toolbase: ToolbaseSource | None = Field(
+        default=None, description="Install the tool through Toolbase."
+    )
     artifactory: (
         ArtifactorySource | dict[Literal["windows", "linux"], ArtifactorySource] | None
-    ) = None
-    uv_tool: str | None = None  # Windows + Linux
+    ) = Field(
+        default=None,
+        description="Download from Artifactory. Use one source or separate windows and linux sources.",
+    )
+    uv_tool: str | None = Field(
+        default=None, description="Python tool requirement to install through uv tool."
+    )  # Windows + Linux
     download: (
         DownloadSource | dict[Literal["windows", "linux"], DownloadSource] | None
-    ) = None
-    apt: str | None = None  # opt-in, needs sudo
-    dnf: str | None = None
+    ) = Field(
+        default=None,
+        description="Download an archive or executable. Use one source or separate windows and linux sources.",
+    )
+    apt: str | None = Field(
+        default=None,
+        description="APT package name for opt-in installation on Linux. Installation may require sudo.",
+    )  # opt-in, needs sudo
+    dnf: str | None = Field(
+        default=None,
+        description="DNF package name for opt-in installation on Linux. Installation may require sudo.",
+    )
 
 
 ProviderName = Literal["env", "keyring", "gopass", "vault", "prompt"]
 
 
 class GopassSpec(_Strict):
-    path: str
+    path: str = Field(description="Entry path in the gopass password store.")
 
 
 class CredentialSpec(_Strict):
-    namespace: str | None = None  # explicit storage scope; VMR supplies one by default
-    description: str = ""
-    fields: list[str] = Field(default_factory=lambda: ["token"])
-    providers: list[str] = Field(
-        default_factory=lambda: ["env", "keyring", "gopass", "vault", "prompt"]
+    namespace: str | None = Field(
+        default=None,
+        description="Credential storage scope. A VMR provides a default scope when this is omitted.",
+    )  # explicit storage scope; VMR supplies one by default
+    description: str = Field(
+        default="", description="Explanation of what the credential is used for."
     )
-    env: dict[str, str] = Field(default_factory=dict)  # field: ENV_VAR
-    gopass: GopassSpec | None = None
-    test: str | None = None  # command to verify the credential
+    fields: list[str] = Field(
+        description="Named values belonging to this credential, for example token, username or password.",
+        default_factory=lambda: ["token"],
+    )
+    providers: list[str] = Field(
+        description="Credential providers to try, in order: env, keyring, gopass, vault or prompt.",
+        default_factory=lambda: ["env", "keyring", "gopass", "vault", "prompt"],
+    )
+    env: dict[str, str] = Field(
+        description="Map credential field names to environment variable names. Store names, not secret values.",
+        default_factory=dict,
+    )  # field: ENV_VAR
+    gopass: GopassSpec | None = Field(
+        default=None, description="Location of this credential in the gopass store."
+    )
+    test: str | None = Field(
+        default=None, description="Command used to verify that the credential works."
+    )  # command to verify the credential
 
     @model_validator(mode="after")
     def _check(self) -> CredentialSpec:
@@ -506,19 +788,40 @@ SharedConfigName = Literal["pre-commit", "ruff", "clang-format", "clang-tidy", "
 
 
 class SharedConfigSpec(_Strict):
-    enabled: bool = True
-    overlay: str | None = None
-    output: str | None = None
+    enabled: bool = Field(
+        default=True, description="Enable this shared tool configuration."
+    )
+    overlay: str | None = Field(
+        default=None,
+        description="Project overlay file merged into the shared configuration.",
+    )
+    output: str | None = Field(
+        default=None,
+        description="Destination path for the generated tool configuration.",
+    )
 
 
 class LayoutSpec(_Strict):
     """Workspace folders: <root>/_builds|_bin|_logs|_reports/<variant>/<job>/<step>."""
 
-    root: str = "."
-    builds: str = "_builds"
-    bin: str = "_bin"
-    logs: str = "_logs"
-    reports: str = "_reports"
+    root: str = Field(
+        default=".",
+        description="Base directory for generated output, relative to the repository root.",
+    )
+    builds: str = Field(
+        default="_builds",
+        description="Build directory name beneath the layout root, partitioned by variant, job and step.",
+    )
+    bin: str = Field(
+        default="_bin",
+        description="Binary/output directory name beneath the layout root.",
+    )
+    logs: str = Field(
+        default="_logs", description="Log directory name beneath the layout root."
+    )
+    reports: str = Field(
+        default="_reports", description="Report directory name beneath the layout root."
+    )
 
     @field_validator("builds", "bin", "logs", "reports")
     @classmethod
@@ -529,49 +832,118 @@ class LayoutSpec(_Strict):
 
 
 class LoggingSpec(_Strict):
-    level: Literal["trace", "debug", "info", "warning", "error"] = "info"
-    keep_history: int = Field(default=10, ge=0)  # previous runs kept per variant/job
+    level: Literal["trace", "debug", "info", "warning", "error"] = Field(
+        default="info", description="Minimum message severity to include in logs."
+    )
+    keep_history: int = Field(
+        description="Number of previous run logs retained per variant and job.",
+        default=10,
+        ge=0,
+    )  # previous runs kept per variant/job
 
 
 class ReportingSpec(_Strict):
-    formats: list[str] = Field(default_factory=lambda: ["json", "html"])
-    dir: str | None = None
+    formats: list[str] = Field(
+        description="Report formats to generate, typically json and html.",
+        default_factory=lambda: ["json", "html"],
+    )
+    dir: str | None = Field(
+        default=None, description="Override the report output directory."
+    )
 
 
 # --------------------------------------------------------------------------- root
 
 
 class PtkConfig(_Strict):
-    artifactory: ArtifactoryStructure | None = None
-    workflows: dict[str, WorkflowSpec] = Field(default_factory=dict)
+    artifactory: ArtifactoryStructure | None = Field(
+        default=None,
+        description="Artifact destination rules by event, branch/tag and job. Configure downloads for tools in tools instead.",
+    )
+    workflows: dict[str, WorkflowSpec] = Field(
+        description="Named sequences or parallel groups of job calls, including calls into other repositories.",
+        default_factory=dict,
+    )
 
     @field_validator("workflows")
     @classmethod
     def _workflow_names(cls, value):
         return WorkflowFile._names(value)
 
-    repository: RepositorySpec | None = None
+    repository: RepositorySpec | None = Field(
+        default=None,
+        description="Repository identity and conventional configuration directory.",
+    )
     virtual_monorepo: StrictBool = Field(
         default=False,
         description="Entry-only discovery flag: omit for automatic Git membership, false for standalone, true for a workspace marker.",
     )
-    schema_version: Literal[1] = 1
-    ptk_version: str | None = None  # required ptk version range, e.g. ">=0.1,<0.2"
-    project: ProjectSpec
-    vars: dict[str, Any] = Field(default_factory=dict)
-    param_defaults: dict[str, Any] = Field(default_factory=dict)
-    requires_tools: dict[str, bool | ToolSpec] = Field(default_factory=dict)
-    environment: EnvironmentSpec = Field(default_factory=EnvironmentSpec)
-    tools: dict[str, ToolSpec] = Field(default_factory=dict)
-    credentials: dict[str, CredentialSpec] = Field(default_factory=dict)
-    variants: ProductLineSpec | None = None
-    versioning: VersioningSpec | None = None
-    jobs: dict[str, JobSpec] = Field(default_factory=dict)
-    configs: dict[SharedConfigName, SharedConfigSpec] = Field(default_factory=dict)
-    layout: LayoutSpec = Field(default_factory=LayoutSpec)
-    logging: LoggingSpec = Field(default_factory=LoggingSpec)
-    reporting: ReportingSpec = Field(default_factory=ReportingSpec)
-    plugins: list[str] = Field(default_factory=list)
+    schema_version: Literal[1] = Field(
+        default=1, description="PTK configuration schema version."
+    )
+    ptk_version: str | None = Field(
+        default=None,
+        description="Required PTK package version range, for example >=0.7,<1.",
+    )  # required ptk version range, e.g. ">=0.1,<0.2"
+    project: ProjectSpec = Field(
+        description="Project identity, default job and registered component directories."
+    )
+    vars: dict[str, Any] = Field(
+        description="Reusable project values referenced with ${vars.name}.",
+        default_factory=dict,
+    )
+    param_defaults: dict[str, Any] = Field(
+        description="Shared default values for job parameters with matching names.",
+        default_factory=dict,
+    )
+    requires_tools: dict[str, bool | ToolSpec] = Field(
+        description="Tools required at project level. Use registered names or inline definitions.",
+        default_factory=dict,
+    )
+    environment: EnvironmentSpec = Field(
+        description="Default environment isolation and PATH settings for job execution.",
+        default_factory=EnvironmentSpec,
+    )
+    tools: dict[str, ToolSpec] = Field(
+        description="Named tool definitions, version checks and installation sources.",
+        default_factory=dict,
+    )
+    credentials: dict[str, CredentialSpec] = Field(
+        description="Named credential definitions and lookup providers. Keep secret values outside configuration.",
+        default_factory=dict,
+    )
+    variants: ProductLineSpec | None = Field(
+        default=None,
+        description="Project variants, component features, inheritance and validation constraints.",
+    )
+    versioning: VersioningSpec | None = Field(
+        default=None,
+        description="Project and component version sources, per-variant overrides and repository dependencies.",
+    )
+    jobs: dict[str, JobSpec] = Field(
+        description="Named executable jobs, including their steps, parameters and required tools.",
+        default_factory=dict,
+    )
+    configs: dict[SharedConfigName, SharedConfigSpec] = Field(
+        description="Shared tool configuration settings, such as pre-commit, Ruff and clang-format.",
+        default_factory=dict,
+    )
+    layout: LayoutSpec = Field(
+        description="Directory names for generated builds, binaries, logs and reports.",
+        default_factory=LayoutSpec,
+    )
+    logging: LoggingSpec = Field(
+        description="Log verbosity and run-history retention.",
+        default_factory=LoggingSpec,
+    )
+    reporting: ReportingSpec = Field(
+        description="Report formats and optional output-directory override.",
+        default_factory=ReportingSpec,
+    )
+    plugins: list[str] = Field(
+        description="Python modules loaded to register additional PTK plugins.",
+        default_factory=list,
+    )
     command_audience: dict[
         Literal[
             "setup",
@@ -596,7 +968,10 @@ class PtkConfig(_Strict):
             "clean-all",
         ],
         Literal["all", "maintainer"],
-    ] = Field(default_factory=dict)
+    ] = Field(
+        description="Control which built-in commands are available to all users or only maintainers.",
+        default_factory=dict,
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -643,7 +1018,9 @@ class PtkConfig(_Strict):
 
 
 class MaintainersSpec(_Strict):
-    maintainers: list[StrictStr]
+    maintainers: list[StrictStr] = Field(
+        description="Login names allowed to use maintainer-only commands and jobs."
+    )
 
     @field_validator("maintainers")
     @classmethod

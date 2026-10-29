@@ -8,6 +8,7 @@
   let state, schema, selected = [], issue = "", serial = 0, inflight, commitRequested = false, rendering = false;
   const queue = new Map();
   const deferred = [], uiDrafts = new Map();
+  const expandedHelp = new Set();
   let pointerActive = false, renderPending = false;
   let variablePicker;
   let parameterDraft = {};
@@ -15,19 +16,6 @@
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const display = value => typeof value === "string" ? value : JSON.stringify(value);
   const valueAt = path => path.reduce((value, key) => value?.[key], state.value);
-  const fieldHelp = {
-    help: "Description shown in the PTK tree, command help and parameter form.",
-    open_report: "Choose when PTK opens the report after this job or workflow finishes.",
-    params: "Named parameters accepted by this job. Add help, a type, choices or a default for each parameter.",
-    steps: "Steps run in the order shown. Open an item to edit its name and settings.",
-    run: "Command string or argument list. An argument list preserves spaces in each argument.",
-    uses: "Registered plugin used to execute this step. Configure its inputs in with.",
-    with: "Inputs passed to the selected plugin.",
-    timeout: "Maximum time for this step in seconds.",
-    retries: "Number of additional attempts after a failed step.",
-    cwd: "Working directory for the step. PTK template expressions are supported.",
-    env: "Environment settings. For a parameter, this names the environment variable used before its default.",
-  };
   function el(tag, text, attrs = {}) {
     const node = document.createElement(tag);
     if (text !== undefined) node.textContent = text;
@@ -157,6 +145,7 @@
         draft: active.hasAttribute("data-ui-draft") || [...queue.values()].some(op => `field-${JSON.stringify(op.path)}` === active.id) } : undefined;
       const scroll = [window.scrollX, window.scrollY];
       app.replaceChildren();
+      app.className = "configuration";
       const header = el("header");
       const toolbar = el("div", undefined, { className: "toolbar" });
       const heading = el("div");
@@ -228,20 +217,41 @@
     const field = el("section", undefined, { className: "field", "data-type": S.type(value) });
     const top = el("div", undefined, { className: "field-top" });
     const name = el("label", P.pathLabel(state.value, path), { className: "name", for: id });
-    top.append(name, el("span", required ? "required" : S.type(value), { className: "badge" }));
+    top.append(name);
+    if (required) top.append(el("span", "*", { className: "required-mark", title: "Required", "aria-label": "required" }));
     field.append(top);
-    const help = resolved.description || fieldHelp[key];
-    if (help) field.append(el("p", help, { className: "help" }));
+    const help = S.help(spec, value, schema);
+    const helpId = `${id}-help`;
+    if (help) {
+      const details = el("div", undefined, { className: "field-help", id: helpId });
+      details.hidden = !expandedHelp.has(id);
+      details.append(el("p", help, { className: "help" }));
+      const toggle = button("?", () => {
+        details.hidden = !details.hidden;
+        if (details.hidden) expandedHelp.delete(id); else expandedHelp.add(id);
+        toggle.setAttribute("aria-expanded", String(!details.hidden));
+      }, "help-toggle");
+      toggle.setAttribute("aria-label", `Help for ${name.textContent}`);
+      toggle.setAttribute("aria-expanded", String(!details.hidden));
+      toggle.setAttribute("aria-controls", helpId);
+      toggle.title = resolved.description || help;
+      name.title = toggle.title;
+      top.append(toggle); field.append(details);
+    }
+    const body = el("div", undefined, { className: "field-value" });
+    field.append(body);
     const tag = state.annotations.find(item => same(item.path, path));
-    if (tag) field.append(el("p", `YAML tag: ${tag.text}`, { className: "help" }));
+    if (tag) body.append(el("p", `YAML tag: ${tag.text}`, { className: "help" }));
     const locked = state.locked.some(prefix => prefix.length <= path.length && prefix.every((key, i) => key === path[i]));
     if (locked) {
-      field.append(el("p", `${display(value)} · Edit this value in Raw YAML.`, { className: "notice" }));
+      body.append(el("p", `${display(value)} · Edit this value in Raw YAML.`, { className: "notice" }));
       main.append(field); return;
     }
     if (value !== null && typeof value === "object") {
       const summary = Array.isArray(value) ? `${value.length} items` : Object.keys(value).join(", ") || "Empty object";
-      field.append(el("p", summary, { className: "help" }), button("Edit fields →", () => navigate(P.namedEntry(value, path) ? [...path, P.namedEntry(value, path)] : path)));
+      const open = button("Edit fields →", () => navigate(P.namedEntry(value, path) ? [...path, P.namedEntry(value, path)] : path), "link");
+      open.id = id;
+      body.append(el("span", summary, { className: "field-summary", title: summary }), open);
     } else {
       const input = control(value, spec, next => change({ op: "set", path, value: next }), id);
       const hint = el("p", required ? "Required — enter a value." : "Empty — enter a value.", { className: "empty-field-message", id: `${id}-empty` });
@@ -252,11 +262,11 @@
         if (empty && required || input.hasAttribute("data-number-invalid")) input.setAttribute("aria-invalid", "true");
         else input.removeAttribute("aria-invalid");
       };
-      input.setAttribute("aria-describedby", hint.id);
+      input.setAttribute("aria-describedby", [help && helpId, hint.id].filter(Boolean).join(" "));
       if (required) input.setAttribute("aria-required", "true");
       input.addEventListener("input", markEmpty); input.addEventListener("change", markEmpty);
-      markEmpty(); field.append(input, hint);
-      if (typeof value === "string" && (input.tagName === "TEXTAREA" || input.type === "text")) variableControl(field, input, path);
+      markEmpty(); body.append(input, hint);
+      if (typeof value === "string" && (input.tagName === "TEXTAREA" || input.type === "text")) variableControl(body, input, path);
     }
     const actions = el("div", undefined, { className: "field-actions" });
     let types = [...new Set(S.choices(spec, schema).map(item => item.type).filter(Boolean))];
@@ -349,7 +359,9 @@
       show(search.value);
       if (!auto) search.focus();
     }
-    const launch = button("Insert variable…", () => open(), "secondary small");
+    const launch = button("${}", () => open(), "secondary small");
+    launch.setAttribute("aria-label", "Insert variable…");
+    launch.title = "Insert variable (or type ${)";
     launch.addEventListener("pointerdown", event => event.preventDefault());
     launch.addEventListener("blur", event => { if (popup.hidden && !field.contains(event.relatedTarget)) flush(); });
     function keys(event) {
@@ -381,7 +393,7 @@
     search.setAttribute("aria-controls", results.id); input.setAttribute("aria-controls", results.id);
     input.setAttribute("aria-autocomplete", "list");
     popup.append(search, results, summary, button("Close", () => close(true), "secondary small"));
-    tools.append(launch, el("span", "or type ${", { className: "help" }));
+    tools.append(launch);
     field.append(tools, popup);
   }
   function addField(main, value, spec, resolved) {
@@ -408,7 +420,7 @@
       row.append(name);
       const describe = () => {
         const field = resolved.properties?.[name.value] || {};
-        help.textContent = field.description || fieldHelp[name.value] || (Object.hasOwn(field, "default") ? `Default: ${display(field.default)}` : "");
+        help.textContent = S.help(field, undefined, schema);
       };
       name.addEventListener("change", describe); describe();
     }
@@ -438,6 +450,7 @@
   }
   function renderParameters() {
     app.replaceChildren();
+    app.className = "parameter-editor";
     const header = el("header");
     header.append(el("div", "PTk / Job parameters", { className: "brand" }), el("h1", state.name), el("p", [state.project, state.variant && `Variant: ${state.variant}`].filter(Boolean).join(" · "), { className: "muted" }));
     app.append(header);

@@ -3,6 +3,15 @@ const test = require("node:test"), assert = require("node:assert/strict");
 const S = require("../media/schema");
 const schema = require("../media/config-schema.json");
 
+test("field help preserves context through references and includes defaults and limits", () => {
+  const root = { $defs: { Nested: { type: "object", description: "Generic model help" } } };
+  const spec = { description: "Purpose of this field", anyOf: [{ $ref: "#/$defs/Nested" }, { type: "null" }], default: null };
+  assert.equal(S.effective(spec, {}, root).description, "Purpose of this field");
+  assert.match(S.help(spec, {}, root), /Purpose of this field\nType: object \/ null · Default: null/);
+  assert.match(S.help(schema.$defs.StepBody.properties.retries, 0, schema), /additional attempts[\s\S]*Default: 0 · Minimum: 0/);
+  assert.match(S.help(schema.$defs.ParamSpec.properties.env, null, schema), /parameter/);
+});
+
 test("creation fills required descendants even when a schema default is incomplete", () => {
   const spec = { type: "object", default: { child: {} }, required: ["child", "items"], properties: {
     child: { $ref: "#/$defs/Child" },

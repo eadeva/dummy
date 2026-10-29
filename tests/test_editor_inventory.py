@@ -217,3 +217,24 @@ def test_extension_form_schema_matches_canonical_model_schema():
         / "extensions/project-toolkit/media/config-schema.json"
     )
     assert json.loads(file.read_text()) == ExportSchema().execute()
+
+
+def test_exported_configuration_fields_have_model_owned_help():
+    from ptk.application.use_cases.project import ExportSchema
+    from ptk.domain.config.model import JobSpec, ParamSpec, StepSpec
+
+    schema = ExportSchema().execute()
+    for name, model in [("root", schema), *schema["$defs"].items()]:
+        for field, spec in model.get("properties", {}).items():
+            assert spec.get("description", "").strip(), f"{name}.{field} has no help"
+    for definition, model, field in [
+        ("JobSpec", JobSpec, "only_variants"),
+        ("StepBody", StepSpec, "only_variants"),
+        ("ParamSpec", ParamSpec, "env"),
+    ]:
+        assert (
+            schema["$defs"][definition]["properties"][field]["description"]
+            == model.model_fields[field].description
+        )
+    assert "error" in JobSpec.model_fields["only_variants"].description
+    assert "skip" in StepSpec.model_fields["only_variants"].description

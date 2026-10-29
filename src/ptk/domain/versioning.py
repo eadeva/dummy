@@ -15,21 +15,66 @@ class Strict(BaseModel):
 
 
 class VersionSource(Strict):
-    source: Literal["literal", "git", "file", "env", "command", "inherit"] = "inherit"
-    version: str | None = None
-    match: str = "v*"
-    strip_prefix: str = ""
-    first_parent: bool = True
-    dirty: Literal["suffix", "ignore", "error"] = "suffix"
-    allow_shallow: bool = False
-    path: str | None = None
-    format: Literal["text", "json", "toml", "yaml"] = "text"
-    key: str | None = None
-    regex: str | None = None
-    variable: str | None = None
-    command: list[str] | None = None
-    timeout: float = Field(default=30, gt=0)
-    fallback: VersionSource | None = None
+    source: Literal["literal", "git", "file", "env", "command", "inherit"] = Field(
+        default="inherit",
+        description="How to obtain the version: literal, git, file, env, command, or inherit from the containing context.",
+    )
+    version: str | None = Field(
+        default=None, description="Fixed version string. Required for a literal source."
+    )
+    match: str = Field(
+        default="v*",
+        description="Git tag pattern used for version discovery, for example v*.",
+    )
+    strip_prefix: str = Field(
+        default="",
+        description="Prefix removed from the discovered version, for example v.",
+    )
+    first_parent: bool = Field(
+        default=True,
+        description="Follow only the first-parent Git history when locating a version tag.",
+    )
+    dirty: Literal["suffix", "ignore", "error"] = Field(
+        default="suffix",
+        description="How uncommitted changes affect a Git-derived version: add a suffix, ignore them, or fail.",
+    )
+    allow_shallow: bool = Field(
+        default=False,
+        description="Allow version discovery from a shallow Git checkout.",
+    )
+    path: str | None = Field(
+        default=None,
+        description="File containing the version. Required for a file source.",
+    )
+    format: Literal["text", "json", "toml", "yaml"] = Field(
+        default="text",
+        description="Format of the version file: plain text, JSON, TOML or YAML.",
+    )
+    key: str | None = Field(
+        default=None,
+        description="Key used to select the version from structured file content.",
+    )
+    regex: str | None = Field(
+        default=None,
+        description="Regular expression used to extract the version from the source value.",
+    )
+    variable: str | None = Field(
+        default=None,
+        description="Environment variable containing the version. Required for an env source.",
+    )
+    command: list[str] | None = Field(
+        default=None,
+        description="Command and arguments that print a version. Required for a command source.",
+    )
+    timeout: float = Field(
+        description="Maximum time in seconds allowed for the version command.",
+        default=30,
+        gt=0,
+    )
+    fallback: VersionSource | None = Field(
+        default=None,
+        description="Alternative version source used if this source cannot provide a version.",
+    )
 
     @model_validator(mode="after")
     def required(self):
@@ -52,17 +97,30 @@ class VersionSource(Strict):
 
 
 class VersionOverride(Strict):
-    project: VersionSource | None = None
-    components: dict[str, VersionSource] = Field(default_factory=dict)
+    project: VersionSource | None = Field(
+        default=None, description="Version source for the project."
+    )
+    components: dict[str, VersionSource] = Field(
+        description="Version sources keyed by component name.", default_factory=dict
+    )
 
 
 class VersionDependency(Strict):
-    variant: str | None = None
+    variant: str | None = Field(
+        default=None,
+        description="Variant used when resolving the dependency repository’s version.",
+    )
 
 
 class VersioningSpec(VersionOverride):
-    variants: dict[str, VersionOverride] = Field(default_factory=dict)
-    dependencies: dict[str, VersionDependency] = Field(default_factory=dict)
+    variants: dict[str, VersionOverride] = Field(
+        description="Project and component version-source overrides keyed by variant name.",
+        default_factory=dict,
+    )
+    dependencies: dict[str, VersionDependency] = Field(
+        description="Other repositories whose versions should be resolved.",
+        default_factory=dict,
+    )
 
 
 def identifier(name: str) -> str:

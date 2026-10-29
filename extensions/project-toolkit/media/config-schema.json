@@ -4,20 +4,24 @@
       "additionalProperties": false,
       "properties": {
         "url": {
+          "description": "Artifactory base URL, including /artifactory when required by the server.",
           "title": "Url",
           "type": "string"
         },
         "repository": {
+          "description": "Artifactory repository containing the tool.",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
           "title": "Repository",
           "type": "string"
         },
         "path": {
           "default": ".",
+          "description": "Directory or AQL directory pattern used to locate the tool archive.",
           "title": "Path",
           "type": "string"
         },
         "name": {
+          "description": "Archive filename or AQL filename pattern.",
           "title": "Name",
           "type": "string"
         },
@@ -26,10 +30,12 @@
           "additionalProperties": {
             "type": "string"
           },
+          "description": "Artifact properties required when searching for the download.",
           "title": "Properties"
         },
         "select": {
           "default": "unique",
+          "description": "Require exactly one matching artifact (unique), or choose the latest match (latest).",
           "enum": [
             "unique",
             "latest"
@@ -47,6 +53,7 @@
             }
           ],
           "default": null,
+          "description": "Name of the environment variable holding the bearer token. Do not put the token value in configuration.",
           "title": "Token Env"
         },
         "sha256": {
@@ -60,10 +67,12 @@
             }
           ],
           "default": null,
+          "description": "Expected 64-character SHA-256 digest used to verify the download.",
           "title": "Sha256"
         },
         "extract": {
           "default": true,
+          "description": "Extract the downloaded archive.",
           "title": "Extract",
           "type": "boolean"
         },
@@ -77,6 +86,7 @@
             }
           ],
           "default": null,
+          "description": "Subdirectory containing executables inside the installed tool.",
           "title": "Bin"
         }
       },
@@ -97,15 +107,18 @@
       "additionalProperties": false,
       "properties": {
         "url": {
+          "description": "HTTPS Artifactory base URL without credentials, query or fragment.",
           "title": "Url",
           "type": "string"
         },
         "repository": {
+          "description": "Default Artifactory repository for uploaded artifacts.",
           "title": "Repository",
           "type": "string"
         },
         "base_path": {
           "default": "",
+          "description": "Relative path prefix shared by all artifact destinations.",
           "title": "Base Path",
           "type": "string"
         },
@@ -113,6 +126,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/EventRoute"
           },
+          "description": "Destination routes keyed by event name, for example push or pull_request.",
           "minProperties": 1,
           "title": "Events",
           "type": "object",
@@ -122,6 +136,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/JobDestination"
           },
+          "description": "Optional destination suffixes keyed by job name.",
           "title": "Jobs",
           "type": "object"
         }
@@ -142,6 +157,7 @@
       "additionalProperties": false,
       "properties": {
         "package": {
+          "description": "Chocolatey package ID used on Windows.",
           "title": "Package",
           "type": "string"
         },
@@ -155,6 +171,7 @@
             }
           ],
           "default": null,
+          "description": "Exact Chocolatey package version to install. Omit to use the installer default.",
           "title": "Version"
         }
       },
@@ -168,6 +185,7 @@
       "additionalProperties": false,
       "properties": {
         "path": {
+          "description": "Component directory relative to the repository root. Its component.variants.ptk.yml lives here, beside the build definition.",
           "minLength": 1,
           "title": "Path",
           "type": "string"
@@ -185,10 +203,12 @@
       "properties": {
         "description": {
           "default": "",
+          "description": "Short explanation of this component.",
           "title": "Description",
           "type": "string"
         },
         "requires_components": {
+          "description": "Other components that must be included whenever this component is selected.",
           "items": {
             "type": "string"
           },
@@ -196,6 +216,7 @@
           "type": "array"
         },
         "constraints": {
+          "description": "Validation expressions applied to this component\u2019s feature selection.",
           "items": {
             "$ref": "#/$defs/Constraint"
           },
@@ -206,6 +227,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/FeatureSpec"
           },
+          "description": "Feature definitions owned by this component. Use UPPER_SNAKE_CASE names.",
           "title": "Features",
           "type": "object"
         }
@@ -217,11 +239,13 @@
       "additionalProperties": false,
       "properties": {
         "expr": {
+          "description": "Boolean expression that must hold for a valid variant.",
           "title": "Expr",
           "type": "string"
         },
         "message": {
           "default": "",
+          "description": "Explanation shown when the constraint fails.",
           "title": "Message",
           "type": "string"
         }
@@ -248,14 +272,17 @@
             }
           ],
           "default": null,
+          "description": "Credential storage scope. A VMR provides a default scope when this is omitted.",
           "title": "Namespace"
         },
         "description": {
           "default": "",
+          "description": "Explanation of what the credential is used for.",
           "title": "Description",
           "type": "string"
         },
         "fields": {
+          "description": "Named values belonging to this credential, for example token, username or password.",
           "items": {
             "type": "string"
           },
@@ -263,6 +290,7 @@
           "type": "array"
         },
         "providers": {
+          "description": "Credential providers to try, in order: env, keyring, gopass, vault or prompt.",
           "items": {
             "type": "string"
           },
@@ -273,6 +301,7 @@
           "additionalProperties": {
             "type": "string"
           },
+          "description": "Map credential field names to environment variable names. Store names, not secret values.",
           "title": "Env",
           "type": "object"
         },
@@ -285,7 +314,8 @@
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "Location of this credential in the gopass store."
         },
         "test": {
           "anyOf": [
@@ -297,6 +327,7 @@
             }
           ],
           "default": null,
+          "description": "Command used to verify that the credential works.",
           "title": "Test"
         }
       },
@@ -307,6 +338,7 @@
       "additionalProperties": false,
       "properties": {
         "url": {
+          "description": "Download URL for the tool archive or executable.",
           "title": "Url",
           "type": "string"
         },
@@ -320,10 +352,12 @@
             }
           ],
           "default": null,
+          "description": "Expected SHA-256 digest used to verify the download.",
           "title": "Sha256"
         },
         "extract": {
           "default": true,
+          "description": "Extract the downloaded archive before using the tool.",
           "title": "Extract",
           "type": "boolean"
         },
@@ -337,6 +371,7 @@
             }
           ],
           "default": null,
+          "description": "Subdirectory containing executables inside the downloaded tool.",
           "title": "Bin"
         }
       },
@@ -351,15 +386,18 @@
       "properties": {
         "isolate": {
           "default": true,
+          "description": "Start from a minimal operating-system environment instead of copying the caller\u2019s full environment.",
           "title": "Isolate",
           "type": "boolean"
         },
         "inherit_path": {
           "default": false,
+          "description": "Include the caller\u2019s PATH when creating an isolated environment.",
           "title": "Inherit Path",
           "type": "boolean"
         },
         "keep": {
+          "description": "Environment variable names to preserve from the caller when isolation is enabled.",
           "items": {
             "type": "string"
           },
@@ -370,11 +408,13 @@
           "additionalProperties": {
             "type": "string"
           },
+          "description": "Environment variable values to add or override.",
           "title": "Set",
           "type": "object",
           "x-ptk-template-context": "environment"
         },
         "unset": {
+          "description": "Environment variable names to remove.",
           "items": {
             "type": "string"
           },
@@ -382,6 +422,7 @@
           "type": "array"
         },
         "path_prepend": {
+          "description": "Directories placed before the existing PATH entries, in this order.",
           "items": {
             "type": "string"
           },
@@ -390,6 +431,7 @@
           "x-ptk-template-context": "environment"
         },
         "path_append": {
+          "description": "Directories placed after the existing PATH entries, in this order.",
           "items": {
             "type": "string"
           },
@@ -417,6 +459,7 @@
             }
           ],
           "default": null,
+          "description": "Relative path for this event. Choose a single path or separate branch/tag routes.",
           "title": "Path"
         },
         "repository": {
@@ -429,6 +472,7 @@
             }
           ],
           "default": null,
+          "description": "Override the Artifactory repository for this event.",
           "title": "Repository"
         },
         "branch": {
@@ -440,7 +484,8 @@
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "Destination for a push to a branch. Only valid for the push event."
         },
         "tag": {
           "anyOf": [
@@ -451,7 +496,8 @@
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "Destination for a push of a tag. Only valid for the push event."
         }
       },
       "title": "EventRoute",
@@ -462,10 +508,12 @@
       "properties": {
         "type": {
           "$ref": "#/$defs/FeatureType",
-          "default": "bool"
+          "default": "bool",
+          "description": "Feature value type: boolean, integer, string or enum."
         },
         "help": {
           "default": "",
+          "description": "Explanation of the feature shown to users.",
           "title": "Help",
           "type": "string"
         },
@@ -485,6 +533,7 @@
             }
           ],
           "default": null,
+          "description": "Feature value used when a variant does not override it.",
           "title": "Default"
         },
         "values": {
@@ -500,6 +549,7 @@
             }
           ],
           "default": null,
+          "description": "Allowed values for an enum feature. Required when type is enum.",
           "title": "Values"
         },
         "min": {
@@ -512,6 +562,7 @@
             }
           ],
           "default": null,
+          "description": "Smallest allowed integer feature value.",
           "title": "Min"
         },
         "max": {
@@ -524,6 +575,7 @@
             }
           ],
           "default": null,
+          "description": "Largest allowed integer feature value.",
           "title": "Max"
         },
         "depends_on": {
@@ -536,9 +588,11 @@
             }
           ],
           "default": null,
+          "description": "Condition controlling whether this feature is active.",
           "title": "Depends On"
         },
         "requires": {
+          "description": "Feature expressions that must hold when this feature is enabled.",
           "items": {
             "type": "string"
           },
@@ -546,6 +600,7 @@
           "type": "array"
         },
         "conflicts": {
+          "description": "Feature expressions that must not hold when this feature is enabled.",
           "items": {
             "type": "string"
           },
@@ -570,6 +625,7 @@
       "additionalProperties": false,
       "properties": {
         "path": {
+          "description": "Entry path in the gopass password store.",
           "title": "Path",
           "type": "string"
         }
@@ -585,6 +641,7 @@
       "properties": {
         "path": {
           "default": "",
+          "description": "Job-specific path appended after the base and event destination paths.",
           "title": "Path",
           "type": "string"
         }
@@ -597,10 +654,12 @@
       "properties": {
         "only_cx": {
           "default": false,
+          "description": "Expose this job only during CX/CI execution. It is hidden from local command and extension listings.",
           "title": "Only Cx",
           "type": "boolean"
         },
         "only_variants": {
+          "description": "Allow this job only for these variants. Running it with another variant is a configuration error; this does not select a variant.",
           "items": {
             "type": "string"
           },
@@ -608,6 +667,7 @@
           "type": "array"
         },
         "omit_variants": {
+          "description": "Disallow this job for these variants. Running it with an omitted variant is an error.",
           "items": {
             "type": "string"
           },
@@ -628,12 +688,14 @@
             }
           ],
           "default": null,
+          "description": "Open the report after every run (always), only after failures (on_errors), or leave automatic opening disabled (null).",
           "title": "Open Report"
         },
         "version_dependencies": {
           "additionalProperties": {
             "$ref": "#/$defs/VersionDependency"
           },
+          "description": "Other repositories whose versions this job needs, with optional variant selections.",
           "title": "Version Dependencies",
           "type": "object"
         },
@@ -646,15 +708,18 @@
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "Override environment isolation and PATH settings for this job."
         },
         "help": {
           "default": "",
+          "description": "Job description shown in the tree, command help and parameter form.",
           "title": "Help",
           "type": "string"
         },
         "audience": {
           "default": "all",
+          "description": "Choose whether everyone or only configured maintainers can access this job.",
           "enum": [
             "all",
             "maintainer"
@@ -666,10 +731,12 @@
           "additionalProperties": {
             "$ref": "#/$defs/ParamSpec"
           },
+          "description": "Named parameters accepted by this job. Define their types, help, choices and defaults.",
           "title": "Params",
           "type": "object"
         },
         "requires_tools": {
+          "description": "Tools required before the job runs. Reference a registered tool, disable it with false, or supply an inline tool definition.",
           "anyOf": [
             {
               "additionalProperties": {
@@ -682,6 +749,7 @@
                   }
                 ]
               },
+              "description": "Tools required before the job runs. Reference a registered tool, disable it with false, or supply an inline tool definition.",
               "title": "Requires Tools",
               "type": "object"
             },
@@ -697,11 +765,13 @@
           "additionalProperties": {
             "type": "string"
           },
+          "description": "Environment variables supplied to this job\u2019s steps. Step settings can override them.",
           "title": "Env",
           "type": "object",
           "x-ptk-template-context": "job"
         },
         "steps": {
+          "description": "Ordered steps executed by this job. At least one step is required.",
           "items": {
             "$ref": "#/$defs/StepEntry"
           },
@@ -722,26 +792,31 @@
       "properties": {
         "root": {
           "default": ".",
+          "description": "Base directory for generated output, relative to the repository root.",
           "title": "Root",
           "type": "string"
         },
         "builds": {
           "default": "_builds",
+          "description": "Build directory name beneath the layout root, partitioned by variant, job and step.",
           "title": "Builds",
           "type": "string"
         },
         "bin": {
           "default": "_bin",
+          "description": "Binary/output directory name beneath the layout root.",
           "title": "Bin",
           "type": "string"
         },
         "logs": {
           "default": "_logs",
+          "description": "Log directory name beneath the layout root.",
           "title": "Logs",
           "type": "string"
         },
         "reports": {
           "default": "_reports",
+          "description": "Report directory name beneath the layout root.",
           "title": "Reports",
           "type": "string"
         }
@@ -754,6 +829,7 @@
       "properties": {
         "level": {
           "default": "info",
+          "description": "Minimum message severity to include in logs.",
           "enum": [
             "trace",
             "debug",
@@ -766,6 +842,7 @@
         },
         "keep_history": {
           "default": 10,
+          "description": "Number of previous run logs retained per variant and job.",
           "minimum": 0,
           "title": "Keep History",
           "type": "integer"
@@ -780,6 +857,7 @@
       "properties": {
         "type": {
           "default": "str",
+          "description": "Value type accepted by this job parameter. Use choice for a fixed list, path for a filesystem path, or secret for hidden input.",
           "enum": [
             "str",
             "int",
@@ -795,6 +873,7 @@
         },
         "default": {
           "default": null,
+          "description": "Value used when no explicit argument or environment value is supplied. Supports PTK variables resolved when the job runs. Required and secret parameters cannot have defaults.",
           "title": "Default",
           "x-ptk-template-context": "default"
         },
@@ -811,15 +890,18 @@
             }
           ],
           "default": null,
+          "description": "Allowed values for a choice parameter. Required only when type is choice.",
           "title": "Choices"
         },
         "help": {
           "default": "",
+          "description": "Explanation shown in command help and the job parameter form.",
           "title": "Help",
           "type": "string"
         },
         "required": {
           "default": false,
+          "description": "Require a value when the job runs. Cannot be combined with a default.",
           "title": "Required",
           "type": "boolean"
         },
@@ -833,6 +915,7 @@
             }
           ],
           "default": null,
+          "description": "Name of the environment variable supplying this parameter. Explicit arguments take precedence; the configured default is used if the environment value is absent.",
           "title": "Env"
         }
       },
@@ -843,6 +926,7 @@
       "additionalProperties": false,
       "properties": {
         "path": {
+          "description": "Relative destination path for this route. Supports PTK variables.",
           "title": "Path",
           "type": "string"
         },
@@ -856,6 +940,7 @@
             }
           ],
           "default": null,
+          "description": "Override the Artifactory repository for this route.",
           "title": "Repository"
         }
       },
@@ -878,12 +963,14 @@
             }
           ],
           "default": null,
+          "description": "Concrete variant used when no explicit selection is supplied.",
           "title": "Default"
         },
         "components": {
           "additionalProperties": {
             "$ref": "#/$defs/ComponentSpec"
           },
+          "description": "Component feature models loaded from registered component directories.",
           "title": "Components",
           "type": "object"
         },
@@ -891,10 +978,12 @@
           "additionalProperties": {
             "$ref": "#/$defs/VariantSpec"
           },
+          "description": "Named variants with component selections, feature overrides and inheritance.",
           "title": "Variants",
           "type": "object"
         },
         "constraints": {
+          "description": "Validation expressions applied to all variants.",
           "items": {
             "$ref": "#/$defs/Constraint"
           },
@@ -902,7 +991,8 @@
           "type": "array"
         },
         "env": {
-          "$ref": "#/$defs/VariantEnvSpec"
+          "$ref": "#/$defs/VariantEnvSpec",
+          "description": "Naming rules for exported variant environment variables."
         }
       },
       "title": "ProductLineSpec",
@@ -912,11 +1002,13 @@
       "additionalProperties": false,
       "properties": {
         "name": {
+          "description": "Human-readable project name shown in reports and the extension.",
           "title": "Name",
           "type": "string"
         },
         "description": {
           "default": "",
+          "description": "Short explanation of the project for users and reports.",
           "title": "Description",
           "type": "string"
         },
@@ -930,6 +1022,7 @@
             }
           ],
           "default": null,
+          "description": "Job used when PTK is invoked without a command. Choose a job defined in this repository.",
           "title": "Default Job",
           "x-ptk-reference": {
             "path": [
@@ -942,6 +1035,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/ComponentRegistration"
           },
+          "description": "Register component names and their source directories. Each component owns its local variant and feature definitions.",
           "title": "Components",
           "type": "object"
         }
@@ -965,9 +1059,11 @@
             }
           ],
           "default": null,
+          "description": "Python tool requirement to run with uvx, for example ruff==0.6.9. Choose exactly one of uvx, venv, project or interpreter.",
           "title": "Uvx"
         },
         "with": {
+          "description": "Additional Python packages supplied to uvx. Only valid with uvx.",
           "items": {
             "type": "string"
           },
@@ -983,7 +1079,8 @@
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "Create an isolated environment with the specified requirements, packages and Python version."
         },
         "project": {
           "anyOf": [
@@ -995,9 +1092,11 @@
             }
           ],
           "default": null,
+          "description": "Python project directory passed to uv run --project. Uses that project\u2019s dependencies.",
           "title": "Project"
         },
         "groups": {
+          "description": "Dependency groups to include with uv run. Only valid with project mode.",
           "items": {
             "type": "string"
           },
@@ -1015,6 +1114,7 @@
             }
           ],
           "default": null,
+          "description": "Use cli to run with PTK\u2019s own Python environment. Choose exactly one Python execution mode.",
           "title": "Interpreter"
         }
       },
@@ -1028,6 +1128,7 @@
       "additionalProperties": false,
       "properties": {
         "formats": {
+          "description": "Report formats to generate, typically json and html.",
           "items": {
             "type": "string"
           },
@@ -1044,6 +1145,7 @@
             }
           ],
           "default": null,
+          "description": "Override the report output directory.",
           "title": "Dir"
         }
       },
@@ -1054,11 +1156,13 @@
       "additionalProperties": false,
       "properties": {
         "alias": {
+          "description": "Short repository name used in VMR commands and workflow repository references. Use lowercase letters, digits and hyphens.",
           "pattern": "^[a-z][a-z0-9-]*$",
           "title": "Alias",
           "type": "string"
         },
         "config_path": {
+          "description": "Configuration directory relative to .main.ptk.yml. PTK loads the conventional configuration files from this directory.",
           "minLength": 1,
           "title": "Config Path",
           "type": "string"
@@ -1076,6 +1180,7 @@
       "properties": {
         "enabled": {
           "default": true,
+          "description": "Enable this shared tool configuration.",
           "title": "Enabled",
           "type": "boolean"
         },
@@ -1089,6 +1194,7 @@
             }
           ],
           "default": null,
+          "description": "Project overlay file merged into the shared configuration.",
           "title": "Overlay"
         },
         "output": {
@@ -1101,6 +1207,7 @@
             }
           ],
           "default": null,
+          "description": "Destination path for the generated tool configuration.",
           "title": "Output"
         }
       },
@@ -1112,11 +1219,13 @@
       "properties": {
         "description": {
           "default": "",
+          "description": "Short explanation of the tool and why it is needed.",
           "title": "Description",
           "type": "string"
         },
         "docker": {
           "default": false,
+          "description": "Allow installation inside Docker. When false, installation is skipped in containers but version checks still run.",
           "title": "Docker",
           "type": "boolean"
         },
@@ -1125,6 +1234,7 @@
             "additionalProperties": true,
             "type": "object"
           },
+          "description": "Custom installer definitions keyed by installer or platform.",
           "title": "Installers",
           "type": "object"
         },
@@ -1138,6 +1248,7 @@
             }
           ],
           "default": null,
+          "description": "Accepted tool version range, for example >=3.28,<4.",
           "title": "Version"
         },
         "check": {
@@ -1150,10 +1261,12 @@
             }
           ],
           "default": null,
+          "description": "Command that prints the installed tool version.",
           "title": "Check"
         },
         "version_regex": {
           "default": "(\\d+\\.\\d+(?:\\.\\d+)?)",
+          "description": "Regular expression used to extract a version from the check command output.",
           "title": "Version Regex",
           "type": "string"
         },
@@ -1170,6 +1283,7 @@
             }
           ],
           "default": null,
+          "description": "Windows installation through Chocolatey, using a package ID or package/version settings.",
           "title": "Choco"
         },
         "toolbase": {
@@ -1181,7 +1295,8 @@
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "Install the tool through Toolbase."
         },
         "artifactory": {
           "anyOf": [
@@ -1205,6 +1320,7 @@
             }
           ],
           "default": null,
+          "description": "Download from Artifactory. Use one source or separate windows and linux sources.",
           "title": "Artifactory"
         },
         "uv_tool": {
@@ -1217,6 +1333,7 @@
             }
           ],
           "default": null,
+          "description": "Python tool requirement to install through uv tool.",
           "title": "Uv Tool"
         },
         "download": {
@@ -1241,6 +1358,7 @@
             }
           ],
           "default": null,
+          "description": "Download an archive or executable. Use one source or separate windows and linux sources.",
           "title": "Download"
         },
         "apt": {
@@ -1253,6 +1371,7 @@
             }
           ],
           "default": null,
+          "description": "APT package name for opt-in installation on Linux. Installation may require sudo.",
           "title": "Apt"
         },
         "dnf": {
@@ -1265,6 +1384,7 @@
             }
           ],
           "default": null,
+          "description": "DNF package name for opt-in installation on Linux. Installation may require sudo.",
           "title": "Dnf"
         }
       },
@@ -1275,22 +1395,26 @@
       "additionalProperties": false,
       "properties": {
         "package": {
+          "description": "Toolbase package identifier.",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
           "title": "Package",
           "type": "string"
         },
         "version": {
+          "description": "Toolbase package version to install.",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
           "title": "Version",
           "type": "string"
         },
         "environment": {
           "default": "ptk",
+          "description": "Toolbase environment name used for this installation.",
           "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
           "title": "Environment",
           "type": "string"
         },
         "bin": {
+          "description": "Executable directories relative to the installed package. A dot means the package root.",
           "items": {
             "type": "string"
           },
@@ -1315,11 +1439,13 @@
       "properties": {
         "prefix": {
           "default": "VH_",
+          "description": "Prefix for exported variant and feature environment variables.",
           "title": "Prefix",
           "type": "string"
         },
         "legacy_bo": {
           "default": false,
+          "description": "Also export BO_ feature variables for tools that require that naming convention.",
           "title": "Legacy Bo",
           "type": "boolean"
         }
@@ -1334,20 +1460,24 @@
           "additionalProperties": {
             "type": "string"
           },
+          "description": "Map repository aliases to the variants their workflow jobs must use when this owner variant is selected.",
           "title": "Repo Variants",
           "type": "object"
         },
         "description": {
           "default": "",
+          "description": "Human-readable explanation shown in variant choices.",
           "title": "Description",
           "type": "string"
         },
         "abstract": {
           "default": false,
+          "description": "Use this variant only as an inheritance base; it cannot be selected for execution.",
           "title": "Abstract",
           "type": "boolean"
         },
         "extends": {
+          "description": "Parent variants inherited in order.",
           "items": {
             "type": "string"
           },
@@ -1355,6 +1485,7 @@
           "type": "array"
         },
         "aliases": {
+          "description": "Alternative names accepted when selecting this variant.",
           "items": {
             "type": "string"
           },
@@ -1374,6 +1505,7 @@
             }
           ],
           "default": null,
+          "description": "Components included in this variant. Omission inherits the parent selection; a root variant defaults to all components.",
           "title": "Components"
         },
         "features": {
@@ -1390,11 +1522,13 @@
               }
             ]
           },
+          "description": "Feature values overriding defaults or inherited selections.",
           "title": "Features",
           "type": "object"
         },
         "data": {
           "additionalProperties": true,
+          "description": "Custom variant data available through ${vh.data.name}.",
           "title": "Data",
           "type": "object"
         }
@@ -1406,6 +1540,7 @@
       "additionalProperties": false,
       "properties": {
         "requirements": {
+          "description": "Requirement files to install in this step\u2019s isolated Python environment.",
           "items": {
             "type": "string"
           },
@@ -1413,6 +1548,7 @@
           "type": "array"
         },
         "packages": {
+          "description": "Additional Python package requirements to install, for example pytest>=8.",
           "items": {
             "type": "string"
           },
@@ -1429,6 +1565,7 @@
             }
           ],
           "default": null,
+          "description": "Python interpreter or version requested for this environment.",
           "title": "Python"
         }
       },
@@ -1448,6 +1585,7 @@
             }
           ],
           "default": null,
+          "description": "Variant used when resolving the dependency repository\u2019s version.",
           "title": "Variant"
         }
       },
@@ -1466,12 +1604,14 @@
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "Version source for the project."
         },
         "components": {
           "additionalProperties": {
             "$ref": "#/$defs/VersionSource"
           },
+          "description": "Version sources keyed by component name.",
           "title": "Components",
           "type": "object"
         }
@@ -1484,6 +1624,7 @@
       "properties": {
         "source": {
           "default": "inherit",
+          "description": "How to obtain the version: literal, git, file, env, command, or inherit from the containing context.",
           "enum": [
             "literal",
             "git",
@@ -1505,25 +1646,30 @@
             }
           ],
           "default": null,
+          "description": "Fixed version string. Required for a literal source.",
           "title": "Version"
         },
         "match": {
           "default": "v*",
+          "description": "Git tag pattern used for version discovery, for example v*.",
           "title": "Match",
           "type": "string"
         },
         "strip_prefix": {
           "default": "",
+          "description": "Prefix removed from the discovered version, for example v.",
           "title": "Strip Prefix",
           "type": "string"
         },
         "first_parent": {
           "default": true,
+          "description": "Follow only the first-parent Git history when locating a version tag.",
           "title": "First Parent",
           "type": "boolean"
         },
         "dirty": {
           "default": "suffix",
+          "description": "How uncommitted changes affect a Git-derived version: add a suffix, ignore them, or fail.",
           "enum": [
             "suffix",
             "ignore",
@@ -1534,6 +1680,7 @@
         },
         "allow_shallow": {
           "default": false,
+          "description": "Allow version discovery from a shallow Git checkout.",
           "title": "Allow Shallow",
           "type": "boolean"
         },
@@ -1547,10 +1694,12 @@
             }
           ],
           "default": null,
+          "description": "File containing the version. Required for a file source.",
           "title": "Path"
         },
         "format": {
           "default": "text",
+          "description": "Format of the version file: plain text, JSON, TOML or YAML.",
           "enum": [
             "text",
             "json",
@@ -1570,6 +1719,7 @@
             }
           ],
           "default": null,
+          "description": "Key used to select the version from structured file content.",
           "title": "Key"
         },
         "regex": {
@@ -1582,6 +1732,7 @@
             }
           ],
           "default": null,
+          "description": "Regular expression used to extract the version from the source value.",
           "title": "Regex"
         },
         "variable": {
@@ -1594,6 +1745,7 @@
             }
           ],
           "default": null,
+          "description": "Environment variable containing the version. Required for an env source.",
           "title": "Variable"
         },
         "command": {
@@ -1609,10 +1761,12 @@
             }
           ],
           "default": null,
+          "description": "Command and arguments that print a version. Required for a command source.",
           "title": "Command"
         },
         "timeout": {
           "default": 30,
+          "description": "Maximum time in seconds allowed for the version command.",
           "exclusiveMinimum": 0,
           "title": "Timeout",
           "type": "number"
@@ -1626,7 +1780,8 @@
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "Alternative version source used if this source cannot provide a version."
         }
       },
       "title": "VersionSource",
@@ -1648,12 +1803,14 @@
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "Version source for the project."
         },
         "components": {
           "additionalProperties": {
             "$ref": "#/$defs/VersionSource"
           },
+          "description": "Version sources keyed by component name.",
           "title": "Components",
           "type": "object"
         },
@@ -1661,6 +1818,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/VersionOverride"
           },
+          "description": "Project and component version-source overrides keyed by variant name.",
           "title": "Variants",
           "type": "object"
         },
@@ -1668,6 +1826,7 @@
           "additionalProperties": {
             "$ref": "#/$defs/VersionDependency"
           },
+          "description": "Other repositories whose versions should be resolved.",
           "title": "Dependencies",
           "type": "object"
         }
@@ -1683,11 +1842,13 @@
       "properties": {
         "help": {
           "default": "",
+          "description": "Workflow description shown in command help and the extension.",
           "title": "Help",
           "type": "string"
         },
         "audience": {
           "default": "all",
+          "description": "Choose whether everyone or only maintainers can access this workflow.",
           "enum": [
             "all",
             "maintainer"
@@ -1709,21 +1870,25 @@
             }
           ],
           "default": "always",
+          "description": "Open the aggregate report after every run (always), only on failures (on-errors), or disable automatic opening (null).",
           "title": "Open Report"
         },
         "parallel": {
           "default": false,
+          "description": "Run top-level workflow entries concurrently.",
           "title": "Parallel",
           "type": "boolean"
         },
         "max_workers": {
           "default": 4,
+          "description": "Maximum number of concurrent workflow workers.",
           "maximum": 32,
           "minimum": 1,
           "title": "Max Workers",
           "type": "integer"
         },
         "steps": {
+          "description": "Ordered job calls or nested groups. At least one entry is required.",
           "items": {
             "$ref": "#/$defs/WorkflowEntry"
           },
@@ -1743,10 +1908,12 @@
       "properties": {
         "only_cx": {
           "default": false,
+          "description": "Skip this step outside CX/CI execution.",
           "title": "Only Cx",
           "type": "boolean"
         },
         "only_variants": {
+          "description": "Run this step only for these variants. Other variants skip it; this does not select a variant.",
           "items": {
             "type": "string"
           },
@@ -1754,6 +1921,7 @@
           "type": "array"
         },
         "omit_variants": {
+          "description": "Skip this step for these variants. This does not change the job\u2019s selected variant.",
           "items": {
             "type": "string"
           },
@@ -1770,6 +1938,7 @@
             }
           ],
           "default": null,
+          "description": "Readable title used to describe this step.",
           "title": "Title"
         },
         "run": {
@@ -1788,6 +1957,7 @@
             }
           ],
           "default": null,
+          "description": "Command string or argument list to execute. A list preserves spaces within arguments. Choose exactly one of run, uses or steps.",
           "title": "Run",
           "x-ptk-template-context": "step"
         },
@@ -1801,10 +1971,12 @@
             }
           ],
           "default": null,
+          "description": "Registered plugin that executes this step. Supply its inputs in with.",
           "title": "Uses"
         },
         "with": {
           "additionalProperties": true,
+          "description": "Inputs passed to the plugin named in uses.",
           "title": "With",
           "type": "object",
           "x-ptk-template-context": "step"
@@ -1822,15 +1994,18 @@
             }
           ],
           "default": null,
+          "description": "Ordered child steps in this group. Enable parallel to run them concurrently.",
           "title": "Steps"
         },
         "parallel": {
           "default": false,
+          "description": "Run child steps concurrently. Only valid for a group containing steps.",
           "title": "Parallel",
           "type": "boolean"
         },
         "background": {
           "default": false,
+          "description": "Start this command in the background. Only valid with run.",
           "title": "Background",
           "type": "boolean"
         },
@@ -1844,10 +2019,12 @@
             }
           ],
           "default": null,
+          "description": "Condition evaluated against PTK execution symbols. The step is skipped when the expression is false.",
           "title": "When"
         },
         "continue_on_error": {
           "default": false,
+          "description": "Allow execution to continue after this step fails.",
           "title": "Continue On Error",
           "type": "boolean"
         },
@@ -1862,10 +2039,12 @@
             }
           ],
           "default": null,
+          "description": "Maximum time for the step in seconds. Must be greater than zero.",
           "title": "Timeout"
         },
         "retries": {
           "default": 0,
+          "description": "Number of additional attempts after a failed step. Zero means no retries.",
           "minimum": 0,
           "title": "Retries",
           "type": "integer"
@@ -1880,6 +2059,7 @@
             }
           ],
           "default": null,
+          "description": "Working directory for this step. Supports PTK variable expressions.",
           "title": "Cwd",
           "x-ptk-template-context": "step"
         },
@@ -1887,6 +2067,7 @@
           "additionalProperties": {
             "type": "string"
           },
+          "description": "Environment variables added or overridden for this step. Values support PTK variables.",
           "title": "Env",
           "type": "object",
           "x-ptk-template-context": "secret"
@@ -1895,6 +2076,7 @@
           "additionalProperties": {
             "type": "string"
           },
+          "description": "Map environment variable names to credential fields, for example TOKEN: artifactory.token. Store references here, not secret values.",
           "title": "Secrets",
           "type": "object"
         },
@@ -1907,15 +2089,18 @@
               "type": "null"
             }
           ],
-          "default": null
+          "default": null,
+          "description": "Python environment used for this command step. Choose one execution mode."
         },
         "passthrough": {
           "default": false,
+          "description": "Accept extra command-line arguments passed after -- or targeted with --args-for. Only valid with run.",
           "title": "Passthrough",
           "type": "boolean"
         },
         "report": {
           "default": true,
+          "description": "Include this step in the job report.",
           "title": "Report",
           "type": "boolean"
         }
@@ -1971,6 +2156,7 @@
             }
           ],
           "default": null,
+          "description": "Job to call. Choose either a job call or a group of child steps.",
           "title": "Job",
           "x-ptk-reference": {
             "path": [
@@ -1990,10 +2176,12 @@
             }
           ],
           "default": null,
+          "description": "Repository alias owning the job. Omit for the workflow\u2019s own repository.",
           "title": "Repo"
         },
         "params": {
           "additionalProperties": true,
+          "description": "Parameter values supplied to the called job.",
           "title": "Params",
           "type": "object"
         },
@@ -2011,15 +2199,18 @@
             }
           ],
           "default": null,
+          "description": "Nested workflow entries in this group.",
           "title": "Steps"
         },
         "parallel": {
           "default": false,
+          "description": "Run the child entries concurrently. Only valid for groups.",
           "title": "Parallel",
           "type": "boolean"
         },
         "continue_on_error": {
           "default": false,
+          "description": "Continue the workflow after this entry fails.",
           "title": "Continue On Error",
           "type": "boolean"
         }
@@ -2065,17 +2256,20 @@
         }
       ],
       "default": null,
+      "description": "Artifact destination rules by event, branch/tag and job. Configure downloads for tools in tools instead.",
       "x-ptk-template-context": "destination"
     },
     "workflows": {
       "additionalProperties": {
         "$ref": "#/$defs/WorkflowSpec"
       },
+      "description": "Named sequences or parallel groups of job calls, including calls into other repositories.",
       "title": "Workflows",
       "type": "object"
     },
     "repository": {
-      "$ref": "#/$defs/RepositorySpec"
+      "$ref": "#/$defs/RepositorySpec",
+      "description": "Repository identity and conventional configuration directory."
     },
     "virtual_monorepo": {
       "description": "Entry-only discovery flag: omit for automatic Git membership, false for standalone, true for a workspace marker.",
@@ -2085,6 +2279,7 @@
     "schema_version": {
       "const": 1,
       "default": 1,
+      "description": "PTK configuration schema version.",
       "title": "Schema Version",
       "type": "integer"
     },
@@ -2098,23 +2293,28 @@
         }
       ],
       "default": null,
+      "description": "Required PTK package version range, for example >=0.7,<1.",
       "title": "Ptk Version"
     },
     "project": {
-      "$ref": "#/$defs/ProjectSpec"
+      "$ref": "#/$defs/ProjectSpec",
+      "description": "Project identity, default job and registered component directories."
     },
     "vars": {
       "additionalProperties": true,
+      "description": "Reusable project values referenced with ${vars.name}.",
       "title": "Vars",
       "type": "object",
       "x-ptk-template-context": "vars"
     },
     "param_defaults": {
       "additionalProperties": true,
+      "description": "Shared default values for job parameters with matching names.",
       "title": "Param Defaults",
       "type": "object"
     },
     "requires_tools": {
+      "description": "Tools required at project level. Use registered names or inline definitions.",
       "anyOf": [
         {
           "additionalProperties": {
@@ -2127,6 +2327,7 @@
               }
             ]
           },
+          "description": "Tools required at project level. Use registered names or inline definitions.",
           "title": "Requires Tools",
           "type": "object"
         },
@@ -2139,12 +2340,14 @@
       ]
     },
     "environment": {
-      "$ref": "#/$defs/EnvironmentSpec"
+      "$ref": "#/$defs/EnvironmentSpec",
+      "description": "Default environment isolation and PATH settings for job execution."
     },
     "tools": {
       "additionalProperties": {
         "$ref": "#/$defs/ToolSpec"
       },
+      "description": "Named tool definitions, version checks and installation sources.",
       "title": "Tools",
       "type": "object"
     },
@@ -2152,6 +2355,7 @@
       "additionalProperties": {
         "$ref": "#/$defs/CredentialSpec"
       },
+      "description": "Named credential definitions and lookup providers. Keep secret values outside configuration.",
       "title": "Credentials",
       "type": "object"
     },
@@ -2164,7 +2368,8 @@
           "type": "null"
         }
       ],
-      "default": null
+      "default": null,
+      "description": "Project variants, component features, inheritance and validation constraints."
     },
     "versioning": {
       "anyOf": [
@@ -2175,12 +2380,14 @@
           "type": "null"
         }
       ],
-      "default": null
+      "default": null,
+      "description": "Project and component version sources, per-variant overrides and repository dependencies."
     },
     "jobs": {
       "additionalProperties": {
         "$ref": "#/$defs/JobSpec"
       },
+      "description": "Named executable jobs, including their steps, parameters and required tools.",
       "title": "Jobs",
       "type": "object"
     },
@@ -2188,6 +2395,7 @@
       "additionalProperties": {
         "$ref": "#/$defs/SharedConfigSpec"
       },
+      "description": "Shared tool configuration settings, such as pre-commit, Ruff and clang-format.",
       "propertyNames": {
         "enum": [
           "pre-commit",
@@ -2201,15 +2409,19 @@
       "type": "object"
     },
     "layout": {
-      "$ref": "#/$defs/LayoutSpec"
+      "$ref": "#/$defs/LayoutSpec",
+      "description": "Directory names for generated builds, binaries, logs and reports."
     },
     "logging": {
-      "$ref": "#/$defs/LoggingSpec"
+      "$ref": "#/$defs/LoggingSpec",
+      "description": "Log verbosity and run-history retention."
     },
     "reporting": {
-      "$ref": "#/$defs/ReportingSpec"
+      "$ref": "#/$defs/ReportingSpec",
+      "description": "Report formats and optional output-directory override."
     },
     "plugins": {
+      "description": "Python modules loaded to register additional PTK plugins.",
       "items": {
         "type": "string"
       },
@@ -2224,6 +2436,7 @@
         ],
         "type": "string"
       },
+      "description": "Control which built-in commands are available to all users or only maintainers.",
       "propertyNames": {
         "enum": [
           "setup",

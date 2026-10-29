@@ -16,9 +16,23 @@
     return (schema.anyOf || schema.oneOf || [schema]).map(part => resolve(part, root));
   }
   function effective(schema, value, root) {
+    const outer = resolve(schema, root);
     const variants = choices(schema, root);
     const match = variants.find(part => part.type === type(value) || part.type === "number" && type(value) === "integer");
-    return { ...resolve(schema, root), ...(match || variants.find(part => part.type !== "null") || {}) };
+    const chosen = match || variants.find(part => part.type !== "null") || {};
+    return { ...outer, ...chosen, ...(outer.description ? { description: outer.description } : {}) };
+  }
+  function help(schema, value, root) {
+    const spec = effective(schema, value, root);
+    const details = [];
+    const types = [...new Set(choices(schema, root).map(item => item.type).filter(Boolean))];
+    if (types.length) details.push(`Type: ${types.join(" / ")}`);
+    if (Object.hasOwn(spec, "default")) details.push(`Default: ${JSON.stringify(spec.default)}`);
+    if (spec.enum) details.push(`Values: ${spec.enum.join(", ")}`);
+    for (const [key, label] of [["minimum", "Minimum"], ["maximum", "Maximum"], ["exclusiveMinimum", "Greater than"], ["minLength", "Minimum characters"], ["minItems", "Minimum items"], ["pattern", "Pattern"]]) {
+      if (spec[key] !== undefined) details.push(`${label}: ${spec[key]}`);
+    }
+    return [spec.description, details.join(" · ")].filter(Boolean).join("\n");
   }
   function child(schema, value, key, root) {
     schema = effective(schema, value, root);
@@ -88,5 +102,5 @@
     }
     return create(schema, undefined, 0, context.existing || []);
   }
-  return { type, resolve, choices, effective, child, at, initial };
+  return { type, resolve, choices, effective, help, child, at, initial };
 });

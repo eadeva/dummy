@@ -67,15 +67,39 @@ class FeatureType(StrEnum):
 
 
 class FeatureSpec(_Strict):
-    type: FeatureType = FeatureType.BOOL
-    help: str = ""
-    default: bool | int | str | None = None
-    values: list[str] | None = None
-    min: int | None = None
-    max: int | None = None
-    depends_on: str | None = None
-    requires: list[str] = Field(default_factory=list)
-    conflicts: list[str] = Field(default_factory=list)
+    type: FeatureType = Field(
+        default=FeatureType.BOOL,
+        description="Feature value type: boolean, integer, string or enum.",
+    )
+    help: str = Field(
+        default="", description="Explanation of the feature shown to users."
+    )
+    default: bool | int | str | None = Field(
+        default=None,
+        description="Feature value used when a variant does not override it.",
+    )
+    values: list[str] | None = Field(
+        default=None,
+        description="Allowed values for an enum feature. Required when type is enum.",
+    )
+    min: int | None = Field(
+        default=None, description="Smallest allowed integer feature value."
+    )
+    max: int | None = Field(
+        default=None, description="Largest allowed integer feature value."
+    )
+    depends_on: str | None = Field(
+        default=None,
+        description="Condition controlling whether this feature is active.",
+    )
+    requires: list[str] = Field(
+        description="Feature expressions that must hold when this feature is enabled.",
+        default_factory=list,
+    )
+    conflicts: list[str] = Field(
+        description="Feature expressions that must not hold when this feature is enabled.",
+        default_factory=list,
+    )
 
     @field_validator("requires", "conflicts", mode="before")
     @classmethod
@@ -156,8 +180,12 @@ class FeatureSpec(_Strict):
 
 
 class Constraint(_Strict):
-    expr: str
-    message: str = ""
+    expr: str = Field(
+        description="Boolean expression that must hold for a valid variant."
+    )
+    message: str = Field(
+        default="", description="Explanation shown when the constraint fails."
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -166,10 +194,21 @@ class Constraint(_Strict):
 
 
 class ComponentSpec(_Strict):
-    description: str = ""
-    requires_components: list[str] = Field(default_factory=list)
-    constraints: list[Constraint] = Field(default_factory=list)
-    features: dict[str, FeatureSpec] = Field(default_factory=dict)
+    description: str = Field(
+        default="", description="Short explanation of this component."
+    )
+    requires_components: list[str] = Field(
+        description="Other components that must be included whenever this component is selected.",
+        default_factory=list,
+    )
+    constraints: list[Constraint] = Field(
+        description="Validation expressions applied to this component’s feature selection.",
+        default_factory=list,
+    )
+    features: dict[str, FeatureSpec] = Field(
+        description="Feature definitions owned by this component. Use UPPER_SNAKE_CASE names.",
+        default_factory=dict,
+    )
 
     @field_validator("features", mode="before")
     @classmethod
@@ -188,14 +227,36 @@ class ComponentSpec(_Strict):
 
 
 class VariantSpec(_Strict):
-    repo_variants: dict[str, str] = Field(default_factory=dict)
-    description: str = ""
-    abstract: bool = False
-    extends: list[str] = Field(default_factory=list)
-    aliases: list[str] = Field(default_factory=list)
-    components: list[str] | None = None  # None = inherit (root: all components)
-    features: dict[str, bool | int | str] = Field(default_factory=dict)
-    data: dict[str, Any] = Field(default_factory=dict)
+    repo_variants: dict[str, str] = Field(
+        description="Map repository aliases to the variants their workflow jobs must use when this owner variant is selected.",
+        default_factory=dict,
+    )
+    description: str = Field(
+        default="", description="Human-readable explanation shown in variant choices."
+    )
+    abstract: bool = Field(
+        default=False,
+        description="Use this variant only as an inheritance base; it cannot be selected for execution.",
+    )
+    extends: list[str] = Field(
+        description="Parent variants inherited in order.", default_factory=list
+    )
+    aliases: list[str] = Field(
+        description="Alternative names accepted when selecting this variant.",
+        default_factory=list,
+    )
+    components: list[str] | None = Field(
+        default=None,
+        description="Components included in this variant. Omission inherits the parent selection; a root variant defaults to all components.",
+    )  # None = inherit (root: all components)
+    features: dict[str, bool | int | str] = Field(
+        description="Feature values overriding defaults or inherited selections.",
+        default_factory=dict,
+    )
+    data: dict[str, Any] = Field(
+        description="Custom variant data available through ${vh.data.name}.",
+        default_factory=dict,
+    )
 
     @field_validator("extends", mode="before")
     @classmethod
@@ -214,16 +275,37 @@ class VariantSpec(_Strict):
 
 
 class VariantEnvSpec(_Strict):
-    prefix: str = "VH_"
-    legacy_bo: bool = False  # also export BO_<FEATURE> like the previous tool
+    prefix: str = Field(
+        default="VH_",
+        description="Prefix for exported variant and feature environment variables.",
+    )
+    legacy_bo: bool = Field(
+        default=False,
+        description="Also export BO_ feature variables for tools that require that naming convention.",
+    )  # also export BO_<FEATURE> like the previous tool
 
 
 class ProductLineSpec(_Strict):
-    default: str | None = None
-    components: dict[str, ComponentSpec] = Field(default_factory=dict)
-    variants: dict[str, VariantSpec] = Field(default_factory=dict)
-    constraints: list[Constraint] = Field(default_factory=list)
-    env: VariantEnvSpec = Field(default_factory=VariantEnvSpec)
+    default: str | None = Field(
+        default=None,
+        description="Concrete variant used when no explicit selection is supplied.",
+    )
+    components: dict[str, ComponentSpec] = Field(
+        description="Component feature models loaded from registered component directories.",
+        default_factory=dict,
+    )
+    variants: dict[str, VariantSpec] = Field(
+        description="Named variants with component selections, feature overrides and inheritance.",
+        default_factory=dict,
+    )
+    constraints: list[Constraint] = Field(
+        description="Validation expressions applied to all variants.",
+        default_factory=list,
+    )
+    env: VariantEnvSpec = Field(
+        description="Naming rules for exported variant environment variables.",
+        default_factory=VariantEnvSpec,
+    )
 
     @field_validator("components")
     @classmethod

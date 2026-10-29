@@ -46,10 +46,22 @@ Credential values and vault passwords stay in PTK's hidden terminal prompts.
 Update PTK from the same checkout to expose the command tree. Older inventories
 retain job actions and CLI help, with an update hint for built-in browsing.
 
-Selecting a variant stores the choice in VS Code's workspace state for that
-repository. **Use project default** clears it. Selection never rewrites PTK YAML.
+Expand a job or repository workflow to see its variant checkboxes. One choice
+is active at a time; checking another variant switches the selection.
+The choice is stored independently per job/workflow in VS Code's workspace state.
+**Use project default**, or unchecking the explicit selection, restores the
+configured default. Abstract variants are excluded. This updates only the
+affected tree branch, without running PTK or rewriting configuration.
 Workflows use the selected owner variant and its repository variant mappings. Use **Display Variant**
 for resolved features and the report icon on a job or workflow to open its report.
+
+The configuration form uses compact rows for labels, values and actions, with a
+vertical layout in narrow editor columns. Hover a field label or its **?** button
+for help, or activate **?** to expand the explanation, default and constraints.
+Help is supplied by the installed PTK's schema, generated from Pydantic field
+descriptions. The optional-field selector shows the same help before insertion.
+Open help survives save replies, and typing retains the existing deferred-save
+behavior. Update PTK and the extension together to receive the new descriptions.
 
 Multiple folders, VMR members and workspace workflows are supported. Discovery
 uses PTK's role-filtered inventory; commands still enforce permissions in the CLI.
@@ -73,7 +85,7 @@ refreshes the tree. Click **PTK unavailable** to see the exact discovery error.
 
 Build from the repository root with ``ptk extension`` or ``uv run ptk extension``.
 The job checks Node.js 22+ and npm, installs the build dependencies, runs the
-checks and writes ``extensions/project-toolkit/project-toolkit-0.7.0.vsix``.
+checks and writes ``extensions/project-toolkit/project-toolkit-0.8.0.vsix``.
 Use ``ptk dry-run extension`` to preview it. Node.js and npm must be on PATH.
 Set ``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
 integration tests. CI builds downloadable VSIX artifacts on Linux and Windows;
@@ -114,7 +126,7 @@ JavaScript, run ``npm run build`` and reload the development window.
 To install a development build into your normal VS Code instead::
 
    uv run ptk extension
-   uv run ptk setup extension --vsix extensions/project-toolkit/project-toolkit-0.7.0.vsix --force
+   uv run ptk setup extension --vsix extensions/project-toolkit/project-toolkit-0.8.0.vsix --force
 
 Editable installs intentionally contain no built-in VSIX; supply ``--vsix`` for
 this workflow. Full ``uv run ptk package`` builds the release artifacts containing
@@ -130,7 +142,7 @@ surrounding text, cursor and unsaved draft and does not reload configuration.
 The installed PTK supplies the catalogue, field capabilities and current job's
 parameter names. Runtime availability is described rather than evaluated in
 the editor. Environment and credential values are never previewed.
-Update PTK and extension 0.7.0 together to use this feature.
+Update PTK and extension 0.8.0 together to use this feature.
 
 Generated tasks and offline resources
 -----------------------------------------

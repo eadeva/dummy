@@ -65,3 +65,58 @@ main { padding: 24px 28px 40px; min-width: 0; max-width: 1000px; }
 footer { position: sticky; bottom: 0; background: var(--vscode-editor-background); border-top: 1px solid var(--vscode-panel-border); padding: 16px 28px; }
 @media (max-width: 650px) { main, header, .parameters { padding-left: 18px; padding-right: 18px; } }
 @media (forced-colors: active) { .field, button, input, select { border: 1px solid CanvasText; } }
+
+/* Dense configuration rows; the parameter dialog keeps its own layout. */
+.configuration header { padding: 10px 18px 8px; }
+.configuration .brand { font-size: 10px; letter-spacing: .09em; }
+.configuration h1 { font-size: 18px; margin: 3px 0; }
+.configuration h2 { font-size: 16px; margin: 0 0 10px; }
+.configuration .status { margin: 2px 0 0; }
+.configuration main { max-width: none; padding: 12px 18px 28px; }
+.configuration .crumbs { gap: 6px; margin-bottom: 8px; }
+.configuration button { padding: 4px 8px; min-height: 26px; }
+.configuration input:not([type=checkbox]), .configuration select, .configuration textarea { min-width: 0; padding: 4px 7px; min-height: 28px; }
+.configuration textarea { min-height: 58px; }
+.configuration .field { display: grid; grid-template-columns: minmax(110px, 18%) minmax(0, 1fr) auto; align-items: start; gap: 0 12px; padding: 7px 8px; margin: 0; border: 0; border-bottom: 1px solid var(--vscode-panel-border, var(--vscode-widget-border)); border-left: 2px solid transparent; border-radius: 0; }
+.configuration .field:focus-within { background: var(--vscode-list-hoverBackground); border-left-color: var(--vscode-focusBorder); }
+.configuration .field-top { grid-column: 1; grid-row: 1; justify-content: flex-start; align-items: center; flex-wrap: wrap; gap: 4px; min-height: 28px; margin: 0; }
+.configuration label.name { font-size: 12px; }
+.configuration .field-value { grid-column: 2; grid-row: 1; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; min-width: 0; min-height: 28px; }
+.configuration .field-value > input:not([type=checkbox]), .configuration .field-value > textarea, .configuration .field-value > select { flex: 1; width: 0; }
+.configuration .field-value > input[type=checkbox] { margin: 4px 0; }
+.configuration .field-value > .empty-field-message { order: 2; flex-basis: 100%; margin: 0; }
+.configuration .field-summary { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--vscode-descriptionForeground); font-size: 12px; }
+.configuration .field-value > .link { flex-shrink: 0; }
+.configuration .field-actions { grid-column: 3; grid-row: 1; gap: 4px; margin: 0; justify-content: flex-end; }
+.configuration .field-actions select { max-width: 95px; }
+.configuration .field-actions button { font-size: 11px; padding: 3px 5px; }
+.configuration .field > .row { grid-column: 2 / -1; margin-top: 6px; }
+.configuration .field-help { grid-column: 1 / -1; grid-row: 2; padding: 6px 8px; margin-top: 6px; background: var(--vscode-textBlockQuote-background); border-left: 2px solid var(--vscode-charts-blue, var(--vscode-focusBorder)); }
+.configuration .field .help { margin: 0; }
+.configuration .help-toggle { min-height: 22px; width: 22px; padding: 0; border-radius: 50%; font-size: 11px; background: transparent; color: var(--vscode-textLink-foreground); }
+.configuration .help-toggle:hover, .configuration .help-toggle[aria-expanded=true] { background: var(--vscode-toolbar-hoverBackground); }
+.required-mark { color: var(--vscode-descriptionForeground); }
+.configuration .field.needs-value { border-left-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground)); }
+.configuration .add { padding: 8px 10px; margin: 16px 0 0; border-color: var(--vscode-panel-border, var(--vscode-widget-border)); }
+.configuration .add .help { margin: 5px 0 0; }
+.configuration .variable-tools { margin: 0; }
+.configuration .variable-tools button { font-family: var(--vscode-editor-font-family, monospace); }
+.configuration .variable-picker { flex-basis: 100%; order: 3; min-width: 0; margin-top: 4px; }
+.configuration .notice { margin: 6px 0; padding: 6px 10px; }
+.configuration .field-help[hidden] { display: none; }
+@media (max-width: 850px) {
+  .configuration .field { grid-template-columns: minmax(100px, 23%) minmax(0, 1fr); gap: 4px 10px; }
+  .configuration .field-actions { grid-column: 2; grid-row: 2; }
+  .configuration .field-help { grid-row: 3; }
+}
+@media (max-width: 480px) {
+  .configuration main, .configuration header { padding-left: 10px; padding-right: 10px; }
+  .configuration .field { grid-template-columns: minmax(0, 1fr) auto; }
+  .configuration .field-top { grid-column: 1; grid-row: 1; }
+  .configuration .field-value { grid-column: 1 / -1; grid-row: 2; }
+  .configuration .field-actions { grid-column: 2; grid-row: 1; max-width: 190px; }
+  .configuration .field-help { grid-column: 1 / -1; grid-row: 3; }
+  .configuration .field > .row { grid-column: 1 / -1; }
+  .configuration .add .row { flex-wrap: wrap; }
+}
+@media (forced-colors: active) { .configuration .field { border-bottom: 1px solid CanvasText; } }

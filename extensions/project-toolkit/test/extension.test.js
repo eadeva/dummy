@@ -23,6 +23,8 @@ function harness(t, docs = [inventory()], trusted = true) {
   let editorActions;
   const watchers = [];
   const taskEnd = [];
+  const changedElements = [];
+  let checkboxListener, treeOptions;
   let outputShown = 0, treeChanges = 0;
   const disposable = () => ({ dispose() {} });
   const folder = doc => ({ name: path.basename(doc.root), uri: { scheme: "file", fsPath: doc.root } });
@@ -31,7 +33,7 @@ function harness(t, docs = [inventory()], trusted = true) {
     calls.push({ settings, cwd });
     return structuredClone(docs.find(doc => doc.root === cwd));
   });
-  class EventEmitter { event = () => disposable(); fire() { treeChanges++; } dispose() {} }
+  class EventEmitter { event = () => disposable(); fire(element) { treeChanges++; changedElements.push(element); } dispose() {} }
   class Task {
     constructor(definition, scope, name, source, execution, problemMatchers) {
       Object.assign(this, { definition, scope, name, source, execution, problemMatchers });
@@ -45,11 +47,12 @@ function harness(t, docs = [inventory()], trusted = true) {
     TreeItem: class { constructor(label, state) { Object.assign(this, { label, state }); } },
     ThemeIcon: class { constructor(id, color) { Object.assign(this, { id, color }); } },
     ThemeColor: class { constructor(id) { this.id = id; } }, TreeItemCollapsibleState: { Expanded: 2, Collapsed: 1, None: 0 },
+    TreeItemCheckboxState: { Unchecked: 0, Checked: 1 },
     TaskRevealKind: { Always: 1 }, TaskPanelKind: { Dedicated: 2 },
     Uri: { file: fsPath => ({ scheme: "file", fsPath }) },
     window: {
       createOutputChannel: () => ({ appendLine: line => logs.push(line), show() { outputShown++; }, dispose() {} }),
-      registerTreeDataProvider: () => disposable(),
+      createTreeView: (_id, options) => { treeOptions = options; return { ...disposable(), onDidChangeCheckboxState(callback) { checkboxListener = callback; return disposable(); } }; },
       showErrorMessage: async message => errors.push(message),
       showInformationMessage: async (message, ...actions) => { logs.push(message); return picks.shift()?.(actions); },
       showQuickPick: async (items, options) => picks.shift()?.(items, options),
@@ -88,8 +91,81 @@ function harness(t, docs = [inventory()], trusted = true) {
   t.after(() => context.subscriptions.forEach(item => item.dispose()));
   const command = (name, element) => commands.get(`project-toolkit.${name}`)(element);
   const target = (kind = "job", index = 0) => ({ kind, name: "build", project: docs[index].projects[0], root: docs[index].projects[0].root });
-  return { api, controller, command, target, context, state, tasks, errors, logs, picks, inputs, calls, config, watchers, taskEnd, outputShown: () => outputShown, forms, formRequests, opened, editorActions, treeChanges: () => treeChanges };
+  return { api, controller, command, target, context, state, tasks, errors, logs, picks, inputs, calls, config, watchers, taskEnd, outputShown: () => outputShown, forms, formRequests, opened, editorActions, treeChanges: () => treeChanges,
+    checkbox: items => checkboxListener({ items }), treeOptions: () => treeOptions, changedElements };
 }
+
+function jobNode(h, label = "Jobs") {
+  return h.controller.provider.getChildren()[0].children[0].children.find(node => node.label === label).children[0];
+}
+
+test("job variant checkboxes choose one variant without discovery or changing configuration", async t => {
+  const h = harness(t);
+  await h.controller.ready();
+  assert.equal(h.treeOptions().manageCheckboxStateManually, true);
+  const node = jobNode(h), choices = node.children;
+  const checked = () => choices.filter(item => h.controller.provider.getTreeItem(item).checkboxState.state === 1).map(item => item.label);
+  assert.deepEqual(checked(), ["Use project default"]);
+  assert.ok(choices.every(item => !item.project.variants.find(v => v.name === item.variantName)?.abstract));
+  const calls = h.calls.length;
+  const before = JSON.stringify(node.project.configuration);
+  await h.checkbox([[choices.find(item => item.variantName === "large"), 1]]);
+  assert.deepEqual(h.changedElements.at(-1), [node]);
+  assert.deepEqual(checked(), ["large"]);
+  assert.match(h.controller.provider.getTreeItem(node).description, /large/);
+  await h.command("run", node);
+  assert.equal(h.tasks[0].definition.variant, "large");
+  assert.equal(h.calls.length, calls);
+  assert.equal(JSON.stringify(node.project.configuration), before);
+  await h.checkbox([[choices.find(item => item.variantName === "large"), 0]]);
+  assert.deepEqual(checked(), ["Use project default"]);
+  await h.command("run", node);
+  assert.equal(h.tasks[1].definition.variant, "small");
+});
+
+test("checkbox selections remain independent for jobs, workflows and repositories", async t => {
+  const h = harness(t, [inventory(), inventory(path.resolve("second"))]);
+  await h.controller.ready();
+  const job = jobNode(h), workflow = jobNode(h, "Workflows");
+  await h.checkbox([[job.children.find(item => item.variantName === "large"), 1]]);
+  await h.command("run", workflow);
+  await h.command("run", h.target("job", 1));
+  assert.deepEqual(h.tasks.map(task => task.definition.variant), ["small", "small"]);
+  assert.equal(h.controller.provider.getTreeItem(workflow.children[0]).checkboxState.state, 1);
+  const refreshed = jobNode(h);
+  assert.deepEqual(refreshed.children.map(item => item.id), job.children.map(item => item.id));
+  assert.equal(h.controller.provider.getTreeItem(refreshed.children.find(item => item.variantName === "large")).checkboxState.state, 1);
+});
+
+test("checkboxes serialize rapid changes and reject removed or abstract variants", async t => {
+  const doc = inventory(), h = harness(t, [doc]);
+  await h.controller.ready();
+  const choices = jobNode(h).children;
+  await Promise.all([h.checkbox([[choices.find(item => item.variantName === "large"), 1]]), h.checkbox([[choices.find(item => item.variantName === "small"), 1]])]);
+  await h.command("run", h.target());
+  assert.equal(h.tasks[0].definition.variant, "small");
+  doc.projects[0].variants.find(item => item.name === "large").abstract = true;
+  await h.controller.refresh();
+  await h.checkbox([[choices.find(item => item.variantName === "large"), 1]]);
+  assert.match(h.errors[0], /variant is no longer available/);
+  assert.equal(jobNode(h).children.some(item => item.variantName === "large"), false);
+});
+
+test("no default keeps a visible reset choice and a stale saved variant falls back safely", async t => {
+  const doc = inventory();
+  delete doc.projects[0].default_variant;
+  const h = harness(t, [doc]);
+  await h.controller.ready();
+  const node = jobNode(h);
+  h.state.set(`variant:${node.project.entry_file}:job:${node.name}`, "removed");
+  assert.equal(h.controller.provider.getTreeItem(node.children[0]).checkboxState.state, 1);
+  assert.equal(node.children[0].description, "No default configured");
+  await h.checkbox([[node.children[0], 0]]);
+  assert.equal(h.controller.provider.getTreeItem(node.children[0]).checkboxState.state, 1);
+  h.api.workspace.isTrusted = false;
+  await h.checkbox([[node.children[1], 1]]);
+  assert.match(h.errors[0], /Trust this workspace/);
+});
 
 test("activation discovers projects and runs jobs as processes with global variants", async t => {
   const h = harness(t);

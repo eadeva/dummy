@@ -564,14 +564,18 @@ class ExportSchema:
             properties = definition.get("properties", {})
             if "requires_tools" in properties:
                 properties["requires_tools"] = {
+                    "description": properties["requires_tools"]["description"],
                     "anyOf": [
                         properties["requires_tools"],
                         {"type": "array", "items": {"type": "string"}},
-                    ]
+                    ],
                 }
         # The assembled schema also describes not-yet-authored optional sections.
         schema["required"] = []
-        schema["properties"]["repository"] = {"$ref": "#/$defs/RepositorySpec"}
+        schema["properties"]["repository"] = {
+            "$ref": "#/$defs/RepositorySpec",
+            "description": schema["properties"]["repository"]["description"],
+        }
         # Authored omission means automatic discovery, not explicit standalone.
         schema["properties"]["virtual_monorepo"].pop("default", None)
         workspace = WorkspaceSpec.model_json_schema()
