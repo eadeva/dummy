@@ -1,0 +1,517 @@
+[build-system]
+requires = ["setuptools>=82.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xc-ce-utils"
+dynamic = ["version"]
+description = "XC-CE Utilities - Build system and automation tools for embedded automotive projects"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "LicenseRef-Proprietary-Bosch"
+authors = [
+    {name = "Hagenlocher Jimenez Pascal (XC-CE/PAV-EF22)", email = "pascal.hagenlocherjimenez@de.bosch.com"},
+    {name = "Adeva Sanz Enrique (XC-CE/PAV-EF22)", email = "enrique.adevasanz@de.bosch.com"}
+]
+keywords = ["build", "embedded", "automotive", "conan", "cmake", "aspice", "conan", "git", "documentation", "qac", "yocto", "automation", "bazel", "python", "utilities"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.12",
+]
+
+# Core dependencies (always installed)
+dependencies = [
+    "colorlog==6.10.1",                         # Base logging
+    "PyYAML==6.0.2",                            # Configuration file processing
+    "filelock==3.17.0",                         # File locking for concurrency control
+    "rich_click==1.9.4",                        # Enhanced CLI output
+    "python-dotenv==1.2.1",                     # Environment variable management
+    "typing-extensions==4.15.0",                # Type checking
+    "pydantic==2.11.7",                         # Data validation and settings management
+    "pre-commit==4.0.1",                        # Git hook framework (bundled, exposed via `xc-ce-utils _pre-commit`)
+    "virtualenv==20.31.2",                      # Keep resolver deterministic and avoid long version backtracking via pre-commit transitive deps
+    "uv==0.5.11",                               # Provides both `uv` and `uvx` launchers. Bundled as sidecar binaries under
+                                                # xc-ce-utils/bin for pre-commit template hooks (`uvx ...`) and any
+                                                # code needing a real Python interpreter.
+                                                # See xc_ce_utils.global_modules.uv_sidecar and xc-ce_core-engine.spec
+                                                # _find_uv_binary() for the runtime/bundling integration.
+
+    # Core-engine runtime dependency set (default install)
+    "GitPython==3.1.46",
+    "gcovr==8.5",
+    "atlassian-python-api>=4.0.7",
+    "validators>=0.35.0",
+    "aiohttp==3.11.11",
+    "requests==2.32.3",
+    "cryptography==46.0.5",
+    "keyring==25.7.0",
+    "bincopy==20.1.1",
+    "crcmod==1.7",
+    "crccheck==1.3.1",
+    "intelhex==2.3.0",
+    "pywin32==311; sys_platform == 'win32'",
+    "dng_helpers==3.0.2b0",
+    "markdownify>=0.14.1",
+    "psutil==6.1.1",
+    "pandas==2.2.3",
+    "pytz>=2024.1",                            # pytz<=2023.3 uses datetime.utcfromtimestamp() at import time (DeprecationWarning on Python 3.12+)
+    "openpyxl==3.1.5",
+    "tabulate==0.9.0",
+    "rtcclient==0.10.0",
+    "xmltodict>=0.13.0",
+    "paramiko==4.0.0",
+    "bcrypt==4.2.1",
+    "invoke==2.2.0",
+    "isystem.connect>=9.21.402",
+    "pyelftools>=0.31,<0.33",
+    "voltcraft==1.6.3",
+    "pyserial==3.5",
+    "pymupdf>=1.24.0,<2",
+    "smbprotocol>=1.10.0",                      # SMB/CIFS auth for splunk_export UNC shares
+    "jsonschema==4.25.1",
+
+    # TACO (Test as Code) - taco_filter / taco_ctest / taco_robotfw steps and the project adapters.
+    # Private packages come from RB aebe-devops-pypi-local (see [tool.uv.sources]); public PyPI
+    # has an unrelated "taco" package, so keep the exact pin.
+    "taco==2.67.0",
+    "xcce_taco_helpers==0.0.7b0",
+    "elefanto==2.4.0",
+    "das-metamodel==3.7.1",
+    "rb-monitor==24.46.1",
+    "robotframework==7.4.2",
+
+    # Doc generation deps were previously transitively pulled via core-engine
+    "Jinja2>=3.1.4,<3.1.5",
+    "sphinx==9.1.0",
+    "sphinx-needs==8.5.0",
+    "sphinxcontrib-plantuml==0.31",
+    "sphinx-rtd-theme==3.1.0",
+    "sphinxcontrib-drawio==0.0.17",
+    "sphinxcontrib.jquery==4.1",
+    "lxml==5.3.0",
+    "breathe==5.1.0",
+    "Pillow==12.1.1",
+    "matplotlib==3.10.8",
+    "sphinx-design==0.7.0",
+    "myst-parser==5.1.0",
+    "linkify-it-py==2.2.0",
+    "sphinx-autodoc-typehints==3.13.9",
+    "sphinx-book-theme==1.4.0",
+]
+
+[project.optional-dependencies]
+# Shared dependency groups (referenced by other optionals)
+common-crypto = [
+    "cryptography==46.0.5",
+    "keyring==25.7.0",
+]
+
+common-binary = [
+    "bincopy==20.1.1",
+    "crcmod==1.7",
+    "crccheck==1.3.1",
+    # sparse removed: only call site (binary_handling.bin_converter) used a
+    # non-existent API (sparse.load(file_handle).to_raw()) and was already
+    # silently dead via bare-except guards. Dropping pydata-sparse also
+    # removes its transitive deps numba/llvmlite (~100 MB) and scipy (~86 MB).
+    "intelhex==2.3.0",
+]
+
+common-git = [
+    "GitPython==3.1.46",
+]
+
+common-xml = [
+    "lxml==5.3.0",
+]
+
+common-http = [
+    "aiohttp==3.11.11",
+    "requests==2.32.3",
+]
+
+common-mcp-servers = [
+    # Required by unified MCP server entrypoints under xc_ce_utils.mcp
+    "fastmcp>=2.12.4",
+    "atlassian-python-api>=4.0.7",
+    "validators>=0.35.0",
+]
+
+common-ssh = [
+    "paramiko==4.0.0",
+    "bcrypt==4.2.1",  # Required by paramiko
+    "invoke==2.2.0",  # Required by paramiko
+]
+
+common-unit-tests = [
+    "gcovr==8.5"
+]
+
+# Base module dependencies
+rb-logger = [
+    "colorlog==6.10.1",
+]  # colorlog in core
+
+conf-file-loader = []  # dependencies are in core
+
+global-modules = [] # dependencies are in core
+
+password-handler = [
+    "xc-ce-utils[common-crypto]",
+]
+
+# Utility modules
+artifactory-utils = [
+    "xc-ce-utils[common-http]",
+    "xc-ce-utils[common-crypto]",
+]
+
+binary-handling = [
+    "xc-ce-utils[common-binary]",
+]
+
+json-utils = []
+rb-timer = []
+proxy = []
+
+# Core execution engine
+core-engine = [
+    "xc-ce-utils[common-git]",
+    "xc-ce-utils[common-unit-tests]",
+    "xc-ce-utils[common-mcp-servers]",
+    "xc-ce-utils[artifactory-utils]",
+    "xc-ce-utils[binary-handling]",
+    "xc-ce-utils[conf-file-loader]",
+    "xc-ce-utils[docascode]",
+    "xc-ce-utils[git-hooks]",
+    "xc-ce-utils[global-modules]",
+    "xc-ce-utils[oss]",
+    "xc-ce-utils[password-handler]",
+    "xc-ce-utils[rb-logger]",
+    "xc-ce-utils[rtc-client-wrapper]",
+    "xc-ce-utils[tool-installers]",
+    "xc-ce-utils[trace32]",
+    "xc-ce-utils[winidea]",
+    "xc-ce-utils[canoe]",
+    "xc-ce-utils[powersupply]",
+    "xc-ce-utils[com-io-handler]",
+    "mcp[cli]==1.28.0",
+    "jsonschema==4.25.1",
+    "pywin32==311; sys_platform == 'win32'",
+    "dng_helpers==3.0.2b0",
+    "markdownify>=0.14.1",
+    # Process management
+    "psutil==6.1.1",
+    # Data processing
+    "pandas==2.2.3",
+    "openpyxl==3.1.5",
+    "tabulate==0.9.0",
+    "smbprotocol>=1.10.0",                      # splunk_export UNC/SMB share auth
+]
+
+# Documentation generation
+docascode = [
+    "Jinja2>=3.1.4,<3.1.5",                 # 3.1.4 fixed FutureWarning in _identifier.py for Python 3.12+; 3.1.5/3.1.6 regressed (collapsed char ranges cause re.error in PyInstaller)
+    "sphinx==9.1.0",
+    "sphinx-needs==8.5.0",  # Compatible with Sphinx 9.x
+    "sphinxcontrib-plantuml==0.31",
+    "sphinx-rtd-theme==3.1.0",
+    "sphinxcontrib-drawio==0.0.17",
+    "sphinxcontrib.jquery==4.1",
+    "lxml==5.3.0",  # Required by breathe - pin modern version with wheels to avoid build failures
+    "breathe==5.1.0",
+    "Pillow==12.1.1",
+    "matplotlib==3.10.8",  # Required for sphinx-needs needpie plots
+    "sphinx-design==0.7.0",  # Grid layout for side-by-side content
+    "myst-parser==5.1.0",
+    "linkify-it-py==2.2.0",
+    "sphinx-autodoc-typehints==3.13.9",
+    "sphinx-book-theme==1.4.0",
+]
+
+# Repository and version control
+repo-dependency-handler = [
+    "xc-ce-utils[common-git]",
+]
+
+git-hooks = []
+
+rtc-client-wrapper = [
+    "xc-ce-utils[common-crypto]",
+    "rtcclient==0.10.0",
+]
+
+rtc-mcp-server = [
+    "xc-ce-utils[rtc-client-wrapper]",
+    "mcp[cli]==1.28.0",
+    "xmltodict>=0.13.0",
+]
+
+rtc-github = [
+    "xc-ce-utils[common-http]",
+]
+
+# Tool integrations
+vector-generation = []
+tresos-generator = []
+
+sw-container-generator = [
+    "xc-ce-utils[common-xml]",
+    "xc-ce-utils[common-binary]",
+    "xc-ce-utils[artifactory-utils]",
+    "xc-ce-utils[rb-logger]",
+    "pyelftools>=0.31,<0.33",  # ELF binary analysis
+]
+
+trace32 = []
+winidea = [
+    "isystem.connect>=9.21.402",
+    "xc-ce-utils[elf-utils]",
+]
+elf-utils = [
+    "pyelftools>=0.31,<0.33",
+]
+canoe = [
+    "pywin32==311; sys_platform == 'win32'",
+]
+tool-installers = [
+    "xc-ce-utils[artifactory-utils]",
+]
+
+powersupply = [
+    "voltcraft==1.6.3",
+]
+
+com-io-handler = [
+    "pyserial==3.5",  # Serial port communication
+]
+
+oss = []
+
+# SBOM / SecBOM / CSI container generation from CSI manifests
+sbom = [
+    "jsonschema==4.25.1",
+    "openpyxl==3.1.5",
+]
+
+rb-latex-doc-generator = []
+yocto-wic-flasher = []
+
+yocto-tftp-flash-script-generator = [
+    "crcmod==1.7",  # Only crcmod, not full binary set
+]
+
+yocto-rcon-bin-generator = []
+yocto-metafile-generator = []
+yocto-metafile-csv-generator = []
+yocto-devicetree-patcher = []
+
+# Init repo module
+init-repo = [
+    "xc-ce-utils[common-git]",
+    "xc-ce-utils[common-crypto]",
+    "xc-ce-utils[common-http]",
+]
+
+pdf-to-md = [
+    "pymupdf>=1.24.0,<2",
+]
+
+# PyInstaller build dependencies
+pyinstaller = [
+    "pyinstaller==6.12.0"
+]
+
+# Development dependencies (optional - for contributors)
+dev = [
+    "pytest==8.3.4",
+    "pytest-cov==6.0.0",
+    "pytest-mock==3.14.0",
+    "black==25.1.0",
+    "ruff==0.9.3",
+    "mypy==1.15.0",
+]
+
+# Test-only dependency group (subset of dev for CI test job)
+test = [
+    "pytest==8.3.4",
+    "pytest-cov==6.0.0",
+    "pytest-mock==3.14.0",
+]
+
+# All dependencies combined
+all = [
+    "xc-ce-utils[core-engine,docascode,sbom,pyinstaller,dev]",
+]
+
+[project.scripts]
+xc-ce-utils = "xc_ce_utils.xc_ce_utils:main"
+xc-ce-sbom = "xc_ce_utils.sbom.sbom_generator:main"
+xc-ce-sbom-convert = "xc_ce_utils.sbom.fossfile_converter:main"
+xc-ce-dng-export = "xc_ce_utils.alm_utils.alm_exporter_cli:main"
+xc-ce-pdf2md = "xc_ce_utils.psd_to_md.pdf_to_md:main"
+
+# [project.urls]
+# Homepage = "https://inside-docupedia.bosch.com/confluence/display/BGSW2WProject"
+# Repository = "https://sourcecode.socialcoding.bosch.com/projects/XC-CE/repos/xc-ce-utils"
+
+[tool.setuptools]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = [
+    "xc_ce_utils",
+    "xc_ce_utils.*",
+    # Explicitly keep post-refactor clean-architecture package trees discoverable.
+    "xc_ce_utils.core_engine.application*",
+    "xc_ce_utils.core_engine.adapters*",
+    "xc_ce_utils.core_engine.reporting*",
+]
+exclude = ["*.__pycache__", "*.__pycache__.*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "xc_ce_utils._version.__version__"}
+
+[tool.setuptools.package-data]
+xc_ce_utils = [
+    "**/*.yml",
+    "**/*.yaml",
+    "**/*.json",
+    "**/*.txt",
+    "!**/requirements*.txt",  # Exclude requirements.txt - use pyproject.toml extras instead
+    "**/*.md",
+    "**/*.j2",  # Jinja2 templates (e.g. xc_ce_utils/sbom/templates)
+    "**/*.xlsx",  # SBOM SecBOM Excel templates
+    "**/*.html",
+    "**/*.css",
+    "**/*.js",
+    "**/*.png",
+    "**/*.ico",
+    "**/*.xml",
+    "**/*.acf",
+    "**/*.cct",
+    "**/*.ncf",
+    "**/*.rcf",
+    "**/*.vcf",
+    "**/*.xsd",
+    "**/*.t32",
+    "**/git_hooks/**/*",
+    "**/vs_code_configurator/**/*",
+    "**/docascode/templates/**/*",
+    # Clang templates (.clang-tidy, .clang-format, .clangd, vfs overlays) —
+    # extension-based globs above miss these dotted-suffix files.
+    "**/clang/**/*",
+]
+
+[tool.setuptools.exclude-package-data]
+xc_ce_utils = [
+    "**/__pycache__/*",
+    "**/*.pyc",
+    "**/*.pyo",
+]
+
+[tool.setuptools.data-files]
+"config/versioning" = ["config/versioning/version.json"]
+
+[tool.black]
+line-length = 100
+target-version = ['py39', 'py310', 'py311']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+    \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | venv
+)/
+'''
+
+# NOTE: Ruff configuration intentionally lives outside pyproject.toml.
+# It is shipped by xc-ce-utils as a layered config:
+#   - Base    : config/ruff/base.toml      (xc-ce-utils-owned, regen on setup)
+#   - Override: config/ruff/overrides.toml (optional, project-owned)
+#   - Wired   : .ruff.toml                 (generated, extends the active layer)
+# See xc_ce_utils/git_hooks/config_layer.py.
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers"
+testpaths = [
+    "tests",
+]
+pythonpath = [
+    "."
+]
+markers = [
+    "unit: pure-logic unit tests (no I/O, fast)",
+    "integration: integration tests touching the file system or subprocess",
+    "slow: tests slower than ~1s",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["xc_ce_utils"]
+omit = [
+    "xc_ce_utils/_version.py",
+    "*/tests/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
+show_missing = true
+skip_covered = false
+
+# uv index configuration:
+# The Bosch Artifactory index is declared as 'explicit' so it is ONLY consulted
+# for packages that reference it via [tool.uv.sources]. Standard packages like
+# setuptools, wheel, etc. are resolved from PyPI exclusively.
+[[tool.uv.index]]
+name = "devops-artifactory"
+url = "https://rb-artifactory.bosch.com/artifactory/api/pypi/aebe-devops-pypi-local/simple"
+explicit = true
+
+[[tool.uv.index]]
+name = "tcc-artifactory"
+url = "https://rb-artifactory.bosch.com/artifactory/api/pypi/tcc-pypi-local/simple/"
+explicit = true
+
+[[tool.uv.index]]
+name = "rb-python-virtual"
+url = "https://rb-artifactory.bosch.com/artifactory/api/pypi/python-virtual/simple"
+explicit = true
+
+[tool.uv]
+# Jinja2 3.1.5/3.1.6 contain a regression in _identifier.py: the auto-generated regex uses
+# a Unicode character class with a descending range (U+FF3F '＿' > end-char), which Python 3.12
+# changed from a FutureWarning to a hard re.error at import time inside a frozen PyInstaller exe.
+# Pinning below prevents frozen runtime regex errors in PyInstaller bundles.
+override-dependencies = ["Jinja2>=3.1.4,<3.1.5"]
+
+[tool.uv.sources]
+dng_helpers = { index = "devops-artifactory" }
+taco = { index = "devops-artifactory" }
+xcce_taco_helpers = { index = "devops-artifactory" }
+elefanto = { index = "devops-artifactory" }
+das-metamodel = { index = "devops-artifactory" }
+rb-monitor = { index = "rb-python-virtual" }
