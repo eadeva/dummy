@@ -8,67 +8,67 @@ Two maintainer skills operate on PTK's own source checkout.
 ptk-config-authoring
 --------------------
 
-.. literalinclude:: ../.claude/skills/ptk-config-authoring/SKILL.md
+.. literalinclude:: ../../.claude/skills/ptk-config-authoring/SKILL.md
    :language: markdown
 
 ptk-job-authoring
 --------------------
 
-.. literalinclude:: ../.claude/skills/ptk-job-authoring/SKILL.md
+.. literalinclude:: ../../.claude/skills/ptk-job-authoring/SKILL.md
    :language: markdown
 
 ptk-python-steps
 ----------------
 
-.. literalinclude:: ../.claude/skills/ptk-python-steps/SKILL.md
+.. literalinclude:: ../../.claude/skills/ptk-python-steps/SKILL.md
    :language: markdown
 
 ptk-variant-model
 -----------------
 
-.. literalinclude:: ../.claude/skills/ptk-variant-model/SKILL.md
+.. literalinclude:: ../../.claude/skills/ptk-variant-model/SKILL.md
    :language: markdown
 
 ptk-credentials
 ---------------
 
-.. literalinclude:: ../.claude/skills/ptk-credentials/SKILL.md
+.. literalinclude:: ../../.claude/skills/ptk-credentials/SKILL.md
    :language: markdown
 
 ptk-shared-configs
 ------------------
 
-.. literalinclude:: ../.claude/skills/ptk-shared-configs/SKILL.md
+.. literalinclude:: ../../.claude/skills/ptk-shared-configs/SKILL.md
    :language: markdown
 
 ptk-tools-setup
 ---------------
 
-.. literalinclude:: ../.claude/skills/ptk-tools-setup/SKILL.md
+.. literalinclude:: ../../.claude/skills/ptk-tools-setup/SKILL.md
    :language: markdown
 
 ptk-reporting
 -------------
 
-.. literalinclude:: ../.claude/skills/ptk-reporting/SKILL.md
+.. literalinclude:: ../../.claude/skills/ptk-reporting/SKILL.md
    :language: markdown
 
 ptk-troubleshooting
 -------------------
 
-.. literalinclude:: ../.claude/skills/ptk-troubleshooting/SKILL.md
+.. literalinclude:: ../../.claude/skills/ptk-troubleshooting/SKILL.md
    :language: markdown
 
 ptk-development
 ---------------
 
-.. literalinclude:: ../.claude/skills/ptk-development/SKILL.md
+.. literalinclude:: ../../.claude/skills/ptk-development/SKILL.md
    :language: markdown
 
 ptk-docs-writing
 ----------------
 
-.. literalinclude:: ../.claude/skills/ptk-docs-writing/SKILL.md
+.. literalinclude:: ../../.claude/skills/ptk-docs-writing/SKILL.md
    :language: markdown
 
 
@@ -80,7 +80,7 @@ repository. It also installs the PTK expert custom agent at
 ``.github/agents/ptk-expert.agent.md``. The installer
 copies skills into ``.github/skills`` and version-matched offline documentation,
 examples and the schema into ``.github/ptk``. It rewrites relative links for that
-layout; no PTK source checkout is required. See :doc:`editor` for update and check
+layout; no PTK source checkout is required. See :doc:`/guides/editor` for update and check
 behavior. Installing the wheel alone does not modify any consuming repository.
 
 The development and docs-writing skills remain checkout-only. Point an assistant
@@ -92,49 +92,49 @@ load the plugin example through its declared distribution entry point.
 ptk-vmr
 -------
 
-.. literalinclude:: ../.claude/skills/ptk-vmr/SKILL.md
+.. literalinclude:: ../../.claude/skills/ptk-vmr/SKILL.md
    :language: markdown
 
 ptk-plugin-development
 ----------------------
 
-.. literalinclude:: ../.claude/skills/ptk-plugin-development/SKILL.md
+.. literalinclude:: ../../.claude/skills/ptk-plugin-development/SKILL.md
    :language: markdown
 
 ptk-workflow-authoring
 ----------------------
 
-.. literalinclude:: ../.claude/skills/ptk-workflow-authoring/SKILL.md
+.. literalinclude:: ../../.claude/skills/ptk-workflow-authoring/SKILL.md
    :language: markdown
 
 ptk-versioning
 ---------------
 
-.. literalinclude:: ../.claude/skills/ptk-versioning/SKILL.md
+.. literalinclude:: ../../.claude/skills/ptk-versioning/SKILL.md
    :language: markdown
 
 ptk-package-preparation
 -----------------------
 
-.. literalinclude:: ../.claude/skills/ptk-package-preparation/SKILL.md
+.. literalinclude:: ../../.claude/skills/ptk-package-preparation/SKILL.md
    :language: markdown
 
 ptk-log-analyzer
 ----------------
 
-.. literalinclude:: ../.claude/skills/ptk-log-analyzer/SKILL.md
+.. literalinclude:: ../../.claude/skills/ptk-log-analyzer/SKILL.md
    :language: markdown
 
 ptk-expert agent
 ----------------
 
-.. literalinclude:: ../.claude/agents/ptk-expert.md
+.. literalinclude:: ../../.claude/agents/ptk-expert.md
    :language: markdown
 
 Project independence and agent selection
 ----------------------------------------
 
-All project-facing skills share :doc:`agent-guide`. They discover the selected
+All project-facing skills share :doc:`/guides/agent-guide`. They discover the selected
 runtime, schema, file ownership, execution routes and run evidence instead of
 assuming example configuration. They can diagnose supplied artifacts when PTK is
 unavailable, but must state which runtime validation could not be performed.

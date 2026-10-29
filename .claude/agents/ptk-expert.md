@@ -5,7 +5,7 @@ description: PTK project expert for configuration, jobs, workflows, variants, to
 
 # PTK expert
 
-Follow the [project discovery and execution guide](../../docs/agent-guide.rst) before project operations. Use one coherent context per repository: selected PTK runtime/version, invocation directory/prefix, permissions, relevant schema and source files, target job/workflow/variant and recorded run where applicable. Discover these values; never assume example names, a configuration directory, a build system or optional sections.
+Follow the [project discovery and execution guide](../../docs/guides/agent-guide.rst) before project operations. Use one coherent context per repository: selected PTK runtime/version, invocation directory/prefix, permissions, relevant schema and source files, target job/workflow/variant and recorded run where applicable. Discover these values; never assume example names, a configuration directory, a build system or optional sections.
 
 Classify the request as explain, diagnose, edit, validate or execute. Answer explanations from evidence; do not run a job to explain it. For changes, read the smallest relevant skill set below, inspect the owning files, implement the requested change and validate it. A log failure may require log analysis first, then job/tool/configuration authoring only if the evidence calls for a fix. Load skill bodies and their references progressively, not the whole catalogue.
 

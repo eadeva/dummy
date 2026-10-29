@@ -435,7 +435,7 @@ tools:
   already exist. Help/dry runs/CI and disabled entries do not install hooks.
   Ordinary existing hooks are preserved; custom hook paths/symlink hooks/backup
   collisions stop with an actionable conflict. Local bypass remains possible;
-  CI required checks provide enforcement. See `docs/configuration.rst`.
+  CI required checks provide enforcement. See `docs/guides/configuration.rst`.
 
 ---
 
@@ -612,7 +612,7 @@ formatted with `ruff format`. CI runs `ruff check` and `ruff format --check`.
 ## CLI organization update
 
 Configuration, shared configs, credentials, tool installation, self-setup, doctor
-and VS Code task generation are grouped under `ptk setup`. See `docs/cli.rst`.
+and VS Code task generation are grouped under `ptk setup`. See `docs/reference/cli.rst`.
 Bare `ptk setup` displays help; `ptk setup install` installs configured tools.
 Former top-level commands remain hidden compatibility aliases.
 
@@ -644,7 +644,7 @@ Former top-level commands remain hidden compatibility aliases.
 - Added `--all-variants`, comma selections, feature overrides and `-bo`/`-mp`
   compatibility spellings. Persistent variant editors were subsequently removed.
 - Implemented all six extension entry-point groups from section 1, selected by
-  installed distribution names in `plugins`. Contracts are in `docs/plugins.rst`.
+  installed distribution names in `plugins`. Contracts are in `docs/reference/plugins.rst`.
 - Added the remaining setup/file/generator built-ins and seven bundled generators.
 - Added configurable maintainer visibility for built-in command groups and aliases.
 - Native Linux/Windows behavior, extension integration and generator outputs are
@@ -792,7 +792,7 @@ Current project-facing skills now include `ptk-workflow-authoring`, `ptk-version
 and `ptk-package-preparation`; existing tools/reporting/job/VMR skills cover the
 new installers, default Docker install policy, report cards, filtering and opening.
 The offline authoring bundle contains fourteen project-facing skills; two additional
-skills remain checkout-only. See docs/workflows.rst and docs/skills.rst.
+skills remain checkout-only. See docs/guides/workflows.rst and docs/guides/skills.rst.
 
 Deferred explicitly: `ptk setup init --workflows` will generate GitHub templates.
 Job calls become jobs invoking a generic PTK run-job GitHub Action. Sequential
@@ -804,7 +804,7 @@ checkout/artifact policy and the reusable GitHub Action are not implemented yet.
 
 PTK executable units are now jobs throughout configuration, CLI options, Python
 interfaces, runtime variables, JSON reports, examples and bundled skills. This is a
-breaking rename without legacy field aliases; docs/configuration.rst lists the
+breaking rename without legacy field aliases; docs/guides/configuration.rst lists the
 required updates. Setup init scaffolds jobs/ and editor setup installs the renamed
 ptk-job-authoring skill. GitHub Actions terminology retains its platform meaning.
 
@@ -857,7 +857,7 @@ The reproducible scripts/benchmark_cli.py records wall-time samples and metadata
 source baseline/optimized samples are kept in docs/benchmarks. CI logs benchmark
 results on Linux/Windows Python 3.12 without flaky time thresholds. Deterministic
 regression tests bound repeated work and ensure help avoids runtime imports.
-See docs/performance.rst for measurements and remaining VMR scaling costs.
+See docs/guides/performance.rst for measurements and remaining VMR scaling costs.
 
 
 ## CLI simplification and editor inventory
@@ -884,7 +884,7 @@ See docs/performance.rst for measurements and remaining VMR scaling costs.
   task restoration and multi-root state. Real Python CLI integration tests exercise
   repository/VMR discovery, read-only previews and parameterized job execution.
 - CI tests and packages VSIX artifacts on Linux and Windows. Installation instructions
-  are in the extension README and docs/editor.rst. Marketplace publication and a
+  are in the extension README and docs/guides/editor.rst. Marketplace publication and a
   graphical extension-host acceptance run remain separate from this implementation.
 
 ### Sidebar command access (extension 0.2.0)
@@ -931,4 +931,4 @@ and passthrough syntax are documented separately.
 Log analysis and skills
 -----------------------
 
-`ptk-log-analyzer` diagnoses run logs and narrowly scoped suppressions. The PTK expert agent routes requests across the bundled skills. See docs/log-analysis.rst for canonical findings, history snapshots and report filters.
+`ptk-log-analyzer` diagnoses run logs and narrowly scoped suppressions. The PTK expert agent routes requests across the bundled skills. See docs/guides/log-analysis.rst for canonical findings, history snapshots and report filters.

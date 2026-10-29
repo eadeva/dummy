@@ -5,7 +5,7 @@ description: Diagnose PTK discovery, configuration, permission, startup, environ
 
 # PTK troubleshooting
 
-First follow the [project discovery and execution guide](../../../docs/agent-guide.rst). Reuse existing evidence before reproducing a failure.
+First follow the [project discovery and execution guide](../../../docs/guides/agent-guide.rst). Reuse existing evidence before reproducing a failure.
 
 1. Record the selected PTK version/launcher, working directory, repository, variant, non-secret parameters and observed error. Separate configuration failure, denied access, preparation failure, step failure and report-generation problems.
 2. For loading errors, inspect `ptk validate` and the reported source file/line; use `ptk describe --json --configuration` when available to recover document ownership and diagnostics. Do not initialize over an invalid project or rename an authored field to match a different release.
@@ -16,4 +16,4 @@ First follow the [project discovery and execution guide](../../../docs/agent-gui
 7. Preview only the relevant execution path after checking preparation effects. Reproduce a real run only within the user's scope; deploying, publishing, deleting or exercising credential-test commands is not implied by a request to explain an error.
 8. Distinguish usage/configuration errors (2), failed job (1), success (0) and cancellation (130). Retain exact evidence for the original failure. Suggest the smallest corrective change and verify it with focused checks; a changed error message alone is not proof of success.
 
-For slow startup/help, use [performance profiling](../../../docs/performance.rst). Separate launcher/environment synchronization from PTK startup. Compare equivalent targets in the same environment; keep profiles local. Do not add stale caches, disable validation or assume the consumer contains PTK's profiling scripts.
+For slow startup/help, use [performance profiling](../../../docs/guides/performance.rst). Separate launcher/environment synchronization from PTK startup. Compare equivalent targets in the same environment; keep profiles local. Do not add stale caches, disable validation or assume the consumer contains PTK's profiling scripts.

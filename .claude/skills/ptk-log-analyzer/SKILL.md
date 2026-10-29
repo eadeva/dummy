@@ -5,9 +5,9 @@ description: Diagnose PTK job or workflow failures, compiler warnings, log-analy
 
 # PTK log analyzer
 
-First follow the [project discovery and execution guide](../../../docs/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
+First follow the [project discovery and execution guide](../../../docs/guides/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
 
-1. Read [log analysis](../../../docs/log-analysis.rst) and the installed PTK schema before changing configuration. Discover the project from the working directory and use repository aliases in a VMR. Inspect existing results before considering a rerun.
+1. Read [log analysis](../../../docs/guides/log-analysis.rst) and the installed PTK schema before changing configuration. Discover the project from the working directory and use repository aliases in a VMR. Inspect existing results before considering a rerun.
 2. Identify the repository, job, variant and run ID from recorded evidence; explicitly mark unknown values rather than infer them from filenames. Read the corresponding `run.json`, step status/exit codes and captured step logs when provided. If PTK or configuration is missing, diagnose the available artifacts without installing or rerunning anything. A failed process remains failed even if every diagnostic is justified. A successful process can still emit active errors. Separate execution failure, imported test failures and log findings.
 3. Read existing HTML/JSON and raw logs first; HTML is the default and `report.json` may not exist. If an export is needed and allowed, use the discovered repository route with `ptk report export JOB -f json`, the selected variant and `--run RUN_ID` for an archived run. Preserve existing evidence with a separate output directory. Follow printed paths. Never mix current logs with an archived report.
 4. Start with active errors, then warnings. Follow the source-log path and line number; inspect surrounding lines and source code. Distinguish primary causes from cascading diagnostics. Check original logs for failures the deterministic parser did not recognize; “no findings” does not prove success.

@@ -6,9 +6,9 @@ description: Add or change ptk components, features, inherited variants, aliases
 
 # ptk-variant-model
 
-First follow the [project discovery and execution guide](../../../docs/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
+First follow the [project discovery and execution guide](../../../docs/guides/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
 
-1. Read [configuration](../../../docs/configuration.rst) and the installed variant schema. Discover existing components/features/defaults and aliases; a project without variants is valid. Add a variant model only when needed by the request.
+1. Read [configuration](../../../docs/guides/configuration.rst) and the installed variant schema. Discover existing components/features/defaults and aliases; a project without variants is valid. Add a variant model only when needed by the request.
 
 2. Register component directories in `project.ptk.yml`. Put features, dependencies and local constraints in `component.variants.ptk.yml` beside the component code. Put the project default and global constraints in `project.variants.ptk.yml`, and each variant body in `variants/<name>.ptk.yml`.
 
@@ -28,9 +28,9 @@ First follow the [project discovery and execution guide](../../../docs/agent-gui
 
 10. Edit the owning variant document; inspection commands are `list`, `show` and `explain`. Use `ptk validate --variants` for validation. Validate before running. Select a variant globally with `ptk -V NAME JOB` or `ptk -V a,b JOB`; use `ptk JOB --all-variants` for every concrete variant. Place `-V` before the repository alias in VMR mode.
 
-11. Use `variant.generate` for bundled formats or enabled generator plugins. See [docs/plugins.rst](../../../docs/plugins.rst) for names, outputs and format restrictions.
+11. Use `variant.generate` for bundled formats or enabled generator plugins. See [docs/reference/plugins.rst](../../../docs/reference/plugins.rst) for names, outputs and format restrictions.
 
 Temporary feature overrides on jobs do not change files. Workflows retain their
 per-job variant selections; global `-V` does not override them. Maintainers alone
 can force `--ci`/`--no-ci`; all users retain automatic CI detection. See
-[configuration](../../../docs/configuration.rst).
+[configuration](../../../docs/guides/configuration.rst).

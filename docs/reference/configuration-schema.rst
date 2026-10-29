@@ -7,9 +7,9 @@ can mean a default factory (for example, an empty mapping), rather than ``null``
 Use ``ptk maintainer config show`` to inspect effective defaults for your project.
 
 These tables describe the assembled model. Each conventional document contains
-its section body; see :doc:`configuration` for file ownership and validation rules.
+its section body; see :doc:`/guides/configuration` for file ownership and validation rules.
 ``plugins`` selects installed distributions for entry-point loading; see
-:doc:`plugins` for the extension contracts and configuration examples.
+:doc:`/reference/plugins` for the extension contracts and configuration examples.
 
 Export a machine-readable schema for editor integration::
 

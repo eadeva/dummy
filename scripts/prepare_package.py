@@ -126,7 +126,7 @@ def smoke(wheel: Path, temporary: Path) -> None:
     ):
         run("-I", "-c", SMOKE, str(installed), *args, cwd=project)
     assert (project / ".github/skills/ptk-config-authoring/SKILL.md").is_file()
-    assert (project / ".github/ptk/docs/configuration.rst").is_file()
+    assert (project / ".github/ptk/docs/guides/configuration.rst").is_file()
     check_skill_links(project)
 
 
@@ -177,7 +177,7 @@ def prepare(output: Path) -> Path:
                 )
             for name in (
                 "skills/ptk-config-authoring/SKILL.md",
-                "docs/configuration.rst",
+                "docs/guides/configuration.rst",
                 "examples/plugin/pyproject.toml",
             ):
                 wheel.getinfo("ptk/resources/authoring/" + name)

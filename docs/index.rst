@@ -1,44 +1,35 @@
-ptk — project tool kit
+PTK — project tool kit
 ======================
 
-ptk turns project configuration into a CLI with typed parameters, variants,
-isolated command environments, logs and reports. Python 3.12 or newer is required.
+PTK turns repository configuration into a command-line interface for jobs,
+variants and local workflows. It prepares tools and isolated environments,
+captures execution logs, and imports tool results into reports. The same
+configuration drives developer commands and CI jobs.
+
+Start with :doc:`guides/getting-started`, then use
+:doc:`reference/cli` for command syntax and :doc:`guides/configuration` for
+file ownership and authoring. Python 3.12 or newer is required.
 
 .. toctree::
    :maxdepth: 2
+   :caption: Documentation
 
-   quickstart
-   cli
-   configuration
-   log-analysis
-   workflows
-   versioning
-   artifacts
-   m11
-   plugins
-   reference
-   skills
-   agent-guide
-   editor
-   packaging
-   development
-   performance
+   guides/index
+   requirements/index
+   architecture/index
+   reference/index
+   ci/index
 
-The implementation roadmap is maintained separately in ``docs/PLAN.md``.
-
-Current capability guide
+About this documentation
 ------------------------
 
-* Configuration discovery, init, variants, job parameters, maintainers,
-  environment isolation, tool sources and report behavior: :doc:`configuration`.
-* Local job orchestration, VMR call ownership and VS Code workflow tasks:
-  :doc:`workflows`.
-* Project/component versions, VMR dependencies, environment variables and generated
-  build files: :doc:`versioning`.
-* Commands and credential/setup entry points: :doc:`cli`; built-ins and extension
-  contracts: :doc:`plugins`.
-* Background step boundaries: :doc:`m11`.
-* Package preparation without publishing: :doc:`packaging`.
-* Offline authoring resources, protected updates and editor tasks: :doc:`editor`;
-  task-specific assistant instructions: :doc:`skills`.
-* Every supported configuration field and its default: :doc:`reference`.
+The guides describe current behavior. The requirements distinguish agreed needs
+from implementation-derived requirements awaiting review; future work is
+explicitly identified. Architecture follows the twelve arc42 sections and
+explains the current implementation and its limits.
+
+The CLI is the requirements scope. The editor guide documents integration with
+PTK, but this set does not specify the VS Code extension's user interface.
+Legacy documentation and the previous development plan are retained outside this
+site under ``reference/`` in the source checkout. They are historical reference,
+not current command or configuration specifications.

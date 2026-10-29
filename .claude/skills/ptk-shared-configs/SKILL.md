@@ -6,9 +6,9 @@ description: Manage ptk shared pre-commit, Ruff and clang configuration with pro
 
 # ptk-shared-configs
 
-First follow the [project discovery and execution guide](../../../docs/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
+First follow the [project discovery and execution guide](../../../docs/guides/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
 
-1. Read [docs/configuration.rst](../../../docs/configuration.rst); inspect available configuration fields with `ptk maintainer config schema` and preview effective files with `ptk maintainer sync configs --diff`.
+1. Read [docs/guides/configuration.rst](../../../docs/guides/configuration.rst); inspect available configuration fields with `ptk maintainer config schema` and preview effective files with `ptk maintainer sync configs --diff`.
 
 2. Manage only tools declared under `configs`. Edit overlays rather than generated outputs.
 
@@ -41,4 +41,4 @@ First follow the [project discovery and execution guide](../../../docs/agent-gui
 listed in the configuration folder's `maintainers.ptk.yml`. `validate --generated`
 checks generated configuration without writing and is available to normal users. Verify identity with `self-service doctor`; do not suggest
 `PTK_ROLE=maintainer` as a workaround. See the maintainer section of the
-[configuration guide](../../../docs/configuration.rst).
+[configuration guide](../../../docs/guides/configuration.rst).

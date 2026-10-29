@@ -164,7 +164,7 @@ Treat it as read-only.
 
 ``${version.current.*}`` is a template shortcut for the current repository's
 entry. ``sort_key`` adds four-digit numeric components for destination folder
-ordering; ``1.2.3`` becomes ``0001_0002_0003``. See :doc:`artifacts` for its
+ordering; ``1.2.3`` becomes ``0001_0002_0003``. See :doc:`/guides/artifacts` for its
 numeric limits and prerelease ordering boundary. The underlying version value
 and generated package version are unchanged.
 

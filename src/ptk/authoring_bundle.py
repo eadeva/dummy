@@ -23,21 +23,22 @@ SKILLS = (
     "ptk-package-preparation",
 )
 DOCS = (
-    "agent-guide",
-    "cli",
-    "configuration",
-    "editor",
-    "m11",
-    "plugins",
-    "quickstart",
-    "reference",
-    "versioning",
-    "workflows",
-    "packaging",
-    "artifacts",
-    "performance",
-    "log-analysis",
+    "guides/agent-guide",
+    "reference/cli",
+    "guides/configuration",
+    "guides/editor",
+    "reference/execution",
+    "reference/plugins",
+    "guides/getting-started",
+    "reference/configuration-schema",
+    "guides/versioning",
+    "guides/workflows",
+    "guides/packaging",
+    "guides/artifacts",
+    "guides/performance",
+    "guides/log-analysis",
 )
+
 EXAMPLES = ("authoring", "plugin", "quickstart", "workflows", "artifacts")
 
 

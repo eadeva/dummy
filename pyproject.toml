@@ -32,7 +32,7 @@ dev = [
   "cmake==3.30.9",  # Native integration tests use this project's executable.
 ]
 
-docs = ["sphinx==9.1.0"]
+docs = ["sphinx==9.1.0", "sphinx-needs==8.5.0", "sphinx-rtd-theme==3.1.0"]
 release = ["build>=1.2", "hatchling>=1.24", "editables>=0.3", "twine>=6", "pip>=24"]
 
 [tool.hatch.build.hooks.custom]
@@ -79,6 +79,8 @@ addopts = "-ra"
 [tool.ruff]
 target-version = "py312"
 src = ["src", "tests"]
+# Historical inputs are preserved verbatim, outside active code and docs.
+extend-exclude = ["reference"]
 
 [tool.ruff.lint]
 # ruff defaults (E4, E7, E9, F; line length 88) plus a few stricter rule sets

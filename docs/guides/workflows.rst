@@ -34,7 +34,7 @@ such workflows remain accessible through ``workflow run``.
 
 A complete repository-owned workflow:
 
-.. literalinclude:: ../examples/workflows/app/config/workflows/verify.ptk.yml
+.. literalinclude:: ../../examples/workflows/app/config/workflows/verify.ptk.yml
    :language: yaml
 
 The example lives in a small manual VMR. From ``examples/workflows`` run::
@@ -212,7 +212,7 @@ that member's job and workflow tasks. Workspace task synchronization updates
 member tasks too; synchronize authoring resources separately with
 ``ptk maintainer sync agent``. The generated VMR tasks set their
 working directory to the workspace root. Offline skills and examples are installed
-with the normal authoring bundle; see :doc:`editor`.
+with the normal authoring bundle; see :doc:`/guides/editor`.
 
 Planned GitHub template generation (not implemented)
 ----------------------------------------------------

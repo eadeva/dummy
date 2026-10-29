@@ -6,9 +6,9 @@ description: Declare tool checks and installers or diagnose PTK self-service too
 
 # ptk-tools-setup
 
-First follow the [project discovery and execution guide](../../../docs/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
+First follow the [project discovery and execution guide](../../../docs/guides/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
 
-1. Read [docs/configuration.rst](../../../docs/configuration.rst) and [docs/cli.rst](../../../docs/cli.rst); use `ptk maintainer config schema` for tool fields.
+1. Read [docs/guides/configuration.rst](../../../docs/guides/configuration.rst) and [docs/reference/cli.rst](../../../docs/reference/cli.rst); use `ptk maintainer config schema` for tool fields.
 
 2. Inspect the selected job's inherited tool requirements and platform-specific definitions. Reuse existing tool keys and sources; declare a check command, version range and version_regex matching observed output.
 
@@ -28,7 +28,7 @@ First follow the [project discovery and execution guide](../../../docs/agent-gui
 
 10. Test adapters with fake runners or local archives; do not install machine-wide tools in unit tests.
 
-11. Global and job `requires_tools` merge per tool: unmentioned tools stay inherited, `name: false` disables one, and settings mappings override only that job. Tool files load automatically; see [docs/configuration.rst](../../../docs/configuration.rst).
+11. Global and job `requires_tools` merge per tool: unmentioned tools stay inherited, `name: false` disables one, and settings mappings override only that job. Tool files load automatically; see [docs/guides/configuration.rst](../../../docs/guides/configuration.rst).
 
 Managed installations coexist by version/source identity. Verify the job-selected PATH; never append the entire cache. System and plugin installers remain host-shared. Use `environment.keep` for required host variables; PATH inheritance is a separate opt-in.
 

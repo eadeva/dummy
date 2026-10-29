@@ -2,11 +2,11 @@
 
 A configuration-driven project CLI: jobs made of steps and step sets,
 built-in variant handling, credentials, tool setup, shared base configs,
-unified logging and reporting. See [`docs/PLAN.md`](docs/PLAN.md) for the full plan.
+unified logging and reporting. See [`reference/development-plan.md`](reference/development-plan.md) for the full plan.
 
 **Status:** Configuration, execution, variants, credentials, reporting, tool setup,
 plugins, VMR discovery and local workflows are implemented. The current scope and acceptance
-boundaries are recorded in `docs/PLAN.md`. Sixteen repository-local skills
+boundaries are recorded in `reference/development-plan.md`. Sixteen repository-local skills
 include tested authoring and plugin examples.
 
 ```bash
@@ -42,7 +42,13 @@ PTK discovers `.main.ptk.yml` from the current directory. This example runs
 without compilers or credentials and writes logs and reports inside the copy. The existing firmware demo contains placeholders
 and is intended for configuration exploration and dry runs.
 
-Build the [documentation](docs/index.rst):
+The [documentation](docs/index.rst) contains user guides, CLI requirements,
+twelve arc42 architecture chapters, reference material and CI/CD guidance.
+Requirements follow the supplied convention in authored RST, without loading
+the reference meta-model. Historical inputs remain outside the published site
+and packages under `reference/`.
+
+Build the documentation:
 
 ```bash
 uv sync --group docs
@@ -63,7 +69,7 @@ the VSIX artifact from the branch's CI run. The job requires Node.js 22+ and npm
 installs the build dependencies, runs the checks and writes
 `extensions/project-toolkit/project-toolkit-0.4.0.vsix`.
 PTK must be installed on the workspace host. See
-[editor documentation](docs/editor.rst) for setup and permissions.
+[editor documentation](docs/guides/editor.rst) for setup and permissions.
 
 ## Tools
 
@@ -130,7 +136,7 @@ Commit them; `ptk validate --generated` in CI catches stale files.
 When pre-commit is enabled, local jobs automatically install or repair its Git
 hooks for every developer. Workflows check each participating VMR repository
 before starting jobs. Help, dry runs and CI skip installation; missing generated
-configuration blocks execution. See [hook setup and conflicts](docs/configuration.rst#local-git-hooks).
+configuration blocks execution. See [hook setup and conflicts](docs/guides/configuration.rst#local-git-hooks).
 
 ## Reports
 
@@ -195,7 +201,7 @@ overrides. It validates each document and then references across the model.
 Use `ptk maintainer config show --sources` for provenance and `ptk validate`
 for errors with source locations. Explicit `--set` overrides, shared defaults and
 variant inheritance remain available. The extension uses PTK's loading mechanism
-and document schemas. See [configuration authoring](docs/configuration.rst).
+and document schemas. See [configuration authoring](docs/guides/configuration.rst).
 
 ## Commands available now
 
@@ -323,7 +329,7 @@ Dependencies point inwards only; the domain has no I/O.
   Select a variant before the command: `ptk -V debug build`.
 - `--ci/--no-ci` is maintainer-only. Automatic CI detection remains the default.
 
-See [background process limitations](docs/m11.rst) and the [CLI reference](docs/cli.rst).
+See [background process limitations](docs/reference/execution.rst) and the [CLI reference](docs/reference/cli.rst).
 
 ## Local workflows
 
@@ -364,7 +370,7 @@ a job report explicitly, or `ptk report open --workflow NAME` for the latest agg
 workflow report. Add `--if-exists` to get an informational message when there
 is no saved run/report. No local browser-link server is started.
 
-See [workflows](docs/workflows.rst) and `examples/workflows` for nested groups,
+See [workflows](docs/guides/workflows.rst) and `examples/workflows` for nested groups,
 VMR ownership, failure handling and reports. The later `ptk init --workflows`
 generator will map job calls to GitHub jobs and their structure to `needs`;
 GitHub template generation and the generic PTK GitHub Action are not implemented yet.
@@ -388,23 +394,23 @@ Commands receive a fresh isolated environment by default. Declare variables to
 keep explicitly; caller PATH is not inherited unless `environment.inherit_path`
 is enabled. Only selected managed tool versions are prepended. Managed download
 and Python-tool versions coexist; system and custom plugin installers remain
-shared host operations. See `docs/configuration.rst` and `docs/cli.rst`.
+shared host operations. See `docs/guides/configuration.rst` and `docs/reference/cli.rst`.
 
 For a complete tested starter, copy `examples/authoring`. For a plugin starter,
-use `examples/plugin`. The authoring skill catalog is in `docs/skills.rst`;
+use `examples/plugin`. The authoring skill catalog is in `docs/guides/skills.rst`;
 the wheel bundles the PTK expert agent, fifteen project-facing skills and lightweight offline references.
 Run `ptk maintainer sync tasks` to create tasks. Run `ptk maintainer sync agent` to install
 `.github/agents/ptk-expert.agent.md`, copy skills to `.github/skills`, and install version-matched docs, examples and a configuration
 schema under `.github/ptk`. Relative links work without a PTK checkout or network
 access. `ptk maintainer sync agent --check` checks drift; updates preserve custom
-skills and refuse to overwrite local edits. See [editor setup](docs/editor.rst).
+skills and refuse to overwrite local edits. See [editor setup](docs/guides/editor.rst).
 
 The extension consumes PTK's versioned CLI/JSON interface: schemas, loaded values,
 file ownership, diagnostics and available commands. Compatible fields, jobs,
 workflows and parameters appear after refresh without an extension rebuild.
 New UI behavior or breaking interface changes require an extension update;
 package and extension release numbers do not need to match. See the
-[compatibility contract](docs/editor.rst#ptk-and-extension-compatibility).
+[compatibility contract](docs/guides/editor.rst#ptk-and-extension-compatibility).
 
 ## Version discovery and initialization
 
@@ -429,7 +435,7 @@ commands or explicit values. Components inherit unless given a source. Every
 configured job gets one ignored `.gen.version.ptk.yml` snapshot and qualified
 variables such as `PTK_VERSION_ENGINE` and `PTK_VERSION_ENGINE_COMPONENT_SDK`.
 `version.generate` produces C headers, CMake, MSBuild, Python or JSON files without
-rewriting unchanged content. See [versioning](docs/versioning.rst) for variant
+rewriting unchanged content. See [versioning](docs/guides/versioning.rst) for variant
 release lines, explicit VMR dependencies and `ptk maintainer version show/generate` and `ptk validate --versions`.
 
 ## Develop PTK using PTK
@@ -438,7 +444,7 @@ To prepare release artifacts without publishing, run `uv run ptk package`.
 It builds a wheel and source archive, checks metadata, smoke-tests the installed
 wheel in a consumer repository, and creates a separate HTML documentation ZIP
 and checksums under `_bin/default/package`. Only `dist/` contains Python upload
-artifacts; nothing is uploaded. See [package preparation](docs/packaging.rst).
+artifacts; nothing is uploaded. See [package preparation](docs/guides/packaging.rst).
 
 The repository configuration in `config/ptk` has one `default` variant and no
 components. From the repository root:
@@ -479,7 +485,7 @@ files, authenticate and upload:
 ptk maintainer artifacts destination --job package --format github
 ```
 
-See [destination configuration and examples](docs/artifacts.rst) and
-[date substitutions](docs/configuration.rst#date-and-time-substitutions).
+See [destination configuration and examples](docs/guides/artifacts.rst) and
+[date substitutions](docs/guides/configuration.rst#date-and-time-substitutions).
 
-Log analysis is enabled by default; HTML shows active diagnostics and retains ignored/justified findings with source-log links. See [logging and reporting](docs/log-analysis.rst) for `report_formats`, `logging_history_backups` and rule examples. `ptk maintainer sync agent` also installs the log-analyzer skill and PTK expert agent.
+Log analysis is enabled by default; HTML shows active diagnostics and retains ignored/justified findings with source-log links. See [logging and reporting](docs/guides/log-analysis.rst) for `report_formats`, `logging_history_backups` and rule examples. `ptk maintainer sync agent` also installs the log-analyzer skill and PTK expert agent.

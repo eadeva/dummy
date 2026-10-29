@@ -12,7 +12,7 @@ Local checks
 ------------
 
 Run from the repository root; the project uses its own PTK configuration in
-``config/ptk`` with one ``default`` variant and no components::
+``config/ptk`` with a ``default`` variant and no components::
 
    uv sync
    uv run ptk validate
@@ -50,7 +50,7 @@ formatting intentionally, use ``uv run ruff format``. The test job explicitly
 inherits caller PATH to exercise installed host tools; ordinary environment
 variables remain filtered.
 
-This repository enables pre-commit through ``config/ptk/configs/configs.ptk.yml``.
+This repository enables pre-commit through ``config/ptk/configs.ptk.yml``.
 Local jobs/workflows automatically install or repair the hooks. The committed
 ``.pre-commit-config.yaml`` combines PTK's base with its repository overlay;
 Ruff uses the existing ``pyproject.toml`` settings. Run
@@ -114,10 +114,10 @@ configuration, while generated member jobs run through the real CLI.
 Documentation and skills
 ------------------------
 
-The configuration reference is generated from the validation models. Sixteen
+The configuration reference is generated from the validation models. Seventeen
 repository-local authoring skills are shipped under ``.claude/skills`` and
 included in the documentation. Tests check catalog completeness and source links.
-The wheel bundles fourteen project-facing skills, reference docs and examples
+The wheel bundles fifteen project-facing skills, reference docs and examples
 through the allowlist in ``src/ptk/authoring_bundle.py``. Keep the canonical skill
 files in ``.claude/skills``; do not maintain another copy for installed users.
 Consumer skill instructions must not depend on PTK's ``src`` or ``tests`` folders.
@@ -126,7 +126,7 @@ Consumer skill instructions must not depend on PTK's ``src`` or ``tests`` folder
 checks metadata, and smoke-tests an installed wheel in a separate project before
 staging artifacts. Linux and Windows packaging jobs run this same job. The
 wheel smoke test reuses installed runtime dependencies, with no dependency fetch
-or upload. See :doc:`packaging` for artifact layout and :doc:`editor` for offline
+or upload. See :doc:`/guides/packaging` for artifact layout and :doc:`/guides/editor` for offline
 resources and protected upgrades.
 
 Native Windows tests cover batch files, PowerShell, timeouts and cancellation.
@@ -148,10 +148,10 @@ Node tests, then packages a VSIX. ``PTK_TEST_PYTHON`` enables integration tests
 which invoke the real CLI from Node for repository and VMR discovery, previews,
 parameter passing and execution. The extension CI job runs ``uv run ptk extension``
 on Linux and Windows and uploads the VSIX. Controller tests use an injected VS Code API; graphical
-extension-host acceptance remains a manual check. See :doc:`editor`.
+extension-host acceptance remains a manual check. See :doc:`/guides/editor`.
 
-Plugin contracts and generators are documented in :doc:`plugins`; variant inspection
-and matrix commands in :doc:`cli`; background process behavior in :doc:`m11`.
+Plugin contracts and generators are documented in :doc:`/reference/plugins`; variant inspection
+and matrix commands in :doc:`/reference/cli`; background process behavior in :doc:`/reference/execution`.
 Real machine-wide tool/credential setup still needs acceptance on target machines.
 Publishing and merging are separate decisions.
 
@@ -160,7 +160,7 @@ Startup performance
 
 Run ``uv run python scripts/benchmark_cli.py --output .ptk/benchmark-cli.json``
 for repeated process-start measurements on this checkout and temporary VMR
-fixtures. See :doc:`performance` for methodology, measured results and profiling.
+fixtures. See :doc:`/guides/performance` for methodology, measured results and profiling.
 The Python 3.12 Linux/Windows CI jobs also run this benchmark and print their
 results; timings are evidence, not pass/fail thresholds on shared runners.
 

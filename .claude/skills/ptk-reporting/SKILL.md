@@ -5,9 +5,9 @@ description: Add ptk report formats, import tool results or troubleshoot report 
 
 # ptk-reporting
 
-First follow the [project discovery and execution guide](../../../docs/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
+First follow the [project discovery and execution guide](../../../docs/guides/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
 
-1. Read the report commands in [docs/cli.rst](../../../docs/cli.rst) and extension contracts in [docs/plugins.rst](../../../docs/plugins.rst).
+1. Read the report commands in [docs/reference/cli.rst](../../../docs/reference/cli.rst) and extension contracts in [docs/reference/plugins.rst](../../../docs/reference/plugins.rst).
 
 2. Write tool results to PTK_STEP_REPORTS_DIR or `${run.reports_dir}` for the producing step.
 
@@ -21,7 +21,7 @@ First follow the [project discovery and execution guide](../../../docs/agent-gui
 
 7. Test malformed files, escaping, totals and relative log links when changing exporters/importers.
 
-8. Register external exporters/contributors with `ptk.reporters` / `ptk.report_contributors` and select the installed distribution in `plugins`. Follow [docs/plugins.rst](../../../docs/plugins.rst).
+8. Register external exporters/contributors with `ptk.reporters` / `ptk.report_contributors` and select the installed distribution in `plugins`. Follow [docs/reference/plugins.rst](../../../docs/reference/plugins.rst).
 
 9. `report: false` excludes a step subtree from reports and imports, but does not hide audit logs or change failure status.
 
@@ -30,12 +30,12 @@ First follow the [project discovery and execution guide](../../../docs/agent-gui
 Historical input snapshots travel with run summaries. Reproduce with two runs producing different input files; historical export must not import the newer results.
 
 
-Read [report summaries](../../../docs/configuration.rst) for recorded project/PTK versions, variant details and declared tool sources. Test cards count executed (excluding skipped), passed, skipped and failed (including errors); green/red/gray convey status and text retains the meaning. Per-column filters combine without changing recorded totals. `needs.json` is not a supported importer.
+Read [report summaries](../../../docs/guides/configuration.rst) for recorded project/PTK versions, variant details and declared tool sources. Test cards count executed (excluding skipped), passed, skipped and failed (including errors); green/red/gray convey status and text retains the meaning. Per-column filters combine without changing recorded totals. `needs.json` is not a supported importer.
 
 Set a job's `open_report` to `always` or `on_errors` only when automatic local opening is wanted; omission disables it and CX/dry-run suppress it. Errors include failed steps/tests, error findings and report import problems. Browser availability must not alter the run's exit status.
 
-For local orchestration, inspect the workflow summary and immutable child reports under the workflow run directory. Read [workflows](../../../docs/workflows.rst); do not merge test cases from unrelated repositories without preserving their context.
+For local orchestration, inspect the workflow summary and immutable child reports under the workflow run directory. Read [workflows](../../../docs/guides/workflows.rst); do not merge test cases from unrelated repositories without preserving their context.
 
 Workflow `open_report` defaults to `always`. Use `on-errors` (hyphen) to include tolerated execution failures and imported report errors, or `null` to disable opening. When the summary is selected for opening, suppress child openings; otherwise apply child policies after completion using retained snapshots. CX/dry-run never open the summary; browser or summary-write failures must not change execution exit codes. Summary links are HTML-only; retain internal run summaries and captured inputs for regeneration. Print report file paths without starting a localhost server; preserve configured automatic opening and explicit `ptk report open`.
 
-Use [log analysis](../../../docs/log-analysis.rst) and [the log-analyzer skill](../ptk-log-analyzer/SKILL.md) for captured warnings/errors, disposition rules and source-log evidence. Keep severity and disposition separate; never change job exit codes to match suppressed findings.
+Use [log analysis](../../../docs/guides/log-analysis.rst) and [the log-analyzer skill](../ptk-log-analyzer/SKILL.md) for captured warnings/errors, disposition rules and source-log evidence. Keep severity and disposition separate; never change job exit codes to match suppressed findings.

@@ -256,7 +256,7 @@ without writing (exit code 1 when an update is needed).
 Editor setup and all its subcommands are maintainer-only, including ``--check``.
 They are hidden from normal users and refuse direct invocation. Maintainers are
 listed by login ID in the configuration folder's ``maintainers.ptk.yml``; see
-:doc:`configuration`. Generate shared tasks with ``--users-only`` so they exclude
+:doc:`/guides/configuration`. Generate shared tasks with ``--users-only`` so they exclude
 maintainer jobs and workflows. Running existing tasks remains available to users.
 
 Fourteen project skills are installed under ``.github/skills/ptk-*/SKILL.md``.
@@ -289,7 +289,7 @@ commands, prefixed with ``maintainer`` for restricted targets, so a shared name 
 At a VMR root, ``ptk maintainer sync tasks`` includes workspace-owned workflows and
 qualified member workflows and each member's tasks. Use
 ``ptk maintainer sync agent`` separately for member authoring resources.
-VMR tasks run from the workspace root. See :doc:`workflows` for
+VMR tasks run from the workspace root. See :doc:`/guides/workflows` for
 parallelism, repository selection and CX restrictions.
 
 Workspace editor commands require membership in the VMR root's own

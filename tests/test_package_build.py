@@ -97,6 +97,10 @@ def test_tagged_build_and_frozen_sdist_rebuild(tmp_path):
         archive.extractall(extracted, filter="data")
     source = next(extracted.iterdir())
     assert not (source / ".git").exists()
+    assert not (source / "reference").exists()  # unpublished legacy/reference material
+    assert not (source / "docs/old_cli_xc-ce-utils").exists()
+    assert (source / "docs/requirements/index.rst").is_file()
+    assert (source / "docs/_static/custom.css").is_file()
     assert (source / "install/install.sh").is_file()
     assert (source / "src/ptk/resources/extension/project-toolkit.vsix").is_file()
     assert not (source / "extensions").exists()  # no Node required by sdist consumers

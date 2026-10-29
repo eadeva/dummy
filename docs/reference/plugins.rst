@@ -120,7 +120,7 @@ Supported keys are ``self-service`` and its project operations (``tools``,
 these always require a listed maintainer, even when their policy is ``all``.
 Restrictions apply to descendants, normal/HTML help and completion. ``init``,
 ``validate``, completion and extension installation remain available to all users.
-There are no compatibility aliases. See :doc:`configuration` for the command
+There are no compatibility aliases. See :doc:`/guides/configuration` for the command
 list and login-ID-only maintainer schema. This is not an operating-system
 security boundary.
 
@@ -147,6 +147,6 @@ Version generators
 ------------------
 
 The bundled ``version.generate`` step supports C headers, CMake, MSBuild, Python
-and JSON. See :doc:`versioning`. Custom ``ptk.steps`` handlers receive the resolved
+and JSON. See :doc:`/guides/versioning`. Custom ``ptk.steps`` handlers receive the resolved
 run snapshot in ``ctx.versions``; consume that snapshot instead of rediscovering
 Git state during execution. Existing variant generator contracts are unchanged.

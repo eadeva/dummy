@@ -1,6 +1,8 @@
 """Render configuration tables from the actual Pydantic JSON Schema."""
 
+import inspect
 import json
+from pathlib import Path
 
 from docutils import nodes
 from docutils.parsers.rst import Directive
@@ -30,6 +32,14 @@ class SchemaReference(Directive):
     has_content = False
 
     def run(self):
+        # Rebuild tables when schema code changes, including incremental builds.
+        domain = Path(inspect.getfile(PtkConfig)).resolve().parents[1]
+        for source in [
+            Path(__file__),
+            Path(inspect.getfile(ExportSchema)),
+            *domain.rglob("*.py"),
+        ]:
+            self.state.document.settings.env.note_dependency(str(source.resolve()))
         result = []
         for model in (PtkConfig, MaintainersSpec):
             schema = (
@@ -43,13 +53,19 @@ class SchemaReference(Directive):
                     continue
                 section = nodes.section(ids=[f"schema-{name.lower()}"])
                 section += nodes.title(text=name)
-                table = nodes.table()
-                group = nodes.tgroup(cols=4)
-                for width in (20, 35, 15, 30):
+                table = nodes.table(classes=["tight-table"])
+                group = nodes.tgroup(cols=5)
+                for width in (18, 22, 8, 22, 30):
                     group += nodes.colspec(colwidth=width)
                 head = nodes.thead()
                 row = nodes.row()
-                for label in ("Field", "Type", "Required", "Default / constraints"):
+                for label in (
+                    "Field",
+                    "Type",
+                    "Required",
+                    "Default / constraints",
+                    "Description",
+                ):
                     entry = nodes.entry()
                     entry += nodes.paragraph(text=label)
                     row += entry
@@ -77,6 +93,7 @@ class SchemaReference(Directive):
                         describe(prop),
                         "yes" if key in definition.get("required", []) else "no",
                         json.dumps(details) if details else "—",
+                        prop.get("description", "—"),
                     )
                     row = nodes.row()
                     for value in values:
@@ -93,4 +110,9 @@ class SchemaReference(Directive):
 
 def setup(app):
     app.add_directive("ptk-schema", SchemaReference)
-    return {"version": "1", "parallel_read_safe": True, "parallel_write_safe": True}
+    return {
+        "version": "2",
+        "env_version": 2,
+        "parallel_read_safe": True,
+        "parallel_write_safe": True,
+    }

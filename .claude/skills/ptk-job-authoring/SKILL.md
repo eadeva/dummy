@@ -5,9 +5,9 @@ description: Add, change or explain PTK jobs, typed parameters, nested steps, co
 
 # ptk-job-authoring
 
-First follow the [project discovery and execution guide](../../../docs/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
+First follow the [project discovery and execution guide](../../../docs/guides/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
 
-1. Read [configuration](../../../docs/configuration.rst), the owning job document and referenced tools/parameters. Use the installed document schema for exact fields. Preserve existing job names, scripts, selected runtimes and output conventions unless the requested change requires otherwise.
+1. Read [configuration](../../../docs/guides/configuration.rst), the owning job document and referenced tools/parameters. Use the installed document schema for exact fields. Preserve existing job names, scripts, selected runtimes and output conventions unless the requested change requires otherwise.
 
 2. Use ordered, uniquely named steps with exactly one of `run`, `uses`, or `steps`.
 
@@ -19,7 +19,7 @@ First follow the [project discovery and execution guide](../../../docs/agent-gui
 
 6. Apply `parallel` only to sets; `python` and `passthrough` only to run steps; `with` only to built-ins.
 
-7. Read the built-in contracts in [docs/plugins.rst](../../../docs/plugins.rst); for available built-ins and selected plugins. Do not invent a `uses` name from a tool binary name.
+7. Read the built-in contracts in [docs/reference/plugins.rst](../../../docs/reference/plugins.rst); for available built-ins and selected plugins. Do not invent a `uses` name from a tool binary name.
 
 8. Use the discovered execution/help paths, including any maintainer prefix. Preview the affected job; add `-V VARIANT` only for an actual variant. Check parameter choices/help and top-level `--from/--to` boundaries.
 

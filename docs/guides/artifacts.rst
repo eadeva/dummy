@@ -13,7 +13,7 @@ Place ``artifactory_paths.ptk.yml`` directly in ``repository.config_path``.
 It contains the destination body without an ``artifactory`` wrapper and owns all
 artifact routes. Explicit CLI overrides remain available for inspection.
 
-.. literalinclude:: ../examples/artifacts/config/artifactory_paths.ptk.yml
+.. literalinclude:: ../../examples/artifacts/config/artifactory_paths.ptk.yml
    :language: yaml
 
 The destination is ``url / repository / base_path / event.path / job.path``.
@@ -48,7 +48,7 @@ cannot use a template requiring it. Version values themselves are unchanged.
 
 ``${date.timestamp}`` provides local invocation time as ``2026_10_26_1507``;
 ``${date.utc.timestamp}`` uses UTC. These values are captured once, rather than
-changing during resolution. See :doc:`configuration` for date components and
+changing during resolution. See :doc:`/guides/configuration` for date components and
 custom combinations. ``${vars.*}`` can reuse ordinary configuration variables.
 Environment references such as ``${env:ARTIFACTORY_URL}`` use the invoking
 environment, including when nested in variables.

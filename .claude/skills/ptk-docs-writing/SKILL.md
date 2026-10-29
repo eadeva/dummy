@@ -8,7 +8,7 @@ description: Document ptk features, configuration or project jobs and maintain
 
 Use this skill only in PTK's own source checkout. Confirm the checkout, project instructions and declared dependency groups first; do not impose PTK's development layout or test commands on consuming projects. For project-specific configuration, use [configuration authoring](../ptk-config-authoring/SKILL.md).
 
-1. Read `docs/index.rst`, `docs/configuration.rst` and the implementation for the feature.
+1. Read `docs/index.rst`, `docs/guides/configuration.rst` and the implementation for the feature.
 
 2. Use reStructuredText for Sphinx pages and add new pages to the toctree.
 
@@ -20,10 +20,12 @@ Use this skill only in PTK's own source checkout. Confirm the checkout, project 
 
 6. Clearly separate supported behavior from planned commands and plugin integrations.
 
-7. Build with `uv sync --group docs` then `uv run sphinx-build -W --keep-going -b html docs docs/_build/html`.
+7. For CLI requirements, follow `docs/requirements/index.rst`: retain IDs and traceability, distinguish lifecycle status from implementation evidence, and use QM/false/false classifications. Keep the meta-model and old CLI archive out of build inputs. Update the relevant arc42 chapter when behavior or boundaries change.
 
-8. Run example tests and skill-catalog validation; inspect generated pages for missing tables and broken internal links.
+8. Build with `uv sync --group docs` then `uv run sphinx-build -W --keep-going -b html docs docs/_build/html`.
 
-9. Keep credentials fictional, use project-relative paths, and describe platform-specific requirements.
+9. Run example tests and skill-catalog validation; inspect generated pages for missing tables and broken internal links.
 
-10. Update the relevant .claude/skills instructions when changing an authoring workflow.
+10. Keep credentials fictional, use project-relative paths, and describe platform-specific requirements.
+
+11. Update the relevant .claude/skills instructions when changing an authoring workflow.

@@ -2,7 +2,7 @@
 # To change it: edit config/ptk/configs/pre-commit.overlay.yaml, then run 'ptk maintainer sync configs'.
 default_install_hook_types:
 - pre-commit
-exclude: \.log$
+exclude: (^reference/|\.log$)
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v5.0.0

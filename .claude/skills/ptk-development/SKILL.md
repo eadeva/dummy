@@ -7,7 +7,7 @@ description: Modify ptk core code, adapters, use cases or extension interfaces.
 
 Use this skill only in PTK's own source checkout. Confirm the checkout, project instructions and declared dependency groups first; do not impose PTK's development layout or test commands on consuming projects. For project-specific configuration, use [configuration authoring](../ptk-config-authoring/SKILL.md).
 
-1. Read `docs/development.rst`, `docs/PLAN.md` and the relevant tests before changing code.
+1. Read `docs/guides/development.rst`, `docs/architecture/index.rst`, the relevant requirements and tests before changing code. Treat `reference/development-plan.md` as historical context, not a current specification.
 
 2. Keep dependencies inward: drivers -> application -> domain; adapters implement ports; wire concrete implementations in bootstrap.
 
@@ -25,9 +25,9 @@ Use this skill only in PTK's own source checkout. Confirm the checkout, project 
 
 9. Review CI results before marking a milestone complete; record explicit remaining limitations in PLAN.md.
 
-10. Extension contracts and explicit distribution loading are documented in `docs/plugins.rst`; test third-party entry points without importing unselected distributions.
+10. Extension contracts and explicit distribution loading are documented in `docs/reference/plugins.rst`; test third-party entry points without importing unselected distributions.
 
 11. For startup changes, profile before editing and run `scripts/benchmark_cli.py`
     before/after sequentially in the same Python environment. Preserve all command
     visibility and live configuration semantics. Bound repeated work with tests;
-    do not add timing thresholds on shared CI runners. See `docs/performance.rst`.
+    do not add timing thresholds on shared CI runners. See `docs/guides/performance.rst`.

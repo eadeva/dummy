@@ -1,9 +1,13 @@
 Run your first project
 ======================
 
-From the repository root, install ptk and its development dependencies::
+Install the team-provided PTK package with its installer; see
+:doc:`/guides/packaging` for package sources and local development. Then check
+``ptk --version`` in a new shell. The examples below use the installed CLI.
 
-   uv sync
+When working on PTK itself, run ``uv sync`` from its source checkout to install
+the development dependencies. This is separate from initializing a consuming
+project.
 
 Create your own project
 -----------------------
@@ -41,7 +45,7 @@ The starter has debug/release variants and a literal ``0.1.0`` version, so it
 runs without tools, credentials or Git tags. ``hello`` demonstrates parameters
 and version substitutions; ``build`` generates ``_bin/<variant>/build/generated/version.h`` and
 ``version.cmake``. Each run also writes its ignored ``.gen.version.ptk.yml``
-snapshot. See :doc:`versioning` to select Git tags or existing manifests instead.
+snapshot. See :doc:`/guides/versioning` to select Git tags or existing manifests instead.
 
 No existing configuration file is overwritten; all destinations are checked
 before writing. Existing ``.gitignore`` content is kept and missing PTK ignore
@@ -53,7 +57,7 @@ do not combine this command with global ``--set`` overrides.
 Outside a VMR, ``ptk init`` initializes the current directory. In a VMR,
 it initializes all checked-out members without a root ``.main.ptk.yml``, skips
 configured repositories, and asks for the common config folder once.
-Use an explicit DIRECTORY to initialize only one project. ``ptk init`` is an alias.
+Use an explicit DIRECTORY to initialize only one project.
 
 Run the repository example
 --------------------------
@@ -87,13 +91,13 @@ to the project's history setting.
 Read the configuration and workload
 -----------------------------------
 
-.. literalinclude:: ../examples/quickstart/.main.ptk.yml
+.. literalinclude:: ../../examples/quickstart/.main.ptk.yml
    :language: yaml
 
-.. literalinclude:: ../examples/quickstart/config/ptk/jobs/build.ptk.yml
+.. literalinclude:: ../../examples/quickstart/config/ptk/jobs/build.ptk.yml
    :language: yaml
 
-.. literalinclude:: ../examples/quickstart/demo.py
+.. literalinclude:: ../../examples/quickstart/demo.py
    :language: python
 
 The larger ``examples/demo`` directory illustrates a firmware configuration.
@@ -106,7 +110,7 @@ Configuration-directory starter
 Copy ``examples/authoring`` into a new repository. Its root entry file declares
 its configuration directory explicitly:
 
-.. literalinclude:: ../examples/authoring/.main.ptk.yml
+.. literalinclude:: ../../examples/authoring/.main.ptk.yml
    :language: yaml
 
 From that repository, run ``ptk validate``, ``ptk build --dry-run``

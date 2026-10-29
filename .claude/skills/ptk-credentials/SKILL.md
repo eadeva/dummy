@@ -6,9 +6,9 @@ description: Declare, provision or troubleshoot ptk credentials without exposing
 
 # ptk-credentials
 
-First follow the [project discovery and execution guide](../../../docs/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
+First follow the [project discovery and execution guide](../../../docs/guides/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
 
-1. Read [docs/configuration.rst](../../../docs/configuration.rst) and [docs/cli.rst](../../../docs/cli.rst); inspect the credential fields with `ptk maintainer config schema`.
+1. Read [docs/guides/configuration.rst](../../../docs/guides/configuration.rst) and [docs/reference/cli.rst](../../../docs/reference/cli.rst); inspect the credential fields with `ptk maintainer config schema`.
 
 2. Declare fields and an ordered provider chain; default order is env, keyring, gopass, vault, prompt.
 

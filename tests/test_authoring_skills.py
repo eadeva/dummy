@@ -10,11 +10,13 @@ from tests.project_files import write_project
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def test_plan_skills_are_shipped_and_documented():
-    planned = set(re.findall(r"`(ptk-[a-z-]+)`", (ROOT / "docs/PLAN.md").read_text()))
+def test_skills_are_shipped_and_documented():
     paths = list((ROOT / ".claude/skills").glob("*/SKILL.md"))
-    assert {p.parent.name for p in paths} == planned
-    catalog = (ROOT / "docs/skills.rst").read_text()
+    catalog = (ROOT / "docs/guides/skills.rst").read_text()
+    documented = set(
+        re.findall(r"literalinclude:: ../../\.claude/skills/([^/]+)/SKILL.md", catalog)
+    )
+    assert {p.parent.name for p in paths} == documented
     for path in paths:
         _, frontmatter, body = path.read_text().split("---", 2)
         metadata = yaml.safe_load(frontmatter)

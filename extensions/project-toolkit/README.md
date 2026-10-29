@@ -81,7 +81,7 @@ and the project marker's schema version. Unsupported interfaces are rejected;
 there is no legacy parser or runtime schema fallback. Breaking changes must
 update the affected interface version, extension and integration tests together.
 The bundled VSIX provides a tested pair without requiring matching release numbers.
-See the full [compatibility contract](../../docs/editor.rst#ptk-and-extension-compatibility).
+See the full [compatibility contract](../../docs/guides/editor.rst#ptk-and-extension-compatibility).
 
 ## Use
 

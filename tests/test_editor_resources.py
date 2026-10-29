@@ -35,7 +35,7 @@ def test_vscode_setup_installs_tasks_skills_and_working_offline_links(
     for path in skills:
         text = path.read_text(encoding="utf-8")
         assert "src/ptk/" not in text and "tests/test_" not in text
-        assert "../../ptk/docs/agent-guide.rst" in text
+        assert "../../ptk/docs/guides/agent-guide.rst" in text
         for target in re.findall(r"\]\(([^)]+)\)", text):
             resolved = (path.parent / target).resolve()
             assert resolved.is_relative_to(tmp_path / ".github"), (path, target)
@@ -47,7 +47,7 @@ def test_vscode_setup_installs_tasks_skills_and_working_offline_links(
     assert set(
         re.findall(r"../skills/(ptk-[a-z-]+)/SKILL.md", agent.read_text())
     ) == set(SKILLS)
-    assert (tmp_path / ".github/ptk/docs/agent-guide.rst").is_file()
+    assert (tmp_path / ".github/ptk/docs/guides/agent-guide.rst").is_file()
     metadata = tmp_path / ".github/skills/ptk-log-analyzer/agents/openai.yaml"
     import yaml
 
@@ -60,7 +60,7 @@ def test_vscode_setup_installs_tasks_skills_and_working_offline_links(
     assert (
         tmp_path / ".github/ptk/examples/artifacts/config/artifactory_paths.ptk.yml"
     ).is_file()
-    assert (tmp_path / ".github/ptk/docs/artifacts.rst").is_file()
+    assert (tmp_path / ".github/ptk/docs/guides/artifacts.rst").is_file()
     before = {
         path: path.stat().st_mtime_ns
         for path in (tmp_path / ".github").rglob("*")
@@ -78,7 +78,7 @@ def test_user_edits_and_unrelated_github_files_are_preserved(tmp_path):
     custom.write_text("my own skill")
     service = SetupAuthoring(AuthoringFiles(), "1.0")
     service.execute(tmp_path)
-    edited = github / "ptk/docs/cli.rst"
+    edited = github / "ptk/docs/reference/cli.rst"
     edited.write_text("local customization")
     before = {path: path.read_bytes() for path in github.rglob("*") if path.is_file()}
     for check in (True, False):

@@ -411,15 +411,15 @@ process produces a diagnostic; remove it only after confirming the owner exited.
 
 Report inputs are snapshotted with completed run summaries. Later runs start
 with fresh report input directories. Historical export reads its retained
-snapshot, not current inputs. Runs for the same job/variant are serialized
-by a local lock; different jobs or repositories may run concurrently.
+snapshot, not current inputs. A local lock rejects concurrent runs for the same job/variant; different jobs
+or repositories may run concurrently.
 
 Version commands
 ----------------
 
 ``ptk maintainer version show/generate`` discovers versions and optionally writes an
 ignored snapshot. There are no bump/set/tag commands. In VMR mode use
-``ptk ALIAS maintainer version ...``. See :doc:`versioning` for sources and generators.
+``ptk ALIAS maintainer version ...``. See :doc:`/guides/versioning` for sources and generators.
 
 ``ptk init`` requires a configuration directory supplied by the user.
 Enter it at the terminal prompt or pass ``--config-dir PATH``; there is no

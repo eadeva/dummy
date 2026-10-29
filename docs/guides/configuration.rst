@@ -99,7 +99,7 @@ workspace marker containing ``virtual_monorepo: true`` and optional
 checked. Git-repo workspaces use ``.repo/project.list``. A project can set
 ``virtual_monorepo: false`` in its marker to remain standalone. Discovery metadata
 cannot be overridden through CLI settings. Workspace orchestration uses
-``workflows/<name>.ptk.yml`` at the VMR root; see :doc:`workflows`.
+``workflows/<name>.ptk.yml`` at the VMR root; see :doc:`/guides/workflows`.
 
 The extension consumes PTK's schemas, document ownership, source locations and
 validation errors through ``describe --json --configuration``. It creates the
@@ -163,7 +163,7 @@ is captured once at CLI invocation in the machine's local timezone. Every job,
 variant and child of a local workflow in that invocation shares the same instant.
 ``${date.utc.timestamp}`` expresses that instant in UTC, including date rollover.
 This works in runtime template values: variables, parameter defaults, environment,
-step commands/options and :doc:`Artifactory destination paths <artifacts>`.
+step commands/options and :doc:`Artifactory destination paths </guides/artifacts>`.
 Configuration discovery fields and other literal schema fields are not templates.
 
 Available fields are ``timestamp`` (minute precision), ``timestamp_seconds``,
@@ -250,7 +250,7 @@ parameters. String commands use platform shell syntax.
 
 The registered built-ins are ``echo``, ``wait``, ``report.import``,
 ``configs.sync``, ``tools.ensure``, ``files.copy``, ``files.clean`` and
-``variant.generate`` and ``version.generate``. Their contracts are in :doc:`plugins`.
+``variant.generate`` and ``version.generate``. Their contracts are in :doc:`/reference/plugins`.
 ``--from`` and ``--to`` select top-level steps.
 
 Python modes are mutually exclusive: ``uvx`` for a Python tool, ``venv`` for
@@ -365,7 +365,7 @@ Use ``ptk self-service hooks install|uninstall|status`` for explicit hook manage
 ``ptk pre-commit run`` for staged files and ``ptk pre-commit run --all-files`` for all tracked
 files. ``ptk pre-commit validate`` checks the hook configuration. These commands
 honor a custom ``configs.pre-commit.output`` and also work when automatic
-installation is disabled. See :doc:`cli` for file/ref selection and exit codes.
+installation is disabled. See :doc:`/reference/cli` for file/ref selection and exit codes.
 
 PTK's pre-commit commands remove inherited Python environment selectors such as
 ``VIRTUAL_ENV``, ``UV_PROJECT_ENVIRONMENT``, ``UV_PYTHON`` and pip/uv installation
@@ -508,9 +508,9 @@ These checks protect ordinary CLI use, not against someone editing their own
 checkout or process environment. Repository configuration and plugins remain
 trusted code; enforce release permissions and credentials in CI separately.
 
-Variant inspection, matrix runs and the command structure are described in :doc:`cli`.
+Variant inspection, matrix runs and the command structure are described in :doc:`/reference/cli`.
 The installed plugin interfaces, generators and built-in command visibility are
-covered in :doc:`plugins`. Background process limitations are in :doc:`m11`.
+covered in :doc:`/reference/plugins`. Background process limitations are in :doc:`/reference/execution`.
 
 
 Additional execution controls
@@ -650,7 +650,7 @@ PTK's managed cache are removed before the selected installations are added.
 
 The complete ``examples/authoring`` starter is exercised by the skill tests.
 
-Version discovery is documented in :doc:`versioning`. It uses a maintained
+Version discovery is documented in :doc:`/guides/versioning`. It uses a maintained
 ``versioning.ptk.yml`` and ignored per-run ``.gen.version.ptk.yml`` snapshots.
 
 Toolbase and Artifactory sources
@@ -775,7 +775,7 @@ Local orchestration
 Use ``workflows/<name>.ptk.yml`` to compose existing jobs into local sequential and
 parallel groups, including jobs from configured VMR members. Workflows load
 from the repository configuration directory; VMR roots can also own a workflow
-file. See :doc:`workflows` for complete syntax, command examples, preflight,
+file. See :doc:`/guides/workflows` for complete syntax, command examples, preflight,
 reports, VS Code tasks and the explicit local-only execution boundary.
 
 Output folder configuration
