@@ -106,7 +106,7 @@ refreshes the tree. Click **PTK unavailable** to see the exact discovery error.
 
 Build from the repository root with ``ptk extension`` or ``uv run ptk extension``.
 The job checks Node.js 22+ and npm, installs the build dependencies, runs the
-checks and writes ``extensions/project-toolkit/project-toolkit-0.11.0.vsix``.
+checks and writes ``extensions/project-toolkit/project-toolkit-0.12.0.vsix``.
 Use ``ptk extension --dry-run`` to preview it. Node.js and npm must be on PATH.
 Set ``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
 integration tests. CI builds downloadable VSIX artifacts on Linux and Windows;
@@ -176,7 +176,7 @@ operations and flags, including validation, reports, initialization,
 ``--variant``, ``--dry-run``, ``--param``, ``--clean`` and ``--re-run``.
 Changing those semantics can break compatibility even if the schema is unchanged.
 
-Extension 0.11.0 requires inventory ``schema_version: 3`` and per-project
+Extension 0.12.0 requires inventory ``schema_version: 3`` and per-project
 ``configuration.version: 2``. These are interface versions, separate from the
 PTK package version, extension version and project marker's ``schema_version``.
 Unsupported interface versions or malformed inventories are rejected with an
@@ -227,7 +227,7 @@ JavaScript, run ``npm run build`` and reload the development window.
 To install a development build into your normal VS Code instead::
 
    uv run ptk extension
-   uv run ptk self-service extension --vsix extensions/project-toolkit/project-toolkit-0.11.0.vsix --force
+   uv run ptk self-service extension --vsix extensions/project-toolkit/project-toolkit-0.12.0.vsix --force
 
 Editable installs intentionally contain no built-in VSIX; supply ``--vsix`` for
 this workflow. Full ``uv run ptk package`` builds the release artifacts containing

@@ -49,7 +49,7 @@ def invoke(write, monkeypatch):
             job["open_report"] = policy
         config = {
             "project": {"name": "report-open"},
-            "reporting": {"formats": ["json"] if formats is None else formats},
+            "report_formats": ["json"] if formats is None else formats,
             "jobs": {"check": job},
         }
         if all_variants:
@@ -182,7 +182,8 @@ def test_explicit_job_report_handles_missing_runs_without_hiding_errors(
         project_files("""
         project: {name: report-open}
         variants: {default: small, variants: {small: {}, large: {}}}
-        reporting: {dir: custom-reports, formats: []}
+        layout: {reports: custom-reports}
+        report_formats: []
         jobs:
           build:
             steps: [{hello: {uses: echo, with: {message: hello}}}]

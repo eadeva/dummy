@@ -16,8 +16,9 @@ PROJECT_FIELDS = (
     "param_defaults",
     "requires_tools",
     "environment",
-    "logging",
-    "reporting",
+    "logging_history_backups",
+    "report_formats",
+    "log_analysis",
     "plugins",
     "command_audience",
 )

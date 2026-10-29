@@ -190,6 +190,28 @@ def to_markdown(report: Report) -> str:
         if len(failed) > 20:
             lines.append(f"- … and {len(failed) - 20} more")
         lines.append("")
+    if report.log_analysis_enabled:
+        lines += [
+            "## Log analysis",
+            "",
+            "| Severity | Disposition | Step | Message | Source log | Location | Occurrences | Reason |",
+            "|---|---|---|---|---|---|---|---|",
+        ]
+        for finding in report.log_findings:
+            values = [
+                finding.level,
+                finding.disposition,
+                finding.step,
+                finding.message,
+                finding.source_log,
+                f"{finding.file}:{finding.line}"
+                if finding.file
+                else f"Log line {finding.log_line}",
+                finding.occurrences,
+                finding.reason,
+            ]
+            lines.append("| " + " | ".join(_cell(value) for value in values) + " |")
+        lines.append("")
     if report.findings:
         totals_f = report.finding_totals()
         lines += [

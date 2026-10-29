@@ -210,7 +210,7 @@ def test_explicit_workflow_report_opens_latest_aggregate_only(
     root = repository(
         tmp_path,
         workflows={"verify": {"open_report": None, "steps": [{"build": "build"}]}},
-        extra={"reporting": {"dir": "custom-reports"}} if custom else {},
+        extra={"layout": {"reports": "custom-reports"}} if custom else {},
     )
     missing = invoke(root, "report", "open", "--if-exists", "--workflow", "verify")
     assert missing.exit_code == 0 and "Info:" in missing.output

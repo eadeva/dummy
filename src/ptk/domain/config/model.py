@@ -831,25 +831,67 @@ class LayoutSpec(_Strict):
         return v
 
 
-class LoggingSpec(_Strict):
-    level: Literal["trace", "debug", "info", "warning", "error"] = Field(
-        default="info", description="Minimum message severity to include in logs."
+class LogMatchSpec(_Strict):
+    step: str = Field(
+        default="*", description="Case-sensitive glob matching the full step path."
     )
-    keep_history: int = Field(
-        description="Number of previous run logs retained per variant and job.",
-        default=10,
-        ge=0,
-    )  # previous runs kept per variant/job
+    severity: Literal["error", "warning"] | None = Field(
+        default=None, description="Match only this severity; omit for both."
+    )
+    message_regex: str = Field(
+        description="Regular expression matched against the diagnostic message, not the command line.",
+        min_length=1,
+    )
+
+    @field_validator("message_regex")
+    @classmethod
+    def valid_pattern(cls, value):
+        try:
+            re.compile(value)
+        except re.error as exc:
+            raise ValueError(f"invalid diagnostic regular expression: {exc}") from None
+        return value
 
 
-class ReportingSpec(_Strict):
-    formats: list[str] = Field(
-        description="Report formats to generate, typically json and html.",
-        default_factory=lambda: ["json", "html"],
+class LogRuleSpec(_Strict):
+    id: str = Field(
+        description="Stable identifier recorded with matching findings.", min_length=1
     )
-    dir: str | None = Field(
-        default=None, description="Override the report output directory."
+    match: LogMatchSpec = Field(
+        description="Conditions that must all match a diagnostic."
     )
+    action: Literal["ignore", "justify"] = Field(
+        description="Ignore hides noise; justify records an accepted diagnostic. Both remain in reports."
+    )
+    reason: str = Field(
+        description="Explanation retained with this run's findings.", min_length=1
+    )
+
+    @field_validator("id", "reason")
+    @classmethod
+    def nonblank(cls, value):
+        if not value.strip():
+            raise ValueError("must not be blank")
+        return value
+
+
+class LogAnalysisSpec(_Strict):
+    enabled: bool = Field(
+        default=True,
+        description="Analyze captured step logs after execution without changing the job exit code.",
+    )
+    rules: list[LogRuleSpec] = Field(
+        default_factory=list,
+        description="Ordered suppression rules. The first matching rule wins; logs remain unchanged.",
+    )
+
+    @field_validator("rules")
+    @classmethod
+    def unique_rules(cls, rules):
+        ids = [rule.id for rule in rules]
+        if len(ids) != len(set(ids)):
+            raise ValueError("log analysis rule IDs must be unique")
+        return rules
 
 
 # --------------------------------------------------------------------------- root
@@ -880,8 +922,9 @@ class PtkConfig(_Strict):
                 "versioning",
                 "layout",
                 "configs",
-                "logging",
-                "reporting",
+                "logging_history_backups",
+                "report_formats",
+                "log_analysis",
                 "plugins",
                 "command_audience",
             ]
@@ -963,13 +1006,18 @@ class PtkConfig(_Strict):
         description="Directory names for generated builds, binaries, logs and reports.",
         default_factory=LayoutSpec,
     )
-    logging: LoggingSpec = Field(
-        description="Log verbosity and run-history retention.",
-        default_factory=LoggingSpec,
+    logging_history_backups: int = Field(
+        default=3,
+        ge=0,
+        description="Previous run logs retained per variant and job, in addition to the current run. Zero disables backups.",
     )
-    reporting: ReportingSpec = Field(
-        description="Report formats and optional output-directory override.",
-        default_factory=ReportingSpec,
+    report_formats: list[str] = Field(
+        default_factory=lambda: ["html"],
+        description="Report exporters: html, json, junit, markdown, github, or installed plugin exporters. An empty list disables automatic export unless open_report requires HTML.",
+    )
+    log_analysis: LogAnalysisSpec = Field(
+        default_factory=LogAnalysisSpec,
+        description="Analyze step diagnostics and retain ignored or justified findings with their reasons.",
     )
     plugins: list[str] = Field(
         description="Python modules loaded to register additional PTK plugins.",

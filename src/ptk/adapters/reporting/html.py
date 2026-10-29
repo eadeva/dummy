@@ -21,6 +21,7 @@ from ...domain.reporting.model import (
     ReportStep,
     test_metrics,
 )
+from . import log_html
 
 CSS = """
 :root{--bg:#f3f5f8;--paper:#fff;--ink:#18212f;--muted:#5b6778;--line:#dce2ea;--accent:#0f7b8a;
@@ -92,6 +93,7 @@ footer{color:var(--muted);font-size:12px;border-top:1px solid var(--line);paddin
 FILTER_SCRIPT = r"""
 <script>
 for (const table of document.querySelectorAll('table')) {
+  if (table.dataset.logAnalysis) continue;
   const heading = table.rows[0];
   if (!heading) continue;
   const rows = Array.from(table.rows).slice(1);
@@ -379,6 +381,7 @@ def render(report: Report, *, link_root: Path | None = None) -> str:
             f"<th>Rule</th><th>Location</th><th>Message</th></tr>{rows}</table></div>{more}</section>"
         )
 
+    parts.append(log_html.render(report, link_root))
     parts.append(
         f"<footer>ptk {_e(report.ptk_version)} report, started {_e(report.started_at)}. "
         "Regenerate with <code>ptk report export</code>.</footer>"
@@ -387,6 +390,6 @@ def render(report: Report, *, link_root: Path | None = None) -> str:
     return (
         '<!doctype html><html lang="en"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        f"<title>{_e(title)}</title><style>{CSS}</style></head><body><main>"
-        f"{''.join(parts)}</main>{FILTER_SCRIPT}</body></html>"
+        f"<title>{_e(title)}</title><style>{CSS}{log_html.CSS}</style></head><body><main>"
+        f"{''.join(parts)}</main>{FILTER_SCRIPT}{log_html.SCRIPT}</body></html>"
     )

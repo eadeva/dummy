@@ -33,7 +33,13 @@ class ReportService:
         reports_dir = self._reports_dir(project, summary)
         labels = [s["step"] for s in summary.get("steps", [])]
         contributions = self._store.contributions(reports_dir, labels)
-        return from_summary(summary, contributions, self._version)
+        report = from_summary(summary, contributions, self._version)
+        if summary.get("log_analysis", {}).get("enabled", False):
+            analysis = self._store.analyze_logs(summary)
+            report.log_analysis_enabled = True
+            report.log_findings.extend(analysis.log_findings)
+            report.problems.extend(analysis.problems)
+        return report
 
     def write(
         self,
@@ -44,7 +50,7 @@ class ReportService:
     ) -> tuple[Report, list[Path]]:
         report = self.build(project, summary)
         formats = list(
-            formats if formats is not None else project.config.reporting.formats
+            formats if formats is not None else project.config.report_formats
         )
         out = target or self.output_dir(project, report.variant, report.job)
         return report, self._store.write(report, formats, out)
@@ -62,14 +68,7 @@ class ReportService:
 
     def output_dir(self, project: Project, variant: str | None, job: str) -> Path:
         layout = layout_of(project)
-        configured = project.config.reporting.dir
         name = None if variant in (None, "default") else variant
-        if configured:
-            return (project.root / configured).joinpath(
-                *Path(layout.reports_dir(name, job))
-                .relative_to(layout.root / layout.reports)
-                .parts
-            )
         return Path(layout.reports_dir(name, job))
 
     def _reports_dir(self, project: Project, summary: dict[str, Any]) -> Path:

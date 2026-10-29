@@ -81,7 +81,7 @@ def test_installed_plugin_distribution_end_to_end(tmp_path, monkeypatch):
                 "repository": {"alias": "demo", "config_path": "."},
                 "project": {"name": "plugins"},
                 "plugins": ["ptk-test-plugin"],
-                "reporting": {"formats": ["text"]},
+                "report_formats": ["text"],
                 "variants": {"variants": {"one": {}}},
                 "credentials": {"remote": {"providers": ["custom"]}},
                 "jobs": {

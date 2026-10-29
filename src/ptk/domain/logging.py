@@ -1,9 +1,9 @@
 """Log levels and run-history rules (pure).
 
 ptk's own messages have a level; the console shows messages at or above the
-effective level (configuration ``logging.level``, ``-v`` = debug, ``-vv`` =
+effective level (info by default, ``-v`` = debug, ``-vv`` =
 trace, ``--quiet`` = warning). Log files always keep debug and above (trace
-too when the level is trace). Command output is not levelled: it always goes
+too with -vv). Command output is not levelled: it always goes
 to the step log and, unless quiet, to the console.
 """
 

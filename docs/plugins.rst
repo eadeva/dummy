@@ -37,7 +37,7 @@ The supported contracts are:
        write messages with ``out`` for masking. Poll ``ctx.cancel.is_set()``.
    * - ``ptk.reporters``
      - ``(report: Report, target: Path) -> Path``. Write the chosen format and return
-       its file. Select its entry-point name in ``reporting.formats`` or ``-f``.
+       its file. Select its entry-point name in ``report_formats`` or ``-f``.
    * - ``ptk.report_contributors``
      - ``(reports_dir: Path, labels: list[str]) -> list[Contribution]``. Read results
        only for the supplied visible step labels; disabled steps are filtered out.

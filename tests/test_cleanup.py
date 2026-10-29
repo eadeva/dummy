@@ -275,11 +275,9 @@ def test_clean_all_refuses_git_tracked_outputs(tmp_path):
 
 
 def test_clean_all_variants_and_custom_reporting(tmp_path):
-    repository(tmp_path, extra=variant_config(reporting={"dir": "custom-reports"}))
-    paths = (
-        seed(tmp_path)
-        + seed(tmp_path, "release")
-        + seed(tmp_path, roots=("custom-reports",))
+    repository(tmp_path, extra=variant_config(layout={"reports": "custom-reports"}))
+    paths = seed(tmp_path, roots=("_builds", "_bin", "_logs", "custom-reports")) + seed(
+        tmp_path, "release", roots=("_builds", "_bin", "_logs", "custom-reports")
     )
     kept = seed(tmp_path, job="another")
     result = invoke(tmp_path, "-c", "build", "--all-variants")

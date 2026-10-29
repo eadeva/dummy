@@ -1,7 +1,7 @@
 Authoring skills
 ================
 
-Canonical assistant instructions live in ``.claude/skills``. Fourteen project-facing
+Canonical assistant instructions live in ``.claude/skills``. Fifteen project-facing
 skills use links relative to their SKILL.md files and are bundled with the wheel.
 Two maintainer skills operate on PTK's own source checkout.
 
@@ -76,7 +76,8 @@ Using these skills
 ------------------
 
 Run ``ptk maintainer sync skills`` to install project-facing skills in a consuming
-repository, or ``ptk maintainer sync skills`` for the skills alone. The installer
+repository. It also installs the PTK expert custom agent at
+``.github/agents/ptk-expert.agent.md``. The installer
 copies skills into ``.github/skills`` and version-matched offline documentation,
 examples and the schema into ``.github/ptk``. It rewrites relative links for that
 layout; no PTK source checkout is required. See :doc:`editor` for update and check
@@ -116,4 +117,16 @@ ptk-package-preparation
 -----------------------
 
 .. literalinclude:: ../.claude/skills/ptk-package-preparation/SKILL.md
+   :language: markdown
+
+ptk-log-analyzer
+----------------
+
+.. literalinclude:: ../.claude/skills/ptk-log-analyzer/SKILL.md
+   :language: markdown
+
+ptk-expert agent
+----------------
+
+.. literalinclude:: ../.claude/agents/ptk-expert.md
    :language: markdown

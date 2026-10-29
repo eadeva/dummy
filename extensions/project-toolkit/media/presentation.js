@@ -32,7 +32,7 @@
     variants: "layers", tools: "tools", credentials: "key", environment: "terminal",
     vars: "symbol-variable", params: "settings-gear", param_defaults: "settings-gear",
     artifactory: "package", events: "calendar", versioning: "versions", configs: "settings-gear",
-    layout: "folder", logging: "output", reporting: "graph", steps: "list-ordered",
+    layout: "folder", logging_history_backups: "history", report_formats: "graph", log_analysis: "search", steps: "list-ordered",
   };
   function icon(value, path) {
     if (!path.length) return "settings-gear";

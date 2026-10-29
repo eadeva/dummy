@@ -237,7 +237,7 @@ class App:
         formats = {"json", "junit", "html", "markdown", "github"} | plugins[
             "reporters"
         ].keys()
-        for name in project.config.reporting.formats:
+        for name in project.config.report_formats:
             if name not in formats:
                 raise PtkError(f"reporter '{name}' is not enabled")
         for credential in project.config.credentials.values():
@@ -441,16 +441,17 @@ class App:
 
         return help_html.open_in_browser(path)
 
-    def log_observers(self, prepared: PreparedRun) -> list[RunObserver]:
+    def log_observers(
+        self, prepared: PreparedRun, *, verbose: int = 0
+    ) -> list[RunObserver]:
         from .adapters.logging.files import FileLogObserver
         from .domain.logging import file_level
 
-        logging = prepared.project.config.logging
         return [
             FileLogObserver(
                 prepared.layout,
-                level=file_level(logging.level),
-                keep_history=logging.keep_history,
+                level=file_level("trace" if verbose >= 2 else "debug"),
+                keep_history=prepared.project.config.logging_history_backups,
             )
         ]
 

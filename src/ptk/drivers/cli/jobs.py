@@ -337,12 +337,10 @@ def _execute_one_unlocked(
     if request.dry_run:
         present.dry_run(console, prepared, runner, show_env=show_env)
         return 0
-    level = console_level(
-        project.config.logging.level, verbose=state.verbose, quiet=quiet
-    )
+    level = console_level("info", verbose=state.verbose, quiet=quiet)
     observers = [
         present.ConsoleObserver(console, quiet=quiet, level=level),
-        *state.app.log_observers(prepared),
+        *state.app.log_observers(prepared, verbose=state.verbose),
     ]
     cancel = Cancelled()
     holder: dict[str, Any] = {}
@@ -414,7 +412,7 @@ def write_reports(
     from ...domain.reporting.summary import run_summary
 
     policy = None if project.ci else project.config.jobs[plan.job].open_report
-    formats = list(project.config.reporting.formats)
+    formats = list(project.config.report_formats)
     if policy and "html" not in formats:
         formats.append("html")
     if not formats:

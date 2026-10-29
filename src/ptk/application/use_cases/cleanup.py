@@ -17,8 +17,6 @@ def targets(project, selections=None):
 
     layout = layout_of(project)
     roots = [Path(p) for p in layout.all_roots()]
-    if project.config.reporting.dir:
-        roots.append(project.root / project.config.reporting.dir)
     if selections is None:
         return [CleanupTarget(p, project) for p in dict.fromkeys(roots)]
     return [

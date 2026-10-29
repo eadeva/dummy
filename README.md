@@ -134,7 +134,7 @@ configuration blocks execution. See [hook setup and conflicts](docs/configuratio
 
 ## Reports
 
-After every run ptk writes `_reports/<variant>/<job>/report.*` (`reporting.formats`:
+After every run ptk writes `_reports/<variant>/<job>/report.*` (`report_formats`:
 json, junit, html, markdown, github). Steps contribute tool results by writing them to
 `$PTK_STEP_REPORTS_DIR` - JUnit, SARIF and Cobertura are picked up automatically - or
 with `uses: report.import`. The HTML report shows what failed and a timeline of all
@@ -481,3 +481,5 @@ ptk maintainer artifacts destination --job package --format github
 
 See [destination configuration and examples](docs/artifacts.rst) and
 [date substitutions](docs/configuration.rst#date-and-time-substitutions).
+
+Log analysis is enabled by default; HTML shows active diagnostics and retains ignored/justified findings with source-log links. See [logging and reporting](docs/log-analysis.rst) for `report_formats`, `logging_history_backups` and rule examples. `ptk maintainer sync skills` also installs the log-analyzer skill and PTK expert agent.

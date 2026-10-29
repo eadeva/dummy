@@ -928,35 +928,117 @@
         "reports"
       ]
     },
-    "LoggingSpec": {
+    "LogAnalysisSpec": {
       "additionalProperties": false,
       "properties": {
-        "level": {
-          "default": "info",
-          "description": "Minimum message severity to include in logs.",
-          "enum": [
-            "trace",
-            "debug",
-            "info",
-            "warning",
-            "error"
-          ],
-          "title": "Level",
-          "type": "string"
+        "enabled": {
+          "default": true,
+          "description": "Analyze captured step logs after execution without changing the job exit code.",
+          "title": "Enabled",
+          "type": "boolean"
         },
-        "keep_history": {
-          "default": 10,
-          "description": "Number of previous run logs retained per variant and job.",
-          "minimum": 0,
-          "title": "Keep History",
-          "type": "integer"
+        "rules": {
+          "description": "Ordered suppression rules. The first matching rule wins; logs remain unchanged.",
+          "items": {
+            "$ref": "#/$defs/LogRuleSpec"
+          },
+          "title": "Rules",
+          "type": "array"
         }
       },
-      "title": "LoggingSpec",
+      "title": "LogAnalysisSpec",
       "type": "object",
       "x-ptk-field-order": [
-        "level",
-        "keep_history"
+        "enabled",
+        "rules"
+      ]
+    },
+    "LogMatchSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "step": {
+          "default": "*",
+          "description": "Case-sensitive glob matching the full step path.",
+          "title": "Step",
+          "type": "string"
+        },
+        "severity": {
+          "anyOf": [
+            {
+              "enum": [
+                "error",
+                "warning"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Match only this severity; omit for both.",
+          "title": "Severity"
+        },
+        "message_regex": {
+          "description": "Regular expression matched against the diagnostic message, not the command line.",
+          "minLength": 1,
+          "title": "Message Regex",
+          "type": "string"
+        }
+      },
+      "required": [
+        "message_regex"
+      ],
+      "title": "LogMatchSpec",
+      "type": "object",
+      "x-ptk-field-order": [
+        "step",
+        "severity",
+        "message_regex"
+      ]
+    },
+    "LogRuleSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "description": "Stable identifier recorded with matching findings.",
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "match": {
+          "$ref": "#/$defs/LogMatchSpec",
+          "description": "Conditions that must all match a diagnostic."
+        },
+        "action": {
+          "description": "Ignore hides noise; justify records an accepted diagnostic. Both remain in reports.",
+          "enum": [
+            "ignore",
+            "justify"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Explanation retained with this run's findings.",
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "match",
+        "action",
+        "reason"
+      ],
+      "title": "LogRuleSpec",
+      "type": "object",
+      "x-ptk-field-order": [
+        "id",
+        "match",
+        "action",
+        "reason"
       ]
     },
     "ParamSpec": {
@@ -1263,38 +1345,6 @@
         "project",
         "groups",
         "interpreter"
-      ]
-    },
-    "ReportingSpec": {
-      "additionalProperties": false,
-      "properties": {
-        "formats": {
-          "description": "Report formats to generate, typically json and html.",
-          "items": {
-            "type": "string"
-          },
-          "title": "Formats",
-          "type": "array"
-        },
-        "dir": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Override the report output directory.",
-          "title": "Dir"
-        }
-      },
-      "title": "ReportingSpec",
-      "type": "object",
-      "x-ptk-field-order": [
-        "formats",
-        "dir"
       ]
     },
     "RepositorySpec": {
@@ -2674,13 +2724,24 @@
       "$ref": "#/$defs/LayoutSpec",
       "description": "Directory names for generated builds, binaries, logs and reports."
     },
-    "logging": {
-      "$ref": "#/$defs/LoggingSpec",
-      "description": "Log verbosity and run-history retention."
+    "logging_history_backups": {
+      "default": 3,
+      "description": "Previous run logs retained per variant and job, in addition to the current run. Zero disables backups.",
+      "minimum": 0,
+      "title": "Logging History Backups",
+      "type": "integer"
     },
-    "reporting": {
-      "$ref": "#/$defs/ReportingSpec",
-      "description": "Report formats and optional output-directory override."
+    "report_formats": {
+      "description": "Report exporters: html, json, junit, markdown, github, or installed plugin exporters. An empty list disables automatic export unless open_report requires HTML.",
+      "items": {
+        "type": "string"
+      },
+      "title": "Report Formats",
+      "type": "array"
+    },
+    "log_analysis": {
+      "$ref": "#/$defs/LogAnalysisSpec",
+      "description": "Analyze step diagnostics and retain ignored or justified findings with their reasons."
     },
     "plugins": {
       "description": "Python modules loaded to register additional PTK plugins.",
@@ -2764,8 +2825,9 @@
     "versioning",
     "layout",
     "configs",
-    "logging",
-    "reporting",
+    "logging_history_backups",
+    "report_formats",
+    "log_analysis",
     "plugins",
     "command_audience"
   ],
@@ -2800,8 +2862,9 @@
           "jobs": false,
           "configs": false,
           "layout": false,
-          "logging": false,
-          "reporting": false,
+          "logging_history_backups": false,
+          "report_formats": false,
+          "log_analysis": false,
           "plugins": false,
           "command_audience": false
         }

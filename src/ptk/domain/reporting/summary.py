@@ -33,6 +33,7 @@ def header(plan: JobPlan) -> dict[str, Any]:
     return {
         "summary_version": SUMMARY_VERSION,
         "context": plan.report_context,
+        "log_analysis": plan.log_analysis,
         "run_id": plan.run_id,
         "project": plan.project,
         "job": plan.job,

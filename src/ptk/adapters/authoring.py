@@ -58,7 +58,10 @@ class AuthoringFiles:
                 relative.is_absolute()
                 or ".." in relative.parts
                 or "\\" in name
-                or not name.startswith(("ptk/", "skills/ptk-"))
+                or not (
+                    name.startswith(("ptk/", "skills/ptk-"))
+                    or name == "agents/ptk-expert.agent.md"
+                )
             ):
                 raise PtkError(f"invalid managed authoring path: {name!r}")
             path = github.joinpath(*relative.parts)

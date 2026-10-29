@@ -88,4 +88,8 @@ def test_reserved_job_names_and_defaults():
             {"project": {"name": "x"}, "jobs": {"config": {"steps": [{"a": "b"}]}}}
         )
     cfg = PtkConfig.model_validate({"project": {"name": "x"}})
-    assert cfg.layout.builds == "_builds" and cfg.logging.level == "info"
+    assert (
+        cfg.layout.builds == "_builds"
+        and cfg.logging_history_backups == 3
+        and cfg.report_formats == ["html"]
+    )

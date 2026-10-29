@@ -54,7 +54,7 @@ def project(root):
             },
             "variants": {"default": "small", "variants": {"small": {}, "large": {}}},
             "versioning": {"project": {"source": "literal", "version": "1.2.3"}},
-            "reporting": {"formats": []},
+            "report_formats": [],
         },
     )
     grant_maintainer(root)

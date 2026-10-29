@@ -94,6 +94,7 @@ class JobPlan:
     dirs: dict[str, str]  # bin_dir, log_dir, reports_dir (job level)
 
     report_context: dict[str, Any] = field(default_factory=dict)
+    log_analysis: dict[str, Any] = field(default_factory=dict)
 
     def walk(self):
         for step in self.steps:

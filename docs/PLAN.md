@@ -86,8 +86,9 @@ src/ptk/
 | `variants` | product line: components, features, variants |
 | `jobs` | CLI commands: params, required tools, steps |
 | `configs` | shared base configs and project overlays (pre-commit, ruff, clang-*) |
-| `logging` | console style, run directory, retention |
-| `reporting` | formats, output dir, contributors |
+| `logging_history_backups` | previous run backups, default 3 |
+| `report_formats` | exporter list, default html |
+| `log_analysis` | diagnostic recognition and suppression rules |
 | `plugins` | extra plugin packages to load / options |
 
 ### 2.2 Loading pipeline
@@ -300,7 +301,7 @@ _reports/<variant>/<job>/<set>/<step>/   reports per step            ${run.repor
 
 Without variants the variant level is `default`. Root and folder names are
 configurable (`layout:`). Previous runs are archived per variant/job
-(`logging.keep_history`).
+(`logging_history_backups`).
 
 ## 6. Main point 5 — Unified logging
 
@@ -316,10 +317,10 @@ configurable (`layout:`). Previous runs are archived per variant/job
     step, status, exit code, attempts, messages) for tools and reports
   - `_logs/<variant>/<job>/run.json` — summary: status, params with sources, step tree
   - `_logs/<variant>/<job>/_history/<run id>/` — previous runs, pruned to
-    `logging.keep_history` (0 = keep only the latest)
+    `logging_history_backups` (0 = keep only the latest)
 - **Levels** for ptk's messages: trace (full masked environment per step), debug
   (cwd, Python runtime, env and secret names), info, warning (retries, allowed
-  failures), error. Console: `logging.level`, `-v` debug, `-vv` trace, `run -q`
+  failures), error. Console: info by default, `-v` debug, `-vv` trace, `run -q`
   warnings only. Files always keep debug and above (trace when configured).
 - Secrets are masked before anything reaches an observer; values shorter than 4
   characters cannot be masked safely and trigger a warning instead.
@@ -339,14 +340,14 @@ configurable (`layout:`). Previous runs are archived per variant/job
   and imported automatically. `uses: report.import` with `files: [globs]` copies
   results produced elsewhere into the step's folder (`optional: true` allows none).
   More formats (QAC, CANoe, SBOM, ...) can be added as importers.
-- **Exporters** (`reporting.formats`, default json + html): JSON (canonical, with
+- **Exporters** (`report_formats`, default HTML): JSON (canonical, with
   totals) · JUnit XML (steps as test cases - allowed failures are not failures -
   plus imported suites) · single-file HTML (offline; "what failed", a **timeline**
   of all steps at their real start times so parallel sets and slow steps are
   visible, parameters, tests, findings, coverage; relative links to the logs) ·
   Markdown · GitHub step summary (appended to `$GITHUB_STEP_SUMMARY`).
 - Written to `_reports/<variant>/<job>/report.*` after every run
-  (`reporting.dir` moves them); a reporting problem never changes the run's result.
+  (`layout.reports` names the report folder); a reporting problem never changes the run's result.
 - Commands: `ptk [-V v] report export [JOB] [--run ID] [-f FORMAT]... [-o DIR]` ·
   `ptk [-V v] report open [JOB] [--run ID]`.
 
@@ -926,3 +927,8 @@ select variants. Job-level variant filters error; step-level filters skip;
 `only_cx` jobs are hidden locally. Extension 0.3.0 exposes clean/re-run, mapped
 workflow variant selection and both all-clean built-ins. Native tool cleanup
 and passthrough syntax are documented separately.
+
+Log analysis and skills
+-----------------------
+
+`ptk-log-analyzer` diagnoses run logs and narrowly scoped suppressions. The PTK expert agent routes requests across the bundled skills. See docs/log-analysis.rst for canonical findings, history snapshots and report filters.

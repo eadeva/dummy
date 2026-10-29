@@ -44,7 +44,7 @@ path = "hatch_metadata.py"
 [tool.hatch.build.targets.sdist]
 include = [
   "/src", "/tests", "/docs", "/examples", "/scripts", "/config/ptk",
-  "/.claude/skills", "/.main.ptk.yml", "/README.md", "/pyproject.toml",
+  "/.claude/skills", "/.claude/agents", "/.main.ptk.yml", "/README.md", "/pyproject.toml",
   "/.pre-commit-config.yaml",
   "/hatch_build.py", "/hatch_metadata.py", "/install",
 ]
@@ -60,6 +60,8 @@ cache-keys = [
   {file = "config/ptk/**/*.ptk.yml"}, {file = "hatch_*.py"},
   {file = "src/ptk/package_version.py"}, {file = "PKG-INFO"},
   {file = "src/ptk/**/*.py"},
+  {file = ".claude/skills/**"}, {file = ".claude/agents/**"},
+  {file = "docs/**"},
   {file = "extensions/project-toolkit/package*.json"},
   {file = "extensions/project-toolkit/src/**"},
   {file = "extensions/project-toolkit/media/**"},

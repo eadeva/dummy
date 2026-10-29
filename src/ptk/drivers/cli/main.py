@@ -92,7 +92,7 @@ click.rich_click.SHOW_ARGUMENTS = True
     "-v",
     "--verbose",
     count=True,
-    help="More ptk messages: -v debug, -vv trace (default: logging.level).",
+    help="More ptk messages: -v debug, -vv trace (default: info).",
 )
 @click.option(
     "-V",
@@ -766,7 +766,7 @@ def _report_target(ctx: click.Context, job: str | None) -> tuple[Any, str]:
     "formats",
     multiple=True,
     type=str,
-    help="Formats (default: reporting.formats). Repeatable.",
+    help="Formats (default: report_formats). Repeatable.",
 )
 @click.option(
     "-o",

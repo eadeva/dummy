@@ -1,0 +1,4 @@
+interface:
+  display_name: "PTK Log Analyzer"
+  short_description: "Diagnose PTK job errors and review suppression rules"
+  default_prompt: "Use $ptk-log-analyzer to diagnose this PTK job log and explain active and suppressed findings."

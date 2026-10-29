@@ -441,7 +441,7 @@ or steps (including tolerated failures), failed/error test cases, error-level
 findings, or report import problems. Warnings, skipped results and cancellation
 alone do not trigger ``on_errors``. This does not change the job's exit code.
 When enabled locally, HTML is added to the configured report formats, even when
-``reporting.formats`` is empty. A missing browser prints a hint and keeps the
+``report_formats`` is empty. A missing browser prints a hint and keeps the
 report available on disk. Failed report generation never opens an old report.
 
 Automatic opening is disabled in CX/CI mode (including ``--ci``), and dry runs
@@ -794,7 +794,7 @@ duplicate definitions are errors.
 Absent this file, these four PTK defaults apply; there is no VMR-level inheritance.
 Folder values are plain directory names. ``layout.root`` defaults to the repository
 root; cleanup requires its output directories to remain inside the repository.
-An existing ``reporting.dir`` override is also included in cleanup.
+The report folder selected by ``layout.reports`` is included in cleanup.
 
 All four categories use ``<variant>/<job>`` beneath their configured directory.
 Without variants, the variant directory is ``default``. This keeps selected-job

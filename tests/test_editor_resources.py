@@ -41,6 +41,18 @@ def test_vscode_setup_installs_tasks_skills_and_working_offline_links(
             resolved = (path.parent / target).resolve()
             assert resolved.is_relative_to(tmp_path / ".github"), (path, target)
             assert resolved.exists(), (path, target)
+    agent = tmp_path / ".github/agents/ptk-expert.agent.md"
+    assert agent.is_file()
+    for target in re.findall(r"\]\(([^)]+)\)", agent.read_text()):
+        assert (agent.parent / target).resolve().is_file(), target
+    assert "ptk-log-analyzer" in agent.read_text()
+    metadata = tmp_path / ".github/skills/ptk-log-analyzer/agents/openai.yaml"
+    import yaml
+
+    assert (
+        yaml.safe_load(metadata.read_text())["interface"]["display_name"]
+        == "PTK Log Analyzer"
+    )
     schema = json.loads((tmp_path / ".github/ptk/config-schema.json").read_text())
     assert "StepEntry" in schema["$defs"]
     assert (
@@ -145,7 +157,13 @@ def test_vmr_editor_setup_uses_selected_repository(tmp_path, monkeypatch):
 def test_bundle_ignores_local_config_and_generated_examples(tmp_path):
     root = Path(__file__).resolve().parents[1]
     assets = source_files(root)
-    assert len([name for name in assets if name.startswith("skills/")]) == len(SKILLS)
+    assert len(
+        [
+            name
+            for name in assets
+            if name.startswith("skills/") and name.endswith("/SKILL.md")
+        ]
+    ) == len(SKILLS)
     assert all(
         "local.ptk.yml" not in name and ".gen.version.ptk.yml" not in name
         for name in assets

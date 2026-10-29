@@ -2,12 +2,7 @@
 name: quickstart
 description: Offline example using only the Python interpreter running ptk
 default_job: build
-reporting:
-  formats:
-  - json
-  - html
-  - junit
-  - markdown
+report_formats: [html, json, junit, markdown]
 components:
   core:
     path: components/core

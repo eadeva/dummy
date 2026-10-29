@@ -64,7 +64,9 @@ def test_new_project_runs(tmp_path, monkeypatch):
         cli, [*base, "hello", "--message", "custom message"], cwd=target
     )
     assert ran.exit_code == 0, ran.output
-    report = json.loads((target / "_reports/debug/hello/report.json").read_text())
+    assert (target / "_reports/debug/hello/report.html").is_file()
+    assert not (target / "_reports/debug/hello/report.json").exists()
+    report = json.loads((target / "_logs/debug/hello/run.json").read_text())
     assert report["status"] == "passed"
     assert report["params"]["message"] == "custom message"
 

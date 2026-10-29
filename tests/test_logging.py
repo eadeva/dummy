@@ -30,7 +30,7 @@ HOST = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": "/tmp"}
 
 PROJECT = """
 project: {name: logs, default_job: go}
-logging: {level: LEVEL, keep_history: KEEP}
+logging_history_backups: KEEP
 credentials:
   repo: {fields: [token]}
 jobs:
@@ -47,17 +47,19 @@ jobs:
 """
 
 
-def project(write, level="info", keep=10):
-    text = PROJECT.replace("LEVEL", level).replace("KEEP", str(keep))
+def project(write, keep=3):
+    text = PROJECT.replace("KEEP", str(keep))
     return write(project_files(text))
 
 
-def run(root: Path, token: str = "t0ps3cret"):
+def run(root: Path, token: str = "t0ps3cret", verbose=0):
     (root / ".once").unlink(missing_ok=True)
     app = create_app(environ={**HOST, "PTK_CRED_REPO_TOKEN": token})
     proj = app.load_project.execute(root)
     prepared = app.prepare_run(proj).execute(proj, RunRequest())
-    return app.run_job(proj).execute(prepared, app.log_observers(prepared))
+    return app.run_job(proj).execute(
+        prepared, app.log_observers(prepared, verbose=verbose)
+    )
 
 
 LOGS = Path("_logs/default/go")
@@ -139,8 +141,8 @@ def test_logs_events_and_summary(write):
 
 
 def test_trace_level_logs_masked_environment(write):
-    root = project(write, level="trace")
-    run(root)
+    root = project(write)
+    run(root, verbose=2)
     text = (root / LOGS / "hello.log").read_text()
     assert "trace: env TOKEN=********" in text and "trace: env PTK_STEP=hello" in text
 

@@ -46,6 +46,11 @@ class FileReportStore:
             results.extend(handler(reports_dir, labels))
         return [r for r in results if r.step in labels]
 
+    def analyze_logs(self, summary):
+        from .log_analysis import analyze
+
+        return analyze(summary)
+
     def write(self, report: Report, formats: list[str], target: Path) -> list[Path]:
         unknown = set(formats) - (set(FILES) | {"github"} | set(self._reporters))
         if unknown:

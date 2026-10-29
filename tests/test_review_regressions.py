@@ -86,7 +86,7 @@ def test_report_inputs_are_fresh_and_history_is_immutable(tmp_path):
             {
                 "repository": {"alias": "demo", "config_path": "."},
                 "project": {"name": "demo"},
-                "reporting": {"formats": ["json"]},
+                "report_formats": ["json"],
                 "jobs": {
                     "go": {
                         "params": {"name": {"default": "first-test"}},

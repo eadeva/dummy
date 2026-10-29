@@ -130,7 +130,11 @@ def write_workflow_report(result, target: Path) -> Path:
 
 def snapshot_logs(summary: dict, target: Path) -> dict:
     """Keep child report links valid when the same job is called again."""
-    summary = {**summary, "steps": [dict(step) for step in summary.get("steps", [])]}
+    summary = {
+        **summary,
+        "log_dir": str(target / "logs"),
+        "steps": [dict(step) for step in summary.get("steps", [])],
+    }
     for index, step in enumerate(summary["steps"]):
         source = Path(step.get("log_file") or "")
         if step.get("log_file") and source.is_file():

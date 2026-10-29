@@ -182,7 +182,7 @@ def test_html_export(tmp_path):
 PROJECT = """
 project: {name: rep, default_job: ci}
 environment: {keep: [JUNIT]}
-reporting: {formats: [json, junit, html, markdown, github]}
+report_formats: [json, junit, html, markdown, github]
 jobs:
   ci:
     steps:
@@ -272,7 +272,7 @@ def test_reporting_disabled(write):
     root = write(
         project_files("""
         project: {name: x}
-        reporting: {formats: []}
+        report_formats: []
         jobs: {go: {steps: [{a: "echo hi"}]}}
         """)
     )

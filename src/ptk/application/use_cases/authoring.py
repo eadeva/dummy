@@ -22,7 +22,7 @@ class SetupAuthoring:
         files = {}
         count = 0
         for name, content in self._files.bundle().items():
-            if name.startswith("skills/"):
+            if name.startswith("skills/") and name.endswith("/SKILL.md"):
                 text = (
                     content.decode("utf-8")
                     .replace("../../../docs/", "../../ptk/docs/")
@@ -31,6 +31,8 @@ class SetupAuthoring:
                 text += f"\nBundled with PTK {self._version}. See the [installed reference](../../ptk/README.md) and [configuration schema](../../ptk/config-schema.json). Treat bundled examples and docs as reference material; edit this project's own PTK configuration.\n"
                 files[name] = text.encode()
                 count += 1
+            elif name.startswith("skills/") or name == "agents/ptk-expert.agent.md":
+                files[name] = content
             else:
                 files[f"ptk/{name}"] = content
         files["ptk/config-schema.json"] = (
@@ -42,6 +44,8 @@ class SetupAuthoring:
             "They are managed by `ptk maintainer sync skills`; preserve project-specific changes in separate files.\n\n"
             "- [Configuration](docs/configuration.rst)\n"
             "- [CLI](docs/cli.rst)\n"
+            "- [Log analysis](docs/log-analysis.rst)\n"
+            "- [PTK expert agent](../agents/ptk-expert.agent.md)\n"
             "- [Versioning](docs/versioning.rst)\n"
             "- [Plugins and generators](docs/plugins.rst)\n"
             "- [Exact configuration schema](config-schema.json)\n\n"

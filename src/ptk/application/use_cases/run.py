@@ -421,6 +421,7 @@ class PrepareRun:
             steps=steps,
             base_env=base,
             dirs=dirs,
+            log_analysis=config.log_analysis.model_dump(),
             report_context={
                 "date": dates,
                 "ptk_version": self._ptk_version,

@@ -12,6 +12,7 @@ SKILLS = (
     "ptk-plugin-development",
     "ptk-python-steps",
     "ptk-reporting",
+    "ptk-log-analyzer",
     "ptk-shared-configs",
     "ptk-tools-setup",
     "ptk-troubleshooting",
@@ -34,6 +35,7 @@ DOCS = (
     "packaging",
     "artifacts",
     "performance",
+    "log-analysis",
 )
 EXAMPLES = ("authoring", "plugin", "quickstart", "workflows", "artifacts")
 
@@ -42,6 +44,10 @@ def source_files(root: Path) -> dict[str, Path]:
     files = {f"docs/{name}.rst": root / "docs" / f"{name}.rst" for name in DOCS}
     for name in SKILLS:
         files[f"skills/{name}/SKILL.md"] = root / ".claude/skills" / name / "SKILL.md"
+        metadata = root / ".claude/skills" / name / "agents/openai.yaml"
+        if metadata.is_file():
+            files[f"skills/{name}/agents/openai.yaml"] = metadata
+    files["agents/ptk-expert.agent.md"] = root / ".claude/agents/ptk-expert.md"
     for example in EXAMPLES:
         directory = root / "examples" / example
         for path in directory.rglob("*"):

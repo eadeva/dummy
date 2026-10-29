@@ -202,7 +202,7 @@ test("configuration tree uses meaningful root order and scalar fields before col
   const h = harness(t, [doc]);
   await h.controller.ready();
   const config = h.controller.provider.getChildren()[0].children[0].children.find(item => item.label === "Configuration");
-  assert.deepEqual(config.children.slice(0, 10).map(item => item.label), ["schema_version", "ptk_version", "virtual_monorepo", "repository", "project", "variants", "Components", "jobs", "workflows", "vars"]);
+  assert.deepEqual(config.children.slice(0, 11).map(item => item.label), ["schema_version", "ptk_version", "virtual_monorepo", "logging_history_backups", "repository", "project", "variants", "Components", "jobs", "workflows", "vars"]);
   const job = config.children.find(item => item.label === "jobs").children[0];
   assert.deepEqual(job.children.map(item => item.label), ["help", "audience", "env", "steps"]);
   assert.deepEqual(job.children.at(-1).children.map(item => item.configPath.at(-1)), [0, 1]);

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.12.0
+
+- Read PTK’s simplified report_formats and logging_history_backups fields and log-analysis rule schema.
+- Update bundled schema and tree icons for the new reporting configuration.
+
+
 ## 0.11.0
 
 - Use PTK discovery and its invocation directory/repository prefix; remove `--config` from tasks. Requires inventory protocol 3 and configuration interface 2.

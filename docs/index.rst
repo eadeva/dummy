@@ -10,6 +10,7 @@ isolated command environments, logs and reports. Python 3.12 or newer is require
    quickstart
    cli
    configuration
+   log-analysis
    workflows
    versioning
    artifacts

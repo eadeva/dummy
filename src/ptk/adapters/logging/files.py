@@ -100,7 +100,7 @@ def _remove(path: Path) -> None:
 
 class FileLogObserver:
     def __init__(
-        self, layout: lay.Layout, *, level: Level = Level.DEBUG, keep_history: int = 10
+        self, layout: lay.Layout, *, level: Level = Level.DEBUG, keep_history: int = 3
     ):
         self._layout = layout
         self._level = level

@@ -172,11 +172,7 @@ def report_directory(root, name, project=None):
     report_root = root / "_reports"
     if project is not None:
         layout = layout_of(project)
-        report_root = (
-            root / project.config.reporting.dir
-            if project.config.reporting.dir
-            else layout.root / layout.reports
-        )
+        report_root = layout.root / layout.reports
     return report_root / "workflows" / name.split("/")[-1]
 
 

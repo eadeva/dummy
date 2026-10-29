@@ -41,6 +41,18 @@ class Finding:
 
 
 @dataclass
+class LogFinding(Finding):
+    disposition: str = "active"
+    source_log: str = ""
+    log_line: int = 0
+    occurrences: int = 1
+    log_lines: list[int] = field(default_factory=list)
+    context: list[str] = field(default_factory=list)
+    suppression_rule: str = ""
+    reason: str = ""
+
+
+@dataclass
 class Coverage:
     step: str
     source: str
@@ -60,6 +72,7 @@ class Contribution:
     suites: list[TestSuite] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
     coverage: list[Coverage] = field(default_factory=list)
+    log_findings: list[LogFinding] = field(default_factory=list)
     problems: list[str] = field(default_factory=list)  # unreadable files
 
 
@@ -101,7 +114,9 @@ class Report:
     suites: list[TestSuite] = field(default_factory=list)
     findings: list[Finding] = field(default_factory=list)
     coverage: list[Coverage] = field(default_factory=list)
+    log_findings: list[LogFinding] = field(default_factory=list)
     problems: list[str] = field(default_factory=list)
+    log_analysis_enabled: bool = False
     ptk_version: str = ""
     context: dict[str, Any] = field(default_factory=dict)
 
@@ -121,6 +136,10 @@ class Report:
                 for case in suite.cases
             )
             or any(finding.level == ERROR for finding in self.findings)
+            or any(
+                f.level == ERROR and f.disposition == "active"
+                for f in self.log_findings
+            )
             or bool(self.problems)
         )
 
@@ -178,6 +197,7 @@ def from_summary(
     for contribution in contributions:
         report.suites += contribution.suites
         report.findings += contribution.findings
+        report.log_findings += contribution.log_findings
         report.coverage += contribution.coverage
         report.problems += contribution.problems
     return report
