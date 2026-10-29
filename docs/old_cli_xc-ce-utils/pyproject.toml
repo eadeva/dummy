@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "XC-CE Utilities - Build system and automation tools for embedded automotive projects"
 readme = "README.md"
 requires-python = ">=3.10"
-license = "LicenseRef-Proprietary-Bosch"
+license = "LicenseRef-Proprietary"
 authors = [
     {name = "Hagenlocher Jimenez Pascal (XC-CE/PAV-EF22)", email = "pascal.hagenlocherjimenez@de.bosch.com"},
     {name = "Adeva Sanz Enrique (XC-CE/PAV-EF22)", email = "enrique.adevasanz@de.bosch.com"}
