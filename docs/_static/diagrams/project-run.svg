@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 760" role="img" aria-labelledby="title description">
+<title id="title">One definition, independent variant runs</title><desc id="description">Repository configuration and developer or CI selection feed PTK preparation. Debug and release execute the same job definition independently. Each run retains its own logs, outputs, canonical results and exported reports.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#607d91"/></marker></defs>
+<style>text{font-family:Lato,Arial,sans-serif;fill:#203d52}.title{font-size:23px;font-weight:700}.body{font-size:18px;fill:#415d70}.label{font-size:15px;font-weight:700;letter-spacing:.8px;fill:#216b9e}.small{font-size:16px;fill:#4d687a}.edge{fill:none;stroke:#607d91;stroke-width:2.3;marker-end:url(#arrow)}</style>
+<rect width="880" height="760" rx="16" fill="#f8fafc"/>
+
+<rect x="30" y="25" width="395" height="105" rx="12" fill="#edf5fb" stroke="#c2dced" stroke-width="1.5"/>
+<rect x="48" y="44" width="4" height="67" rx="2" fill="#216b9e"/>
+<text x="227.5" y="56" class="label" text-anchor="middle">DEFINE THE WORK</text>
+<text x="227.5" y="86" class="title" text-anchor="middle">Repository configuration</text>
+<text x="227.5" y="113" class="body" text-anchor="middle">Jobs · variants · tools · inputs</text>
+<rect x="455" y="25" width="395" height="105" rx="12" fill="#fff" stroke="#d4e0e9" stroke-width="1.5"/>
+<rect x="473" y="44" width="4" height="67" rx="2" fill="#516d80"/>
+<text x="652.5" y="56" class="label" text-anchor="middle">SELECT A RUN</text>
+<text x="652.5" y="86" class="title" text-anchor="middle">Developer or CI</text>
+<text x="652.5" y="113" class="body" text-anchor="middle">Choose a job, variants and options</text>
+<path d="M 227 130 L 227 159 L 440 159 L 440 190" class="edge"/>
+<path d="M 652 130 L 652 159 L 440 159" class="edge"/>
+<rect x="180" y="190" width="520" height="110" rx="12" fill="#edf5fb" stroke="#c2dced" stroke-width="1.5"/>
+<rect x="198" y="209" width="4" height="72" rx="2" fill="#216b9e"/>
+<text x="440.0" y="221" class="title" text-anchor="middle">PTK prepares the selected runs</text>
+<text x="440.0" y="248" class="body" text-anchor="middle">Validate inputs · resolve context</text>
+<text x="440.0" y="275" class="body" text-anchor="middle">Compose environments · plan steps</text>
+<path d="M 440 300 L 440 330 L 227 330 L 227 365" class="edge"/>
+<path d="M 440 330 L 652 330 L 652 365" class="edge"/>
+<rect x="30" y="365" width="395" height="110" rx="12" fill="#edf8f4" stroke="#b6dcd0" stroke-width="1.5"/>
+<rect x="48" y="384" width="4" height="72" rx="2" fill="#14796f"/>
+<text x="227.5" y="396" class="label" text-anchor="middle">RUN THE JOB</text>
+<text x="227.5" y="426" class="title" text-anchor="middle">Debug variant</text>
+<text x="227.5" y="453" class="body" text-anchor="middle">Existing commands and scripts</text>
+<rect x="455" y="365" width="395" height="110" rx="12" fill="#edf8f4" stroke="#b6dcd0" stroke-width="1.5"/>
+<rect x="473" y="384" width="4" height="72" rx="2" fill="#14796f"/>
+<text x="652.5" y="396" class="label" text-anchor="middle">RUN THE SAME JOB</text>
+<text x="652.5" y="426" class="title" text-anchor="middle">Release variant</text>
+<text x="652.5" y="453" class="body" text-anchor="middle">Existing commands and scripts</text>
+<path d="M 227 475 L 227 530" class="edge"/>
+<path d="M 652 475 L 652 530" class="edge"/>
+<rect x="30" y="530" width="395" height="120" rx="12" fill="#fff7e9" stroke="#ecd5aa" stroke-width="1.5"/>
+<rect x="48" y="549" width="4" height="82" rx="2" fill="#916014"/>
+<text x="227.5" y="561" class="label" text-anchor="middle">KEEP ITS EVIDENCE</text>
+<text x="227.5" y="591" class="title" text-anchor="middle">Debug results</text>
+<text x="227.5" y="618" class="body" text-anchor="middle">Logs and tool results → report model</text>
+<text x="227.5" y="645" class="body" text-anchor="middle">Exports and retained history</text>
+<rect x="455" y="530" width="395" height="120" rx="12" fill="#fff7e9" stroke="#ecd5aa" stroke-width="1.5"/>
+<rect x="473" y="549" width="4" height="82" rx="2" fill="#916014"/>
+<text x="652.5" y="561" class="label" text-anchor="middle">KEEP ITS EVIDENCE</text>
+<text x="652.5" y="591" class="title" text-anchor="middle">Release results</text>
+<text x="652.5" y="618" class="body" text-anchor="middle">Logs and tool results → report model</text>
+<text x="652.5" y="645" class="body" text-anchor="middle">Exports and retained history</text>
+<text x="440" y="700" class="body" text-anchor="middle">Each run has its own output folders, logs and report.</text>
+<text x="440" y="730" class="small" text-anchor="middle">HTML by default · JSON · JUnit · Markdown · GitHub summary</text>
+</svg>

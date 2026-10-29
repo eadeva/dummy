@@ -1,0 +1,102 @@
+/* Presentation for documentation entry pages; the supplied theme CSS is retained. */
+:root {
+    --sd-color-primary: #216b9e;
+    --sd-color-primary-highlight: #18547e;
+    --sd-color-primary-text: #fff;
+    --ptk-ink: #1d3548;
+    --ptk-muted: #465e70;
+    --ptk-border: #d8e3ec;
+    --ptk-blue: #2478ad;
+    --ptk-teal: #14796f;
+    --ptk-amber: #a66513;
+}
+
+.ptk-hero {
+    padding: 1.8rem 2rem;
+    margin: 1.2rem 0 2rem;
+    background: #f0f6fb;
+    border: 1px solid #d4e4f0;
+    border-left: 5px solid var(--ptk-blue);
+    border-radius: 0 12px 12px 0;
+    color: var(--ptk-ink);
+}
+.ptk-hero .ptk-hero-title {
+    font-size: clamp(1.7rem, 3vw, 2.4rem);
+    font-weight: 800;
+    line-height: 1.2;
+    margin: 0 0 1rem;
+}
+.ptk-hero .ptk-lead p { font-size: 1.22rem; line-height: 1.55; }
+.ptk-hero > p { max-width: 78ch; }
+.ptk-hero-note p { color: var(--ptk-muted); font-size: .9rem; margin: .8rem 0 0; }
+.ptk-actions { display: flex; flex-wrap: wrap; gap: .7rem; }
+.ptk-actions > p { margin: 0; }
+.ptk-actions .sd-btn { font-weight: 700; text-decoration: none; padding: .6rem 1rem; }
+
+.rst-content .ptk-card {
+    border: 1px solid var(--ptk-border);
+    border-radius: 10px;
+    box-shadow: 0 2px 6px #1832470a !important;
+    overflow: hidden;
+    min-width: 0;
+    background: #fff;
+}
+.rst-content .ptk-card .sd-card-body { padding: 1.2rem 1.25rem; }
+.rst-content .ptk-card .sd-card-title {
+    color: var(--ptk-ink);
+    font-size: 1.1rem;
+    line-height: 1.4;
+    margin-bottom: .65rem;
+}
+.rst-content .ptk-card .sd-card-text { color: #364f61; font-size: .97rem; line-height: 1.6; }
+.rst-content .ptk-card .sd-card-text:last-child { margin-bottom: 0; }
+.rst-content .ptk-card .sd-card-footer {
+    background: #f6f9fb;
+    border-top: 1px solid #e3ebf0;
+    padding: .7rem 1.25rem;
+    font-size: .85rem;
+}
+.rst-content .ptk-card .sd-card-footer p { font-size: inherit; margin: 0; }
+.rst-content .ptk-card .sd-card-footer a { overflow-wrap: anywhere; }
+.rst-content .ptk-card.sd-card-hover:hover { border-color: var(--ptk-blue); }
+.rst-content .ptk-card:focus-within { outline: 3px solid #277ba4; outline-offset: 3px; }
+.rst-content .ptk-blue { border-top: 3px solid var(--ptk-blue); }
+.rst-content .ptk-teal { border-top: 3px solid var(--ptk-teal); }
+.rst-content .ptk-amber { border-top: 3px solid var(--ptk-amber); }
+.ptk-blue .sd-octicon { color: var(--ptk-blue); }
+.ptk-teal .sd-octicon { color: var(--ptk-teal); }
+.ptk-amber .sd-octicon { color: var(--ptk-amber); }
+.ptk-capabilities .sd-octicon, .ptk-benefits .sd-octicon { margin-right: .25rem; }
+
+.rst-content .ptk-diagram {
+    padding: 1rem;
+    margin: 1.5rem 0;
+    border: 1px solid var(--ptk-border);
+    border-radius: 12px;
+    background: #f8fafc;
+    text-align: center;
+}
+.rst-content .ptk-diagram img { width: 100%; max-width: 900px; height: auto; }
+.rst-content .ptk-diagram .caption { color: var(--ptk-muted); font-size: .9rem; }
+.rst-content .ptk-diagram .caption-text { font-style: normal; }
+.rst-content .ptk-metric .sd-card-body { padding: 1rem 1.2rem; }
+.rst-content .ptk-metric .sd-card-title { font-size: .92rem; font-weight: 600; }
+.rst-content .ptk-metric .ptk-number { font-size: 2.4rem; line-height: 1.1; font-weight: 800; color: var(--ptk-blue); margin: .35rem 0 .65rem; }
+.rst-content .ptk-metric .ptk-number p { font: inherit; color: inherit; margin: 0; }
+.rst-content .ptk-metric .sd-card-text { font-size: .88rem; }
+.rst-content .ptk-metric.ptk-teal .ptk-number { color: var(--ptk-teal); }
+.rst-content .ptk-metric.ptk-amber .ptk-number { color: var(--ptk-amber); }
+.ptk-overview-note { padding: .9rem 1rem; border-left: 3px solid var(--ptk-teal); background: #f2f8f6; margin: 1rem 0 1.5rem; }
+.ptk-overview-note p:last-child { margin-bottom: 0; }
+.rst-content .ptk-card table td, .rst-content .ptk-card table th { padding: .6rem .75rem; }
+
+@media (max-width: 767px) {
+    .ptk-hero { padding: 1.2rem; }
+    .ptk-hero .ptk-lead p { font-size: 1.08rem; }
+    .rst-content .ptk-diagram { padding: .4rem; }
+    .rst-content .ptk-card .sd-card-body { padding: 1rem; }
+}
+@media print {
+    .ptk-hero, .rst-content .ptk-card { box-shadow: none !important; }
+    .rst-content .ptk-card, .rst-content .ptk-diagram { break-inside: avoid; }
+}

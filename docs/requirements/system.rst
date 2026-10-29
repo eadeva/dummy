@@ -244,23 +244,3 @@ level or repeat every software rule. Derived formulations remain under review.
    **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
 
    **Evidence:** ``src/ptk/application/use_cases/authoring.py``; ``tests/test_editor_resources.py``.
-
-.. req-sys:: Documentation and traceability contract
-   :id: REQ_Sys_DOCS
-   :req_type: functional
-   :safety: QM
-   :security: false
-   :legal: false
-   :status: under review
-   :verification_criteria: A warning-free Sphinx build renders all chapters and need links; integrity checks validate mandatory attributes and relations without reading reference YAML.
-   :verification_level: system-verification
-   :req_satisfies: REQ_Stkh_DOCS
-   :tags: implemented
-
-   PTK documentation shall include user guides, a three-level requirements set, twelve architecture chapters, current reference and CI/CD guidance, built as RST without the legacy meta-model loader.
-
-   **Origin:** Refinement of the linked stakeholder requirement; review this system-level formulation.
-
-   **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
-
-   **Evidence:** ``docs/conf.py``; ``tests/test_documentation_requirements.py``.

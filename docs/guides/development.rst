@@ -114,6 +114,12 @@ configuration, while generated member jobs run through the real CLI.
 Documentation and skills
 ------------------------
 
+The documentation environment pins Sphinx 9.1.0, Sphinx-Needs 8.5.0, the
+Read the Docs theme 3.1.0 and Sphinx-Design 0.7.0. Sphinx-Design supplies
+RST grids and cards; repository-owned SVGs provide diagrams without a network
+renderer. Requirement overview counts come from Sphinx-Needs filters. Keep
+documentation authoring conventions separate from PTK product requirements.
+
 The configuration reference is generated from the validation models. Seventeen
 repository-local authoring skills are shipped under ``.claude/skills`` and
 included in the documentation. Tests check catalog completeness and source links.

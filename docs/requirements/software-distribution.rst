@@ -1,5 +1,5 @@
-Distribution, authoring and documentation
-=========================================
+Distribution and project authoring
+===================================
 
 Packaging, current-user setup and version-aligned authoring resources. Planned
 items are explicitly marked and must not be presented as supported commands.
@@ -163,66 +163,6 @@ items are explicitly marked and must not be presented as supported commands.
    **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
 
    **Evidence:** ``src/ptk/authoring_bundle.py``; ``tests/test_authoring_skills.py``.
-
-.. req-sw:: Publish structured RST documentation
-   :id: REQ_Sw_RST_DOCS
-   :req_type: functional
-   :safety: QM
-   :security: false
-   :legal: false
-   :status: accepted
-   :verification_criteria: Sphinx warnings-as-errors build succeeds and all twelve chapters and navigation sections are reachable.
-   :verification_level: sw-integration-test
-   :req_satisfies: REQ_Sys_DOCS
-   :tags: implemented
-
-   PTK shall build RST guides, requirements, twelve arc42 chapters, reference and CI/CD pages using the supplied theme/CSS and only required documentation dependencies.
-
-   **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
-
-   **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
-
-   **Evidence:** ``docs/conf.py``; ``tests/test_documentation_requirements.py``.
-
-.. req-sw:: Follow the requirements convention explicitly
-   :id: REQ_Sw_REQUIREMENT_CONVENTION
-   :req_type: functional
-   :safety: QM
-   :security: false
-   :legal: false
-   :status: accepted
-   :verification_criteria: Integrity checks validate IDs, lifecycle enums, cardinality and allowed link targets; removing archived reference inputs does not prevent a docs build.
-   :verification_level: sw-integration-test
-   :req_satisfies: REQ_Sys_DOCS
-   :tags: implemented
-
-   PTK documentation shall author feature, req-stkh, req-sys and req-sw directives with the supplied prefixes, mandatory attributes and traceability relations without loading the reference YAML.
-
-   **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
-
-   **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
-
-   **Evidence:** ``docs/conf.py``; ``tests/test_documentation_requirements.py``.
-
-.. req-sw:: Generate field reference from current models
-   :id: REQ_Sw_SCHEMA_REFERENCE
-   :req_type: functional
-   :safety: QM
-   :security: false
-   :legal: false
-   :status: under review
-   :verification_criteria: The built reference includes model-derived fields/defaults and field descriptions; model changes appear on the next build.
-   :verification_level: sw-integration-test
-   :req_satisfies: REQ_Sys_DOCS
-   :tags: implemented
-
-   PTK documentation shall generate configuration field tables from the same models used for CLI validation rather than maintaining a separate field catalog.
-
-   **Origin:** Derived from the current CLI implementation and regression tests; requires review.
-
-   **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
-
-   **Evidence:** ``docs/_ext/schema_reference.py``; ``config/ptk/jobs/docs.ptk.yml``.
 
 .. req-sw:: Generate native CI workflow files
    :id: REQ_Sw_CI_GENERATION

@@ -35,7 +35,7 @@ organizational, not requirements or implementation statuses.
 
    Grouping for the associated PTK stakeholder needs.
 
-.. feature:: Maintainable authoring and documentation
+.. feature:: Version-aligned project authoring
    :id: FEAT_AUTHORING
 
    Grouping for the associated PTK stakeholder needs.
@@ -259,22 +259,5 @@ organizational, not requirements or implementation statuses.
    PTK shall provide an expert agent and task-specific skills, including log analysis, using the installed CLI and project context rather than assumptions about PTK's own repository.
 
    **Origin:** Accepted authoring-agent, skill review and independence requests.
-
-   **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
-
-.. req-stkh:: Maintain structured CLI documentation
-   :id: REQ_Stkh_DOCS
-   :req_type: stakeholder technical requirement
-   :safety: QM
-   :security: false
-   :legal: false
-   :status_crs: accepted
-   :safety_relevance: no
-   :clustered_by: FEAT_AUTHORING
-   :tags: implemented
-
-   PTK shall publish RST guides, requirements and architecture based on current behavior, following the supplied requirements convention without loading its meta-model.
-
-   **Origin:** Accepted documentation restructure; include stakeholder, system and software requirements and identify future work.
 
    **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
