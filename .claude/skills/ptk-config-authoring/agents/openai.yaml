@@ -1,0 +1,4 @@
+interface:
+  display_name: "PTK Configuration Authoring"
+  short_description: "Discover and edit PTK configuration safely"
+  default_prompt: "Use $ptk-config-authoring to update this project configuration using its installed schema and file ownership."

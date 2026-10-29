@@ -20,6 +20,11 @@ def test_plan_skills_are_shipped_and_documented():
         metadata = yaml.safe_load(frontmatter)
         assert metadata["name"] == path.parent.name
         assert metadata["description"]
+        interface = yaml.safe_load((path.parent / "agents/openai.yaml").read_text())[
+            "interface"
+        ]
+        assert f"${path.parent.name}" in interface["default_prompt"]
+        assert 25 <= len(interface["short_description"]) <= 64
         assert path.parent.name in catalog
         for reference in re.findall(r"`((?:src/|docs/|tests/)[^`]+)`", body):
             assert (ROOT / reference).exists(), (path, reference)

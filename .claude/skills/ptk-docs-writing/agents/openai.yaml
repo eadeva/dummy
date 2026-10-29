@@ -1,0 +1,4 @@
+interface:
+  display_name: "PTK Documentation"
+  short_description: "Maintain tested documentation in the PTK checkout"
+  default_prompt: "Use $ptk-docs-writing to document this implemented PTK feature with verified commands."

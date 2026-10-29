@@ -6,9 +6,11 @@ description: Declare tool checks and installers or diagnose PTK self-service too
 
 # ptk-tools-setup
 
+First follow the [project discovery and execution guide](../../../docs/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
+
 1. Read [docs/configuration.rst](../../../docs/configuration.rst) and [docs/cli.rst](../../../docs/cli.rst); use `ptk maintainer config schema` for tool fields.
 
-2. Declare a check command, version range and version_regex matching the actual output.
+2. Inspect the selected job's inherited tool requirements and platform-specific definitions. Reuse existing tool keys and sources; declare a check command, version range and version_regex matching observed output.
 
 3. Add job requires_tools so missing or wrong tools are caught before execution.
 
@@ -31,8 +33,8 @@ description: Declare tool checks and installers or diagnose PTK self-service too
 Managed installations coexist by version/source identity. Verify the job-selected PATH; never append the entire cache. System and plugin installers remain host-shared. Use `environment.keep` for required host variables; PATH inheritance is a separate opt-in.
 
 
-For Toolbase, declare an exact package/version and relative executable directories; it is Windows-only. Toolbase-only entries are ignored on Linux. Do not add global PATH or shared `.env` mutations, and leave live Toolbase validation to the user's Windows environment.
+Only when the project uses Toolbase, declare an exact package/version and relative executable directories; it is Windows-only. Toolbase-only entries are ignored on Linux. Do not add global PATH or shared `.env` mutations, and leave live Toolbase validation to the user's Windows environment.
 
-For Artifactory, configure the HTTPS base URL, repository and exact path/name or AQL properties. The adapter uses curl, not JFrog CLI. Require a checksum (explicit or from AQL), default to unique selection, and provide bearer credentials through `token_env`, never YAML values. ZIP/tar and standalone files are supported; legacy 7z bundles require conversion.
+Only when the project uses Artifactory, configure the HTTPS base URL, repository and exact path/name or AQL properties. The adapter uses curl, not JFrog CLI. Require a checksum (explicit or from AQL), default to unique selection, and provide bearer credentials through `token_env`, never YAML values. ZIP/tar and standalone files are supported; legacy 7z bundles require conversion.
 
 `docker: false` is the default and disables installation only inside Docker. Keep version checks, report entries and existing tool activation. Use `docker: true` only when installation inside the image is intended. `PTK_DOCKER=1|0` overrides best-effort runtime detection.

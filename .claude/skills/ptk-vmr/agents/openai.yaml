@@ -1,4 +1,4 @@
 interface:
-  display_name: "PTK VMR"
+  display_name: "PTK Virtual Monorepo"
   short_description: "Operate and diagnose multi-repository PTK workspaces"
-  default_prompt: "Use $ptk-vmr to validate this workspace and diagnose repository tool isolation."
+  default_prompt: "Use $ptk-vmr to diagnose discovery and command routing in this workspace."

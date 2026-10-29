@@ -1,0 +1,4 @@
+interface:
+  display_name: "PTK Reporting"
+  short_description: "Configure reports and diagnose imported results"
+  default_prompt: "Use $ptk-reporting to inspect this run and configure the requested report outputs."

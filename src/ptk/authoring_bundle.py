@@ -23,6 +23,7 @@ SKILLS = (
     "ptk-package-preparation",
 )
 DOCS = (
+    "agent-guide",
     "cli",
     "configuration",
     "editor",

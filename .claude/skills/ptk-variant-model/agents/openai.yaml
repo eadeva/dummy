@@ -1,0 +1,4 @@
+interface:
+  display_name: "PTK Variant Model"
+  short_description: "Inspect features, constraints and project variants"
+  default_prompt: "Use $ptk-variant-model to update this project variant model while preserving existing selections."

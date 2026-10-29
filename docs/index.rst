@@ -18,6 +18,7 @@ isolated command environments, logs and reports. Python 3.12 or newer is require
    plugins
    reference
    skills
+   agent-guide
    editor
    packaging
    development

@@ -6,6 +6,8 @@ description: Document ptk features, configuration or project jobs and maintain
 
 # ptk-docs-writing
 
+Use this skill only in PTK's own source checkout. Confirm the checkout, project instructions and declared dependency groups first; do not impose PTK's development layout or test commands on consuming projects. For project-specific configuration, use [configuration authoring](../ptk-config-authoring/SKILL.md).
+
 1. Read `docs/index.rst`, `docs/configuration.rst` and the implementation for the feature.
 
 2. Use reStructuredText for Sphinx pages and add new pages to the toctree.

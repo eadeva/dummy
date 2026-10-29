@@ -5,6 +5,8 @@ description: Modify ptk core code, adapters, use cases or extension interfaces.
 
 # ptk-development
 
+Use this skill only in PTK's own source checkout. Confirm the checkout, project instructions and declared dependency groups first; do not impose PTK's development layout or test commands on consuming projects. For project-specific configuration, use [configuration authoring](../ptk-config-authoring/SKILL.md).
+
 1. Read `docs/development.rst`, `docs/PLAN.md` and the relevant tests before changing code.
 
 2. Keep dependencies inward: drivers -> application -> domain; adapters implement ports; wire concrete implementations in bootstrap.

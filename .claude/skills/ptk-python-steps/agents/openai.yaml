@@ -1,0 +1,4 @@
+interface:
+  display_name: "PTK Python Steps"
+  short_description: "Choose and diagnose project Python runtimes"
+  default_prompt: "Use $ptk-python-steps to diagnose the Python runtime selected for this job."

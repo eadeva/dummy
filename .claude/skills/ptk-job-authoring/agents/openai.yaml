@@ -1,0 +1,4 @@
+interface:
+  display_name: "PTK Job Authoring"
+  short_description: "Author jobs using discovered project settings"
+  default_prompt: "Use $ptk-job-authoring to update this job using the existing parameters and runtime conventions."

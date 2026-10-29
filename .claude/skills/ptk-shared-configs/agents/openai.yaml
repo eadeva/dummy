@@ -1,0 +1,4 @@
+interface:
+  display_name: "PTK Shared Configurations"
+  short_description: "Manage declared tool configs and generated files"
+  default_prompt: "Use $ptk-shared-configs to preview changes to this project managed tool configuration."

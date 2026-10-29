@@ -1,0 +1,4 @@
+interface:
+  display_name: "PTK Tools Setup"
+  short_description: "Inspect tool requirements and scoped installations"
+  default_prompt: "Use $ptk-tools-setup to diagnose this job tool requirements and propose the needed setup."

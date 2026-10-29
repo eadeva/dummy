@@ -6,6 +6,8 @@ description: Manage ptk shared pre-commit, Ruff and clang configuration with pro
 
 # ptk-shared-configs
 
+First follow the [project discovery and execution guide](../../../docs/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
+
 1. Read [docs/configuration.rst](../../../docs/configuration.rst); inspect available configuration fields with `ptk maintainer config schema` and preview effective files with `ptk maintainer sync configs --diff`.
 
 2. Manage only tools declared under `configs`. Edit overlays rather than generated outputs.
@@ -18,7 +20,7 @@ description: Manage ptk shared pre-commit, Ruff and clang configuration with pro
 
 6. Preview `ptk maintainer sync configs --diff`, apply `ptk maintainer sync configs`, then run `ptk maintainer sync configs --check`.
 
-7. Commit effective files and overlays together so CI and tools see the same configuration.
+7. Keep generated files and authored overlays consistent in the reviewed diff; follow the project's tracking policy. Commit or push only within the user's authorized scope.
 
 8. Run the actual affected formatter or linter when available. Keep optional binary-dependent checks explicit.
 
@@ -28,7 +30,7 @@ description: Manage ptk shared pre-commit, Ruff and clang configuration with pro
     before developers run jobs. Local jobs automatically install/repair the hooks;
     workflows check each participating repository before starting jobs. This works
     for normal users and does not synchronize configuration. Help, previews, CI,
-    and disabled entries do not install hooks. Diagnose with `self-service doctor`.
+    and disabled entries do not install hooks. Diagnose with `ptk self-service doctor`.
 
 11. Preserve existing hooks and custom Git settings. Resolve `core.hooksPath`,
     hook-file symlink or `.legacy` backup conflicts with the maintainer; do not

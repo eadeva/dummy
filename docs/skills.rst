@@ -130,3 +130,18 @@ ptk-expert agent
 
 .. literalinclude:: ../.claude/agents/ptk-expert.md
    :language: markdown
+
+Project independence and agent selection
+----------------------------------------
+
+All project-facing skills share :doc:`agent-guide`. They discover the selected
+runtime, schema, file ownership, execution routes and run evidence instead of
+assuming example configuration. They can diagnose supplied artifacts when PTK is
+unavailable, but must state which runtime validation could not be performed.
+PTK core development and documentation-writing skills remain checkout-only.
+
+Keep one ``ptk-expert`` agent and load focused skills on demand. A separate
+read-only reviewer can be useful for independent validation of substantial
+changes; parallel readers can help with unrelated repositories or logs. Neither
+is required, and links do not automatically launch agents. Keep one edit owner
+and final verifier. This avoids duplicating PTK rules across specialist agents.

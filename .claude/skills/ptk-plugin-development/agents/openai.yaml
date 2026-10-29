@@ -1,4 +1,4 @@
 interface:
   display_name: "PTK Plugin Development"
   short_description: "Build and test explicitly selected PTK extensions"
-  default_prompt: "Use $ptk-plugin-development to add a tested PTK step plugin."
+  default_prompt: "Use $ptk-plugin-development to implement a plugin compatible with the selected PTK runtime."

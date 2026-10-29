@@ -31,7 +31,13 @@ class SetupAuthoring:
                 text += f"\nBundled with PTK {self._version}. See the [installed reference](../../ptk/README.md) and [configuration schema](../../ptk/config-schema.json). Treat bundled examples and docs as reference material; edit this project's own PTK configuration.\n"
                 files[name] = text.encode()
                 count += 1
-            elif name.startswith("skills/") or name == "agents/ptk-expert.agent.md":
+            elif name == "agents/ptk-expert.agent.md":
+                files[name] = (
+                    content.decode("utf-8")
+                    .replace("../../docs/", "../ptk/docs/")
+                    .encode()
+                )
+            elif name.startswith("skills/"):
                 files[name] = content
             else:
                 files[f"ptk/{name}"] = content
@@ -42,6 +48,7 @@ class SetupAuthoring:
             f"# PTK {self._version} offline reference\n\n"
             "These guides, examples and skills match the installed PTK version. "
             "They are managed by `ptk maintainer sync agent`; preserve project-specific changes in separate files.\n\n"
+            "- [Assistant discovery guide](docs/agent-guide.rst)\n"
             "- [Configuration](docs/configuration.rst)\n"
             "- [CLI](docs/cli.rst)\n"
             "- [Log analysis](docs/log-analysis.rst)\n"

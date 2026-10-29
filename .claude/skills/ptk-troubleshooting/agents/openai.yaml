@@ -1,0 +1,4 @@
+interface:
+  display_name: "PTK Troubleshooting"
+  short_description: "Diagnose configuration, environment and run failures"
+  default_prompt: "Use $ptk-troubleshooting to diagnose this PTK failure using existing project evidence."

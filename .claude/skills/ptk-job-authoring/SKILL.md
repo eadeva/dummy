@@ -1,12 +1,13 @@
 ---
 name: ptk-job-authoring
-description: Add or modify ptk jobs, parameters, nested steps, conditions and maintainer
-  visibility.
+description: Add, change or explain PTK jobs, typed parameters, nested steps, conditions, runtime variables and maintainer visibility in an existing or new project.
 ---
 
 # ptk-job-authoring
 
-1. Read [docs/configuration.rst](../../../docs/configuration.rst) and use `ptk maintainer config schema` for exact fields.
+First follow the [project discovery and execution guide](../../../docs/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
+
+1. Read [configuration](../../../docs/configuration.rst), the owning job document and referenced tools/parameters. Use the installed document schema for exact fields. Preserve existing job names, scripts, selected runtimes and output conventions unless the requested change requires otherwise.
 
 2. Use ordered, uniquely named steps with exactly one of `run`, `uses`, or `steps`.
 
@@ -18,20 +19,17 @@ description: Add or modify ptk jobs, parameters, nested steps, conditions and ma
 
 6. Apply `parallel` only to sets; `python` and `passthrough` only to run steps; `with` only to built-ins.
 
-7. Read the built-in contracts in [docs/plugins.rst](../../../docs/plugins.rst); including echo, wait, report.import, configs.sync, tools.ensure, files.copy, files.clean variant.generate and version.generate.
+7. Read the built-in contracts in [docs/plugins.rst](../../../docs/plugins.rst); for available built-ins and selected plugins. Do not invent a `uses` name from a tool binary name.
 
-8. Preview `ptk -V VARIANT JOB --dry-run`; check `ptk JOB --help` and top-level `--from/--to` boundaries.
+8. Use the discovered execution/help paths, including any maintainer prefix. Preview the affected job; add `-V VARIANT` only for an actual variant. Check parameter choices/help and top-level `--from/--to` boundaries.
 
-9. After changes, run the affected job in a disposable example and inspect logs and reports.
+9. Validate the edit and preview the affected path. Run a focused check only within the authorized scope, using disposable inputs where possible; inspect its actual output paths and exit status.
 
-10. Regenerate `ptk maintainer sync tasks --users-only` if committing tasks; verify maintainer-only jobs stay hidden for users.
+10. If the requested change affects maintained VS Code tasks, update them with `ptk maintainer sync tasks`, preserving the project's user/maintainer task policy; use `--users-only` when explicitly wanted.
 
 11. Background processes are finite and joined at their containing group boundary. Group retries repeat all children; Python handlers must cooperate with deadlines. Use `files.clean` only within generated workspace folders.
 
-For version discovery, read [docs/versioning.rst](../../../docs/versioning.rst). Keep `.main.ptk.yml` minimal; use `ptk init --config-dir PATH` for starter documents. Maintain `versioning.ptk.yml`, never commit `.gen.version.ptk.yml`. Use `PTK_VERSION_ALIAS_COMPONENT_NAME` and `${version.projects.alias.value}`; generators consume the run snapshot. Declare VMR version dependencies and their variants explicitly. Do not add bump/tag operations.
-
-
-To combine existing jobs locally, use [workflow configuration](../../../docs/workflows.rst) and the `ptk-workflow-authoring` skill. Put each workflow body in `workflows/<name>.ptk.yml` under the configured folder; workspace workflows use the same directory at the VMR root. Workflows preserve each call's repository settings and never run wholesale on CX. GitHub job/template generation is deferred.
+Read [versioning](../ptk-versioning/SKILL.md) only for version sources or generated version files, and [workflow authoring](../ptk-workflow-authoring/SKILL.md) to compose existing jobs.
 
 Use `audience: maintainer` for configuration-writing or release jobs. Maintainer
 IDs are plain login strings in `maintainers.ptk.yml`, never Git-email records.

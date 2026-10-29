@@ -1,0 +1,4 @@
+interface:
+  display_name: "PTK Core Development"
+  short_description: "Develop and verify changes in PTK itself"
+  default_prompt: "Use $ptk-development to fix this issue in the PTK source checkout and run focused checks."
