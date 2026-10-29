@@ -7,7 +7,7 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
 
 1. Install PTK using `install/install.ps1` or `install/install.sh`. Both install
    the extension bundled in the Python package when VS Code is available. The CLI must
-   support `ptk describe --json` (inventory schema version 2).
+   support `ptk describe --json --configuration` (inventory and configuration interface version 2).
 2. If PTK was installed directly with uv, run `ptk self-service extension` afterwards.
    Alternatively, in VS Code run **Extensions: Install from VSIX...** and select
    `project-toolkit-0.10.0.vsix`. You can also use
@@ -42,7 +42,7 @@ to prepare the environment, then configure:
 ```
 
 The extension adds `--no-sync` to existing `uv`/`uv.exe` settings beginning with
-`run`, for both discovery and tasks. This prevents a validate --versions, tree refresh,
+`run`, for both discovery and tasks. This prevents a version check, tree refresh,
 help request or other command from reinstalling the environment that runs PTK.
 Run `uv sync` explicitly after changing dependencies. Job steps can still prepare
 their own Python runtimes normally; the extension does not set `UV_NO_SYNC`.
@@ -53,6 +53,35 @@ project. Discovery errors appear in **Output > Project Toolkit** and on the
 workspace node. Click a **PTK unavailable** node to show the exact error.
 Set `projectToolkit.discoveryTimeout` (seconds) for slow projects.
 
+## Compatibility with PTK
+
+**PTK defines the capabilities; the extension presents them.** The extension
+uses PTK's CLI and JSON interface, not Python imports or an exact package version.
+`ptk describe --json --configuration` supplies loaded values, schemas, field help,
+file ownership, diagnostics, variables, jobs, workflows, variants, parameters and
+permitted command paths/options. PTK handles loading, full validation and execution;
+the extension renders the UI, writes YAML using PTK's mappings and reloads it.
+
+Compatible additions appear after refresh without rebuilding the extension:
+ordinary configuration fields, descriptions, defaults, choices, jobs, workflows,
+variants and built-in commands using supported inventory/schema structures.
+For example, a new optional integer field can use the existing numeric input and
+help display. New required values may still need to be filled in existing YAML.
+
+New widgets, unsupported schema constructs or parameter types, and changes to
+the CLI operations used by dedicated actions can require an extension update.
+Some action paths and flags are known by the extension, including validation,
+reports, initialization, variants, dry runs and cleanup; the schema alone is
+not the full contract.
+
+Extension 0.10.0 requires inventory `schema_version: 2` and
+`configuration.version: 2`. These are independent of package/release numbers
+and the project marker's schema version. Unsupported interfaces are rejected;
+there is no legacy parser or runtime schema fallback. Breaking changes must
+update the affected interface version, extension and integration tests together.
+The bundled VSIX provides a tested pair without requiring matching release numbers.
+See the full [compatibility contract](../../docs/editor.rst#ptk-and-extension-compatibility).
+
 ## Use
 
 Template-capable configuration inputs have a **${}** button (**Insert variable…**) and autocomplete
@@ -62,8 +91,8 @@ reloading the form or losing unfinished text. Environment placeholders select
 the name for editing. The installed PTK supplies the catalogue and tells the
 form which fields support templates. Job parameters are scoped to their job;
 credential references are only offered for step environment values. No resolved
-environment or credential values are displayed. Update PTK and extension 0.10.0
-together.
+environment or credential values are displayed. Compatible catalogue additions
+are read from PTK after refresh.
 
 PTK resolves `${git.branch}`, `${git.commit}`, `${git.short_commit}`, `${git.tag}`,
 `${git.tags}` and `${git.dirty}` at runtime. PR commit identity comes from the
@@ -89,7 +118,6 @@ labels and icon shapes also identify each category.
   latest saved aggregate report. If no report is available, the task terminal
   prints an **Info** message that it has not run yet or its saved report was
   removed. The action does not run the job/workflow or prompt for parameters.
-  Update PTK from the same checkout as extension 0.3.2 for this action.
 - Use the parameter icon or **Run Job with Parameters** in the command palette
   to open a single form with text/number fields, boolean checkboxes, choices,
   help and authored defaults. Jobs with required non-secret parameters open it
@@ -121,7 +149,7 @@ labels and icon shapes also identify each category.
   PTK's maintainer permissions. Report files and explicit opening use the machine
   running PTK; no local browser-link server is started.
 
-The built-in tree omits the duplicate `run`, `dry-run` and `report` branches,
+The built-in tree omits the duplicate `run` and `report` branches,
 including their workflow equivalents. These operations are available directly
 on jobs/workflows. Other built-in commands and CLI help remain available.
 

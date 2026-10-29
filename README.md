@@ -399,6 +399,13 @@ schema under `.github/ptk`. Relative links work without a PTK checkout or networ
 access. `ptk maintainer sync skills --check` checks drift; updates preserve custom
 skills and refuse to overwrite local edits. See [editor setup](docs/editor.rst).
 
+The extension consumes PTK's versioned CLI/JSON interface: schemas, loaded values,
+file ownership, diagnostics and available commands. Compatible fields, jobs,
+workflows and parameters appear after refresh without an extension rebuild.
+New UI behavior or breaking interface changes require an extension update;
+package and extension release numbers do not need to match. See the
+[compatibility contract](docs/editor.rst#ptk-and-extension-compatibility).
+
 ## Version discovery and initialization
 
 `ptk init` requires a configuration folder, supplied at the terminal prompt

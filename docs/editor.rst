@@ -9,7 +9,7 @@ sidebar for jobs, workflows, built-in commands, variants and configuration files
 Run ``ptk self-service extension`` to install the VSIX bundled with the Python package,
 then open a trusted PTK
 repository or VMR. PTK must be installed on the workspace host and support
-``ptk describe --json``. The extension requires VS Code 1.96 or newer.
+``ptk describe --json --configuration``. The extension requires VS Code 1.96 or newer.
 
 Both installers run extension setup automatically when ``code`` is available.
 Use ``install.ps1 -NoExtension`` or ``install.sh --no-extension`` to skip it.
@@ -43,8 +43,8 @@ The remaining tree commands have Run, Options and Help icons. Required
 arguments are prompted automatically; the gear lets you supply optional values.
 Credential values and vault passwords stay in PTK's hidden terminal prompts.
 **CLI help** displays ``ptk --help``; **help** opens PTK's HTML help.
-Update PTK from the same checkout to expose the command tree. Older inventories
-retain job actions and CLI help, with an update hint for built-in browsing.
+The command tree requires a supported PTK inventory; incompatible inventories
+show an update error. See :ref:`extension-compatibility`.
 
 Expand a job to check one or more variants. Run, Dry Run, Clean and Re-run launch
 the selected variants in parallel, with a separate named task and terminal for
@@ -67,7 +67,7 @@ for help, or activate **?** to expand the explanation, default and constraints.
 Help is supplied by the installed PTK's schema, generated from Pydantic field
 descriptions. The optional-field selector shows the same help before insertion.
 Open help survives save replies, and typing retains the existing deferred-save
-behavior. Update PTK and the extension together to receive the new descriptions.
+behavior. Compatible additions to PTK's field descriptions appear after refresh.
 
 Tree and form place scalar fields before objects and lists. At the root, scalar
 metadata is followed by repository/project identity, variants and components,
@@ -105,6 +105,84 @@ Set ``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
 integration tests. CI builds downloadable VSIX artifacts on Linux and Windows;
 Marketplace publication is separate. See the extension README for installation,
 settings and manual smoke-test instructions.
+
+.. _extension-compatibility:
+
+PTK and extension compatibility
+-------------------------------
+
+PTK defines the capabilities; the extension presents them. The extension depends
+on PTK's versioned JSON interface and CLI behavior, not only on its configuration
+schema. It starts the configured PTK executable on the workspace host; it does
+not import Python modules or require an exact Python-package release version.
+Discovery calls::
+
+   ptk describe --json --configuration
+
+.. list-table:: Responsibilities at the integration boundary
+   :header-rows: 1
+   :widths: 45 55
+
+   * - PTK supplies or performs
+     - The extension uses it for
+   * - Loaded values, document ownership, source locations and fingerprints
+     - The logical configuration tree and edits to the correct YAML files
+   * - Schemas, defaults, descriptions, constraints and field-order metadata
+     - Generic forms, required-item initialization and field help
+   * - Jobs, workflows, variants, parameters and permitted built-in commands
+     - Available actions, variant selection and parameter forms
+   * - Command paths and built-in argument/option metadata
+     - Launching PTK through VS Code tasks
+   * - Validation diagnostics and template-variable metadata
+     - Errors, variable suggestions and field-specific insertion rules
+
+PTK owns discovery, configuration assembly, full validation, permissions and job
+or workflow execution. The extension writes YAML using PTK's ownership mappings,
+then reloads through PTK. Its form checks assist editing; they do not replace
+PTK's full validation. The bundled schema is not a runtime fallback.
+
+Compatible additions
+~~~~~~~~~~~~~~~~~~~~~
+
+After refresh, the existing extension can recognize new jobs, workflows,
+variants, supported parameter types, configuration fields and permitted built-in
+commands exposed through the existing inventory structures. New defaults,
+choices, descriptions and supported constraints need no extension rebuild.
+For example, an optional integer ``timeout`` field with a default and description
+can be offered by the form as a numeric input with help. Adding fields does not
+migrate existing YAML; new required values can still require user edits.
+
+PTK's internal loading implementation can also change independently, provided
+the exported values, schemas, ownership mappings and command behavior preserve
+the contract. New Python code alone does not require a new extension release.
+
+Compatibility limits and versioning
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The extension supports a defined set of schema constructs and parameter types,
+not every possible JSON Schema feature. A new widget, unsupported schema
+construct, parameter type or specialized action can require extension changes.
+Although PTK supplies execution paths, dedicated actions still use known CLI
+operations and flags, including validation, reports, initialization,
+``--variant``, ``--dry-run``, ``--param``, ``--clean`` and ``--re-run``.
+Changing those semantics can break compatibility even if the schema is unchanged.
+
+Extension 0.10.0 requires inventory ``schema_version: 2`` and per-project
+``configuration.version: 2``. These are interface versions, separate from the
+PTK package version, extension version and project marker's ``schema_version``.
+Unsupported interface versions or malformed inventories are rejected with an
+error; there is no legacy parser or schema fallback.
+
+When evolving PTK, keep compatible additions within the supported contract.
+Treat removal or reinterpretation of required metadata, command semantics or
+editing mappings as a breaking change: update the affected interface version,
+extension and integration tests together. An unchanged version number alone
+does not guarantee compatibility. The recent CLI reorganization required an
+inventory-version and extension update because command routing changed.
+
+Bundling the VSIX in PTK distributes a tested pair; it does not require both
+projects to have matching release numbers. Use the installers or
+``ptk self-service extension`` to apply the bundled extension when needed.
 
 Developing PTK locally
 ----------------------
@@ -156,7 +234,7 @@ surrounding text, cursor and unsaved draft and does not reload configuration.
 The installed PTK supplies the catalogue, field capabilities and current job's
 parameter names. Runtime availability is described rather than evaluated in
 the editor. Environment and credential values are never previewed.
-Update PTK and extension 0.10.0 together to use this feature.
+The catalogue follows the compatibility contract in :ref:`extension-compatibility`.
 
 Generated tasks and offline resources
 -----------------------------------------
@@ -220,7 +298,7 @@ latest saved aggregate report. Missing reports produce an informational message
 in the task terminal, without running anything. Saved tasks with ``report: true``
 remain report requests when rerun.
 
-Update PTK together with extension 0.10.0. The CLI operations are
+The CLI operations are
 ``ptk report open --if-exists JOB`` and ``ptk report open --workflow NAME --if-exists``.
 Omitting ``--if-exists`` retains an error for missing reports. Configured
 ``open_report`` policies continue to open reports after local runs. Remote
