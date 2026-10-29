@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.0
+
+- Use PTK discovery and its invocation directory/repository prefix; remove `--config` from tasks. Requires inventory protocol 3 and configuration interface 2.
+- Add job/workflow run-options forms with variant choices, help and declared parameter values. Jobs support multiple variants and `--from`/`--to` step dropdowns with titles.
+- Show PTK-provided feature and passthrough-step suggestions, preserve run options when restoring tasks, and reject stale choices before starting a batch.
+- Install the bundled extension with the updated PTK package.
+
 ## 0.10.0
 
 - Follow PTK's canonical job/workflow command paths, including maintainer-only targets, using inventory protocol 2.

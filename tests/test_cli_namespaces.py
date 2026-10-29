@@ -12,6 +12,11 @@ from tests.conftest import grant_maintainer
 from tests.project_files import write_project
 
 
+@pytest.fixture(autouse=True)
+def project_directory(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+
+
 def project(root):
     def job(marker, audience="all"):
         return {
@@ -53,7 +58,7 @@ def project(root):
         },
     )
     grant_maintainer(root)
-    return ["-C", str(root / ".main.ptk.yml")]
+    return []
 
 
 @pytest.mark.parametrize(

@@ -1,18 +1,17 @@
-from tests.project_files import write_workflows
-
 """Maintainer command visibility and denial through real CLI entry points."""
 
 import re
+from pathlib import Path
 
 import pytest
 import yaml
 from click.shell_completion import BashComplete
-from click.testing import CliRunner
 from rich.text import Text
 
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.conftest import grant_maintainer
-from tests.project_files import read_project, write_project
+from tests.project_files import read_project, write_project, write_workflows
 from tests.test_workspace import workspace
 
 MUTATIONS = [
@@ -56,7 +55,9 @@ def test_mutation_commands_denied_before_side_effects(tmp_path, args, forced):
         tmp_path, command_audience={"maintainer.sync": "all", "variant": "all"}
     )
     before = snapshot(tmp_path)
-    result = CliRunner(env={"PTK_ROLE": forced}).invoke(cli, ["-C", str(config), *args])
+    result = CliRunner(env={"PTK_ROLE": forced}).invoke(
+        cli, [*args], cwd=Path(config).parent
+    )
     assert result.exit_code != 0 and "maintainer-only" in result.output, result.output
     assert snapshot(tmp_path) == before
 
@@ -64,7 +65,7 @@ def test_mutation_commands_denied_before_side_effects(tmp_path, args, forced):
 def test_normal_help_html_and_completion_exclude_mutations(tmp_path):
     config = project(tmp_path)
     runner = CliRunner(env={"PTK_ROLE": "user"})
-    base = ["-C", str(config)]
+    base = []
     for group, hidden, shown in [
         ([], ["maintainer", "describe", "run"], ["self-service", "validate", "init"]),
         (
@@ -74,7 +75,7 @@ def test_normal_help_html_and_completion_exclude_mutations(tmp_path):
         ),
         (["variant"], ["set", "new", "gui", "check"], ["list", "show", "explain"]),
     ]:
-        result = runner.invoke(cli, [*base, *group, "--help"])
+        result = runner.invoke(cli, [*base, *group, "--help"], cwd=Path(config).parent)
         assert result.exit_code == 0, result.output
         text = Text.from_ansi(result.output).plain
         for name in hidden:
@@ -86,7 +87,9 @@ def test_normal_help_html_and_completion_exclude_mutations(tmp_path):
         assert not values.intersection(hidden)
         assert set(shown) <= values
     out = tmp_path / "help.html"
-    result = runner.invoke(cli, [*base, "help", "--no-open", "-o", str(out)])
+    result = runner.invoke(
+        cli, [*base, "help", "--no-open", "-o", str(out)], cwd=Path(config).parent
+    )
     assert result.exit_code == 0, result.output
     html = out.read_text()
     for command in (
@@ -99,7 +102,7 @@ def test_normal_help_html_and_completion_exclude_mutations(tmp_path):
     ):
         assert f"ptk {command}" not in html
     for args in MUTATIONS:
-        result = runner.invoke(cli, [*base, *args, "--help"])
+        result = runner.invoke(cli, [*base, *args, "--help"], cwd=Path(config).parent)
         assert result.exit_code != 0 and "maintainer-only" in result.output
 
 
@@ -119,16 +122,18 @@ def test_missing_or_invalid_configuration_does_not_expose_mutations(
             (tmp_path / "maintainers.ptk.yml").write_text(
                 "maintainers: [{user: old-schema}]"
             )
-            base = ["-C", str(tmp_path / ".main.ptk.yml")]
+            base = []
         for args in (
             ["maintainer", "sync", "configs"],
             ["maintainer", "--help"],
         ):
-            result = runner.invoke(cli, [*base, *args])
-            assert result.exit_code != 0 and "maintainer-only" in result.output, (
-                result.output
+            result = runner.invoke(cli, [*base, *args], cwd=tmp_path)
+            assert result.exit_code != 0, result.output
+            assert (
+                "maintainer-only" in result.output
+                or "entry file requires" in result.output
             )
-        help_result = runner.invoke(cli, [*base, "--help"])
+        help_result = runner.invoke(cli, [*base, "--help"], cwd=tmp_path)
         assert help_result.exit_code == 0, help_result.output
         assert "vscode" not in help_result.output
 
@@ -137,14 +142,22 @@ def test_listed_user_can_edit_but_downgrade_cannot(tmp_path):
     config = project(tmp_path)
     grant_maintainer(tmp_path)
     runner = CliRunner(env={"PTK_ROLE": ""})
-    base = ["-C", str(config)]
-    assert "maintainer" in runner.invoke(cli, [*base, "--help"]).output
-    result = runner.invoke(cli, [*base, "maintainer", "sync", "configs"])
+    base = []
+    assert (
+        "maintainer"
+        in runner.invoke(cli, [*base, "--help"], cwd=Path(config).parent).output
+    )
+    result = runner.invoke(
+        cli, [*base, "maintainer", "sync", "configs"], cwd=Path(config).parent
+    )
     assert result.exit_code == 0, result.output
     assert (tmp_path / "ruff-base.toml").exists()
     before = snapshot(tmp_path)
     result = runner.invoke(
-        cli, [*base, "maintainer", "sync", "configs"], env={"PTK_ROLE": "user"}
+        cli,
+        [*base, "maintainer", "sync", "configs"],
+        env={"PTK_ROLE": "user"},
+        cwd=Path(config).parent,
     )
     assert result.exit_code != 0 and "maintainer-only" in result.output
     assert snapshot(tmp_path) == before
@@ -159,20 +172,28 @@ def test_explicit_policy_protects_self_service_operations(tmp_path):
         },
     )
     runner = CliRunner(env={"PTK_ROLE": "user"})
-    base = ["-C", str(config)]
+    base = []
     for args in (
         ["self-service", "creds", "list"],
         ["self-service", "creds", "list"],
         ["self-service", "tools", "--dry-run"],
         ["self-service", "tools", "--dry-run"],
     ):
-        result = runner.invoke(cli, [*base, *args])
+        result = runner.invoke(cli, [*base, *args], cwd=Path(config).parent)
         assert result.exit_code != 0 and "maintainer-only" in result.output
-    assert "creds" not in runner.invoke(cli, [*base, "self-service", "--help"]).output
+    assert (
+        "creds"
+        not in runner.invoke(
+            cli, [*base, "self-service", "--help"], cwd=Path(config).parent
+        ).output
+    )
     grant_maintainer(tmp_path)
     assert (
         runner.invoke(
-            cli, [*base, "self-service", "creds", "list"], env={"PTK_ROLE": ""}
+            cli,
+            [*base, "self-service", "creds", "list"],
+            env={"PTK_ROLE": ""},
+            cwd=Path(config).parent,
         ).exit_code
         == 0
     )
@@ -190,7 +211,7 @@ def test_developer_installation_credentials_and_read_commands_remain_available(
         ["validate"],
         ["variant", "show"],
     ):
-        result = runner.invoke(cli, ["-C", str(config), *args])
+        result = runner.invoke(cli, [*args], cwd=Path(config).parent)
         assert result.exit_code == 0, result.output
 
 

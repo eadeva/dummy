@@ -448,18 +448,103 @@
     }, ""));
     box.append(row, help); main.append(box);
   }
+  function variantControls(container, selected, onChange) {
+    const choices = state.variantChoices || [];
+    if (!choices.length) return () => [];
+    const section = el("section", undefined, { className: "run-variants" });
+    section.append(el("h2", state.kind === "workflow" ? "Owner variant" : "Variants"));
+    section.append(el("p", state.kind === "workflow" ? "Choose one owner variant. PTK applies its repository mappings." : "Select one or more variants to run in parallel. Choices apply to this run.", { className: "help" }));
+    if (state.variantHelp) {
+      const details = el("details"); details.append(el("summary", "Variant help"), el("p", state.variantHelp, { className: "help" })); section.append(details);
+    }
+    const defaults = state.defaultVariant ? `Use project default (${state.defaultVariant})` : "Use project default (none configured)";
+    const inputs = [];
+    for (const item of [{ name: "", description: defaults }, ...choices]) {
+      const label = el("label", undefined, { className: "variant-choice" });
+      const input = el("input", undefined, { type: state.kind === "workflow" ? "radio" : "checkbox", name: "run-variant", value: item.name, "aria-label": item.name || defaults });
+      input.checked = item.name ? state.useDefault !== true && selected.includes(item.name) : state.useDefault === true || !selected.length;
+      const text = el("span", item.name || defaults);
+      if (item.name && item.description) text.append(el("small", item.description, { className: "help" }));
+      if (item.aliases?.length) text.append(el("small", `Aliases: ${item.aliases.join(", ")}`, { className: "help" }));
+      label.append(input, text); section.append(label); inputs.push(input);
+      input.addEventListener("change", () => {
+        if (input.checked && !item.name) for (const other of inputs) { if (other !== input) other.checked = false; }
+        else if (input.checked) inputs[0].checked = false;
+        if (!inputs.some(other => other.checked)) inputs[0].checked = true;
+        onChange(inputs.filter(other => other.checked && other.value).map(other => other.value));
+        showIssue("");
+      });
+    }
+    container.append(section);
+    return () => inputs.filter(input => input.checked && input.value).map(input => input.value);
+  }
+
+  function executionControls(container) {
+    const specs = state.runOptions || [];
+    if (!specs.length) return () => ({});
+    const section = el("section", undefined, { className: "run-options" });
+    section.append(el("h2", "Run options"));
+    const advanced = el("details"); advanced.append(el("summary", "More run options"));
+    const controls = [];
+    for (const spec of specs) {
+      const id = `run-option-${spec.name}`;
+      const field = el("div", undefined, { className: "run-option" });
+      const label = el("label", spec.option, { for: id });
+      const description = el("p", spec.help || "Optional; omit to use PTK's default.", { className: "help", id: `${id}-help` });
+      let input;
+      if (spec.choices.length) {
+        input = el("select", undefined, { id });
+        input.append(el("option", "Use default", { value: "" }));
+        for (const value of spec.choices) {
+          const detail = spec.suggestions?.find(item => item.value === value)?.help;
+          input.append(el("option", detail && detail !== "Top-level step" ? `${value} — ${detail}` : value, { value }));
+        }
+      } else if (spec.multiple) {
+        input = el("textarea", undefined, { id, rows: 2, placeholder: "One value per line" });
+        description.append(document.createTextNode(" Enter one value per line; spaces within each value are preserved."));
+      } else input = el("input", undefined, { id, type: spec.is_flag ? "checkbox" : "text" });
+      input.setAttribute("aria-describedby", `${id}-help`);
+      field.append(label, input, description);
+      if (!spec.choices.length && spec.suggestions?.length) {
+        const suggestions = el("div", undefined, { className: "run-suggestions", "aria-label": `${spec.option} suggestions` });
+        for (const item of spec.suggestions) {
+          const action = button(item.value, () => {
+            input.value = spec.multiple && input.value ? `${input.value}\n${item.value}` : item.value;
+            input.focus(); showIssue("");
+          });
+          action.title = item.help || item.value;
+          suggestions.append(action);
+        }
+        field.append(suggestions);
+      }
+      input.addEventListener("input", () => showIssue(""));
+      (spec.name === "start" || spec.name === "end" ? section : advanced).append(field);
+      controls.push({ spec, input });
+    }
+    section.append(advanced); container.append(section);
+    return () => Object.fromEntries(controls.flatMap(({ spec, input }) => {
+      const values = spec.is_flag ? input.checked ? ["true"] : [] : spec.multiple ? input.value.split(/\r?\n/).filter(value => value.trim()) : input.value ? [input.value] : [];
+      return values.length ? [[spec.name, values]] : [];
+    }));
+  }
+
   function renderParameters() {
     app.replaceChildren();
     app.className = "parameter-editor";
     const header = el("header");
     const variants = state.variants || (state.variant ? [state.variant] : []);
-    header.append(el("div", "PTk / Job parameters", { className: "brand" }), el("h1", state.name), el("p", [state.project, variants.length && `${variants.length > 1 ? "Variants (parallel)" : "Variant"}: ${variants.join(", ")}`].filter(Boolean).join(" · "), { className: "muted" }));
+    header.append(el("div", `PTk / ${state.kind === "workflow" ? "Workflow" : "Job"} options`, { className: "brand" }), el("h1", state.name), el("p", [state.project, variants.length && `${variants.length > 1 ? "Variants (parallel)" : "Variant"}: ${variants.join(", ")}`].filter(Boolean).join(" · "), { className: "muted" }));
     app.append(header);
     const main = el("main", undefined, { className: "parameters" });
     notice(main);
     if (state.help) main.append(el("p", state.help));
-    main.append(el("p", "Enable an override to supply a value. Otherwise PTK uses the configured environment or default when the job runs.", { className: "muted" }));
-    if (variants.length > 1) main.append(el("p", "Overrides apply to every selected variant. Omitted values and template defaults are resolved separately for each run.", { className: "help" }));
+    const selectedVariants = variantControls(main, variants, names => {
+      const selected = names.length ? names : state.defaultVariant ? [state.defaultVariant] : [];
+      header.querySelector("p").textContent = [state.project, selected.length && `${selected.length > 1 ? "Variants (parallel)" : "Variant"}: ${selected.join(", ")}`].filter(Boolean).join(" · ");
+    });
+    const runOptions = executionControls(main);
+    if (state.params.length) main.append(el("p", "Enable an override to supply a value. Otherwise PTK uses the configured environment or default when the job runs.", { className: "muted" }));
+    if (variants.length > 1 || state.kind === "job" && state.variantChoices?.length > 1) main.append(el("p", "Overrides apply to every selected variant. Omitted values and template defaults are resolved separately for each run.", { className: "help" }));
     const controls = [];
     for (const spec of state.params) {
       const id = `parameter-${spec.name}`;
@@ -501,7 +586,7 @@
       } else wrapper.append(input);
       field.append(wrapper); main.append(field); controls.push({ spec, override, input });
     }
-    if (!state.params.length) main.append(el("p", "This job has no non-secret parameters.", { className: "empty" }));
+    if (!state.params.length && state.kind !== "workflow") main.append(el("p", "This job has no non-secret parameters.", { className: "empty" }));
     app.append(main);
     const footer = el("footer", undefined, { className: "actions" });
     function submit(preview) {
@@ -514,11 +599,11 @@
         params[spec.name] = spec.type === "bool" ? String(input.checked) : input.value;
       }
       showIssue("");
-      vscode.postMessage({ type: "submit", preview, params });
+      vscode.postMessage({ type: "submit", preview, params, runOptions: runOptions(), variants: selectedVariants() });
     }
     footer.append(button("Cancel", () => vscode.postMessage({ type: "cancel" })),
       button("Dry run", () => submit(true), state.preview ? "" : "secondary"),
-      button(state.reRun ? "Clean & re-run" : "Run job", () => submit(false), state.preview ? "secondary" : ""));
+      button(state.reRun ? "Clean & re-run" : state.kind === "workflow" ? "Run workflow" : "Run job", () => submit(false), state.preview ? "secondary" : ""));
     app.append(footer);
   }
   window.addEventListener("message", event => {

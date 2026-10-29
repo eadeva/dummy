@@ -472,7 +472,7 @@ tools:
 ## 10. CLI surface
 
 ```
-ptk [--config FILE] [--set k=v]... [--ci/--no-ci] [-V VARIANT] [-v|-vv]
+ptk [--set k=v]... [--ci/--no-ci] [-V VARIANT] [-v|-vv]
 ptk <job> [--<param> VALUE]... [--from STEP] [--to STEP]
              [--params FILE] [-q] [--args-for STEP="ARGS"] [--setup] [-- args]
 ptk                                     run project.default_job
@@ -684,8 +684,8 @@ Former top-level commands remain hidden compatibility aliases.
   No automatic discovery of the old filename. Configuration and execution roots
   are separate; conventional section files use the configuration directory while
   commands and outputs use the repository root.
-- Upward standalone discovery stops at Git boundaries. Explicit `--config`
-  selects one project, bypassing VMR grouping.
+- Upward standalone discovery stops at Git boundaries. Project selection uses
+  the current directory and, in VMR mode, the repository alias.
 - `.repo` in the invocation directory activates VMR mode. Inside a repository,
   only its root `.git` symlink/junction or `gitdir:` file resolving inside `.repo`
   establishes automatic membership; proximity to a parent `.repo` is insufficient.
@@ -916,7 +916,7 @@ See docs/performance.rst for measurements and remaining VMR scaling costs.
 
 Implemented global `--clean/-c` and `--re-run/-rr`, repository `clean-all` and
 workspace `vmr-clean-all`, with complete preflight, confirmation for all-clean,
-and active-run locking. `--config` now uses `-C`. Each repository can define
+and active-run locking. Project selection uses discovery and repository aliases. Each repository can define
 `folder_structure.ptk.yml`; defaults remain `_bin`, `_builds`, `_logs`, `_reports`.
 Binary paths now include the job to make selected cleanup safe.
 

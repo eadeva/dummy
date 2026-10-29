@@ -1,14 +1,17 @@
-from tests.project_files import read_project, write_project, write_workflows
-
 """Workflow report policies include child failures and keep execution exit codes."""
 
 import sys
 
 import pytest
 import yaml
-from click.testing import CliRunner
 from pydantic import ValidationError
-from tests.project_files import project_files
+from tests.cli_runner import CliRunner
+from tests.project_files import (
+    project_files,
+    read_project,
+    write_project,
+    write_workflows,
+)
 
 from ptk.adapters import help_html
 from ptk.application.use_cases.workflow import RunWorkflow, WorkflowResult
@@ -79,14 +82,13 @@ def invoke(write):
         result = CliRunner(env=env).invoke(
             cli,
             [
-                "-C",
-                str(root / ".main.ptk.yml"),
                 "workflow",
                 "run",
                 "verify",
                 *(["--dry-run"] if mode == "dry-run" else []),
             ],
             catch_exceptions=False,
+            cwd=root,
         )
         return result, root
 

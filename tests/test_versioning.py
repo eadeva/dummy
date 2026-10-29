@@ -8,7 +8,6 @@ from pathlib import Path
 
 import pytest
 import yaml
-from click.testing import CliRunner
 
 from ptk.adapters.versioning import VersionIO, generate, write_generated
 from ptk.application.use_cases.run import RunRequest
@@ -16,6 +15,7 @@ from ptk.bootstrap import create_app
 from ptk.domain.errors import PtkError
 from ptk.domain.versioning import VersionSource
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.project_files import project_files, read_project, write_project
 
 
@@ -122,9 +122,7 @@ def test_dry_run_discovers_without_writing(write, load):
             "jobs": {"go": {"steps": [{"echo": {"uses": "echo"}}]}},
         },
     )
-    result = CliRunner().invoke(
-        cli, ["-C", str(root / ".main.ptk.yml"), "go", "--dry-run"]
-    )
+    result = CliRunner().invoke(cli, ["go", "--dry-run"], cwd=root)
     assert result.exit_code == 0, result.output
     assert not list(root.rglob(".gen.version.ptk.yml"))
 
@@ -327,22 +325,26 @@ def test_cli_and_generated_input_exclusion(write):
         },
     )
     runner = CliRunner()
-    base = ["-C", str(root / ".main.ptk.yml")]
+    base = []
     from tests.conftest import grant_maintainer
 
     grant_maintainer(root)
     for args in (["maintainer", "version", "show"], ["validate", "--versions"]):
-        result = runner.invoke(cli, [*base, *args])
+        result = runner.invoke(cli, [*base, *args], cwd=root)
         assert result.exit_code == 0, result.output
     path = root / ".gen.version.ptk.yml"
     assert (
         runner.invoke(
-            cli, [*base, "maintainer", "version", "generate", "--output", str(path)]
+            cli,
+            [*base, "maintainer", "version", "generate", "--output", str(path)],
+            cwd=root,
         ).exit_code
         == 0
     )
-    assert runner.invoke(cli, [*base, "validate"]).exit_code == 0
-    assert runner.invoke(cli, [*base, "version", "bump", "patch"]).exit_code != 0
+    assert runner.invoke(cli, [*base, "validate"], cwd=root).exit_code == 0
+    assert (
+        runner.invoke(cli, [*base, "version", "bump", "patch"], cwd=root).exit_code != 0
+    )
 
 
 def test_semver_and_custom_strings_are_distinguished():

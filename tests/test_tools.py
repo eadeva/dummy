@@ -10,7 +10,6 @@ import tarfile
 from pathlib import Path
 
 import pytest
-from click.testing import CliRunner
 
 from ptk.adapters.tools import SystemToolInstaller
 from ptk.application.ports import ProcessOutcome
@@ -18,6 +17,7 @@ from ptk.domain.config.model import ToolSpec
 from ptk.domain.errors import PtkError
 from ptk.domain.tools import check_version, install_methods, parse_version, satisfies
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.conftest import grant_maintainer
 from tests.project_files import project_files, read_project, write_project
 
@@ -160,9 +160,9 @@ def project(write, tmp_path):
     }
 
     def invoke(*args, role="user"):
-        base = ["--config", str(root / ".main.ptk.yml")]
+        base = []
         return CliRunner(env={**env, "PTK_ROLE": role}).invoke(
-            cli, [*base, *args], catch_exceptions=False
+            cli, [*base, *args], catch_exceptions=False, cwd=root
         )
 
     invoke.root = root
@@ -320,9 +320,7 @@ def test_job_versions_coexist_and_path_contains_only_selected_tools(
     assert app.tools.status(two, ["selectedtool"])[0].version == "2.0.0"
     assert second_paths[0] not in app.tools.environment(one)["PATH"]
     for job, version in [("one", "1.0.0"), ("two", "2.0.0"), ("one", "1.0.0")]:
-        result = CliRunner(env={"PTK_CI": "0", **env}).invoke(
-            cli, ["-C", str(root / ".main.ptk.yml"), job]
-        )
+        result = CliRunner(env={"PTK_CI": "0", **env}).invoke(cli, [job], cwd=root)
         assert result.exit_code == 0 and f"selectedtool {version}" in result.output, (
             result.output
         )
@@ -332,9 +330,7 @@ def test_job_versions_coexist_and_path_contains_only_selected_tools(
         "PATH": second_paths[0] + ":/usr/bin:/bin"
     }
     write(project_files(yaml.safe_dump(data)))
-    result = CliRunner(env={"PTK_CI": "0", **env}).invoke(
-        cli, ["-C", str(root / ".main.ptk.yml"), "one"]
-    )
+    result = CliRunner(env={"PTK_CI": "0", **env}).invoke(cli, ["one"], cwd=root)
     assert result.exit_code == 1
     assert (
         "tool requirements are not satisfied in the command environment"

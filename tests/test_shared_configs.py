@@ -7,11 +7,11 @@ import subprocess
 
 import pytest
 import yaml
-from click.testing import CliRunner
 
 from ptk.domain import shared_configs as sc
 from ptk.domain.errors import ConfigError
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.conftest import grant_maintainer
 from tests.project_files import project_files
 
@@ -114,11 +114,7 @@ def invoke(write):
     grant_maintainer(root)
 
     def _invoke(*args):
-        return CliRunner().invoke(
-            cli,
-            ["--config", str(root / ".main.ptk.yml"), *args],
-            catch_exceptions=False,
-        )
+        return CliRunner().invoke(cli, [*args], catch_exceptions=False, cwd=root)
 
     _invoke.root = root
     return _invoke

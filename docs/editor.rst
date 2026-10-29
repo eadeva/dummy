@@ -26,15 +26,22 @@ to overwrite existing files. VSIX installations do not automatically follow
 Python upgrades: rerun the installer or ``ptk self-service extension`` after upgrading
 PTK. In remote workspaces run setup on the workspace host.
 
-Hover over a job to see Run, Dry Run, **Run Job with Parameters** (gear) and
-**Show Help** (question mark), each with a tooltip. The gear prompts for optional
-overrides; required non-secret parameters are prompted automatically. Help shows
+Hover over a job to see Run, Dry Run, **Run Job or Workflow with Options** (gear) and
+**Show Help** (question mark), each with a tooltip. The gear opens the run-options form for jobs and workflows. Jobs offer multiple
+variant checkboxes, ``--from``/``--to`` step dropdowns in authored order, and
+parameter overrides with help, defaults and declared choices. Step titles label
+the dropdown choices. **More run options** exposes feature overrides, per-step
+arguments and flags, with suggestions where PTK supplies them. ``--env`` requires
+**Dry run**. Repository workflows offer one owner variant and their help text;
+PTK resolves the mapped jobs' variants. Workspace workflows have no owner-variant
+selector. Required non-secret job parameters open the form automatically. Help shows
 the job's ``--help`` without running it or asking for parameters.
 Dry Run calls ``ptk JOB --dry-run`` or ``ptk workflow run --dry-run NAME`` and shows the
 planned steps without executing them.
 Provide secrets through their configured environment variables. Tasks execute
 PTK as a process and show output in the task terminal. Saved tasks preserve
-dry-run mode, parameters, variants and help requests.
+dry-run mode, parameters, variants, run options and help requests. The extension
+rechecks current choices before launching; removed steps or variants require a new selection.
 
 Expand **Built-in commands** to browse ``self-service``, ``maintainer``, ``help`` and
 other permitted commands. Duplicate ``run`` and ``report`` branches,
@@ -99,7 +106,7 @@ refreshes the tree. Click **PTK unavailable** to see the exact discovery error.
 
 Build from the repository root with ``ptk extension`` or ``uv run ptk extension``.
 The job checks Node.js 22+ and npm, installs the build dependencies, runs the
-checks and writes ``extensions/project-toolkit/project-toolkit-0.10.0.vsix``.
+checks and writes ``extensions/project-toolkit/project-toolkit-0.11.0.vsix``.
 Use ``ptk extension --dry-run`` to preview it. Node.js and npm must be on PATH.
 Set ``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
 integration tests. CI builds downloadable VSIX artifacts on Linux and Windows;
@@ -131,8 +138,10 @@ Discovery calls::
      - Generic forms, required-item initialization and field help
    * - Jobs, workflows, variants, parameters and permitted built-in commands
      - Available actions, variant selection and parameter forms
-   * - Command paths and built-in argument/option metadata
-     - Launching PTK through VS Code tasks
+   * - Invocation directory, repository prefix and command paths
+     - Launching PTK through VS Code tasks without a config-file override
+   * - Run and built-in argument/option metadata, choices and descriptions
+     - Step dropdowns, parameter help and value suggestions
    * - Validation diagnostics and template-variable metadata
      - Errors, variable suggestions and field-specific insertion rules
 
@@ -167,7 +176,7 @@ operations and flags, including validation, reports, initialization,
 ``--variant``, ``--dry-run``, ``--param``, ``--clean`` and ``--re-run``.
 Changing those semantics can break compatibility even if the schema is unchanged.
 
-Extension 0.10.0 requires inventory ``schema_version: 2`` and per-project
+Extension 0.11.0 requires inventory ``schema_version: 3`` and per-project
 ``configuration.version: 2``. These are interface versions, separate from the
 PTK package version, extension version and project marker's ``schema_version``.
 Unsupported interface versions or malformed inventories are rejected with an
@@ -218,7 +227,7 @@ JavaScript, run ``npm run build`` and reload the development window.
 To install a development build into your normal VS Code instead::
 
    uv run ptk extension
-   uv run ptk self-service extension --vsix extensions/project-toolkit/project-toolkit-0.10.0.vsix --force
+   uv run ptk self-service extension --vsix extensions/project-toolkit/project-toolkit-0.11.0.vsix --force
 
 Editable installs intentionally contain no built-in VSIX; supply ``--vsix`` for
 this workflow. Full ``uv run ptk package`` builds the release artifacts containing

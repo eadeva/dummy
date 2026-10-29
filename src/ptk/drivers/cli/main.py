@@ -43,6 +43,7 @@ from .jobs import (
     install_tools,
     pairs,
 )
+from .options import SuggestedCommand, SuggestedOption
 from .report_links import print_report
 from .state import console, err_console, guarded, state_of
 from .versioning import version_group
@@ -72,13 +73,6 @@ click.rich_click.SHOW_ARGUMENTS = True
     invoke_without_command=True,
 )
 @click.option(
-    "-C",
-    "--config",
-    type=click.Path(path_type=Path, dir_okay=False, exists=True),
-    is_eager=True,  # known before --help lists the project's jobs
-    help="Path to .main.ptk.yml (default: search upwards from the current directory).",
-)
-@click.option(
     "-s",
     "--set",
     "overrides",
@@ -103,6 +97,7 @@ click.rich_click.SHOW_ARGUMENTS = True
 @click.option(
     "-V",
     "--variant",
+    cls=SuggestedOption,
     shell_complete=complete_variants,
     help="Variant name/alias (comma-separated for jobs). Used by jobs, variant show, versions, reports and artifact destinations. Workflows map the owner variant to repository variants. Ignored by self-service, config inspection, pre-commit, init and help.",
 )
@@ -123,7 +118,6 @@ click.rich_click.SHOW_ARGUMENTS = True
 @guarded
 def cli(
     ctx: click.Context,
-    config: Path | None,
     overrides: tuple[str, ...],
     ci: bool | None,
     verbose: int,
@@ -436,7 +430,7 @@ def check_variants(ctx: click.Context, names: tuple[str, ...], strict: bool) -> 
 # --------------------------------------------------------------------------- run
 
 
-@cli.command("run", hidden=True)
+@cli.command("run", hidden=True, cls=SuggestedCommand)
 @click.argument("job", required=False, shell_complete=complete_jobs)
 @click.option(
     "-p",
@@ -1120,10 +1114,8 @@ def init_command(
 ) -> None:
     """Initialize unconfigured VMR members, or create one project at DIRECTORY."""
     state = _state(ctx)
-    if state.config is not None or state.overrides:
-        raise click.UsageError(
-            "init uses DIRECTORY; do not combine it with --config or --set"
-        )
+    if state.overrides:
+        raise click.UsageError("init uses DIRECTORY; do not combine it with --set")
     target = directory.resolve()
     workspace = None
     if ctx.get_parameter_source("directory") != click.core.ParameterSource.COMMANDLINE:

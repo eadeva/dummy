@@ -7,11 +7,11 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
 
 1. Install PTK using `install/install.ps1` or `install/install.sh`. Both install
    the extension bundled in the Python package when VS Code is available. The CLI must
-   support `ptk describe --json --configuration` (inventory and configuration interface version 2).
+   support `ptk describe --json --configuration` (inventory version 3 and configuration interface version 2).
 2. If PTK was installed directly with uv, run `ptk self-service extension` afterwards.
    Alternatively, in VS Code run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.10.0.vsix`. You can also use
-   `code --install-extension project-toolkit-0.10.0.vsix`.
+   `project-toolkit-0.11.0.vsix`. You can also use
+   `code --install-extension project-toolkit-0.11.0.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -59,7 +59,8 @@ Set `projectToolkit.discoveryTimeout` (seconds) for slow projects.
 uses PTK's CLI and JSON interface, not Python imports or an exact package version.
 `ptk describe --json --configuration` supplies loaded values, schemas, field help,
 file ownership, diagnostics, variables, jobs, workflows, variants, parameters and
-permitted command paths/options. PTK handles loading, full validation and execution;
+permitted command paths/options, value suggestions and invocation directory/prefix.
+PTK handles loading, full validation and execution;
 the extension renders the UI, writes YAML using PTK's mappings and reloads it.
 
 Compatible additions appear after refresh without rebuilding the extension:
@@ -74,7 +75,7 @@ Some action paths and flags are known by the extension, including validation,
 reports, initialization, variants, dry runs and cleanup; the schema alone is
 not the full contract.
 
-Extension 0.10.0 requires inventory `schema_version: 2` and
+Extension 0.11.0 requires inventory `schema_version: 3` and
 `configuration.version: 2`. These are independent of package/release numbers
 and the project marker's schema version. Unsupported interfaces are rejected;
 there is no legacy parser or runtime schema fallback. Breaking changes must
@@ -107,7 +108,7 @@ gold configuration and blue repositories and commands. Colours follow your VS Co
 labels and icon shapes also identify each category.
 
 - Expand **Jobs** and hover over a job to see **Run**, **Dry Run**,
-  **Run Job with Parameters** (gear) and **Show Help** (question mark). Each icon
+  **Run Job or Workflow with Options** (gear) and **Show Help** (question mark). Each icon
   has a tooltip. Output appears in VS Code's task terminal; **Tasks: Terminate
   Task** stops a running task. Help displays the job's `--help` without running it
   or asking for parameters.
@@ -118,8 +119,14 @@ labels and icon shapes also identify each category.
   latest saved aggregate report. If no report is available, the task terminal
   prints an **Info** message that it has not run yet or its saved report was
   removed. The action does not run the job/workflow or prompt for parameters.
-- Use the parameter icon or **Run Job with Parameters** in the command palette
-  to open a single form with text/number fields, boolean checkboxes, choices,
+- Use **Run Job or Workflow with Options** (gear) on either kind of target.
+  Jobs offer multiple variant checkboxes and `--from`/`--to` dropdowns showing
+  the actual step names and titles. **More run options** provides feature and
+  step-argument suggestions plus flags with help; `--env` requires **Dry run**.
+  Workflows offer their help and one owner variant, with mappings resolved by PTK.
+  Workspace workflows have no owner-variant selector. Saved tasks retain run
+  options; choices are rechecked before starting the selected batch.
+- Job parameters appear in the same form with text/number fields, boolean checkboxes, choices,
   help and authored defaults. Jobs with required non-secret parameters open it
   automatically. Enable **Override value** to supply a value; omitted parameters
   retain PTK's environment/default precedence. Template defaults are shown as
@@ -259,7 +266,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.10.0.vsix`. Use `ptk extension --dry-run`
+`extensions/project-toolkit/project-toolkit-0.11.0.vsix`. Use `ptk extension --dry-run`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:

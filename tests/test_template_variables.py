@@ -1,9 +1,9 @@
 import json
-
-from click.testing import CliRunner
+from pathlib import Path
 
 from ptk.domain.config.template_variables import catalogue
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.project_files import write_project
 
 
@@ -36,7 +36,7 @@ def test_catalogue_is_available_without_git_or_resolving_secret_environment(
 
     monkeypatch.setattr("ptk.adapters.process.SubprocessRunner.run", forbidden)
     result = CliRunner(env={"CATALOGUE_TOKEN": "NEVER_PREVIEW_SECRET"}).invoke(
-        cli, ["-C", str(entry), "describe", "--json", "--configuration"]
+        cli, ["describe", "--json", "--configuration"], cwd=Path(entry).parent
     )
     assert result.exit_code == 0, result.output
     entries = json.loads(result.output)["projects"][0]["configuration"]["variables"][

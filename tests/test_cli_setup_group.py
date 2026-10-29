@@ -3,12 +3,12 @@
 import json
 
 import pytest
-from click.testing import CliRunner
 from rich.text import Text
 
 from ptk.application.use_cases.hooks import EnsureHooks
 from ptk.application.use_cases.tools import ToolService
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.conftest import grant_maintainer
 from tests.project_files import project_files
 
@@ -24,7 +24,7 @@ def invoke(write):
 
     def call(*args):
         return CliRunner(env={"PTK_CI": "0", "PTK_ROLE": ""}).invoke(
-            cli, ["-C", str(root / ".main.ptk.yml"), *args], catch_exceptions=False
+            cli, [*args], catch_exceptions=False, cwd=root
         )
 
     return call

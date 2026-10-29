@@ -9,6 +9,7 @@ from ...application.use_cases.role import visible
 from ...bootstrap import create_app
 from ...domain.errors import ConfigError, PtkError
 from .access import allowed
+from .options import describe_execution, describe_parameter
 from .state import CliState, guarded, state_of
 
 
@@ -20,36 +21,13 @@ def describe_commands(ctx, commands=None, path=()):
     for name, command in commands.items():
         if command.hidden or not allowed(ctx, name):
             continue
-        params = []
-        for param in command.params:
-            if getattr(param, "hidden", False) or getattr(param, "hide_input", False):
-                continue
-            option = isinstance(param, click.Option)
-            params.append(
-                {
-                    "name": param.name,
-                    "kind": "option" if option else "argument",
-                    "help": getattr(param, "help", None) or "",
-                    "required": param.required,
-                    "type": param.type.name,
-                    "choices": list(param.type.choices)
-                    if isinstance(param.type, click.Choice)
-                    else [],
-                    "nargs": param.nargs,
-                    "multiple": getattr(param, "multiple", False),
-                    "is_flag": getattr(param, "is_flag", False),
-                    "option": next(
-                        (opt for opt in param.opts if opt.startswith("--")),
-                        param.opts[0],
-                    )
-                    if option
-                    else None,
-                    "secondary_option": next(iter(param.secondary_opts), None)
-                    if option
-                    else None,
-                }
-            )
         with click.Context(command, info_name=name, parent=ctx) as child:
+            params = [
+                describe_parameter(child, param)
+                for param in command.params
+                if not getattr(param, "hidden", False)
+                and not getattr(param, "hide_input", False)
+            ]
             children = describe_commands(child, path=(*path, name))
         result.append(
             {
@@ -146,6 +124,7 @@ def describe(ctx, as_json, configuration):
                 {
                     "name": name,
                     "help": spec.help,
+                    "run_options": [],
                     "command": [
                         *(["maintainer"] if spec.audience == "maintainer" else []),
                         "workflow",
@@ -175,9 +154,13 @@ def describe(ctx, as_json, configuration):
                     group, info_name=alias, parent=command_ctx, obj=state
                 ) as member_ctx:
                     project["commands"] = describe_commands(member_ctx)
+                    describe_execution(member_ctx, project)
+                project["invocation"] = {"cwd": str(root), "prefix": [alias]}
                 projects.append(project)
             except PtkError as exc:
-                projects.append(failed_project(state, exc, entry, alias))
+                failed = failed_project(state, exc, entry, alias)
+                failed["invocation"] = {"cwd": str(root), "prefix": [alias]}
+                projects.append(failed)
         from .workspace_commands import build_commands
 
         commands = describe_commands(command_ctx, build_commands(command_ctx, entries))
@@ -192,14 +175,31 @@ def describe(ctx, as_json, configuration):
                 environment_names=parent.app.host.variables.keys(),
             )
             item["commands"] = describe_commands(command_ctx)
+            describe_execution(command_ctx, item)
+            invocation_root = (
+                parent.app.workspace.root(project.root) if boundary else None
+            )
+            item["invocation"] = {
+                "cwd": str(invocation_root or project.root),
+                "prefix": [project.config.repository.alias] if invocation_root else [],
+            }
             projects.append(item)
         except PtkError as exc:
             root, role = Path.cwd(), "user"
-            item = failed_project(parent, exc)
+            item = failed_project(
+                parent, exc, alias=command_ctx.info_name if boundary else None
+            )
             if item:
+                invocation_root = (
+                    parent.app.workspace.root(Path(item["root"])) if boundary else None
+                )
+                item["invocation"] = {
+                    "cwd": str(invocation_root or item["root"]),
+                    "prefix": [item["alias"]] if invocation_root else [],
+                }
                 projects.append(item)
     result = {
-        "schema_version": 2,
+        "schema_version": 3,
         "ptk_version": parent.app.version,
         "mode": "workspace" if workspace else "repository",
         "root": str(root),

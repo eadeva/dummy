@@ -3,6 +3,7 @@
 const path = require("node:path");
 const crypto = require("node:crypto");
 const model = require("./config-model");
+const core = require("./core");
 const { validateParameters } = require("./parameters");
 const projectEdits = require("./project-edits");
 const fs = require("node:fs/promises");
@@ -215,13 +216,23 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
         try {
           trusted();
           if (message.type === "ready") return panel.webview.postMessage({ type: "state", mode: "parameters", name: target.name,
-            project: target.project?.alias, help: target.spec.help, params: (target.spec.params || []).filter(spec => spec.type !== "secret"),
+            kind: target.kind, project: target.project?.alias, help: target.spec.help,
+            variantChoices: (target.project?.variants || []).filter(item => !item.abstract),
+            defaultVariant: target.project?.default_variant, variantHelp: target.project?.variant_help, useDefault: options.useDefault,
+            runOptions: target.spec.run_options || [], params: (target.spec.params || []).filter(spec => spec.type !== "secret"),
             preview: options.preview, variant: options.variant, variants: options.variants, reRun: !!options.reRun });
           if (message.type === "cancel") return finish();
           if (message.type === "submit") {
             if (typeof message.preview !== "boolean") throw new Error("Invalid run action.");
             validateParameters(target.spec.params || [], message.params);
-            finish({ params: message.params, preview: message.preview });
+            const runOptions = message.runOptions || {};
+            core.builtinArgs({ params: target.spec.run_options || [] }, runOptions);
+            if (runOptions.show_env?.[0] === "true" && !message.preview) throw new Error("Include environment requires Dry run.");
+            const variants = message.variants || [];
+            if (!Array.isArray(variants) || variants.some(name => !target.project?.variants.some(item => item.name === name && !item.abstract)) ||
+                new Set(variants).size !== variants.length || target.kind === "workflow" && variants.length > 1) throw new Error("Choose available variants.");
+            if (!variants.length && target.project?.variants.some(item => !item.abstract) && !target.project.default_variant) throw new Error("Select a variant; this project has no default.");
+            finish({ params: message.params, preview: message.preview, runOptions, variants });
           }
         } catch (error) { await panel.webview.postMessage({ type: "issue", issue: error.message }); }
       });

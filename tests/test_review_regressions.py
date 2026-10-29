@@ -1,5 +1,3 @@
-from tests.project_files import write_project
-
 """Observable failures found in the full-project review."""
 
 import json
@@ -7,10 +5,10 @@ import os
 import signal
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 import yaml
-from click.testing import CliRunner
 
 from ptk.adapters.credentials.vault import Vault
 from ptk.adapters.process import SubprocessRunner
@@ -19,7 +17,8 @@ from ptk.bootstrap import create_app
 from ptk.domain.errors import ConfigError
 from ptk.domain.execution.model import CommandSpec
 from ptk.drivers.cli.main import cli
-from tests.project_files import project_files
+from tests.cli_runner import CliRunner
+from tests.project_files import project_files, write_project
 
 
 def test_vault_updates_from_two_clients_preserve_both(tmp_path):
@@ -108,17 +107,29 @@ def test_report_inputs_are_fresh_and_history_is_immutable(tmp_path):
         ),
     )
     runner = CliRunner()
-    base = ["-C", str(main)]
-    assert runner.invoke(cli, [*base, "go"]).exit_code == 0
+    base = []
+    assert runner.invoke(cli, [*base, "go"], cwd=Path(main).parent).exit_code == 0
     first_id = json.loads((tmp_path / "_logs/default/go/run.json").read_text())[
         "run_id"
     ]
-    assert runner.invoke(cli, [*base, "go", "--name", "none"]).exit_code == 0
+    assert (
+        runner.invoke(
+            cli, [*base, "go", "--name", "none"], cwd=Path(main).parent
+        ).exit_code
+        == 0
+    )
     report = tmp_path / "_reports/default/go/report.json"
     assert "first-test" not in report.read_text()
-    assert runner.invoke(cli, [*base, "go", "--name", "second-test"]).exit_code == 0
+    assert (
+        runner.invoke(
+            cli, [*base, "go", "--name", "second-test"], cwd=Path(main).parent
+        ).exit_code
+        == 0
+    )
     result = runner.invoke(
-        cli, [*base, "report", "export", "go", "--run", first_id, "-f", "json"]
+        cli,
+        [*base, "report", "export", "go", "--run", first_id, "-f", "json"],
+        cwd=Path(main).parent,
     )
     assert result.exit_code == 0, result.output
     assert "second-test" not in report.read_text()

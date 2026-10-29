@@ -138,8 +138,9 @@ Workspace-owned names are unqualified, for example ``all``. Member-owned names
 are qualified, for example ``frontend/verify``; identical names in different
 repositories never merge. Under ``ptk frontend workflow``, use the local name
 ``verify``. Manual VMR members should be invoked from the workspace root to retain
-membership context. An explicit ``-C`` entry selects that repository's command
-surface; automatic Git-pointer membership can still resolve its dependencies.
+membership context. Use ``ptk frontend verify`` from that root to select the
+member's command surface. Git-pointer membership is detected automatically
+when invoking PTK inside a member directory.
 
 An owner workflow's ``audience`` and ``command_audience.workflow`` policy are
 checked along with the target job's actual repository role. A public workflow

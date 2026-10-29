@@ -1,5 +1,3 @@
-from tests.project_files import write_workflows
-
 """The editor consumes PTK's permissions/discovery, never a second YAML parser."""
 
 import json
@@ -7,11 +5,11 @@ from pathlib import Path
 
 import rich_click as click
 import yaml
-from click.testing import CliRunner
 
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.conftest import grant_maintainer
-from tests.project_files import read_project, write_project
+from tests.project_files import read_project, write_project, write_workflows
 from tests.test_command_access import snapshot
 from tests.test_variant_commands import setup
 from tests.test_workspace import workspace
@@ -41,14 +39,14 @@ def test_inventory_is_read_only_filters_roles_and_omits_secret_values(tmp_path):
     write_project(entry, yaml.safe_dump(data))
     grant_maintainer(tmp_path)
     before = snapshot(tmp_path)
-    base = ["-C", str(entry), "describe", "--json"]
+    base = ["describe", "--json"]
     for role, expected in (("user", ["go"]), ("", ["go", "secret-job"])):
         result = CliRunner(
             env={"PTK_ROLE": role, "PTK_CI": "0", "EXAMPLE_TOKEN": "SECRET_VALUE"}
-        ).invoke(cli, base)
+        ).invoke(cli, base, cwd=Path(entry).parent)
         assert result.exit_code == 0, result.output
         doc = json.loads(result.output)
-        assert doc["schema_version"] == 2 and doc["mode"] == "repository"
+        assert doc["schema_version"] == 3 and doc["mode"] == "repository"
         project = doc["projects"][0]
         commands = command_paths(project["commands"])
         assert {
@@ -93,7 +91,7 @@ def test_inventory_respects_group_policies(tmp_path):
     data["workflows"] = {"verify": {"steps": [{"go": "go"}]}}
     write_project(entry, yaml.safe_dump(data))
     result = CliRunner(env={"PTK_ROLE": "user"}).invoke(
-        cli, ["-C", str(entry), "describe", "--json"]
+        cli, ["describe", "--json"], cwd=Path(entry).parent
     )
     project = json.loads(result.output)["projects"][0]
     assert project["variants"] == [] and project["workflows"] == []
@@ -135,6 +133,14 @@ def test_vmr_inventory_retains_healthy_members_when_one_is_invalid(
     assert [w["name"] for w in doc["workflows"]] == ["verify"]
     assert "error" in next(p for p in doc["projects"] if p["alias"] == "bootloader")
     assert "repos" in command_paths(doc["commands"])
+    for member in doc["projects"]:
+        route = member["invocation"]
+        assert route == {"cwd": str(tmp_path), "prefix": [member["alias"]]}
+        child = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"}).invoke(
+            cli, [*route["prefix"], "describe", "--json"], cwd=route["cwd"]
+        )
+        assert child.exit_code == 0, child.output
+        assert json.loads(child.output)["projects"][0]["invocation"] == route
     healthy = next(p for p in doc["projects"] if p["alias"] == "firmware")
     assert "repos" not in command_paths(healthy["commands"])
     assert "self-service creds set" in command_paths(healthy["commands"])
@@ -168,7 +174,7 @@ def test_command_metadata_does_not_resolve_defaults_or_invoke_callbacks(
     grant_maintainer(tmp_path)
     before = snapshot(tmp_path)
     result = CliRunner(env={"PTK_ROLE": ""}).invoke(
-        cli, ["-C", str(entry), "describe", "--json"]
+        cli, ["describe", "--json"], cwd=Path(entry).parent
     )
     assert result.exit_code == 0, result.output
     commands = command_paths(json.loads(result.output)["projects"][0]["commands"])
@@ -205,7 +211,7 @@ def test_parameter_forms_receive_authored_defaults_without_resolving_environment
     write_project(entry, yaml.safe_dump(data))
     before = snapshot(tmp_path)
     result = CliRunner(env={"EXAMPLE_TOKEN": "NEVER_EXPOSE_THIS"}).invoke(
-        cli, ["-C", str(entry), "describe", "--json"]
+        cli, ["describe", "--json"], cwd=Path(entry).parent
     )
     assert result.exit_code == 0, result.output
     params = {

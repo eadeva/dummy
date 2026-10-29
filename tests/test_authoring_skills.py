@@ -30,9 +30,8 @@ def test_plan_skills_are_shipped_and_documented():
 def test_authoring_starter_runs_from_its_configuration_directory(tmp_path, monkeypatch):
     import shutil
 
-    from click.testing import CliRunner
-
     from ptk.drivers.cli.main import cli
+    from tests.cli_runner import CliRunner
 
     source = ROOT / "examples/authoring"
     destination = tmp_path / "authoring"
@@ -55,9 +54,8 @@ def test_plugin_starter_installed_entry_point_runs(tmp_path, monkeypatch):
     import configparser
     import tomllib
 
-    from click.testing import CliRunner
-
     from ptk.drivers.cli.main import cli
+    from tests.cli_runner import CliRunner
 
     source = ROOT / "examples/plugin"
     project = tomllib.loads((source / "pyproject.toml").read_text())["project"]
@@ -84,7 +82,7 @@ def test_plugin_starter_installed_entry_point_runs(tmp_path, monkeypatch):
             }
         ),
     )
-    result = CliRunner().invoke(cli, ["-C", str(config), "check"])
+    result = CliRunner().invoke(cli, ["check"], cwd=Path(config).parent)
     assert result.exit_code == 0 and "Example check passed" in result.output, (
         result.output
     )

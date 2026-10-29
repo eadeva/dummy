@@ -5,9 +5,9 @@ import shutil
 from pathlib import Path
 
 import pytest
-from click.testing import CliRunner
 
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "quickstart"
 
@@ -16,13 +16,15 @@ EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "quickstart"
 def test_quickstart(tmp_path, variant):
     root = tmp_path / "project with spaces"
     shutil.copytree(EXAMPLE, root)
-    base = ["-C", str(root / ".main.ptk.yml")]
+    base = []
     runner = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"})
-    preview = runner.invoke(cli, [*base, "-V", variant, "build", "--dry-run"])
+    preview = runner.invoke(cli, [*base, "-V", variant, "build", "--dry-run"], cwd=root)
     assert preview.exit_code == 0, preview.output
     assert not (root / "_bin").exists()
     message = "Hello with spaces & punctuation"
-    run = runner.invoke(cli, [*base, "-V", variant, "build", "--message", message])
+    run = runner.invoke(
+        cli, [*base, "-V", variant, "build", "--message", message], cwd=root
+    )
     assert run.exit_code == 0, run.output
     assert (root / "_bin" / variant / "build" / "message.txt").read_text() == message
     folder = root / "_reports" / variant / "build"

@@ -2,13 +2,13 @@ import json
 import shutil
 
 import pytest
-from click.testing import CliRunner
 
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.conftest import DEMO, grant_maintainer
 from tests.project_files import project_files
 
-CONFIG = ["--config", str(DEMO / ".main.ptk.yml")]
+CONFIG = []
 
 
 @pytest.fixture(autouse=True)
@@ -20,13 +20,13 @@ def demo_checkout(tmp_path, monkeypatch):
         ignore=shutil.ignore_patterns("_logs", "_reports", "_builds", "_bin", ".ptk"),
     )
     grant_maintainer(demo)
-    monkeypatch.setitem(globals(), "CONFIG", ["--config", str(demo / ".main.ptk.yml")])
+    monkeypatch.setitem(globals(), "DEMO", demo)
     monkeypatch.delenv("PTK_ROLE", raising=False)
 
 
 def run(*args):
     return CliRunner(env={"PTK_CI": "0"}).invoke(
-        cli, [*CONFIG, *args], catch_exceptions=False
+        cli, [*CONFIG, *args], catch_exceptions=False, cwd=DEMO
     )
 
 
@@ -76,7 +76,7 @@ def test_variant_commands():
 
 def test_errors_exit_2():
     result = CliRunner(env={"PTK_CI": "0"}).invoke(
-        cli, [*CONFIG, "variant", "show", "nope"]
+        cli, [*CONFIG, "variant", "show", "nope"], cwd=DEMO
     )
     assert result.exit_code == 2
     assert "unknown variant 'nope'" in result.output
@@ -105,8 +105,6 @@ def test_dry_run_of_demo_shows_plan_without_executing(tmp_path, existing_logs):
     result = CliRunner(env={"PTK_CI": "0"}).invoke(
         cli,
         [
-            "--config",
-            str(demo / ".main.ptk.yml"),
             "-V",
             "b_us",
             "build",
@@ -116,6 +114,7 @@ def test_dry_run_of_demo_shows_plan_without_executing(tmp_path, existing_logs):
             "--env",
         ],
         catch_exceptions=False,
+        cwd=demo,
     )
     assert result.exit_code == 0, result.output
     assert "dry run" in result.output and "-j 3" in result.output
@@ -142,12 +141,12 @@ def test_run_executes_and_returns_exit_code(write):
           bad: {steps: [{fail: "exit 4"}]}
         """)
     )
-    config = ["--config", str(root / ".main.ptk.yml")]
+    config = []
     ok = CliRunner(env={"PTK_CI": "0"}).invoke(
-        cli, [*config, "run", "ok"], catch_exceptions=False
+        cli, [*config, "run", "ok"], catch_exceptions=False, cwd=root
     )
     assert ok.exit_code == 0 and "hi-there" in ok.output
     bad = CliRunner(env={"PTK_CI": "0"}).invoke(
-        cli, [*config, "run", "bad"], catch_exceptions=False
+        cli, [*config, "run", "bad"], catch_exceptions=False, cwd=root
     )
     assert bad.exit_code == 1 and "exit code 4" in bad.output

@@ -3,11 +3,11 @@
 import json
 
 import pytest
-from click.testing import CliRunner
 
 from ptk.application.use_cases.variants import VariantService
 from ptk.domain.errors import ConfigError
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 
 
 def files(**extra):
@@ -194,9 +194,9 @@ def test_editor_reports_file_schemas_ownership_fingerprints_and_errors(write):
             }
         )
     )
-    args = ["-C", str(root / ".main.ptk.yml"), "describe", "--json", "--configuration"]
+    args = ["describe", "--json", "--configuration"]
     runner = CliRunner()
-    result = runner.invoke(cli, args)
+    result = runner.invoke(cli, args, cwd=root)
     assert result.exit_code == 0, result.output
     config = json.loads(result.output)["projects"][0]["configuration"]
     assert config["version"] == 2
@@ -212,7 +212,7 @@ def test_editor_reports_file_schemas_ownership_fingerprints_and_errors(write):
     (root / "config/artifactory_paths.ptk.yml").write_text(
         "events: {push: {step: {run: bad}}}"
     )
-    invalid = runner.invoke(cli, args)
+    invalid = runner.invoke(cli, args, cwd=root)
     assert invalid.exit_code == 0, invalid.output
     project = json.loads(invalid.output)["projects"][0]
     assert project["error"] and project["diagnostics"]
@@ -246,9 +246,7 @@ def test_validate_stays_available_to_users(write):
             }
         )
     )
-    result = CliRunner(env={"PTK_ROLE": "user"}).invoke(
-        cli, ["-C", str(root / ".main.ptk.yml"), "validate"]
-    )
+    result = CliRunner(env={"PTK_ROLE": "user"}).invoke(cli, ["validate"], cwd=root)
     assert result.exit_code == 0, result.output
 
 

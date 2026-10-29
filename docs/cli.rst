@@ -185,6 +185,9 @@ Examples (``<Tab>`` means press the key)::
    ptk build --build-type <Tab>     # declared choice values
    ptk --variant <Tab><Tab>         # concrete variants and aliases
    ptk build --from <Tab><Tab>      # top-level step names
+   ptk build --to <Tab><Tab>        # inclusive final step
+   ptk build --feature MODE=<Tab>   # declared enum/bool feature values
+   ptk build --args-for <Tab>       # eligible passthrough step paths
    ptk workflow run <Tab><Tab>      # available workflow names
 
 Job names also complete after ``run``, report commands and ``--job`` options.
@@ -193,6 +196,13 @@ Suggestions respect command visibility and the current project configuration;
 integration commands and the maintainer namespace remain hidden from ordinary users.
 Type ``-`` to request option names. Choice and path parameters use native shell
 completion; free-text and secret values are not guessed.
+
+``ptk --help`` also lists available concrete variants and aliases beside
+``--variant``. ``ptk JOB --help`` lists the job's top-level step names beside
+``--from`` and ``--to``, in execution order. Long lists show the first 12 values;
+Tab completion offers the complete set. These hints use the same project metadata
+as the extension's run-options form. ``--from``/``--to`` apply to jobs; workflows
+select one owner variant and use their configured job mappings.
 
 Each completion request starts a short-lived PTK process and reads the required
 configuration. It does not execute jobs, initialize plugins, resolve Git/version
@@ -342,7 +352,7 @@ own entry file; it is then standalone and excluded from the workspace listing.
 Omit the field for automatic membership. Discovery fields must be literal YAML
 in the entry file; fragments and CLI overrides cannot supply or change
 them. Discovery reads entry metadata without loading unselected repositories'
-includes. Metadata and the member index are cached for one invocation and shared
+configuration files. Metadata and the member index are cached for one invocation and shared
 by routing, credentials and version dependencies; the next invocation rereads them.
 
 Commands are grouped under the configured repository alias::
@@ -360,8 +370,11 @@ member repository, ptk remains standalone. Each repository has
 isolated configuration, tools, plugins, permissions and output directories.
 ``ptk firmware`` runs that repository's default job; bare ``ptk`` lists the
 repositories. There is no implicit run across all repositories. Global options
-precede the alias. ``ptk --config path/to/.main.ptk.yml build`` explicitly selects
-standalone mode. Generated VS Code tasks in VMR mode include the repository alias.
+precede the alias. Project selection uses the working directory and the repository
+alias; there is no global ``--config``/``-C`` option. To opt a repository out of
+VMR membership, set ``virtual_monorepo: false`` in its root marker. Generated
+VS Code tasks and extension launches use the discovered workspace directory
+and repository alias.
 
 Shared VMR commands
 -------------------
@@ -381,7 +394,7 @@ catalog. Repository commands remain available for all these operations.
 
 VMR credential storage is namespaced by workspace location and definition
 identity unless ``credentials.NAME.namespace`` explicitly sets a stable scope.
-Git-pointer membership preserves this scope even with explicit ``--config``.
+Git-pointer membership preserves this scope when invoked from a member directory.
 Manual VMR members receive workspace scope when routed from the marked workspace;
 direct standalone invocation does not infer a parent workspace. Identical definitions
 share a scope; conflicting definitions cannot overwrite each other in the vault
@@ -491,7 +504,7 @@ repository roots, paths outside repositories, symlink paths, configuration/Git
 metadata, tracked source files and active job locks. Filesystem errors can still
 interrupt deletion; cleanup is not a transactional filesystem operation.
 
-Migration: ``--config`` now uses uppercase ``-C``. Lowercase ``-c`` means clean.
+Lowercase ``-c`` means clean.
 Binary output paths now include the job: ``_bin/<variant>/<job>``. Jobs using
 ``${run.bin_dir}`` receive the new path automatically; update hard-coded paths.
 Old files directly under ``_bin/<variant>`` remain until ``clean-all``.

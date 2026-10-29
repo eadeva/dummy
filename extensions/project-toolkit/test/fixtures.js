@@ -34,20 +34,21 @@ function builtinCommands() {
 
 function inventory(root = path.resolve("test project")) {
   return {
-    schema_version: 2, mode: "repository", root, ci: false, workflows: [], commands: [],
+    schema_version: 3, mode: "repository", root, ci: false, workflows: [], commands: [],
     projects: [{
       alias: "demo", name: "Demo", root, entry_file: path.join(root, ".main.ptk.yml"),
+      invocation: { cwd: root, prefix: [] },
       config_files: [path.join(root, ".main.ptk.yml")],
       configuration: { version: 2, bindings: [], documents: [], schema: { properties: { project: {}, jobs: {}, variants: {} } }, value: { jobs: { build: { help: "Build" } } }, sources: [], files: [path.join(root, ".main.ptk.yml")] },
       capabilities: { variants: true, validate: true, reports: true },
       default_variant: "small",
       commands: builtinCommands(),
       variants: [{ name: "base", abstract: true }, { name: "small" }, { name: "large" }],
-      jobs: [{ name: "build", command: ["run", "build"], help_command: ["build"], help: "Build firmware", params: [
+      jobs: [{ name: "build", command: ["run", "build"], help_command: ["build"], help: "Build firmware", run_options: [], params: [
         { name: "output_path", type: "path", choices: [], required: false },
         { name: "verbose", type: "bool", choices: [], required: false },
       ] }],
-      workflows: [{ name: "build", command: ["workflow", "run", "build"], help: "Verify all repositories" }],
+      workflows: [{ name: "build", command: ["workflow", "run", "build"], help: "Verify all repositories", run_options: [] }],
     }],
   };
 }

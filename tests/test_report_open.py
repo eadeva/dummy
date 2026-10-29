@@ -4,7 +4,6 @@ import sys
 
 import pytest
 import yaml
-from click.testing import CliRunner
 from pydantic import ValidationError
 
 from ptk.adapters import help_html
@@ -12,6 +11,7 @@ from ptk.adapters.reporting.store import FileReportStore
 from ptk.domain.config.model import JobSpec
 from ptk.domain.reporting.model import Contribution, Finding, from_summary
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.project_files import project_files
 
 
@@ -55,7 +55,7 @@ def invoke(write, monkeypatch):
         if all_variants:
             config["variants"] = {"default": "one", "variants": {"one": {}, "two": {}}}
         root = write(project_files(yaml.safe_dump(config)))
-        args = ["--config", str(root / ".main.ptk.yml")]
+        args = []
         args.append("check")
         if dry:
             args.append("--dry-run")
@@ -65,7 +65,7 @@ def invoke(write, monkeypatch):
             "PTK_CI": "" if ci == "auto" else "1" if ci else "0",
             "GITHUB_ACTIONS": "true" if ci == "auto" else "false",
         }
-        result = CliRunner(env=env).invoke(cli, args, catch_exceptions=False)
+        result = CliRunner(env=env).invoke(cli, args, catch_exceptions=False, cwd=root)
         return result, opened, root
 
     return run
@@ -193,10 +193,10 @@ def test_explicit_job_report_handles_missing_runs_without_hiding_errors(
         help_html, "open_in_browser", lambda path: opened.append(path) or True
     )
     runner = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"})
-    base = ["-C", str(root / ".main.ptk.yml")]
+    base = []
 
     def invoke(*args):
-        return runner.invoke(cli, [*base, *args], catch_exceptions=False)
+        return runner.invoke(cli, [*base, *args], catch_exceptions=False, cwd=root)
 
     missing = invoke("-V", "small", "report", "open", "--if-exists", "build")
     assert missing.exit_code == 0 and "Info:" in missing.output
@@ -219,5 +219,7 @@ def test_explicit_job_report_handles_missing_runs_without_hiding_errors(
     assert "</html>" in opened[0].read_text(encoding="utf-8")
     summary = root / "_logs/small/build/run.json"
     summary.write_text("not json", encoding="utf-8")
-    malformed = runner.invoke(cli, [*base, "report", "open", "--if-exists", "build"])
+    malformed = runner.invoke(
+        cli, [*base, "report", "open", "--if-exists", "build"], cwd=root
+    )
     assert malformed.exit_code != 0 and "hasn't run yet" not in malformed.output

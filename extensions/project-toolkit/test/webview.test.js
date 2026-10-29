@@ -320,3 +320,53 @@ test("literal fields do not offer variable insertion and keyboard opening does n
   assert.equal(await h.page.getByRole("searchbox").isVisible(), true);
   assert.equal((await h.edits()).length, 0);
 });
+
+test("run form shows authored choices and help and submits one variant batch", options, async t => {
+  const { builtinParam } = require("./fixtures");
+  const h = await form(t);
+  await h.state({ mode: "parameters", kind: "job", name: "build", project: "demo", variants: ["small"], useDefault: true, defaultVariant: "small",
+    variantChoices: [{ name: "small", description: "Quick developer build", aliases: ["dev"] }, { name: "large", description: "Full build" }],
+    runOptions: [
+      builtinParam("start", { kind: "option", option: "--from", help: "Start at this top-level step.", choices: ["configure", "compile"], suggestions: [{ value: "configure", help: "Prepare build files" }] }),
+      builtinParam("end", { kind: "option", option: "--to", help: "Stop after this top-level step.", choices: ["configure", "compile"] }),
+      builtinParam("features", { kind: "option", option: "--feature", multiple: true, help: "Override a variant feature.", suggestions: [{ value: "MODE=", help: "Compilation mode" }] }),
+    ], params: [{ name: "mode", type: "choice", choices: ["Debug", "Release"], help: "Choose compiler optimization", default: "Debug" }],
+  });
+  assert.match(await h.page.locator("main").innerText(), /Quick developer build/);
+  assert.match(await h.page.locator("main").innerText(), /Aliases: dev/);
+  assert.deepEqual(await h.field("--from").locator("option").allTextContents(), ["Use default", "configure — Prepare build files", "compile"]);
+  await h.field("--from").selectOption("configure");
+  await h.field("--to").selectOption("compile");
+  await h.page.getByRole("checkbox", { name: "small", exact: true }).check();
+  await h.page.getByRole("checkbox", { name: "large", exact: true }).check();
+  assert.equal(await h.page.getByRole("checkbox", { name: "Use project default (small)", exact: true }).isChecked(), false);
+  assert.equal(await h.field("mode").isDisabled(), true);
+  await h.page.getByText("More run options", { exact: true }).click();
+  await h.page.getByRole("button", { name: "MODE=", exact: true }).click();
+  assert.equal(await h.field("--feature").inputValue(), "MODE=");
+  await h.field("--feature").fill("MODE=fast");
+  await h.page.setViewportSize({ width: 390, height: 850 });
+  assert.equal(await h.page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true);
+  await h.page.screenshot({ path: "/tmp/ptk-run-options-narrow.png", fullPage: true });
+  await h.page.getByRole("button", { name: "Dry run", exact: true }).click();
+  const message = await h.page.evaluate(() => window.messages.at(-1));
+  assert.deepEqual(message.variants, ["small", "large"]);
+  assert.deepEqual(message.runOptions, { start: ["configure"], end: ["compile"], features: ["MODE=fast"] });
+  assert.deepEqual(message.params, {});
+  assert.equal(message.preview, true);
+});
+
+test("workflow run form provides a single owner variant and workflow help", options, async t => {
+  const h = await form(t);
+  await h.state({ mode: "parameters", kind: "workflow", name: "verify", help: "Run all validation jobs", project: "demo", variants: ["small"],
+    variantChoices: [{ name: "small" }, { name: "large" }], defaultVariant: "small", runOptions: [], params: [] });
+  assert.match(await h.page.locator("main").innerText(), /Run all validation jobs/);
+  await h.page.getByRole("radio", { name: "large", exact: true }).check();
+  assert.equal(await h.page.getByRole("radio", { name: "small", exact: true }).isChecked(), false);
+  assert.equal(await h.page.getByRole("combobox").count(), 0);
+  await h.page.getByRole("button", { name: "Run workflow", exact: true }).click();
+  const message = await h.page.evaluate(() => window.messages.at(-1));
+  assert.deepEqual(message.variants, ["large"]);
+  assert.deepEqual(message.runOptions, {});
+  assert.equal(message.preview, false);
+});

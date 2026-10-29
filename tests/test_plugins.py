@@ -1,15 +1,16 @@
 import importlib
 import textwrap
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 import yaml
-from click.testing import CliRunner
 
 from ptk.adapters.plugins import PluginInstaller, load_plugins
 from ptk.domain.errors import PtkError
 from ptk.domain.tools import InstallMethod
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.project_files import write_project
 
 
@@ -104,7 +105,7 @@ def test_installed_plugin_distribution_end_to_end(tmp_path, monkeypatch):
             }
         ),
     )
-    result = CliRunner().invoke(cli, ["-C", str(config), "-V", "one", "go"])
+    result = CliRunner().invoke(cli, ["-V", "one", "go"], cwd=Path(config).parent)
     assert result.exit_code == 0, result.output
     assert "plugin-secret" not in result.output
     module = importlib.import_module("ptk_test_extension")

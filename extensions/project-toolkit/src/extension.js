@@ -470,7 +470,7 @@ function createController(vscode, context, editorFactory = createEditors) {
         for (let i = 0; i < Math.max(1, param.nargs); i++) {
           const choices = param.is_flag ? ["true", "false"] : param.choices;
           const prompt = `${target.name}: ${param.option || param.name}${repeated || param.nargs > 1 ? ` (${values.length + 1})` : ""}`;
-          const value = choices.length ? await vscode.window.showQuickPick(choices, { placeHolder: prompt })
+          const value = choices.length ? (await vscode.window.showQuickPick(choices.map(value => ({ label: value, value, description: param.suggestions?.find(item => item.value === value)?.help || param.help })), { title: prompt, placeHolder: param.help || "Choose a value" }))?.value
             : await vscode.window.showInputBox({ title: prompt, prompt: param.help || "Enter one value; spaces are preserved" });
           if (value === undefined) return;
           values.push(value);
@@ -497,37 +497,38 @@ function createController(vscode, context, editorFactory = createEditors) {
     if (options.help !== undefined) definition.help = options.help;
     if (options.report !== undefined) definition.report = options.report;
     if (options.inputs && Object.keys(options.inputs).length) definition.inputs = options.inputs;
+    if (options.runOptions && Object.keys(options.runOptions).length) definition.runOptions = options.runOptions;
     const task = new vscode.Task(definition, target.folder, `${options.report ? "Report " : options.help ? "Help " : options.preview ? "Dry Run " : options.clean ? "Clean " : options.reRun ? "Re-run " : ""}${title(target)}${options.variant ? ` [${options.variant}]` : ""}`, "project-toolkit",
-      new vscode.ProcessExecution(config.executable, core.launchArgs(config, core.argsFor(target, options)), { cwd: target.root }), []);
+      new vscode.ProcessExecution(config.executable, core.launchArgs(config, core.argsFor(target, options)), { cwd: core.cwdFor(target) }), []);
     task.presentationOptions = { reveal: vscode.TaskRevealKind.Always, panel: vscode.TaskPanelKind.Dedicated, clear: false, focus: target.kind === "builtin" && !options.help };
     return task;
   }
 
   async function run(element, preview = false, editOptional = false, cleanup = {}) {
-    const target = await chooseTarget(element, editOptional);
+    const target = await chooseTarget(element);
     if (!target) return;
-    let variants = [];
-    let params = {};
-    if (target.project && ["job", "workflow"].includes(target.kind)) {
-      variants = variantsFor(target);
-      if (!variants.length && target.project.variants.some(v => !v.abstract)) {
-        variants = await selectVariant(target);
-        if (!variants?.length) return;
-      }
-      if (target.kind === "job" && !cleanup.clean && (editOptional || (target.spec.params || []).some(spec => spec.required))) {
-        const result = await editors.parameters(target, { preview, variant: variants.length === 1 ? variants[0] : undefined, variants, ...cleanup });
-        if (!result) return;
-        params = result.params;
-        preview = result.preview;
-      }
+    let variants = target.project ? variantsFor(target) : [];
+    let params = {}, runOptions = {};
+    const form = !cleanup.clean && (editOptional || (target.spec.params || []).some(spec => spec.required));
+    if (form) {
+      const result = await editors.parameters(target, {
+        preview, variant: variants.length === 1 ? variants[0] : undefined, variants,
+        useDefault: !target.project || !explicitVariants(target).length, ...cleanup,
+      });
+      if (!result) return;
+      params = result.params;
+      preview = result.preview;
+      runOptions = result.runOptions || {};
+      if (result.variants !== undefined) variants = result.variants.length ? result.variants : (target.project?.default_variant ? [target.project.default_variant] : []);
+    } else if (target.project && !variants.length && target.project.variants.some(v => !v.abstract)) {
+      variants = await selectVariant(target);
+      if (!variants?.length) return;
     }
-    // A form may remain open while discovery, permissions or the configuration changes.
+    // Recheck choices and permissions after a form that may have stayed open during edits.
     const current = await chooseTarget(target);
     if (current.kind === "job" && !cleanup.clean) validateParameters(current.spec.params || [], params);
     if (variants.some(variant => !current.project?.variants.some(item => item.name === variant && !item.abstract))) throw new Error("A selected variant is no longer available. Refresh projects and choose variants.");
-    // Construct and validate the whole batch before starting anything. Each
-    // definition retains its own variant for task reruns and dedicated terminals.
-    const tasks = (variants.length ? variants : [undefined]).map(variant => makeTask(current, { preview, variant, params, ...cleanup }));
+    const tasks = (variants.length ? variants : [undefined]).map(variant => makeTask(current, { preview, variant, params, runOptions, ...cleanup }));
     return Promise.all(tasks.map(task => vscode.tasks.executeTask(task)));
   }
 
@@ -638,13 +639,13 @@ function createController(vscode, context, editorFactory = createEditors) {
       const target = targets.find(t => t.kind === d.kind && t.name === d.name && t.root === d.root);
       if (!target || d.report && !core.canOpenReport(target) || target.ci && target.kind === "workflow" && !d.preview && !d.help && !d.report) return;
       if (!d.report && !d.help && !(d.kind === "job" && d.clean === true) && (target.spec.params || []).some(p => p.required && !p.env && !Object.hasOwn(d.kind === "builtin" ? d.inputs || {} : d.params || {}, p.name))) {
-        const action = d.kind === "builtin" ? "Run Command with Options" : "Run Job with Parameters";
+        const action = d.kind === "builtin" ? "Run Command with Options" : "Run Job or Workflow with Options";
         output.appendLine(`Use Project Toolkit: ${action} to supply required parameters for ${target.name}.`);
         return;
       }
       const resolved = makeTask(target, {
         variant: target.project && !d.help ? d.variant || core.selectedVariant(target.project) : undefined,
-        preview: d.preview, params: d.params, help: d.help, inputs: d.inputs, clean: d.clean, reRun: d.reRun, report: d.report,
+        preview: d.preview, params: d.params, runOptions: d.runOptions, help: d.help, inputs: d.inputs, clean: d.clean, reRun: d.reRun, report: d.report,
       });
       resolved.definition = task.definition;
       resolved.name = task.name;

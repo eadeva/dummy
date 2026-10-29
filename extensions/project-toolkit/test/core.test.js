@@ -13,7 +13,7 @@ function target(kind = "job") {
 
 test("inventory accepts the versioned CLI contract and isolated broken members", () => {
   const doc = inventory();
-  doc.projects.push({ configuration: { ...doc.projects[0].configuration, value: null }, alias: "broken", root: doc.root, entry_file: path.join(doc.root, "bad.yml"), error: "Invalid configuration" });
+  doc.projects.push({ configuration: { ...doc.projects[0].configuration, value: null }, invocation: { cwd: doc.root, prefix: [] }, alias: "broken", root: doc.root, entry_file: path.join(doc.root, "bad.yml"), error: "Invalid configuration" });
   assert.deepEqual(core.parseInventory(JSON.stringify(doc)), doc);
 });
 
@@ -46,12 +46,12 @@ test("job arguments put global options first and preserve literal metacharacters
   const t = target();
   const literal = "folder with spaces/$(touch unwanted);'value";
   assert.deepEqual(core.argsFor(t, { variant: "large", params: { output_path: literal } }), [
-    "--config", t.project.entry_file, "--variant", "large", "run", "build", "--param", `output_path=${literal}`,
+    "--variant", "large", "run", "build", "--param", `output_path=${literal}`,
   ]);
 });
 
 test("previews use the same parameter interface as execution", () => {
-  assert.deepEqual(core.argsFor(target(), { preview: true, params: { output_path: "some folder", verbose: "false" } }).slice(2),
+  assert.deepEqual(core.argsFor(target(), { preview: true, params: { output_path: "some folder", verbose: "false" } }),
     ["run", "build", "--dry-run", "--param", "output_path=some folder", "--param", "verbose=false"]);
   assert.equal(core.argsFor(target(), { preview: true, params: { verbose: "true" } }).at(-1), "verbose=true");
   assert.throws(() => core.argsFor(target(), { preview: true, params: { verbose: "invalid" } }), /Boolean/);
@@ -60,11 +60,11 @@ test("previews use the same parameter interface as execution", () => {
 });
 
 test("workflows select their owner variants and resolve shared names explicitly", () => {
-  assert.deepEqual(core.argsFor(target("workflow"), { variant: "large" }).slice(2), ["--variant", "large", "workflow", "run", "build"]);
-  assert.deepEqual(core.argsFor({ kind: "workflow", name: "all", spec: { command: ["workflow", "run", "all"] } }, { preview: true }), ["workflow", "run", "all", "--dry-run"]);
-  assert.deepEqual(core.argsFor(target("report"), { variant: "large" }).slice(2), ["--variant", "large", "report", "open", "build"]);
-  assert.deepEqual(core.argsFor(target("variant")).slice(2), ["variant", "show", "build"]);
-  assert.deepEqual(core.argsFor(target("validate")).slice(2), ["validate"]);
+  assert.deepEqual(core.argsFor(target("workflow"), { variant: "large" }), ["--variant", "large", "workflow", "run", "build"]);
+  assert.deepEqual(core.argsFor({ kind: "workflow", name: "all", spec: { run_options: [], command: ["workflow", "run", "all"] } }, { preview: true }), ["workflow", "run", "all", "--dry-run"]);
+  assert.deepEqual(core.argsFor(target("report"), { variant: "large" }), ["--variant", "large", "report", "open", "build"]);
+  assert.deepEqual(core.argsFor(target("variant")), ["variant", "show", "build"]);
+  assert.deepEqual(core.argsFor(target("validate")), ["validate"]);
 });
 
 test("target discovery preserves healthy VMR members and workspace workflows", () => {
@@ -91,8 +91,8 @@ test("built-in command metadata is required and malformed metadata is rejected",
 test("job and workflow help bypasses required parameters", () => {
   const job = target();
   job.spec.params[0].required = true;
-  assert.deepEqual(core.argsFor(job, { help: true }).slice(2), ["build", "--help"]);
-  assert.deepEqual(core.argsFor(target("workflow"), { help: true }).slice(2), ["workflow", "run", "build", "--help"]);
+  assert.deepEqual(core.argsFor(job, { help: true }), ["build", "--help"]);
+  assert.deepEqual(core.argsFor(target("workflow"), { help: true }), ["workflow", "run", "build", "--help"]);
 });
 
 test("built-in options, repeated values and leading-dash positional arguments stay literal", () => {
@@ -130,7 +130,7 @@ test("built-in discovery keeps VMR root and member contexts separate", () => {
   const targets = core.availableBuiltins([{ inventory: doc, folder: "workspace" }]);
   const member = targets.find(t => t.name === "self-service creds set");
   assert.equal(member.project, doc.projects[0]);
-  assert.deepEqual(core.argsFor(member, { help: true }), ["--config", member.project.entry_file, "self-service", "creds", "set", "--help"]);
+  assert.deepEqual(core.argsFor(member, { help: true }), ["self-service", "creds", "set", "--help"]);
   assert.deepEqual(core.argsFor(targets.find(t => t.name === "repos")), ["repos"]);
   assert.equal(targets.filter(t => t.name === "--help").length, 2);
 });
@@ -149,10 +149,10 @@ test("missing executables, failing processes and timeouts are reported", async (
 
 test("cleanup flags precede commands and workflow variants are forwarded", () => {
   const job = target("job");
-  assert.deepEqual(core.argsFor(job, { clean: true, variant: "large" }).slice(2), ["--variant", "large", "--clean", "run", "build"]);
-  assert.deepEqual(core.argsFor(target("workflow"), { reRun: true, variant: "large", preview: true }).slice(2), ["--variant", "large", "--re-run", "workflow", "run", "build", "--dry-run"]);
+  assert.deepEqual(core.argsFor(job, { clean: true, variant: "large" }), ["--variant", "large", "--clean", "run", "build"]);
+  assert.deepEqual(core.argsFor(target("workflow"), { reRun: true, variant: "large", preview: true }), ["--variant", "large", "--re-run", "workflow", "run", "build", "--dry-run"]);
   assert.throws(() => core.argsFor(job, { clean: true, reRun: true }), /Choose/);
-  assert.deepEqual(core.argsFor(job, { clean: true, help: true }).slice(2), ["build", "--help"]);
+  assert.deepEqual(core.argsFor(job, { clean: true, help: true }), ["build", "--help"]);
 });
 
 test("uv launch arguments prevent implicit syncing on POSIX and Windows without changing explicit commands", () => {
@@ -198,12 +198,12 @@ test("maintainer command paths come from PTK for run, preview, help and cleanup"
   const job = target();
   job.spec.command = ["maintainer", "run", "build"];
   job.spec.help_command = ["maintainer", "build"];
-  assert.deepEqual(core.argsFor(job, { preview: true, params: { verbose: "false" } }).slice(2),
+  assert.deepEqual(core.argsFor(job, { preview: true, params: { verbose: "false" } }),
     ["maintainer", "run", "build", "--dry-run", "--param", "verbose=false"]);
-  assert.deepEqual(core.argsFor(job, { help: true }).slice(2), ["maintainer", "build", "--help"]);
+  assert.deepEqual(core.argsFor(job, { help: true }), ["maintainer", "build", "--help"]);
   const workflow = target("workflow");
   workflow.spec.command = ["maintainer", "workflow", "run", "build"];
-  assert.deepEqual(core.argsFor(workflow, { clean: true, preview: true }).slice(2),
+  assert.deepEqual(core.argsFor(workflow, { clean: true, preview: true }),
     ["--clean", "maintainer", "workflow", "run", "build", "--dry-run"]);
   for (const invalid of [undefined, [], ["--unexpected"], ["run", 123]]) {
     const doc = inventory();
@@ -211,4 +211,32 @@ test("maintainer command paths come from PTK for run, preview, help and cleanup"
     assert.throws(() => core.parseInventory(JSON.stringify(doc)), /Incomplete/);
   }
   assert.throws(() => core.parseInventory(JSON.stringify({ ...inventory(), schema_version: 1 })), /Update PTK/);
+});
+
+test("PTK supplies cwd and alias routing without a config override", () => {
+  const t = target();
+  t.project.invocation = { cwd: path.resolve("workspace"), prefix: ["demo"] };
+  assert.equal(core.cwdFor(t), path.resolve("workspace"));
+  assert.deepEqual(core.argsFor(t, { variant: "large", preview: true }), ["--variant", "large", "demo", "run", "build", "--dry-run"]);
+  assert.deepEqual(core.argsFor(t, { help: true }), ["demo", "build", "--help"]);
+  assert.deepEqual(core.argsFor({ ...t, kind: "validate" }), ["demo", "validate"]);
+  for (const route of [undefined, { cwd: "relative", prefix: [] }, { cwd: path.resolve("workspace"), prefix: ["--config"] }]) {
+    const doc = inventory(); doc.projects[0].invocation = route;
+    assert.throws(() => core.parseInventory(JSON.stringify(doc)), /repository paths/);
+  }
+  assert.throws(() => core.parseInventory(JSON.stringify({ ...inventory(), schema_version: 2 })), /Update PTK/);
+});
+
+test("run options retain literal repeated values and reject removed step choices", () => {
+  const t = target();
+  t.spec.run_options = [
+    builtinParam("start", { kind: "option", option: "--from", choices: ["configure", "compile"] }),
+    builtinParam("end", { kind: "option", option: "--to", choices: ["configure", "compile"] }),
+    builtinParam("args_for", { kind: "option", option: "--args-for", multiple: true }),
+    builtinParam("show_env", { kind: "option", option: "--env", is_flag: true }),
+  ];
+  const runOptions = { start: ["configure"], end: ["compile"], args_for: ['compile=--dir "some folder"', 'compile=$(not-a-shell)'], show_env: ["true"] };
+  assert.deepEqual(core.argsFor(t, { preview: true, runOptions }), ["run", "build", "--from=configure", "--to=compile", '--args-for=compile=--dir "some folder"', "--args-for=compile=$(not-a-shell)", "--env", "--dry-run"]);
+  assert.throws(() => core.argsFor(t, { runOptions: { start: ["removed"] } }), /available value/);
+  assert.throws(() => core.argsFor(t, { runOptions }), /requires Dry run/);
 });

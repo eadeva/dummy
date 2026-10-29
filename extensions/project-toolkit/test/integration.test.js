@@ -420,3 +420,22 @@ test("real maintainer jobs and workflows execute through the discovered namespac
   assert.equal(JSON.parse(fs.readFileSync(path.join(root, "_logs/large/publish/run.json"))).params.message, "maintenance");
   invoke(root, core.argsFor(targets.find(target => target.name === "release"), { variant: "large" }), { PTK_ROLE: "" });
 });
+
+test("PTK run-option metadata drives a real bounded job execution", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk step choices "));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  project(root, "demo");
+  fs.writeFileSync(path.join(root, "jobs/build.ptk.yml"), JSON.stringify({ steps: [
+    { prepare: { uses: "echo", with: { message: "SHOULD_NOT_RUN_BEFORE" } } },
+    { compile: { title: "Compile firmware", uses: "echo", with: { message: "IN_SELECTED_RANGE" } } },
+    { package: { uses: "echo", with: { message: "SHOULD_NOT_RUN_AFTER" } } },
+  ] }));
+  const doc = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));
+  const target = core.availableTargets([{ inventory: doc }]).find(item => item.kind === "job");
+  const from = target.spec.run_options.find(option => option.name === "start");
+  assert.deepEqual(from.choices, ["prepare", "compile", "package"]);
+  assert.equal(from.suggestions[1].help, "Compile firmware");
+  const output = invoke(core.cwdFor(target), core.argsFor(target, { variant: "small", runOptions: { start: ["compile"], end: ["compile"] } }));
+  assert.match(output, /IN_SELECTED_RANGE/);
+  assert.doesNotMatch(output, /SHOULD_NOT_RUN/);
+});

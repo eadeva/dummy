@@ -1,5 +1,3 @@
-from tests.project_files import write_workflows
-
 """Workflow execution with real portable jobs and bounded VMR discovery."""
 
 import json
@@ -8,9 +6,9 @@ from pathlib import Path
 
 import pytest
 import yaml
-from click.testing import CliRunner
+from tests.cli_runner import CliRunner
 from tests.conftest import grant_maintainer
-from tests.project_files import read_project, write_project
+from tests.project_files import read_project, write_project, write_workflows
 
 from ptk.drivers.cli.main import cli
 
@@ -35,7 +33,7 @@ def repository(root, alias="app", *, jobs=None, workflows=None, extra=None):
 
 def invoke(root, *args, env=None):
     return CliRunner(env={"PTK_ROLE": "user", "PTK_CI": "0", **(env or {})}).invoke(
-        cli, ["-C", str(root / ".main.ptk.yml"), *args], catch_exceptions=False
+        cli, [*args], catch_exceptions=False, cwd=root
     )
 
 

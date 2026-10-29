@@ -5,10 +5,10 @@ from pathlib import Path
 
 import pytest
 import yaml
-from click.testing import CliRunner
 
 from ptk.bootstrap import create_app
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.conftest import grant_maintainer
 from tests.project_files import write_project
 
@@ -75,8 +75,6 @@ def invoke(root, *args, env=None, variant=None):
     ).invoke(
         cli,
         [
-            "-C",
-            str(root / ".main.ptk.yml"),
             *(["-V", variant] if variant else []),
             "maintainer",
             "artifacts",
@@ -88,6 +86,7 @@ def invoke(root, *args, env=None, variant=None):
             *args,
         ],
         catch_exceptions=False,
+        cwd=root,
     )
 
 
@@ -178,7 +177,7 @@ def test_unknown_fields_and_template_typos_include_file_provenance(tmp_path):
     root = make_project(tmp_path)
     path = root / "config/artifactory_paths.ptk.yml"
     path.write_text(path.read_text().replace("date.timestamp", "date.timestmp"))
-    result = CliRunner().invoke(cli, ["-C", str(root / ".main.ptk.yml"), "validate"])
+    result = CliRunner().invoke(cli, ["validate"], cwd=root)
     assert result.exit_code != 0
     assert (
         "artifactory_paths.ptk.yml" in result.output
@@ -187,7 +186,7 @@ def test_unknown_fields_and_template_typos_include_file_provenance(tmp_path):
     path.write_text(
         path.read_text().replace("date.timestmp", "date.timestamp") + "uploads: []\n"
     )
-    result = CliRunner().invoke(cli, ["-C", str(root / ".main.ptk.yml"), "validate"])
+    result = CliRunner().invoke(cli, ["validate"], cwd=root)
     assert result.exit_code != 0 and "unknown key 'uploads'" in result.output
 
 

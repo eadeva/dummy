@@ -48,7 +48,11 @@ def _variant_projects(ctx):
         current = current.parent
     root = ctx.find_root()
     try:
-        entries = root.command._repositories(root)
+        entries = (
+            root.command._repositories(root)
+            if hasattr(root.command, "_repositories")
+            else None
+        )
     except (PtkError, click.ClickException, OSError):
         return []
     if entries is None:
@@ -131,9 +135,70 @@ def _job(ctx):
 def steps(ctx, param, incomplete):
     job = _job(ctx)
     return (
-        _items({step.name: "Top-level step" for step in job.steps}, incomplete)
+        [
+            CompletionItem(step.name, help=step.title or "Top-level step")
+            for step in job.steps
+            if step.name.startswith(incomplete)
+        ]
         if job
         else []
+    )
+
+
+def passthrough_steps(ctx, param, incomplete):
+    job = _job(ctx)
+    values = {}
+
+    def visit(steps, prefix=""):
+        for step in steps:
+            name = f"{prefix}{step.name}"
+            if step.passthrough:
+                values[name + "="] = step.title or "Additional command arguments"
+            visit(step.steps or [], name + "/")
+
+    if job:
+        visit(job.steps)
+    return _items(values, incomplete)
+
+
+def features(ctx, param, incomplete):
+    project = state_of(ctx).try_project()
+    line = project.config.variants if project else None
+    if line is None:
+        return []
+    from ...domain.variants.model import component_symbol
+
+    specs = {
+        name: spec
+        for component in line.components.values()
+        for name, spec in component.features.items()
+    }
+    components = {
+        component_symbol(name): f"Select component {name}" for name in line.components
+    }
+    key, equals, _value = incomplete.partition("=")
+    if not equals:
+        return _items(
+            {
+                **{name + "=": spec.help for name, spec in specs.items()},
+                **{name + "=": help for name, help in components.items()},
+            },
+            incomplete,
+        )
+    spec = specs.get(key)
+    values = (
+        ["true", "false"]
+        if key in components or spec and spec.type == "bool"
+        else spec.values
+        if spec and spec.type == "enum"
+        else []
+    )
+    return _items(
+        {
+            key + "=" + item: spec.help if spec else components[key]
+            for item in values or []
+        },
+        incomplete,
     )
 
 

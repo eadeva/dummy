@@ -84,7 +84,7 @@ test("parameter window validates values, filters secrets, and resolves only once
   assert.equal(p.isDisposed, false);
   assert.match(p.messages.at(-1).issue, /whole number/);
   await p.receive({ type: "submit", params: { count: "2" }, preview: true });
-  assert.deepEqual(await result, { params: { count: "2" }, preview: true });
+  assert.deepEqual(await result, { params: { count: "2" }, preview: true, runOptions: {}, variants: [] });
   assert.equal(p.isDisposed, true);
   const cancelled = h.editors.parameters(target, { preview: false });
   h.panels[1].dispose();

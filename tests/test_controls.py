@@ -1,15 +1,16 @@
 import json
 import os
 import sys
+from pathlib import Path
 
 import yaml
-from click.testing import CliRunner
 
 from ptk.application.use_cases.run import RunRequest
 from ptk.bootstrap import create_app
 from ptk.domain.execution.model import Status
 from ptk.domain.reporting.summary import run_summary
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.project_files import write_project
 
 
@@ -51,8 +52,9 @@ def test_secret_prompt_and_path_param(tmp_path):
     )
     result = CliRunner().invoke(
         cli,
-        ["-C", str(file), "go", "--token", "--output", "two words"],
+        ["go", "--token", "--output", "two words"],
         input="secret-value\n",
+        cwd=Path(file).parent,
     )
     assert result.exit_code == 0, result.output
     assert "secret-value" not in result.output

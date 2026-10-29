@@ -3,11 +3,11 @@
 import json
 
 import pytest
-from click.testing import CliRunner
 
 from ptk.application.use_cases.init import InitProject
 from ptk.domain.errors import PtkError
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 
 
 class MemoryScaffold:
@@ -58,9 +58,11 @@ def test_new_project_runs(tmp_path, monkeypatch):
     initialized = app.load_project.execute(config_file=target / ".main.ptk.yml")
     assert initialized.maintainers.maintainers == [SystemHost().user_id()]
     assert app.role(initialized) == "maintainer"
-    base = ["-C", str(target / ".main.ptk.yml")]
-    assert runner.invoke(cli, [*base, "validate"]).exit_code == 0
-    ran = runner.invoke(cli, [*base, "hello", "--message", "custom message"])
+    base = []
+    assert runner.invoke(cli, [*base, "validate"], cwd=target).exit_code == 0
+    ran = runner.invoke(
+        cli, [*base, "hello", "--message", "custom message"], cwd=target
+    )
     assert ran.exit_code == 0, ran.output
     report = json.loads((target / "_reports/debug/hello/report.json").read_text())
     assert report["status"] == "passed"
@@ -149,11 +151,15 @@ def test_custom_config_directory_and_outputs(tmp_path):
         "build.ptk.yml",
         "hello.ptk.yml",
     ]
-    base = ["-C", str(tmp_path / ".main.ptk.yml")]
+    base = []
     for variant in ("debug", "release"):
-        result = runner.invoke(cli, [*base, "--variant", variant, "hello"])
+        result = runner.invoke(
+            cli, [*base, "--variant", variant, "hello"], cwd=tmp_path
+        )
         assert result.exit_code == 0, result.output
-        result = runner.invoke(cli, [*base, "--variant", variant, "build"])
+        result = runner.invoke(
+            cli, [*base, "--variant", variant, "build"], cwd=tmp_path
+        )
         assert result.exit_code == 0, result.output
         assert (tmp_path / f"_bin/{variant}/build/generated/version.h").is_file()
     assert len(list(tmp_path.rglob(".gen.version.ptk.yml"))) == 4
@@ -219,8 +225,6 @@ def test_scaffold_discovered_fragments_variants_and_ci(tmp_path):
     (tmp_path / "ptk/jobs/check.ptk.yml").write_text(
         "steps:\n  - check: {uses: echo, with: {message: discovered}}\n"
     )
-    result = CliRunner(env={"PTK_CI": "0"}).invoke(
-        cli, ["-C", str(tmp_path / ".main.ptk.yml"), "check"]
-    )
+    result = CliRunner(env={"PTK_CI": "0"}).invoke(cli, ["check"], cwd=tmp_path)
     assert result.exit_code == 0, result.output
     assert "discovered" in result.output

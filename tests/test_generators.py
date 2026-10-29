@@ -1,15 +1,16 @@
 import ast
 import shutil
 import subprocess
+from pathlib import Path
 
 import pytest
 import yaml
-from click.testing import CliRunner
 
 from ptk.domain.variants.generators import GENERATORS
 from ptk.domain.variants.model import ProductLineSpec
 from ptk.domain.variants.rules import resolve
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.project_files import write_project
 
 
@@ -127,7 +128,7 @@ def test_builtin_generation_copy_clean_and_configs(tmp_path):
             }
         ),
     )
-    result = CliRunner().invoke(cli, ["-C", str(config), "-V", "demo", "go"])
+    result = CliRunner().invoke(cli, ["-V", "demo", "go"], cwd=Path(config).parent)
     assert result.exit_code == 0, result.output
     assert (tmp_path / "_bin/demo/variant.h").exists()
     assert not (tmp_path / "_builds/demo/go/gen").exists()

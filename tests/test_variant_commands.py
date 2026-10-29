@@ -1,9 +1,10 @@
 import json
+from pathlib import Path
 
 import yaml
-from click.testing import CliRunner
 
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.project_files import read_project, write_project
 
 
@@ -54,8 +55,6 @@ def test_all_variants_and_typed_overrides(tmp_path):
     result = CliRunner().invoke(
         cli,
         [
-            "-C",
-            str(file),
             "go",
             "--all-variants",
             "--feature",
@@ -63,6 +62,7 @@ def test_all_variants_and_typed_overrides(tmp_path):
             "--who",
             "team",
         ],
+        cwd=Path(file).parent,
     )
     assert result.exit_code == 0, result.output
     summaries = [
@@ -76,11 +76,11 @@ def test_all_variants_and_typed_overrides(tmp_path):
 def test_variant_selection_preflight_and_dry_run(tmp_path):
     file = setup(tmp_path)
     runner = CliRunner()
-    result = runner.invoke(cli, ["-C", str(file), "-V", "small,missing", "go"])
+    result = runner.invoke(cli, ["-V", "small,missing", "go"], cwd=Path(file).parent)
     assert result.exit_code == 2
     assert not (tmp_path / "_logs").exists()
     preview = runner.invoke(
-        cli, ["-C", str(file), "-V", "small,large", "go", "--dry-run"]
+        cli, ["-V", "small,large", "go", "--dry-run"], cwd=Path(file).parent
     )
     assert preview.exit_code == 0, preview.output
     assert not (tmp_path / "_logs").exists()
@@ -100,7 +100,7 @@ def test_matrix_failure_preserves_later_runs(tmp_path):
         }
     )
     write_project(file, yaml.safe_dump(config))
-    result = CliRunner().invoke(cli, ["-C", str(file), "go", "--all-variants"])
+    result = CliRunner().invoke(cli, ["go", "--all-variants"], cwd=Path(file).parent)
     assert result.exit_code == 1, result.output
     summaries = {
         json.loads(p.read_text())["variant"]: json.loads(p.read_text())["status"]
@@ -111,6 +111,8 @@ def test_matrix_failure_preserves_later_runs(tmp_path):
 
 def test_global_feature_override(tmp_path):
     file = setup(tmp_path)
-    result = CliRunner().invoke(cli, ["-C", str(file), "--set", "vh.SIZE=6", "go"])
+    result = CliRunner().invoke(
+        cli, ["--set", "vh.SIZE=6", "go"], cwd=Path(file).parent
+    )
     assert result.exit_code == 0, result.output
     assert "6 world" in result.output

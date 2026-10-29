@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from click.testing import CliRunner
-
 from ptk.adapters.help_html import render
 from ptk.application.use_cases.help import BuildHelp
 from ptk.application.use_cases.role import resolve_role
 from ptk.bootstrap import create_app
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.conftest import DEMO
 
 
@@ -65,11 +64,12 @@ def test_rendered_page_shows_pipeline_and_escapes():
 
 
 def test_help_command_writes_page(tmp_path):
+    import shutil
+
+    demo = shutil.copytree(DEMO, tmp_path / "demo")
     out = tmp_path / "help.html"
     result = CliRunner().invoke(
-        cli,
-        ["--config", str(DEMO / ".main.ptk.yml"), "help", "--no-open", "-o", str(out)],
-        catch_exceptions=False,
+        cli, ["help", "--no-open", "-o", str(out)], catch_exceptions=False, cwd=demo
     )
     assert result.exit_code == 0, result.output
     html = out.read_text()

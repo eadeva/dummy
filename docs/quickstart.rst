@@ -49,7 +49,7 @@ rules are appended. The project name defaults to the destination directory name.
 
 The command works without an existing project, including inside a directory
 whose parent contains a ptk project. ``DIRECTORY`` is the initialization target;
-do not combine this command with global ``--config`` or ``--set`` options.
+do not combine this command with global ``--set`` overrides.
 Outside a VMR, ``ptk init`` initializes the current directory. In a VMR,
 it initializes all checked-out members without a root ``.main.ptk.yml``, skips
 configured repositories, and asks for the common config folder once.
@@ -60,12 +60,13 @@ Run the repository example
 
 The quickstart uses only the Python interpreter running ptk. It needs no CMake,
 compiler, credentials, or network connection once ptk is installed. Commands
-below work from the repository root on Linux and Windows::
+below work on Linux and Windows. Copy ``examples/quickstart`` outside this Git
+checkout, then open a terminal in the copy. PTK discovers its root marker::
 
-   uv run ptk -C examples/quickstart/.main.ptk.yml config validate
-   uv run ptk -C examples/quickstart/.main.ptk.yml -V debug build --dry-run
-   uv run ptk -C examples/quickstart/.main.ptk.yml -V debug build --message "Hello from ptk"
-   uv run ptk -C examples/quickstart/.main.ptk.yml -V release build
+   ptk validate
+   ptk -V debug build --dry-run
+   ptk -V debug build --message "Hello from ptk"
+   ptk -V release build
 
 ``dry-run`` displays the commands without executing the steps. ``build`` first
 writes ``examples/quickstart/_bin/<variant>/build/message.txt``, then runs a parallel
@@ -77,7 +78,7 @@ Inspect the results
 
 Open ``examples/quickstart/_reports/debug/build/report.html`` in a browser, or::
 
-   uv run ptk -C examples/quickstart/.main.ptk.yml -V debug report open build
+   ptk -V debug report open build
 
 JSON, JUnit XML and Markdown reports are written alongside the HTML. Logs are in
 ``examples/quickstart/_logs/debug/build``. Previous logs are retained according

@@ -89,10 +89,11 @@ From a VMR root select the repository explicitly, for example
 alias, variants and version sources. No project settings or tool environments
 are merged across members.
 
-Local preview works without GitHub or network access::
+Local preview works without GitHub or network access. To try the bundled sample,
+copy ``examples/artifacts`` outside this Git checkout and open a terminal in it::
 
-   ptk -C examples/artifacts/.main.ptk.yml maintainer artifacts destination --job package --event release
-   ptk -C examples/artifacts/.main.ptk.yml maintainer artifacts destination --job package --event release --at 2026-10-26T15:07:00+01:00
+   ptk maintainer artifacts destination --job package --event release
+   ptk maintainer artifacts destination --job package --event release --at 2026-10-26T15:07:00+01:00
 
 ``--event`` overrides the detected event for routing. ``--at`` accepts a
 timezone-aware ISO timestamp and fixes all date placeholders for this resolution.

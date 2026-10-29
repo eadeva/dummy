@@ -1,16 +1,17 @@
 """Repository discovery and VMR dispatch through the real CLI."""
 
 import os
+from pathlib import Path
 
 import pytest
 import yaml
-from click.testing import CliRunner
 
 from ptk.adapters.config.source import FileConfigSource
 from ptk.adapters.workspace import repositories, workspace_root
 from ptk.bootstrap import create_app
 from ptk.domain.errors import PtkError
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.conftest import grant_maintainer
 from tests.project_files import read_project, write_project
 
@@ -114,8 +115,8 @@ def test_vmr_cli_isolates_repositories_and_preserves_commands(tmp_path, monkeypa
     monkeypatch.chdir(a.parent / "config")
     nested = runner.invoke(cli, ["bootloader", "build"])
     assert nested.exit_code == 0, nested.output
-    explicit = runner.invoke(cli, ["-C", str(a), "build"])
-    assert explicit.exit_code == 0, explicit.output
+    member = runner.invoke(cli, ["firmware", "build"], cwd=Path(a).parent)
+    assert member.exit_code == 0, member.output
 
 
 def test_vmr_permissions_are_per_repository(tmp_path, monkeypatch):

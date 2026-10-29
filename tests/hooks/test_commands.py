@@ -1,5 +1,3 @@
-from tests.project_files import read_project, write_project
-
 """Exercise the built-ins against real Git and a local pre-commit hook."""
 
 import json
@@ -8,9 +6,10 @@ import sys
 
 import pytest
 import yaml
-from click.testing import CliRunner
 
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
+from tests.project_files import read_project, write_project
 from tests.test_command_access import snapshot
 
 from .conftest import git, invoke, repository
@@ -167,7 +166,7 @@ def test_explicit_checks_work_without_automatic_installation(tmp_path, mode):
         write_project(path, data)
     if mode == "ci":
         result = CliRunner(env={"PTK_CI": "1", "PTK_ROLE": "user"}).invoke(
-            cli, ["-C", str(root / ".main.ptk.yml"), "pre-commit", "run", "--all-files"]
+            cli, ["pre-commit", "run", "--all-files"], cwd=root
         )
     else:
         result = invoke(root, "pre-commit", "run", "--all-files")

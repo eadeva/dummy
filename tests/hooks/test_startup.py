@@ -1,15 +1,14 @@
-from tests.project_files import write_workflows
-
 """Job/workflow startup boundaries and failures before executing user steps."""
 
 import pytest
 import yaml
-from click.testing import CliRunner
 
 from ptk.adapters.hooks import GitHooks
 from ptk.application.use_cases.hooks import EnsureHooks
 from ptk.domain.errors import PtkError
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
+from tests.project_files import write_workflows
 
 from .conftest import git, invoke, repository
 from .test_installation import hook_path
@@ -48,7 +47,7 @@ def test_help_preview_and_ci_do_not_install(tmp_path, monkeypatch, args):
     monkeypatch.setattr(GitHooks, "ensure", forbidden)
     if args == ["build"]:
         result = CliRunner(env={"PTK_CI": "1", "PTK_ROLE": "user"}).invoke(
-            cli, ["-C", str(root / ".main.ptk.yml"), *args]
+            cli, [*args], cwd=root
         )
     else:
         result = invoke(root, *args)

@@ -1,6 +1,3 @@
-import yaml
-from tests.project_files import write_workflows
-
 """Workflow commands and deterministic collision handling for local/CX callers."""
 
 import json
@@ -8,7 +5,9 @@ import sys
 from types import SimpleNamespace
 
 import pytest
-from click.testing import CliRunner
+import yaml
+from tests.cli_runner import CliRunner
+from tests.project_files import write_workflows
 from tests.workflows.test_cli import command, invoke, repository
 
 from ptk.drivers.cli import jobs
@@ -51,10 +50,7 @@ def test_local_collision_prompts_before_parsing_target_options(
         SimpleNamespace(stdin=SimpleNamespace(isatty=lambda: True), exit=sys.exit),
     )
     result = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"}).invoke(
-        cli,
-        ["-C", str(root / ".main.ptk.yml"), "verify"],
-        input=choice + "\n",
-        catch_exceptions=False,
+        cli, ["verify"], input=choice + "\n", catch_exceptions=False, cwd=root
     )
     assert result.exit_code == 0, result.output
     assert "both a job and a workflow" in result.output
@@ -71,7 +67,7 @@ def test_collision_is_noninteractive_in_help_cx_and_explicit_commands(tmp_path):
     assert ambiguous.exit_code == 2 and "non-interactive" in ambiguous.output
     assert not (root / "job-ran").exists()
     ci = CliRunner(env={"PTK_CI": "1", "PTK_ROLE": "user"}).invoke(
-        cli, ["-C", str(root / ".main.ptk.yml"), "verify"]
+        cli, ["verify"], cwd=root
     )
     assert ci.exit_code == 0 and (root / "job-ran").is_file(), ci.output
     assert not (root / "workflow-ran").exists()

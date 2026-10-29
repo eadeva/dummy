@@ -7,12 +7,12 @@ import os
 import sys
 
 import pytest
-from click.testing import CliRunner
 from rich.text import Text
 
 from ptk.adapters.vscode_file import strip_jsonc
 from ptk.domain import vscode
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.conftest import grant_maintainer
 from tests.project_files import project_files
 
@@ -49,9 +49,9 @@ def invoke(write):
 
     def _invoke(*args: str, role: str = "user"):
         env = {**HOST, "PTK_ROLE": "user" if role == "user" else ""}
-        base = ["--config", str(root / ".main.ptk.yml")]
+        base = []
         return CliRunner(env={"PTK_CI": "0", **env}).invoke(
-            cli, [*base, *args], catch_exceptions=False
+            cli, [*base, *args], catch_exceptions=False, cwd=root
         )
 
     _invoke.root = root
@@ -125,13 +125,13 @@ def test_maintainer_jobs_hidden_and_refused_for_users(invoke):
 
 def test_broken_config_still_shows_help(write):
     root = write(project_files("project: {name: t}\njobs: {build: {stepz: []}}\n"))
-    base = ["--config", str(root / ".main.ptk.yml")]
+    base = []
     help_out = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
-        cli, [*base, "--help"], catch_exceptions=False
+        cli, [*base, "--help"], catch_exceptions=False, cwd=root
     )
     assert help_out.exit_code == 0 and "config" in help_out.output
     run = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
-        cli, [*base, "build"], catch_exceptions=False
+        cli, [*base, "build"], catch_exceptions=False, cwd=root
     )
     assert run.exit_code == 2 and "stepz" in run.output
 

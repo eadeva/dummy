@@ -29,17 +29,17 @@ Existing configuration and `.gitignore` files are preserved.
 
 ## Runnable quickstart
 
-From the repository root:
+With PTK installed, copy `examples/quickstart` to a directory outside this Git
+checkout, then open a terminal in that copy:
 
 ```bash
-uv sync
-uv run ptk -C examples/quickstart/.main.ptk.yml build --dry-run
-uv run ptk -C examples/quickstart/.main.ptk.yml -V debug build
-uv run ptk -C examples/quickstart/.main.ptk.yml -V release build
+ptk build --dry-run
+ptk -V debug build
+ptk -V release build
 ```
 
-This example runs without compilers or credentials and writes logs and reports
-inside `examples/quickstart`. The existing firmware demo contains placeholders
+PTK discovers `.main.ptk.yml` from the current directory. This example runs
+without compilers or credentials and writes logs and reports inside the copy. The existing firmware demo contains placeholders
 and is intended for configuration exploration and dry runs.
 
 Build the [documentation](docs/index.rst):

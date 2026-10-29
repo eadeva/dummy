@@ -6,6 +6,7 @@ const path = require("node:path");
 const object = value => value !== null && typeof value === "object" && !Array.isArray(value);
 const absolute = value => typeof value === "string" && path.isAbsolute(value);
 const commandPath = value => Array.isArray(value) && value.length > 0 && value.every(word => typeof word === "string" && word.length > 0 && !word.startsWith("-"));
+const runOptions = value => Array.isArray(value) && value.every(param => validBuiltinParam(param) && param.kind === "option");
 const named = value => object(value) && typeof value.name === "string" && value.name.length > 0;
 
 function validBuiltinParam(param) {
@@ -29,13 +30,14 @@ function parseInventory(text) {
   try { doc = JSON.parse(text); } catch {
     throw new Error("PTK did not return JSON. Update PTK and Project Toolkit together.");
   }
-  if (!object(doc) || doc.schema_version !== 2 || !Array.isArray(doc.projects) ||
-      !Array.isArray(doc.workflows) || !doc.workflows.every(item => named(item) && commandPath(item.command)) || !absolute(doc.root) || typeof doc.ci !== "boolean") {
+  if (!object(doc) || doc.schema_version !== 3 || !Array.isArray(doc.projects) ||
+      !Array.isArray(doc.workflows) || !doc.workflows.every(item => named(item) && commandPath(item.command) && runOptions(item.run_options)) || !absolute(doc.root) || typeof doc.ci !== "boolean") {
     throw new Error("Unsupported PTK inventory. Update PTK and Project Toolkit together.");
   }
   if (!validCommands(doc.commands)) throw new Error("Invalid PTK built-in command inventory.");
   for (const project of doc.projects) {
-    if (!object(project) || typeof project.alias !== "string" || !absolute(project.root) || !absolute(project.entry_file)) {
+    if (!object(project) || typeof project.alias !== "string" || !absolute(project.root) || !absolute(project.entry_file) || !object(project.invocation) || !absolute(project.invocation.cwd) ||
+        !Array.isArray(project.invocation.prefix) || project.invocation.prefix.length > 1 || project.invocation.prefix.some(word => typeof word !== "string" || !/^[a-z][a-z0-9-]*$/.test(word))) {
       throw new Error("Invalid repository paths in PTK inventory.");
     }
     const config = project.configuration;
@@ -50,8 +52,8 @@ function parseInventory(text) {
     if (![project.jobs, project.workflows, project.variants].every(items => Array.isArray(items) && items.every(named)) ||
         !object(project.capabilities) || !["validate", "variants", "reports"].every(key => typeof project.capabilities[key] === "boolean") ||
         !Array.isArray(project.config_files) || !project.config_files.every(absolute) ||
-        !project.workflows.every(item => commandPath(item.command)) ||
-        !project.jobs.every(job => commandPath(job.command) && commandPath(job.help_command) && Array.isArray(job.params) && job.params.every(param => named(param) &&
+        !project.workflows.every(item => commandPath(item.command) && runOptions(item.run_options)) ||
+        !project.jobs.every(job => runOptions(job.run_options) && commandPath(job.command) && commandPath(job.help_command) && Array.isArray(job.params) && job.params.every(param => named(param) &&
           ["str", "int", "float", "bool", "path", "choice", "list"].includes(param.type) &&
           typeof param.required === "boolean" && Array.isArray(param.choices) && param.choices.every(c => typeof c === "string")))) {
       throw new Error("Incomplete PTK project inventory.");
@@ -120,6 +122,7 @@ function builtinArgs(spec, inputs = {}) {
   let omittedArgument = false;
   for (const param of spec.params) {
     const values = Object.hasOwn(inputs, param.name) ? inputs[param.name] : [];
+    if (param.choices.length && values.some(value => !param.choices.includes(value))) throw new Error(`Select an available value for ${param.name}.`);
     if (!values.length) {
       if (param.required) throw new Error(`Required argument: ${param.name}`);
       if (param.kind === "argument") omittedArgument = true;
@@ -144,7 +147,7 @@ function builtinArgs(spec, inputs = {}) {
   return [...options, ...(positional.length ? ["--", ...positional] : [])];
 }
 
-function argsFor(target, { variant, preview = false, params = {}, help = false, inputs = {}, clean = false, reRun = false, report = false, configDir } = {}) {
+function argsFor(target, { variant, preview = false, params = {}, help = false, inputs = {}, clean = false, reRun = false, report = false, configDir, runOptions = {} } = {}) {
   if (typeof clean !== "boolean" || typeof reRun !== "boolean" || clean && reRun) throw new Error("Choose clean or re-run.");
   if ((clean || reRun) && !["job", "workflow"].includes(target.kind)) throw new Error("Cleanup applies to jobs and workflows.");
   if (typeof help !== "boolean") throw new Error("Task help must be a boolean.");
@@ -159,18 +162,22 @@ function argsFor(target, { variant, preview = false, params = {}, help = false, 
       if (target.spec.params.find(param => param.name === key)?.type === "bool" && !["true", "false"].includes(value)) throw new Error(`Boolean parameter ${key} must be true or false.`);
     }
   }
-  const args = target.project ? ["--config", target.project.entry_file] : [];
+  const args = [];
+  const prefix = target.project?.invocation.prefix || [];
+  const executionArgs = ["job", "workflow"].includes(target.kind) ? builtinArgs({ params: target.spec.run_options }, runOptions) : [];
+  if (runOptions.show_env?.[0] === "true" && !preview) throw new Error("Include environment requires Dry run.");
   if (typeof report !== "boolean") throw new Error("Report mode must be a boolean.");
   if (report) {
     if (preview || help || clean || reRun) throw new Error("Open a report separately from run, help or cleanup actions.");
-    if (target.kind === "workflow") return [...args, "report", "open", "--if-exists", "--workflow", target.name];
+    if (target.kind === "workflow") return [...args, ...prefix, "report", "open", "--if-exists", "--workflow", target.name];
     if (target.kind !== "job") throw new Error("Reports apply to jobs and workflows.");
     if (variant) args.push("--variant", variant);
-    return [...args, "report", "open", "--if-exists", "--", target.name];
+    return [...args, ...prefix, "report", "open", "--if-exists", "--", target.name];
   }
   if (variant && target.kind !== "builtin") args.push("--variant", variant);
   if (!help && clean) args.push("--clean");
   if (!help && reRun) args.push("--re-run");
+  args.push(...prefix);
   if (help) {
     if (target.kind === "job") return [...args, ...target.spec.help_command, "--help"];
     if (target.kind === "workflow") return [...args, ...target.spec.command, "--help"];
@@ -185,12 +192,12 @@ function argsFor(target, { variant, preview = false, params = {}, help = false, 
       args.push(...target.spec.path, ...builtinArgs(target.spec, inputs));
       break;
     case "job":
-      args.push(...target.spec.command);
+      args.push(...target.spec.command, ...executionArgs);
       if (preview) args.push("--dry-run");
       for (const [key, value] of Object.entries(params)) args.push("--param", `${key}=${value}`);
       break;
     case "workflow":
-      args.push(...target.spec.command);
+      args.push(...target.spec.command, ...executionArgs);
       if (preview) args.push("--dry-run");
       break;
     case "variant": args.push("variant", "show", target.name); break;
@@ -253,4 +260,6 @@ function canOpenReport(target) {
   return builtinTargets({}, commands).some(command => command.name === name && command.spec.runnable);
 }
 
-module.exports = { parseInventory, readInventory, selectedVariant, argsFor, availableTargets, availableBuiltins, builtinTargets, canOpenReport, launchArgs, ignoreConfigEvent };
+function cwdFor(target) { return target.project?.invocation.cwd || target.root; }
+
+module.exports = { builtinArgs, cwdFor, parseInventory, readInventory, selectedVariant, argsFor, availableTargets, availableBuiltins, builtinTargets, canOpenReport, launchArgs, ignoreConfigEvent };

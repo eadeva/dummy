@@ -185,7 +185,8 @@ def test_cli_redirected_legacy_encoding_does_not_abort_job(tmp_path):
         "      - greet: {uses: echo, with: {message: 'caf\u00e9 \U0001f9ea'}}\n",
     )
     result = subprocess.run(
-        [sys.executable, "-m", "ptk.drivers.cli.main", "-C", str(config), "hello"],
+        [sys.executable, "-m", "ptk.drivers.cli.main", "hello"],
+        cwd=config.parent,
         env={**os.environ, "PYTHONIOENCODING": "cp1252:strict"},
         capture_output=True,
         check=False,

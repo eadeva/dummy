@@ -27,7 +27,10 @@ from ...domain.config.model import JobSpec, ParamSpec
 from ...domain.errors import PtkError
 from ...domain.suggest import did_you_mean
 from .access import AccessGroup, denied_command, in_maintainer
+from .completion import features as complete_features
+from .completion import passthrough_steps as complete_passthrough
 from .completion import steps as complete_steps
+from .options import SuggestedCommand, SuggestedOption
 from .report_links import print_report
 from .state import console, err_console, guarded, report_error, state_of
 
@@ -118,19 +121,20 @@ def common_options() -> list[click.Parameter]:
         click.Option(
             ["--all-variants"], is_flag=True, help="Run all concrete variants."
         ),
-        click.Option(
+        SuggestedOption(
             ["--feature", "features"],
             multiple=True,
             metavar="FEATURE=VALUE",
             help="Override a variant feature for this invocation.",
+            shell_complete=complete_features,
         ),
-        click.Option(
+        SuggestedOption(
             ["--from", "start"],
             metavar="STEP",
             help="Start at this top-level step.",
             shell_complete=complete_steps,
         ),
-        click.Option(
+        SuggestedOption(
             ["--to", "end"],
             metavar="STEP",
             help="Stop after this top-level step.",
@@ -141,11 +145,12 @@ def common_options() -> list[click.Parameter]:
             type=click.Path(path_type=Path, dir_okay=False, exists=True),
             help="YAML file with parameter values.",
         ),
-        click.Option(
+        SuggestedOption(
             ["--args-for"],
             multiple=True,
             metavar='STEP="ARGS"',
             help="Extra arguments for one step with passthrough: true (STEP is a/b).",
+            shell_complete=complete_passthrough,
         ),
     ]
     params.extend(
@@ -473,7 +478,7 @@ def job_command(name: str, spec: JobSpec, *, hidden: bool) -> click.Command:
     help_text = spec.help or f"Run the '{name}' job."
     if spec.audience == "maintainer":
         help_text += " [dim](maintainers only)[/]"
-    command = click.RichCommand(
+    command = SuggestedCommand(
         name,
         callback=guarded(callback),
         params=[

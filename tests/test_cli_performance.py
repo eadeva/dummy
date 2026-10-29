@@ -1,5 +1,3 @@
-from tests.project_files import write_project
-
 """Bound startup work without timing thresholds that vary across machines."""
 
 import json
@@ -7,15 +5,17 @@ import os
 import subprocess
 import sys
 from collections import Counter
+from pathlib import Path
 
 import pytest
-from click.testing import CliRunner
 
 from ptk.adapters.config import yaml_loader
 from ptk.adapters.host import SystemHost
 from ptk.application.use_cases.project import LoadProject
 from ptk.bootstrap import App
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
+from tests.project_files import write_project
 
 
 def make_project(root):
@@ -58,13 +58,13 @@ def test_help_loads_project_plugins_and_identity_once_per_invocation(
     monkeypatch.setattr(App, "configure_project", configure)
     monkeypatch.setattr(SystemHost, "user_id", user_id)
     runner = CliRunner(env={"PTK_ROLE": ""})
-    args = ["-C", str(file), "--help"]
-    result = runner.invoke(cli, args)
+    args = ["--help"]
+    result = runner.invoke(cli, args, cwd=Path(file).parent)
     assert result.exit_code == 0 and "maintainer" in result.output, result.output
     assert calls == {"load": 1, "configure": 1, "identity": 1}
     # Permissions and configuration must be reread on the next invocation.
     (tmp_path / "maintainers.ptk.yml").write_text("maintainers: []\n")
-    result = runner.invoke(cli, args)
+    result = runner.invoke(cli, args, cwd=Path(file).parent)
     assert result.exit_code == 0 and "maintainer" not in result.output, result.output
     assert calls == {"load": 2, "configure": 2, "identity": 2}
 
@@ -84,11 +84,11 @@ def test_failed_configuration_is_loaded_once_but_retry_next_invocation(
 
     monkeypatch.setattr(LoadProject, "execute", load)
     runner = CliRunner(env={"PTK_ROLE": "user"})
-    args = ["-C", str(file), "--help"]
-    assert runner.invoke(cli, args).exit_code == 0
+    args = ["--help"]
+    assert runner.invoke(cli, args, cwd=Path(file).parent).exit_code == 0
     assert len(calls) == 1
     file.write_text(valid)
-    result = runner.invoke(cli, args)
+    result = runner.invoke(cli, args, cwd=Path(file).parent)
     assert result.exit_code == 0 and "build" in result.output
     assert len(calls) == 2
 
@@ -110,7 +110,8 @@ unused = ['ptk.adapters.tools', 'ptk.adapters.python_env', 'ptk.adapters.reporti
 assert not set(unused).intersection(sys.modules), sorted(set(unused).intersection(sys.modules))
 """
     result = subprocess.run(
-        [sys.executable, "-c", code, "-C", str(file), *args],
+        [sys.executable, "-c", code, *args],
+        cwd=file.parent,
         env=os.environ.copy(),
         capture_output=True,
         text=True,

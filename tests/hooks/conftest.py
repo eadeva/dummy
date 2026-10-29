@@ -7,10 +7,10 @@ import sys
 
 import pytest
 import yaml
-from click.testing import CliRunner
 
 from ptk.adapters.hooks import GIT_PATH_VARIABLES, GitHooks
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.project_files import write_project
 
 
@@ -99,9 +99,7 @@ def repository(root, *, alias="app", enabled=True, output=None):
 
 def invoke(root, *args):
     return CliRunner(env={"PTK_ROLE": "user", "PTK_CI": "0"}).invoke(
-        cli,
-        ["-C", str(root / ".main.ptk.yml"), *args],
-        catch_exceptions=False,
+        cli, [*args], catch_exceptions=False, cwd=root
     )
 
 

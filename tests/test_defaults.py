@@ -5,12 +5,12 @@ from __future__ import annotations
 import os
 
 import pytest
-from click.testing import CliRunner
 
 from ptk.application.use_cases.run import RunRequest
 from ptk.bootstrap import create_app
 from ptk.domain.errors import ConfigError, PtkError
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.conftest import DEMO
 from tests.project_files import project_files
 
@@ -132,14 +132,14 @@ def test_no_job_and_no_default(write):
 
 def test_plain_ptk_runs_default_job(write):
     root = write(project_files(PROJECT))
-    args = ["--config", str(root / ".main.ptk.yml")]
+    args = []
     result = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
-        cli, args, catch_exceptions=False
+        cli, args, catch_exceptions=False, cwd=root
     )
     assert result.exit_code == 0, result.output
     assert "hello world careful vanilla-plain 1" in result.output
     dry = CliRunner(env={"PTK_CI": "0"}).invoke(
-        cli, [*args, "-V", "fast", "run", "--dry-run"], catch_exceptions=False
+        cli, [*args, "-V", "fast", "run", "--dry-run"], catch_exceptions=False, cwd=root
     )
     assert "say  echo hello world quick" in dry.output
 
@@ -150,9 +150,12 @@ def test_plain_ptk_outside_a_project_shows_help(tmp_path, monkeypatch):
     assert result.exit_code == 0 and "Commands" in result.output
 
 
-def test_demo_toolchain_follows_variant():
-    args = ["--config", str(DEMO / ".main.ptk.yml")]
+def test_demo_toolchain_follows_variant(tmp_path):
+    import shutil
+
+    demo = shutil.copytree(DEMO, tmp_path / "demo")
+    args = []
     us = CliRunner(env={"PTK_CI": "0"}).invoke(
-        cli, [*args, "-V", "b_us", "run", "--dry-run"], catch_exceptions=False
+        cli, [*args, "-V", "b_us", "run", "--dry-run"], catch_exceptions=False, cwd=demo
     )
     assert "-DTOOLCHAIN=arm-clang" in us.output and "build (dry run" in us.output

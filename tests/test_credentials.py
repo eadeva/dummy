@@ -10,7 +10,6 @@ import types
 from pathlib import Path
 
 import pytest
-from click.testing import CliRunner
 
 from ptk.adapters.credentials.env import EnvProvider
 from ptk.adapters.credentials.gopass import GopassProvider
@@ -24,6 +23,7 @@ from ptk.domain.config.model import CredentialSpec
 from ptk.domain.credentials import key_for
 from ptk.domain.errors import PtkError
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.project_files import project_files
 
 POSIX = not sys.platform.startswith("win")
@@ -282,9 +282,9 @@ def cli_env(write, tmp_path):
     }
 
     def invoke(*args, input=None):
-        base = ["--config", str(root / ".main.ptk.yml")]
+        base = []
         return CliRunner(env={"PTK_CI": "0", **env}).invoke(
-            cli, [*base, *args], input=input, catch_exceptions=False
+            cli, [*base, *args], input=input, catch_exceptions=False, cwd=root
         )
 
     invoke.root = root

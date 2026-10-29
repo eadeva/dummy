@@ -9,12 +9,12 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
-from click.testing import CliRunner
 
 from ptk.adapters import help_html
 from ptk.adapters.reporting import exporters, html, importers
 from ptk.domain.reporting.model import from_summary
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.project_files import project_files
 
 pytestmark = pytest.mark.skipif(sys.platform.startswith("win"), reason="POSIX shell")
@@ -199,9 +199,9 @@ def project(write, tmp_path):
     env = {**HOST, "JUNIT": JUNIT, "GITHUB_STEP_SUMMARY": str(summary)}
 
     def invoke(*args):
-        base = ["--config", str(root / ".main.ptk.yml")]
+        base = []
         return CliRunner(env={"PTK_CI": "0", **env}).invoke(
-            cli, [*base, *args], catch_exceptions=False
+            cli, [*base, *args], catch_exceptions=False, cwd=root
         )
 
     invoke.root = root
@@ -240,7 +240,7 @@ def test_report_import_without_match_fails(write):
         """)
     )
     result = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
-        cli, ["--config", str(root / ".main.ptk.yml"), "go"], catch_exceptions=False
+        cli, ["go"], catch_exceptions=False, cwd=root
     )
     assert result.exit_code == 1 and "no files matched" in result.output
 
@@ -277,7 +277,7 @@ def test_reporting_disabled(write):
         """)
     )
     result = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
-        cli, ["--config", str(root / ".main.ptk.yml"), "go"], catch_exceptions=False
+        cli, ["go"], catch_exceptions=False, cwd=root
     )
     assert (
         result.exit_code == 0

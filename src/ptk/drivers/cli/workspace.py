@@ -63,10 +63,9 @@ class WorkspaceGroup(ProjectGroup):
 
     def _repositories(self, ctx):
         if "vmr_repositories" not in ctx.meta:
-            # An explicit entry file intentionally selects standalone mode.
             try:
                 discovery = state_of(ctx).app.workspace
-                root = None if ctx.params.get("config") else discovery.root(Path.cwd())
+                root = discovery.root(Path.cwd())
                 ctx.meta["vmr_repositories"] = (
                     discovery.repositories(root) if root else None
                 )
@@ -129,9 +128,7 @@ class WorkspaceGroup(ProjectGroup):
 
         @functools.wraps(self.callback)
         def selected_callback():
-            return self.callback(
-                config=None, overrides=(), ci=None, verbose=0, variant=None
-            )
+            return self.callback(overrides=(), ci=None, verbose=0, variant=None)
 
         group = RepositoryGroup(
             cmd_name,
@@ -149,7 +146,12 @@ class WorkspaceGroup(ProjectGroup):
 
         if ctx.params.get("ci") is not None and not can_switch_ci(ctx):
             raise click.ClickException("--ci/--no-ci is a maintainer-only option")
-        repos = self._repositories(ctx)
+        try:
+            repos = self._repositories(ctx)
+        except click.ClickException:
+            # Help remains available when a marker or member index is broken.
+            ctx.meta["vmr_repositories"] = None
+            repos = None
         if repos is None:
             return super().format_help(ctx, formatter)
         # ProjectGroup's panel builder assumes built-ins; VMR lists repositories.

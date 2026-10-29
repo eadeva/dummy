@@ -9,7 +9,6 @@ import time
 from pathlib import Path
 
 import pytest
-from click.testing import CliRunner
 
 from ptk.adapters.logging.files import rotate
 from ptk.application.use_cases.run import RunRequest
@@ -22,6 +21,7 @@ from ptk.domain.logging import (
     runs_to_prune,
 )
 from ptk.drivers.cli.main import cli
+from tests.cli_runner import CliRunner
 from tests.project_files import project_files
 
 pytestmark = pytest.mark.skipif(sys.platform.startswith("win"), reason="POSIX shell")
@@ -177,20 +177,20 @@ def test_short_secret_is_not_masked_but_warned(write):
 
 def test_console_verbosity(write):
     root = project(write)
-    args = ["--config", str(root / ".main.ptk.yml")]
+    args = []
     env = {**HOST, "PTK_CRED_REPO_TOKEN": "t0ps3cret"}
     normal = CliRunner(env={"PTK_CI": "0", **env}).invoke(
-        cli, [*args, "run"], catch_exceptions=False
+        cli, [*args, "run"], catch_exceptions=False, cwd=root
     )
     assert "debug:" not in normal.output and "warning: exit code 2" in normal.output
     assert "  A" in normal.output or "[a] A" in normal.output
     (root / ".once").unlink(missing_ok=True)
     verbose = CliRunner(env={"PTK_CI": "0", **env}).invoke(
-        cli, ["-v", *args, "run"], catch_exceptions=False
+        cli, ["-v", *args, "run"], catch_exceptions=False, cwd=root
     )
     assert "debug: cwd" in verbose.output and "t0ps3cret" not in verbose.output
     (root / ".once").unlink(missing_ok=True)
     quiet = CliRunner(env={"PTK_CI": "0", **env}).invoke(
-        cli, [*args, "run", "-q"], catch_exceptions=False
+        cli, [*args, "run", "-q"], catch_exceptions=False, cwd=root
     )
     assert "[a] A" not in quiet.output and "warning:" in quiet.output

@@ -5,7 +5,7 @@ const assert = require("node:assert/strict");
 const path = require("node:path");
 const core = require("../src/core");
 const { createController } = require("../src/extension");
-const { inventory, builtinCommands } = require("./fixtures");
+const { inventory, builtinCommands, builtinParam } = require("./fixtures");
 
 function harness(t, docs = [inventory()], trusted = true) {
   const commands = new Map();
@@ -290,7 +290,7 @@ test("activation discovers projects and runs jobs as processes with global varia
   await h.command("run", h.target());
   const task = h.tasks[0];
   assert.equal(task.execution.process, "ptk");
-  assert.deepEqual(task.execution.args, ["--config", h.target().project.entry_file, "--variant", "small", "run", "build"]);
+  assert.deepEqual(task.execution.args, ["--variant", "small", "run", "build"]);
   assert.equal(task.execution.options.cwd, h.target().root);
   assert.deepEqual(h.errors, []);
 });
@@ -365,7 +365,7 @@ test("workflow and job name collisions dispatch explicitly and CI allows preview
   assert.equal(h.tasks.length, 0);
   assert.match(h.errors[0], /locally only/);
   await h.command("preview", h.target("workflow"));
-  assert.deepEqual(h.tasks[0].execution.args.slice(2), ["--variant", "small", "workflow", "run", "build", "--dry-run"]);
+  assert.deepEqual(h.tasks[0].execution.args, ["--variant", "small", "workflow", "run", "build", "--dry-run"]);
   const restored = await h.api.taskProvider.resolveTask(h.tasks[0]);
   assert.deepEqual(restored.execution.args, h.tasks[0].execution.args);
   assert.equal((await h.api.taskProvider.provideTasks()).some(task => task.definition.kind === "workflow"), false);
@@ -411,7 +411,7 @@ test("report permissions and capability checks apply to palette commands", async
 test("workspace workflows use the workspace root without a member config", async t => {
   const doc = inventory();
   doc.mode = "workspace";
-  doc.workflows = [{ name: "all", command: ["workflow", "run", "all"] }];
+  doc.workflows = [{ name: "all", run_options: [], command: ["workflow", "run", "all"] }];
   const h = harness(t, [doc]);
   await h.controller.ready();
   await h.command("preview", { kind: "workflow", name: "all", root: doc.root });
@@ -514,7 +514,7 @@ test("tree omits duplicate run and report commands in repositories and workspace
   const doc = inventory();
   doc.mode = "workspace";
   doc.commands = builtinCommands();
-  doc.workflows = [{ name: "all", command: ["workflow", "run", "all"] }];
+  doc.workflows = [{ name: "all", run_options: [], command: ["workflow", "run", "all"] }];
   const h = harness(t, [doc]);
   await h.controller.ready();
   const root = h.controller.provider.getChildren()[0];
@@ -539,7 +539,7 @@ test("report actions target job variants and aggregate workflows without running
   doc.ci = true;
   doc.mode = "workspace";
   doc.commands = builtinCommands();
-  doc.workflows = [{ name: "all", command: ["workflow", "run", "all"] }];
+  doc.workflows = [{ name: "all", run_options: [], command: ["workflow", "run", "all"] }];
   doc.projects[0].jobs[0].params[0].required = true;
   const h = harness(t, [doc]);
   await h.controller.ready();
@@ -549,8 +549,8 @@ test("report actions target job variants and aggregate workflows without running
   await h.command("openReport", h.target());
   await h.command("openReport", h.target("workflow"));
   await h.command("openReport", { kind: "workflow", name: "all", root: doc.root });
-  assert.deepEqual(h.tasks[0].execution.args.slice(2), ["--variant", "large", "report", "open", "--if-exists", "--", "build"]);
-  assert.deepEqual(h.tasks[1].execution.args.slice(2), ["report", "open", "--if-exists", "--workflow", "build"]);
+  assert.deepEqual(h.tasks[0].execution.args, ["--variant", "large", "report", "open", "--if-exists", "--", "build"]);
+  assert.deepEqual(h.tasks[1].execution.args, ["report", "open", "--if-exists", "--workflow", "build"]);
   assert.deepEqual(h.tasks[2].execution.args, ["report", "open", "--if-exists", "--workflow", "all"]);
   for (const task of h.tasks) {
     assert.equal(task.definition.report, true);
@@ -580,8 +580,8 @@ test("help runs without variant or required-parameter prompts and survives task 
   h.api.window.showQuickPick = h.api.window.showInputBox = () => assert.fail("Help must not prompt");
   await h.command("showHelp", h.target());
   await h.command("showHelp", h.target("workflow"));
-  assert.deepEqual(h.tasks[0].execution.args.slice(2), ["build", "--help"]);
-  assert.deepEqual(h.tasks[1].execution.args.slice(2), ["workflow", "run", "build", "--help"]);
+  assert.deepEqual(h.tasks[0].execution.args, ["build", "--help"]);
+  assert.deepEqual(h.tasks[1].execution.args, ["workflow", "run", "build", "--help"]);
   for (const task of h.tasks) {
     assert.deepEqual((await h.api.taskProvider.resolveTask(task)).execution.args, task.execution.args);
   }
@@ -602,8 +602,8 @@ test("built-ins form a collapsible command tree with CLI help and credential act
   assert.doesNotThrow(() => JSON.stringify(help.command));
   await h.command("showHelp", help.command.arguments[0]);
   await h.command("showHelp", creds);
-  assert.deepEqual(h.tasks[0].execution.args.slice(2), ["--help"]);
-  assert.deepEqual(h.tasks[1].execution.args.slice(2), ["self-service", "creds", "--help"]);
+  assert.deepEqual(h.tasks[0].execution.args, ["--help"]);
+  assert.deepEqual(h.tasks[1].execution.args, ["self-service", "creds", "--help"]);
 });
 
 test("built-in required input cancellation prevents execution; secret entry stays in the terminal", async t => {
@@ -614,7 +614,7 @@ test("built-in required input cancellation prevents execution; secret entry stay
   assert.equal(h.tasks.length, 0);
   h.inputs.push("service name");
   await h.command("runBuiltin", target);
-  assert.deepEqual(h.tasks[0].execution.args.slice(2), ["self-service", "creds", "set", "--", "service name"]);
+  assert.deepEqual(h.tasks[0].execution.args, ["self-service", "creds", "set", "--", "service name"]);
   assert.deepEqual(h.tasks[0].definition.inputs, { name: ["service name"] });
   assert.equal(h.tasks[0].presentationOptions.focus, true);
   assert.deepEqual((await h.api.taskProvider.resolveTask(h.tasks[0])).execution.args, h.tasks[0].execution.args);
@@ -624,10 +624,10 @@ test("built-in required input cancellation prevents execution; secret entry stay
 test("built-in option prompts preserve choices and positional values", async t => {
   const h = harness(t);
   await h.controller.ready();
-  h.picks.push(items => items, items => items.find(item => item === "json"));
+  h.picks.push(items => items, items => items.find(item => item.value === "json"));
   h.inputs.push("project.name");
   await h.command("runBuiltinWithParameters", { ...h.target("builtin"), name: "maintainer config show" });
-  assert.deepEqual(h.tasks[0].execution.args.slice(2), ["maintainer", "config", "show", "--format=json", "--", "project.name"]);
+  assert.deepEqual(h.tasks[0].execution.args, ["maintainer", "config", "show", "--format=json", "--", "project.name"]);
   assert.deepEqual(h.errors, []);
 });
 
@@ -658,7 +658,7 @@ test("VMR root built-ins omit member configuration and member help selects its r
   const project = h.controller.provider.getChildren()[0].children[0];
   const commands = project.children.find(node => node.label === "Built-in commands").children;
   await h.command("showHelp", commands[0]);
-  assert.deepEqual(h.tasks[1].execution.args, ["--config", doc.projects[0].entry_file, "--help"]);
+  assert.deepEqual(h.tasks[1].execution.args, ["--help"]);
 });
 
 test("clean bypasses required parameters and survives saved-task restoration", async t => {
@@ -669,12 +669,12 @@ test("clean bypasses required parameters and survives saved-task restoration", a
   await h.command("clean", h.target());
   assert.equal(h.tasks.length, 1);
   assert.equal(h.tasks[0].definition.clean, true);
-  assert.deepEqual(h.tasks[0].execution.args.slice(2), ["--variant", "small", "--clean", "run", "build"]);
+  assert.deepEqual(h.tasks[0].execution.args, ["--variant", "small", "--clean", "run", "build"]);
   const restored = await h.api.taskProvider.resolveTask(h.tasks[0]);
   assert.deepEqual(restored.execution.args, h.tasks[0].execution.args);
   await h.command("reRun", h.target("workflow"));
   assert.equal(h.tasks[1].definition.reRun, true);
-  assert.deepEqual(h.tasks[1].execution.args.slice(2), ["--variant", "small", "--re-run", "workflow", "run", "build"]);
+  assert.deepEqual(h.tasks[1].execution.args, ["--variant", "small", "--re-run", "workflow", "run", "build"]);
 });
 
 
@@ -740,7 +740,7 @@ test("configuration files and validation remain available after an invalid save 
   assert.ok(warning.children.some(node => node.label === "Validate configuration"));
   await h.editorActions.validate({ fsPath: file });
   assert.deepEqual(h.tasks[0].execution.args.slice(-1), ["validate"]);
-  assert.equal(h.tasks[0].execution.args[1], h.target().project.entry_file);
+  assert.equal(h.tasks[0].execution.options.cwd, h.target().project.invocation.cwd);
 });
 
 
@@ -791,7 +791,7 @@ test("variant selection uses only the per-target setting", async t => {
   h.state.set(`variant:${h.target().project.entry_file}`, "large");
   await h.controller.ready();
   await h.command("run", h.target());
-  assert.deepEqual(h.tasks[0].execution.args.slice(2), ["--variant", "small", "run", "build"]);
+  assert.deepEqual(h.tasks[0].execution.args, ["--variant", "small", "run", "build"]);
 });
 
 test("configuration list entries use names and values and skip named-step wrappers", async t => {
@@ -870,4 +870,46 @@ test("tree icons use distinct theme colours for jobs, workflows and configuratio
   const config = project.children.find(item => item.label === "Configuration");
   const items = [project, jobs, jobs.children[0], workflows, config].map(item => h.controller.provider.getTreeItem(item));
   assert.deepEqual(items.map(item => item.iconPath.color.id), ["charts.blue", "charts.green", "charts.green", "charts.purple", "charts.yellow"]);
+});
+
+test("job run form selects multiple variants and restores the same step range", async t => {
+  const doc = inventory();
+  doc.projects[0].jobs[0].run_options = [builtinParam("start", { kind: "option", option: "--from", choices: ["compile"] })];
+  const h = harness(t, [doc]); await h.controller.ready();
+  h.forms.push(() => ({ params: {}, preview: true, variants: ["small", "large"], runOptions: { start: ["compile"] } }));
+  await h.command("runWithParameters", h.target());
+  assert.equal(h.tasks.length, 2);
+  for (const task of h.tasks) {
+    assert.deepEqual(task.definition.runOptions, { start: ["compile"] });
+    assert.ok(task.execution.args.includes("--from=compile"));
+    assert.deepEqual((await h.api.taskProvider.resolveTask(task)).execution.args, task.execution.args);
+  }
+  assert.deepEqual(h.errors, []);
+});
+
+test("workflow gear opens owner variant choices and preserves dry run", async t => {
+  const h = harness(t); await h.controller.ready();
+  h.forms.push((target) => {
+    assert.equal(target.kind, "workflow");
+    return { params: {}, preview: true, variants: ["large"], runOptions: {} };
+  });
+  await h.command("runWithParameters", h.target("workflow"));
+  assert.equal(h.tasks.length, 1);
+  assert.deepEqual(h.tasks[0].execution.args, ["--variant", "large", "workflow", "run", "build", "--dry-run"]);
+  assert.deepEqual(h.errors, []);
+});
+
+test("a step removed while the run form is open prevents the entire variant batch", async t => {
+  const doc = inventory();
+  const option = builtinParam("start", { kind: "option", option: "--from", choices: ["configure", "compile"] });
+  doc.projects[0].jobs[0].run_options = [option];
+  const h = harness(t, [doc]); await h.controller.ready();
+  h.forms.push(async () => {
+    option.choices = ["configure"];
+    await h.controller.refresh();
+    return { params: {}, preview: false, variants: ["small", "large"], runOptions: { start: ["compile"] } };
+  });
+  await h.command("runWithParameters", h.target());
+  assert.equal(h.tasks.length, 0);
+  assert.match(h.errors[0], /available value/);
 });

@@ -76,7 +76,12 @@ def test_metadata_forms_and_custom_config_output(tmp_path, form, offline_engine)
                 (root / ".git").symlink_to(metadata, target_is_directory=True)
             except OSError:
                 pytest.skip("directory symlinks unavailable")
-    assert invoke(root, "build").exit_code == 0
+    prefix = []
+    if form != "worktree":
+        (tmp_path / ".repo/project.list").write_text("original\n")
+        prefix = ["app"]
+    result = invoke(root, *prefix, "build")
+    assert result.exit_code == 0, result.output
     assert service().status(root, root / "config/commit hooks.yaml").installed
     if form == "worktree":
         assert (

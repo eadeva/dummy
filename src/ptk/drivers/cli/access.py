@@ -7,6 +7,7 @@ import rich_click as click
 
 from ...application.use_cases.role import command_allowed
 from ...domain.errors import PtkError
+from .options import SuggestedHelp
 from .state import guarded, state_of
 
 
@@ -108,7 +109,7 @@ def denied_command(name, kind="command"):
     )
 
 
-class AccessGroup(click.RichGroup):
+class AccessGroup(SuggestedHelp, click.RichGroup):
     def get_params(self, ctx):
         params = super().get_params(ctx)
         if not hasattr(ctx, "_maintainer_options"):
