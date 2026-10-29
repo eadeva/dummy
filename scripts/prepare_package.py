@@ -121,8 +121,8 @@ def smoke(wheel: Path, temporary: Path) -> None:
         ["init", "--config-dir", "config/ptk", "--yes"],
         ["validate"],
         ["maintainer", "sync", "tasks"],
-        ["maintainer", "sync", "skills"],
-        ["maintainer", "sync", "skills", "--check"],
+        ["maintainer", "sync", "agent"],
+        ["maintainer", "sync", "agent", "--check"],
     ):
         run("-I", "-c", SMOKE, str(installed), *args, cwd=project)
     assert (project / ".github/skills/ptk-config-authoring/SKILL.md").is_file()

@@ -249,8 +249,8 @@ Generated tasks and offline resources
 -----------------------------------------
 
 Run ``ptk maintainer sync tasks`` to generate VS Code tasks. Run
-``ptk maintainer sync skills`` for
-skills and their reference files. ``ptk maintainer sync skills --check`` checks drift
+``ptk maintainer sync agent`` for
+the PTK expert agent, its skills and their reference files. ``ptk maintainer sync agent --check`` checks drift
 without writing (exit code 1 when an update is needed).
 
 Editor setup and all its subcommands are maintainer-only, including ``--check``.
@@ -288,14 +288,14 @@ Generated tasks use explicit ``ptk run JOB`` and ``ptk workflow run WORKFLOW``
 commands, prefixed with ``maintainer`` for restricted targets, so a shared name never triggers an interactive choice in an editor task.
 At a VMR root, ``ptk maintainer sync tasks`` includes workspace-owned workflows and
 qualified member workflows and each member's tasks. Use
-``ptk maintainer sync skills`` separately for member authoring resources.
+``ptk maintainer sync agent`` separately for member authoring resources.
 VMR tasks run from the workspace root. See :doc:`workflows` for
 parallelism, repository selection and CX restrictions.
 
 Workspace editor commands require membership in the VMR root's own
 ``maintainers.ptk.yml``. Commands updating member repositories also require
 membership in each target's list; synchronization checks every member before any
-write. Use ``ptk ALIAS maintainer sync tasks`` or ``ptk ALIAS maintainer sync skills`` to update only a repository you maintain.
+write. Use ``ptk ALIAS maintainer sync tasks`` or ``ptk ALIAS maintainer sync agent`` to update only a repository you maintain.
 
 Report files
 ------------

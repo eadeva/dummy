@@ -210,7 +210,7 @@ At VMR level, ``ptk maintainer sync tasks`` generates workspace tasks for worksp
 and repository-qualified workflows. ``ptk ALIAS maintainer sync tasks`` generates
 that member's job and workflow tasks. Workspace task synchronization updates
 member tasks too; synchronize authoring resources separately with
-``ptk maintainer sync skills``. The generated VMR tasks set their
+``ptk maintainer sync agent``. The generated VMR tasks set their
 working directory to the workspace root. Offline skills and examples are installed
 with the normal authoring bundle; see :doc:`editor`.
 

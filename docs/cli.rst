@@ -48,7 +48,7 @@ Tab completion follow the same permissions and ordering.
      - Manage this repository's local Git hooks
    * - ``ptk maintainer config show|schema``
      - Inspect effective configuration and sources, or export its JSON schema
-   * - ``ptk maintainer sync configs|tasks|skills [--check]``
+   * - ``ptk maintainer sync configs|tasks|agent [--check]``
      - Regenerate one explicitly selected integration, or check it without writing
    * - ``ptk maintainer version show|generate``
      - Inspect discovered versions or generate a version snapshot
@@ -61,7 +61,8 @@ Tab completion follow the same permissions and ordering.
 changing files. ``maintainer sync`` requires a target; it never generates
 unrequested integrations. Config names may follow ``sync configs``;
 ``--diff`` previews shared configuration changes. Tasks accept ``--command``,
-``--users-only`` and ``--output``. Skills and tasks both support ``--check``.
+``--users-only`` and ``--output``. Agent resources and tasks both support ``--check``.
+``sync agent`` installs the PTK expert agent, its skills and offline reference docs.
 
 ``validate`` is always available. With no project it reports
 "No PTK project found" and suggests ``ptk init``. Ordinary validation only

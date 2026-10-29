@@ -857,28 +857,28 @@ def report_open(
 # --------------------------------------------------------------------------- vscode
 
 
-@click.command("skills")
+@click.command("agent")
 @click.option(
     "--check",
     is_flag=True,
-    help="Check installed skills/docs without writing; exit 1 if outdated.",
+    help="Check the installed agent, skills and docs without writing; exit 1 if outdated.",
 )
 @click.pass_context
 @guarded
-def vscode_skills(ctx: click.Context, check: bool) -> None:
-    """Install version-matched skills under .github/skills and docs under .github/ptk."""
+def agent_command(ctx: click.Context, check: bool) -> None:
+    """Install the PTK expert agent, its skills and offline docs under .github."""
     state = _state(ctx)
     result = state.app.setup_authoring.execute(state.project().root, check=check)
     if check:
         console.print(
-            "PTK skills and docs are "
+            "PTK agent, skills and docs are "
             + ("out of date" if result.paths else "up to date")
         )
         if result.paths:
             ctx.exit(1)
     else:
         console.print(
-            f"PTK skills and docs: {result.skill_count} skills, {len(result.paths)} files updated."
+            f"PTK agent, skills and docs: {result.skill_count} skills, {len(result.paths)} files updated."
         )
 
 
@@ -1193,7 +1193,7 @@ def _show_init_result(target: Path, result: InitResult) -> None:
 
 
 @click.command("sync")
-@click.argument("target", type=click.Choice(["configs", "tasks", "skills"]))
+@click.argument("target", type=click.Choice(["configs", "tasks", "agent"]))
 @click.argument("names", nargs=-1)
 @click.option(
     "--check",
@@ -1262,8 +1262,8 @@ def sync_command(ctx, target, names, check, diff, command, users_only, output):
             if check
             else ctx.invoke(configs_sync, names=names, diff=diff)
         )
-    if target == "skills":
-        return ctx.invoke(vscode_skills, check=check)
+    if target == "agent":
+        return ctx.invoke(agent_command, check=check)
     return ctx.invoke(
         vscode_tasks, check=check, command=command, users_only=users_only, output=output
     )

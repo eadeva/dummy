@@ -75,7 +75,7 @@ ptk-docs-writing
 Using these skills
 ------------------
 
-Run ``ptk maintainer sync skills`` to install project-facing skills in a consuming
+Run ``ptk maintainer sync agent`` to install project-facing skills in a consuming
 repository. It also installs the PTK expert custom agent at
 ``.github/agents/ptk-expert.agent.md``. The installer
 copies skills into ``.github/skills`` and version-matched offline documentation,

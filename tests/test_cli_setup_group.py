@@ -85,11 +85,12 @@ def test_nested_config_and_validation_use_root_options(invoke):
 
 def test_explicit_sync_target_and_option_scope(invoke):
     assert invoke("maintainer", "sync").exit_code == 2
+    assert invoke("maintainer", "sync", "skills").exit_code == 2
     assert invoke("self-service", "--dry-run").exit_code == 2
     assert invoke("self-service", "tools", "--dry-run").exit_code == 0
     for args in (
-        ("skills", "ruff"),
-        ("skills", "--diff"),
+        ("agent", "ruff"),
+        ("agent", "--diff"),
         ("configs", "--diff", "--check"),
         ("configs", "--output", "tasks.json"),
     ):

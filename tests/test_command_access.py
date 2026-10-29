@@ -18,7 +18,7 @@ MUTATIONS = [
     ["maintainer", "sync", "configs"],
     ["maintainer", "sync", "configs", "--diff"],
     ["maintainer", "sync", "tasks"],
-    ["maintainer", "sync", "skills", "--check"],
+    ["maintainer", "sync", "agent", "--check"],
     ["maintainer", "config", "show"],
     ["maintainer", "version", "generate"],
     ["maintainer", "artifacts", "destination", "--job", "build"],

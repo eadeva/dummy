@@ -110,7 +110,7 @@ Logs and reports can be moved together while preserving relative links.
 Assistant support
 ------------------
 
-``ptk maintainer sync skills`` distributes ``ptk-log-analyzer`` and the
+``ptk maintainer sync agent`` distributes ``ptk-log-analyzer`` and the
 ``ptk-expert`` custom agent alongside the other PTK authoring skills. In clients
 supporting GitHub custom agents, select **ptk-expert**. It routes requests to the
 relevant skill and starts diagnostics from existing reports/logs. It does not

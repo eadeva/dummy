@@ -24,12 +24,10 @@ def test_vscode_setup_installs_tasks_skills_and_working_offline_links(
     grant_maintainer(tmp_path)
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
-    assert (
-        runner.invoke(cli, ["maintainer", "sync", "skills", "--check"]).exit_code == 1
-    )
+    assert runner.invoke(cli, ["maintainer", "sync", "agent", "--check"]).exit_code == 1
     assert not (tmp_path / ".github").exists()
     assert runner.invoke(cli, ["maintainer", "sync", "tasks"]).exit_code == 0
-    result = runner.invoke(cli, ["maintainer", "sync", "skills"])
+    result = runner.invoke(cli, ["maintainer", "sync", "agent"])
     assert result.exit_code == 0, result.output
     assert (tmp_path / ".vscode/tasks.json").is_file()
     skills = list((tmp_path / ".github/skills").glob("*/SKILL.md"))
@@ -64,10 +62,8 @@ def test_vscode_setup_installs_tasks_skills_and_working_offline_links(
         for path in (tmp_path / ".github").rglob("*")
         if path.is_file()
     }
-    assert (
-        runner.invoke(cli, ["maintainer", "sync", "skills", "--check"]).exit_code == 0
-    )
-    assert runner.invoke(cli, ["maintainer", "sync", "skills"]).exit_code == 0
+    assert runner.invoke(cli, ["maintainer", "sync", "agent", "--check"]).exit_code == 0
+    assert runner.invoke(cli, ["maintainer", "sync", "agent"]).exit_code == 0
     assert before == {path: path.stat().st_mtime_ns for path in before}
 
 
@@ -115,7 +111,7 @@ def test_unowned_conflict_preflights_before_any_file_is_written(tmp_path, monkey
     conflict.parent.mkdir(parents=True)
     conflict.write_text("custom VMR skill")
     monkeypatch.chdir(tmp_path)
-    result = CliRunner().invoke(cli, ["maintainer", "sync", "skills"])
+    result = CliRunner().invoke(cli, ["maintainer", "sync", "agent"])
     assert result.exit_code != 0 and "unowned" in result.output
     assert not (tmp_path / ".vscode/tasks.json").exists()
     assert not (tmp_path / ".github/ptk/manifest.json").exists()
@@ -141,7 +137,7 @@ def test_vmr_editor_setup_uses_selected_repository(tmp_path, monkeypatch):
     a, b = workspace(tmp_path)
     grant_maintainer(a.parent)
     monkeypatch.chdir(tmp_path)
-    result = CliRunner().invoke(cli, ["firmware", "maintainer", "sync", "skills"])
+    result = CliRunner().invoke(cli, ["firmware", "maintainer", "sync", "agent"])
     assert result.exit_code == 0, result.output
     assert (a.parent / ".github/skills/ptk-vmr/SKILL.md").exists()
     assert not (b.parent / ".github").exists()

@@ -107,6 +107,7 @@ def test_visibility_completion_and_inventory_follow_the_namespace(
     assert {"build", "verify", "self-service", "maintainer"} <= names([])
     assert not {"publish", "release", "describe", "run"} & names([])
     assert {"publish", "release", "sync", "config"} <= names(["maintainer"])
+    assert names(["maintainer", "sync"]) == {"configs", "tasks", "agent"}
     assert names(["run"]) == {"build"}
     assert names(["maintainer", "run"]) == {"publish"}
     assert names(["workflow", "run"]) == {"verify"}

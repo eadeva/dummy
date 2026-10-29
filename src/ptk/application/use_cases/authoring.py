@@ -41,7 +41,7 @@ class SetupAuthoring:
         files["ptk/README.md"] = (
             f"# PTK {self._version} offline reference\n\n"
             "These guides, examples and skills match the installed PTK version. "
-            "They are managed by `ptk maintainer sync skills`; preserve project-specific changes in separate files.\n\n"
+            "They are managed by `ptk maintainer sync agent`; preserve project-specific changes in separate files.\n\n"
             "- [Configuration](docs/configuration.rst)\n"
             "- [CLI](docs/cli.rst)\n"
             "- [Log analysis](docs/log-analysis.rst)\n"

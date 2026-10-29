@@ -218,7 +218,7 @@ ptk self-service completion install | powershell | bash | zsh | fish
 ptk self-service extension | doctor
 ptk self-service hooks install | uninstall | status
 ptk maintainer config show [PATH] [--sources] | schema
-ptk maintainer sync configs | tasks | skills [--check]
+ptk maintainer sync configs | tasks | agent [--check]
 ptk maintainer version show | generate
 ptk maintainer artifacts destination --job JOB
 ptk maintainer JOB_OR_WORKFLOW [--dry-run]
@@ -392,11 +392,11 @@ shared host operations. See `docs/configuration.rst` and `docs/cli.rst`.
 
 For a complete tested starter, copy `examples/authoring`. For a plugin starter,
 use `examples/plugin`. The authoring skill catalog is in `docs/skills.rst`;
-the wheel bundles fourteen project-facing skills and lightweight offline references.
-Run `ptk maintainer sync tasks` to create tasks. Run `ptk maintainer sync skills` to copy skills to
-`.github/skills`, and install version-matched docs, examples and a configuration
+the wheel bundles the PTK expert agent, fifteen project-facing skills and lightweight offline references.
+Run `ptk maintainer sync tasks` to create tasks. Run `ptk maintainer sync agent` to install
+`.github/agents/ptk-expert.agent.md`, copy skills to `.github/skills`, and install version-matched docs, examples and a configuration
 schema under `.github/ptk`. Relative links work without a PTK checkout or network
-access. `ptk maintainer sync skills --check` checks drift; updates preserve custom
+access. `ptk maintainer sync agent --check` checks drift; updates preserve custom
 skills and refuse to overwrite local edits. See [editor setup](docs/editor.rst).
 
 The extension consumes PTK's versioned CLI/JSON interface: schemas, loaded values,
@@ -482,4 +482,4 @@ ptk maintainer artifacts destination --job package --format github
 See [destination configuration and examples](docs/artifacts.rst) and
 [date substitutions](docs/configuration.rst#date-and-time-substitutions).
 
-Log analysis is enabled by default; HTML shows active diagnostics and retains ignored/justified findings with source-log links. See [logging and reporting](docs/log-analysis.rst) for `report_formats`, `logging_history_backups` and rule examples. `ptk maintainer sync skills` also installs the log-analyzer skill and PTK expert agent.
+Log analysis is enabled by default; HTML shows active diagnostics and retains ignored/justified findings with source-log links. See [logging and reporting](docs/log-analysis.rst) for `report_formats`, `logging_history_backups` and rule examples. `ptk maintainer sync agent` also installs the log-analyzer skill and PTK expert agent.
