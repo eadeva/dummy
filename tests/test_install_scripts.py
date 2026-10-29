@@ -60,7 +60,7 @@ sys.exit(9 if os.environ["FAIL_INSTALL"] == "1" and sys.argv[1:3] == ["tool", "i
         )
         uv.chmod(0o755)
         env["PATH"] = str(binary) + os.pathsep + env["PATH"]
-        argv = ["sh", str(script), "--no-extension"]
+        argv = ["sh", str(script), "--no-extension", "--no-completion"]
     result = subprocess.run(
         argv, cwd=tmp_path, env=env, capture_output=True, text=True, check=False
     )

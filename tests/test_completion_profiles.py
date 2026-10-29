@@ -134,6 +134,14 @@ def test_profile_command_and_invalid_combinations(tmp_path, monkeypatch):
 
 def _executable(folder):
     folder.mkdir()
+    # The actual installer/CLI runs, but every discovered profile stays in tmp_path.
+    (folder / "sitecustomize.py").write_text("""import os
+from pathlib import Path
+if os.environ.get('TEST_PROFILE'):
+    from ptk.drivers.cli import shell_setup
+    shell_setup.powershell_profiles = lambda: [Path(os.environ['TEST_PROFILE'])]
+    shell_setup.bash_home = lambda: Path(os.environ['TEST_ROOT']) / 'bash home'
+""")
     target = folder / "ptk.exe"
     if sys.platform == "win32":
         launcher = Path(sys.executable).parent / "ptk.exe"
@@ -153,6 +161,8 @@ def _executable(folder):
 def _powershell(script, tmp_path, **extra):
     env = {**os.environ, **extra}
     env["PYTHONPATH"] = str(ROOT / "src") + os.pathsep + env.get("PYTHONPATH", "")
+    if extra.get("TEST_BIN"):
+        env["PYTHONPATH"] += os.pathsep + extra["TEST_BIN"]
     return subprocess.run(
         [POWERSHELL, "-NoLogo", "-NoProfile", "-NonInteractive", "-File", str(script)],
         cwd=tmp_path,
@@ -227,7 +237,9 @@ $matches = @((TabExpansion2 'ptk setup ' 10).CompletionMatches.CompletionText)
         script,
         tmp_path,
         TEST_PROFILE=str(profile),
-        PATH=str(binary) + os.pathsep + os.environ["PATH"],
+        # Neither the tool directory nor an activated Python venv is on PATH.
+        PATH=os.defpath,
+        VIRTUAL_ENV="",
     )
     assert fresh.returncode == 0, fresh.stdout + fresh.stderr
     data = json.loads(fresh.stdout)

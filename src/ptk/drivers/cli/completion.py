@@ -158,7 +158,20 @@ def parameters(ctx, param, incomplete):
 
 
 @click.command("completion")
-@click.argument("shell", type=click.Choice(["powershell", "bash", "zsh", "fish"]))
+@click.argument(
+    "shell", type=click.Choice(["install", "powershell", "bash", "zsh", "fish"])
+)
+@click.option(
+    "--executable",
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="With 'install': shared PTK launcher. Defaults to uv's tool directory.",
+)
+@click.option(
+    "--powershell-profile",
+    multiple=True,
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="With 'install': also register this current-user profile (used by the installer).",
+)
 @click.option(
     "--double-tab",
     is_flag=True,
@@ -186,15 +199,50 @@ def parameters(ctx, param, incomplete):
 )
 @click.pass_context
 def completion_command(
-    ctx, shell, double_tab, install_profile, uninstall_profile, output
+    ctx,
+    shell,
+    executable,
+    powershell_profile,
+    double_tab,
+    install_profile,
+    uninstall_profile,
+    output,
 ):
-    """Generate terminal Tab completion for ptk (no project required).
+    """Install or generate terminal Tab completion (no project required).
+
+    'ptk setup completion install' configures Bash/Git Bash and detected
+    PowerShell editions for this user. Both installers do this automatically.
 
     PowerShell: ptk setup completion powershell --double-tab | Out-String | Invoke-Expression
 
-    Persist for future terminals with --install $PROFILE.CurrentUserAllHosts.
-    install/install.ps1 enables this automatically.
+    Use --install PROFILE with powershell to target just one profile.
     """
+    if shell == "install":
+        if install_profile or uninstall_profile or output:
+            raise click.UsageError(
+                "'install' discovers user profiles; do not combine it with --install, --uninstall or --output."
+            )
+        import subprocess
+
+        from .shell_setup import install_all
+
+        try:
+            sources = {
+                name: completion_source(ctx, name, name == "powershell")
+                for name in ("bash", "powershell")
+            }
+            for path, changed in install_all(sources, executable, powershell_profile):
+                click.echo(f"{'Updated' if changed else 'Already configured'}: {path}")
+        except (OSError, ValueError, subprocess.SubprocessError) as exc:
+            raise click.ClickException(f"Cannot install completion: {exc}") from None
+        click.echo(
+            "Completion configured for Bash/Git Bash and detected PowerShell editions. Open a new terminal; no venv activation is needed."
+        )
+        return
+    if executable or powershell_profile:
+        raise click.UsageError(
+            "--executable and --powershell-profile require 'completion install'."
+        )
     if (
         sum(value is not None for value in (install_profile, uninstall_profile, output))
         > 1
@@ -213,17 +261,7 @@ def completion_command(
         raise click.UsageError(
             "--double-tab is a PowerShell option; other shells use their own Tab bindings."
         )
-    engine = get_completion_class(shell)
-    text = engine(ctx.find_root().command, {}, "ptk", "_PTK_COMPLETE").source()
-    if double_tab:
-        text += """
-# Complete a unique prefix, then list remaining matches. This is a shell-wide binding.
-if (Get-Command Set-PSReadLineKeyHandler -ErrorAction SilentlyContinue) {
-    Set-PSReadLineKeyHandler -Key Tab -Function Complete
-} else {
-    Write-Warning 'PTK completion registered. Double-Tab listing requires PSReadLine in an interactive terminal.'
-}
-"""
+    text = completion_source(ctx, shell, double_tab)
     if install_profile:
         _update_profile(install_profile, text)
     elif output:
@@ -236,6 +274,21 @@ if (Get-Command Set-PSReadLineKeyHandler -ErrorAction SilentlyContinue) {
         click.echo(f"Completion script written to {output}")
     else:
         click.echo(text)
+
+
+def completion_source(ctx, shell, double_tab=False):
+    engine = get_completion_class(shell)
+    text = engine(ctx.find_root().command, {}, "ptk", "_PTK_COMPLETE").source()
+    if double_tab:
+        text += """
+# Complete a unique prefix, then list remaining matches. This is a shell-wide binding.
+if (Get-Command Set-PSReadLineKeyHandler -ErrorAction SilentlyContinue) {
+    Set-PSReadLineKeyHandler -Key Tab -Function Complete
+} else {
+    Write-Warning 'PTK completion registered. Double-Tab listing requires PSReadLine in an interactive terminal.'
+}
+"""
+    return text
 
 
 def _update_profile(profile, source):

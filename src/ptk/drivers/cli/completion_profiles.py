@@ -1,4 +1,4 @@
-"""Install generated completion in an explicitly selected PowerShell profile."""
+"""Preserve user settings while updating a marked shell-completion block."""
 
 import codecs
 import os
@@ -28,7 +28,7 @@ def _decode(raw):
         return raw.decode("latin-1"), "latin-1", b""
 
 
-def update_profile(profile: Path, source: str | None) -> bool:
+def update_profile(profile: Path, source: str | None, *, dry_run: bool = False) -> bool:
     """Replace only our marked block; None removes it. Return whether changed."""
     profile = profile.expanduser().resolve()
     exists = profile.exists()
@@ -59,6 +59,8 @@ def update_profile(profile: Path, source: str | None) -> bool:
     result = bom + (before + block + after).encode(encoding)
     if result == original:
         return False
+    if dry_run:
+        return True
     profile.parent.mkdir(parents=True, exist_ok=True)
     if exists:
         try:

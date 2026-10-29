@@ -20,6 +20,8 @@ order, omitting empty groups. At a VMR root, Repositories replaces Jobs.
      - Initialize missing VMR configs, or create one project at DIRECTORY
    * - ``ptk setup completion powershell|bash|zsh|fish``
      - Generate shell Tab completion, even outside a PTK project
+   * - ``ptk setup completion install``
+     - Persist completion for this user's Bash/Git Bash and detected PowerShell editions
    * - ``ptk setup config show|validate|schema``
      - Inspect, validate and export project configuration
    * - ``ptk setup configs sync|check``
@@ -68,15 +70,38 @@ tools. Do not combine legacy installation options with a setup subcommand.
 Terminal Tab completion
 -----------------------
 
-Completion works with the installed ``ptk`` executable, independently of any
-editor. The Windows installer (``install/install.ps1``) saves it automatically in
-``$PROFILE.CurrentUserAllHosts`` for future terminals of that PowerShell edition.
+PTK is installed once per user and works without activating a project virtual
+environment. Completion is a shell feature: both installers persist it for
+Bash/Git Bash and every detected PowerShell edition. For an existing installation,
+install or repair all registrations with::
+
+   ptk setup completion install
+
+This locates the shared launcher using ``uv tool dir --bin`` rather than an
+activated venv's PTK. ``--executable PATH`` explicitly selects another shared
+launcher. Each shell profile adds that tool directory to PATH if needed,
+including new VS Code terminals that inherit an older environment. An explicitly
+activated development environment keeps precedence. No Python process starts
+when a shell opens; PTK runs only when completion is requested.
+
+On Windows, setup queries Windows PowerShell and PowerShell 7 separately for
+their ``$PROFILE.CurrentUserAllHosts`` paths, including redirected Documents
+folders. It also discovers Git Bash's home when Git Bash is installed. On Linux,
+Bash uses the user's home. Bash registration is loaded by ``.bashrc`` and the
+first existing login file (``.bash_profile``, ``.bash_login`` or ``.profile``).
+If none exists, setup creates ``.bash_profile``. The actual generated script is
+stored in ``~/.local/share/ptk/completion.bash``; the profile loader is safe for
+POSIX shells that also read ``.profile``.
+
+All managed blocks are checked before writes. Existing settings, encodings and
+line endings are preserved, original profiles get ``.ptk.bak`` backups, and
+repeated installs do not duplicate entries. No administrator rights are needed.
 Running ``.\install\install.ps1`` from PowerShell also activates it in that
 session. If you launch the installer in a separate process with ``powershell
--File``, open a new terminal afterwards. Use ``-NoCompletion`` on the installer
-to leave completion settings unchanged.
+-File``, open a new terminal afterwards. Use ``-NoCompletion`` (PowerShell) or
+``--no-completion`` (Bash) to leave completion settings unchanged.
 
-For an existing installation, enable it permanently with::
+To target just one PowerShell profile instead of all shells::
 
    ptk setup completion powershell --double-tab --install $PROFILE.CurrentUserAllHosts
 
@@ -84,9 +109,9 @@ This updates one marked PTK block, preserves the rest of the profile and its
 encoding, and keeps a ``.ptk.bak`` backup of an existing profile before the first
 change. Repeating the command updates the block without adding duplicates.
 PowerShell supplies the path, including redirected Documents locations;
-Windows PowerShell and PowerShell 7 have separate profiles. Run the command in
-each edition you use. The saved registration does not start PTK during shell
-startup; PTK runs only when completion is requested.
+Windows PowerShell and PowerShell 7 have separate profiles. This single-profile
+command affects only the selected profile; ``completion install`` handles all
+detected editions.
 
 Open a new terminal, or activate completion immediately in the current shell::
 
@@ -112,8 +137,8 @@ For Bash (4.4 or later), enable completion with::
 
    eval "$(ptk setup completion bash)"
 
-Put that line in ``~/.bashrc`` for future terminals. Bash normally lists multiple
-matches on the second Tab. For Zsh, after your usual ``compinit`` initialization::
+Use ``ptk setup completion install`` for future Bash terminals. Bash normally
+lists multiple matches on the second Tab. For Zsh, after your usual ``compinit`` initialization::
 
    eval "$(ptk setup completion zsh)"
 
@@ -124,6 +149,11 @@ For Fish::
 You can save a generated script with ``--output PATH`` and source that file from
 your shell profile instead. Its directory must already exist. Zsh and Fish use
 their configured completion key bindings and display styles.
+
+Zsh and Fish registration remains explicit. Traditional ``cmd.exe`` can run PTK
+but does not use these completion scripts. Shells started with profile loading
+disabled also need explicit registration. WSL/SSH/container environments need
+their own PTK installation and shell setup on the workspace host.
 
 Examples (``<Tab>`` means press the key)::
 

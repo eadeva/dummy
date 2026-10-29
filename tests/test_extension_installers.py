@@ -77,7 +77,9 @@ if ($env:TEST_MODE -eq 'opt-out') { $options.NoExtension = $true }
             '#!/bin/sh\nif [ "$2" = dir ]; then printf "%s\\n" "$TEST_BIN"; fi\n'
         )
         uv.chmod(0o755)
-        argv = ["sh", str(script)] + (["--no-extension"] if mode == "opt-out" else [])
+        argv = ["sh", str(script), "--no-completion"] + (
+            ["--no-extension"] if mode == "opt-out" else []
+        )
     result = subprocess.run(
         argv,
         cwd=tmp_path,

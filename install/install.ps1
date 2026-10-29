@@ -20,11 +20,11 @@ $uv = Get-Command uv -ErrorAction SilentlyContinue
 if (-not $uv) {
     $local = Join-Path $env:USERPROFILE ".local\bin\uv.exe"
     if (Test-Path $local) {
-        $env:Path = (Split-Path $local) + ";" + $env:Path
+        $env:PATH = (Split-Path $local) + ";" + $env:PATH
     } else {
         Say "installing uv (https://docs.astral.sh/uv/)"
         Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression
-        $env:Path = (Join-Path $env:USERPROFILE ".local\bin") + ";" + $env:Path
+        $env:PATH = (Join-Path $env:USERPROFILE ".local\bin") + ";" + $env:PATH
     }
 }
 
@@ -51,13 +51,14 @@ Say "installing/updating $source"
 uv tool install --force --reinstall --upgrade --python 3.12 $source
 if ($LASTEXITCODE -ne 0) { throw "uv tool install failed" }
 uv tool update-shell | Out-Null
+if ($LASTEXITCODE -ne 0) { Write-Warning "uv could not update the shell PATH; completion setup will also add the tool directory to supported shell profiles." }
 
 if (-not $NoCompletion -or -not $NoExtension) {
     $toolBin = (uv tool dir --bin | Out-String).Trim()
     if ($LASTEXITCODE -ne 0 -or -not $toolBin) { throw "PTK installed, but cannot locate uv's tool directory" }
     $ptkExecutable = Join-Path $toolBin "ptk.exe"
     if (-not (Test-Path -LiteralPath $ptkExecutable -PathType Leaf)) { throw "ptk.exe not found in $toolBin" }
-    $env:Path = $toolBin + [IO.Path]::PathSeparator + $env:Path
+    $env:PATH = $toolBin + [IO.Path]::PathSeparator + $env:PATH
 }
 
 if (-not $NoExtension) {
@@ -71,16 +72,16 @@ if (-not $NoExtension) {
 if (-not $NoCompletion) {
     try {
         # Use the tool just installed, even if an older ptk is active in a venv.
-        & $ptkExecutable setup completion powershell --double-tab --install $PROFILE.CurrentUserAllHosts
-        if ($LASTEXITCODE -ne 0) { throw "could not update the PowerShell profile" }
+        & $ptkExecutable setup completion install --executable $ptkExecutable --powershell-profile $PROFILE.CurrentUserAllHosts
+        if ($LASTEXITCODE -ne 0) { throw "could not update shell profiles" }
         $completionScript = & $ptkExecutable setup completion powershell --double-tab | Out-String
         if ($LASTEXITCODE -ne 0) { throw "could not generate completion" }
         Invoke-Expression $completionScript
-        Say "Tab completion enabled now and in future PowerShell terminals"
+        Say "Tab completion enabled now and in future PowerShell and Bash/Git Bash terminals"
         Say "double-Tab listing applies to all commands; profile: $($PROFILE.CurrentUserAllHosts)"
     } catch {
         Write-Warning "PTK is installed, but completion setup failed: $_"
-        Say 'retry: ptk setup completion powershell --double-tab --install $PROFILE.CurrentUserAllHosts'
+        Say 'retry: ptk setup completion install'
     }
 }
 

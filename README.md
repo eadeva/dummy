@@ -95,14 +95,16 @@ package version and updates compatible dependencies. Pull the desired branch
 first: installing a checkout does not run `git pull`. `PTK_SOURCE` overrides the
 source; a standalone downloaded script defaults to the `ptk` package index entry.
 Explicit version pins remain respected. Open a new terminal after installation.
-The Windows installer saves Tab completion in your current-user PowerShell
-profile by default. Running `.\install\install.ps1` from PowerShell also enables
-it in that session. It preserves other profile settings, backs up an existing
-profile and avoids duplicate entries. Use `-NoCompletion` to opt out.
-For an existing installation, run
-`ptk setup completion powershell --double-tab --install $PROFILE.CurrentUserAllHosts`.
-The double-Tab binding applies to all commands in that shell; each PowerShell
-edition has its own profile. See `ptk setup completion --help` for removal.
+Both installers persist Tab completion for your account in Bash/Git Bash and
+detected PowerShell editions. No project venv needs to be active. Windows
+PowerShell and PowerShell 7 get their own current-user/all-hosts registrations;
+Bash login and non-login terminals load the same generated script. Profiles
+preserve other settings, retain backups and do not start Python at shell startup.
+Running `.\install\install.ps1` also enables completion in that session.
+Use `-NoCompletion` or `--no-completion` to opt out. To repair an existing setup,
+run `ptk setup completion install` and open a new terminal. PowerShell's double-Tab
+binding applies to all commands in that shell. Zsh/Fish registration is explicit;
+see `ptk setup completion --help` and the CLI documentation.
 Installation reads only the marker, versioning and optional default-variant
 settings to determine the package version. Errors in other project files remain
 visible through `ptk setup config validate` and do not block installation.
