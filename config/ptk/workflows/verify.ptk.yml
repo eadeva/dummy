@@ -6,9 +6,10 @@ jobs:
     job: check
   test:
     job: test
-    needs: check
   package:
     job: package
-    needs: test
+    needs: [ "check", "test", "extension" ]
   docs:
     job: docs
+  extension:
+    job: check
