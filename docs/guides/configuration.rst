@@ -48,10 +48,10 @@ except ``project.ptk.yml``, which must define the project name.
 
 Documents contain their section body; filenames supply entity names::
 
-   # config/ptk/jobs/build.ptk.yml
    help: Build the project
    steps:
-     - compile: {run: make}
+     compile:
+       run: make
 
 PTK assembles this as ``jobs.build``. There are no includes, file precedence or
 implicit CX/local overlays. An entity cannot be split across files. Unsupported
@@ -112,12 +112,11 @@ Git substitutions
 
 Runtime templates support Git metadata independently of versioning configuration::
 
-   # config/ptk/jobs/package.ptk.yml
    steps:
-   - package:
+     package:
        uses: echo
        with:
-         message: "Source ${git.branch} at ${git.short_commit}"
+         message: Source ${git.branch} at ${git.short_commit}
 
 Available fields:
 
@@ -172,15 +171,12 @@ Available fields are ``timestamp`` (minute precision), ``timestamp_seconds``,
 Numeric date components are strings with leading zeros. Combine them for a
 custom format::
 
-   # config/ptk/project.ptk.yml
    vars:
      archive: build_${date.timestamp}.zip
      day_folder: ${date.year}/${date.month}/${date.day}
      utc_stamp: ${date.utc.year}-${date.utc.month}-${date.utc.day}_${date.utc.hour}${date.utc.minute}
-
-   # config/ptk/jobs/show-date.ptk.yml
    steps:
-   - show:
+     show:
        uses: echo
        with:
          message: ${vars.archive}
@@ -198,20 +194,10 @@ PTK calls executable units **jobs**. Use ``jobs:`` for definitions,
 ``project.default_job`` for the default, and ``job:`` for a workflow call.
 For example::
 
-   # config/ptk/project.ptk.yml
    name: demo
    default_job: check
-
-   # config/ptk/jobs/check.ptk.yml
    steps:
-   - greeting:
-       uses: echo
-       with:
-         message: Running ${run.job}
-
-   # config/ptk/workflows/verify.ptk.yml
-   steps:
-   - checks:
+     checks:
        job: check
 
 Job declarations
@@ -232,26 +218,27 @@ parameters. Validate them for each concrete variant you support.
 Steps and execution
 -------------------
 
-Steps are an ordered list of single-key mappings, for example::
+Steps are a mapping of unique IDs to executable step bodies, for example::
 
-   # config/ptk/jobs/build.ptk.yml
    steps:
-   - check:
+     check:
        run:
        - check.py
        python:
          interpreter: cli
 
-Each step has exactly one of ``run``, ``uses`` or nested ``steps``.
-Names must be unique within their set. ``parallel`` applies only to sets;
-``python`` and ``passthrough`` apply to command steps; ``with`` applies to
+Each step has exactly one of ``run`` or ``uses``. ``needs`` lists prerequisite
+step IDs; independent steps can run concurrently, bounded by job ``max_workers``.
+There are no nested groups. ``python`` and ``passthrough`` apply to command steps; ``with`` applies to
 ``uses``. Prefer argument lists for paths containing spaces and user-supplied
 parameters. String commands use platform shell syntax.
 
 The registered built-ins are ``echo``, ``wait``, ``report.import``,
 ``configs.sync``, ``tools.ensure``, ``files.copy``, ``files.clean`` and
 ``variant.generate`` and ``version.generate``. Their configuration is in :doc:`/reference/plugins`.
-``--from`` and ``--to`` select top-level steps.
+``--to STEP`` selects a target and its transitive prerequisites; ``--only-step STEP``
+explicitly bypasses prerequisite execution. Dry-runs show the graph by default.
+See :doc:`/reference/execution` for storage responsibility and failure semantics.
 
 Python modes are mutually exclusive: ``uvx`` for a Python tool, ``venv`` for
 cached requirements/packages, ``project`` for a uv project, or
@@ -425,10 +412,9 @@ the meaning independently of color.
 
 Jobs can open their HTML report automatically after a local run::
 
-   # config/ptk/jobs/test.ptk.yml
    open_report: on_errors
    steps:
-   - pytest:
+     pytest:
        python:
          project: .
        run:
@@ -546,16 +532,13 @@ explicit ``default: null`` opts out; ``required: true`` parameters remain requir
 Inherited values are validated against each parameter's type/choices, and
 ``config show --sources`` retains the global value's source location::
 
-   # config/ptk/project.ptk.yml
    param_defaults:
      jobs: 8
-
-   # config/ptk/jobs/build.ptk.yml
    params:
      jobs:
        type: int
    steps:
-   - compile:
+     compile:
        run:
        - cmake
        - --build
@@ -608,24 +591,13 @@ selected managed tools. ``inherit_path`` defaults to false: PATH starts with
 standard OS directories, not the caller's potentially repository-specific PATH.
 This is environment isolation, not a filesystem or process sandbox::
 
-   # config/ptk/project.ptk.yml
-   environment:
-     isolate: true
-     inherit_path: false
-     keep:
-     - HTTP_PROXY
-     - HTTPS_PROXY
-     set:
-       BUILD_MODE: reproducible
-
-   # config/ptk/jobs/build.ptk.yml
    environment:
      keep:
      - HTTP_PROXY
      - HTTPS_PROXY
      - COMPANY_SDK
    steps:
-   - compile:
+     compile:
        run:
        - compiler
        - source.c

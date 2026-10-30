@@ -23,7 +23,8 @@ def project(tmp_path, steps, **job):
                 "repository": {"alias": "demo", "config_path": "."},
                 "project": {"name": "controls"},
                 "jobs": {"go": {"steps": steps, **job}},
-            }
+            },
+            sort_keys=False,
         ),
     )
     app = create_app(environ=dict(os.environ))
@@ -33,18 +34,16 @@ def project(tmp_path, steps, **job):
 def test_secret_prompt_and_path_param(tmp_path):
     file, _, _ = project(
         tmp_path,
-        [
-            {
-                "print": {
-                    "run": [
-                        sys.executable,
-                        "-c",
-                        "import os; print(os.environ['TOKEN'])",
-                    ],
-                    "env": {"TOKEN": "${params.token}"},
-                }
+        {
+            "print": {
+                "run": [
+                    sys.executable,
+                    "-c",
+                    "import os; print(os.environ['TOKEN'])",
+                ],
+                "env": {"TOKEN": "${params.token}"},
             }
-        ],
+        },
         params={
             "token": {"type": "secret", "required": True},
             "output": {"type": "path", "default": "a path"},
@@ -66,41 +65,36 @@ def test_secret_prompt_and_path_param(tmp_path):
     assert summary["params"]["output"] == "two words"
 
 
-def test_report_false_hides_descendants_but_retains_run_failure(tmp_path):
+def test_report_false_hides_step_but_retains_run_failure(tmp_path):
     _, app, p = project(
         tmp_path,
-        [
-            {
-                "hidden": {
-                    "report": False,
-                    "steps": [
-                        {"fail": {"run": [sys.executable, "-c", "raise SystemExit(1)"]}}
-                    ],
-                }
+        {
+            "fail": {
+                "report": False,
+                "run": [sys.executable, "-c", "raise SystemExit(1)"],
             }
-        ],
+        },
     )
     prepared = app.prepare_run(p).execute(p, RunRequest(job="go"))
     result = app.run_job(p).execute(prepared)
     summary = run_summary(prepared.plan, result)
-    assert len(summary["steps"]) == 2  # audit logs retain every step
+    assert len(summary["steps"]) == 1
     report = app.reports.build(p, summary)
     assert not report.steps and report.status == "failed"
 
 
-def test_group_deadline_does_not_cancel_parent(tmp_path):
+def test_builtin_timeout_does_not_cancel_independent_branch(tmp_path):
     _, app, p = project(
         tmp_path,
-        [
-            {
-                "limited": {
-                    "timeout": 0.1,
-                    "continue_on_error": True,
-                    "steps": [{"wait": {"uses": "wait", "with": {"seconds": 5}}}],
-                }
+        {
+            "limited": {
+                "uses": "wait",
+                "with": {"seconds": 5},
+                "timeout": 0.1,
+                "continue_on_error": True,
             },
-            {"after": {"uses": "echo"}},
-        ],
+            "after": {"uses": "echo", "needs": "limited"},
+        },
     )
     prepared = app.prepare_run(p).execute(p, RunRequest(job="go"))
     result = app.run_job(p).execute(prepared)
@@ -113,16 +107,14 @@ def test_group_deadline_does_not_cancel_parent(tmp_path):
 def test_builtin_timeout_and_retries(tmp_path):
     _, app, p = project(
         tmp_path,
-        [
-            {
-                "wait": {
-                    "uses": "wait",
-                    "timeout": 0.05,
-                    "retries": 1,
-                    "with": {"seconds": 5},
-                }
+        {
+            "wait": {
+                "uses": "wait",
+                "timeout": 0.05,
+                "retries": 1,
+                "with": {"seconds": 5},
             }
-        ],
+        },
     )
     prepared = app.prepare_run(p).execute(p, RunRequest(job="go"))
     result = app.run_job(p).execute(prepared)
@@ -131,30 +123,21 @@ def test_builtin_timeout_and_retries(tmp_path):
     assert result.duration < 2
 
 
-def test_group_retries_repeat_children_and_report_attempts(tmp_path):
+def test_retries_repeat_failed_command_and_report_attempts(tmp_path):
     _, app, p = project(
         tmp_path,
-        [
-            {
-                "retry": {
-                    "retries": 1,
-                    "steps": [
-                        {
-                            "flaky": {
-                                "run": [
-                                    sys.executable,
-                                    "-c",
-                                    "from pathlib import Path; p=Path('seen'); existed=p.exists(); p.touch(); raise SystemExit(0 if existed else 1)",
-                                ]
-                            }
-                        }
-                    ],
-                }
+        {
+            "flaky": {
+                "retries": 1,
+                "run": [
+                    sys.executable,
+                    "-c",
+                    "from pathlib import Path; p=Path('seen'); existed=p.exists(); p.touch(); raise SystemExit(0 if existed else 1)",
+                ],
             }
-        ],
+        },
     )
     prepared = app.prepare_run(p).execute(p, RunRequest(job="go"))
     result = app.run_job(p).execute(prepared)
     assert result.status is Status.PASSED
     assert result.steps[0].attempts == 2
-    assert result.steps[0].children[0].status is Status.PASSED

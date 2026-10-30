@@ -17,7 +17,15 @@ from tests.project_files import project_files
 def invoke(write):
     root = write(
         project_files(
-            "project: {name: demo}\njobs: {build: {steps: [{hi: {uses: echo}}]}}\n"
+            """\
+project:
+  name: demo
+jobs:
+  build:
+    steps:
+      hi:
+        uses: echo
+"""
         )
     )
     grant_maintainer(root)

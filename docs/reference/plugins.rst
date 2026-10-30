@@ -40,9 +40,8 @@ Use the installed plugin's documented names in configuration:
 The plugin supplies its accepted option names and supported PTK versions.
 For example, after installing a distribution that provides ``company.check``::
 
-   # config/ptk/jobs/check.ptk.yml
    steps:
-   - checks:
+     checks:
        uses: company.check
        with:
          mode: strict

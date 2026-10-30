@@ -4,22 +4,22 @@ const V = require("../media/variables"), S = require("../media/schema");
 const schema = require("../media/config-schema.json"), variables = require("./variable-fixtures");
 const { bindingsForFile, schemaForFile } = require("../src/project-edits");
 
-test("installed field capabilities filter literal fields, defaults, jobs, nested steps and credentials", () => {
+test("installed field capabilities filter literal fields, defaults, jobs, named steps and credentials", () => {
   const value = { project: { name: "literal" }, vars: { nested: { text: "" } }, jobs: { build: {
-    params: { mode: { default: "" } }, env: { MODE: "" }, steps: [{ group: { steps: [{ child: { run: ["echo", ""], uses: "echo", with: { message: "" }, env: { TOKEN: "" } } }] } }, { short: "echo" }],
+    params: { mode: { default: "" } }, env: { MODE: "" }, steps: {child: {run: ["echo", ""], with: {message: ""}, env: {TOKEN: ""}}, short: {run: "echo"}},
   } }, artifactory: { events: { push: { path: "" } } } };
   const names = path => V.available({ logical: true, value, variables }, schema, path, S).map(entry => entry.reference);
   assert.deepEqual(names(["project", "name"]), []);
   assert.ok(names(["vars", "nested", "text"]).includes("git.short_commit"));
   assert.ok(!names(["jobs", "build", "params", "mode", "default"]).includes("run.bin_dir"));
   assert.ok(!names(["jobs", "build", "params", "mode", "default"]).includes("params.mode"));
-  const child = ["jobs", "build", "steps", 0, "group", "steps", 0, "child"];
+  const child = ["jobs", "build", "steps", "child"];
   assert.ok(names([...child, "run", 1]).includes("params.mode"));
   assert.ok(!names([...child, "run", 1]).includes("params.other"));
   assert.ok(!names([...child, "run", 1]).includes("secret:service.token"));
   assert.ok(names([...child, "env", "TOKEN"]).includes("secret:service.token"));
   assert.deepEqual(names([...child, "uses"]), []);
-  assert.ok(names(["jobs", "build", "steps", 1, "short"]).includes("run.bin_dir"));
+  assert.ok(names(["jobs", "build", "steps", "short", "run"]).includes("run.bin_dir"));
   assert.ok(names(["artifactory", "events", "push", "path"]).includes("github.ref_name"));
   assert.ok(!names(["artifactory", "events", "push", "path"]).includes("run.bin_dir"));
 });

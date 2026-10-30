@@ -1,10 +1,10 @@
 """Workspace folder layout (pure).
 
-    <root>/_builds/<variant>/<job>/<set>/<step>/    working directory per step
+    <root>/_builds/<variant>/<job>/<step>/    build folder per step
     <root>/_bin/<variant>/<job>/                        binaries / artifacts per job
     <root>/_logs/<variant>/<job>/run.log             whole run of a job
-    <root>/_logs/<variant>/<job>/<set>/<step>.log    one log per step
-    <root>/_reports/<variant>/<job>/<set>/<step>/    reports per step
+    <root>/_logs/<variant>/<job>/<step>.log    one log per step
+    <root>/_reports/<variant>/<job>/<step>/    reports per step
     <root>/_reports/<variant>/<job>/report.*         job report
 
 Without variants the ``<variant>`` level is ``default``. Folder names and the

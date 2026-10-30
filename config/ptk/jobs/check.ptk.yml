@@ -3,7 +3,7 @@ help: Check PTK's lint rules and formatting
 env:
   UV_PROJECT_ENVIRONMENT: ${project.root}/.ptk/venvs/check
 steps:
-- lint:
+  lint:
     python:
       project: .
       groups:
@@ -14,7 +14,7 @@ steps:
     - ruff
     - check
     timeout: 120
-- format:
+  format:
     python:
       project: .
       groups:
@@ -26,3 +26,5 @@ steps:
     - format
     - --check
     timeout: 120
+    needs:
+    - lint

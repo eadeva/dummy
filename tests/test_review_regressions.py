@@ -90,17 +90,11 @@ def test_report_inputs_are_fresh_and_history_is_immutable(tmp_path):
                 "jobs": {
                     "go": {
                         "params": {"name": {"default": "first-test"}},
-                        "steps": [
-                            {
-                                "test": {
-                                    "run": [
-                                        sys.executable,
-                                        str(script),
-                                        "${params.name}",
-                                    ]
-                                }
+                        "steps": {
+                            "test": {
+                                "run": [sys.executable, str(script), "${params.name}"]
                             }
-                        ],
+                        },
                     }
                 },
             }
@@ -139,7 +133,21 @@ def test_report_inputs_are_fresh_and_history_is_immutable(tmp_path):
 def test_requirement_redefinition_is_a_conflict(write, load):
     root = write(
         project_files(
-            "project: {name: demo}\ntools: {ninja: {version: '>=1'}}\njobs: {go: {requires_tools: {ninja: {version: '>=2'}}, steps: [{ok: {uses: echo}}]}}",
+            """\
+project:
+  name: demo
+tools:
+  ninja:
+    version: '>=1'
+jobs:
+  go:
+    requires_tools:
+      ninja:
+        version: '>=2'
+    steps:
+      ok:
+        uses: echo
+""",
             {"local.ptk.yml": "jobs: {go: {requires_tools: [ninja]}}"},
         )
     )
@@ -193,7 +201,18 @@ def test_isolated_job_environment_does_not_inherit_secrets(write, load, monkeypa
     monkeypatch.setenv("UNRELATED_TOKEN", "must-not-inherit")
     root = write(
         project_files(
-            "project: {name: demo}\nenvironment: {keep: [KEPT]}\njobs: {go: {steps: [{ok: {uses: echo}}]}}"
+            """\
+project:
+  name: demo
+environment:
+  keep:
+  - KEPT
+jobs:
+  go:
+    steps:
+      ok:
+        uses: echo
+"""
         )
     )
     from ptk.application.use_cases.run import RunRequest

@@ -853,14 +853,26 @@
           "type": "object",
           "x-ptk-template-context": "job"
         },
+        "max_workers": {
+          "default": 4,
+          "description": "Maximum concurrent steps in this job.",
+          "maximum": 32,
+          "minimum": 1,
+          "title": "Max Workers",
+          "type": "integer"
+        },
         "steps": {
-          "description": "Ordered steps executed by this job. At least one step is required.",
-          "items": {
-            "$ref": "#/$defs/StepEntry"
+          "additionalProperties": {
+            "$ref": "#/$defs/StepSpec"
           },
-          "minItems": 1,
+          "description": "Named steps with explicit needs dependencies. YAML order only controls presentation.",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$"
+          },
           "title": "Steps",
-          "type": "array"
+          "type": "object",
+          "x-ptk-entry-name": "step"
         }
       },
       "required": [
@@ -880,6 +892,7 @@
         "params",
         "requires_tools",
         "env",
+        "max_workers",
         "steps"
       ]
     },
@@ -1416,6 +1429,223 @@
         "enabled",
         "overlay",
         "output"
+      ]
+    },
+    "StepSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "only_cx": {
+          "default": false,
+          "description": "Skip this step outside CX execution.",
+          "title": "Only Cx",
+          "type": "boolean"
+        },
+        "only_variants": {
+          "description": "Run this step only for these variants. Other variants skip it; this does not select a variant.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Only Variants",
+          "type": "array"
+        },
+        "omit_variants": {
+          "description": "Skip this step for these variants. This does not change the job\u2019s selected variant.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Omit Variants",
+          "type": "array"
+        },
+        "needs": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+              "type": "string"
+            },
+            {
+              "items": {
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "Step IDs that must succeed first. Accepts one ID or a list; omission makes the step immediately eligible.",
+          "title": "Needs"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Readable title used to describe this step.",
+          "title": "Title"
+        },
+        "run": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Command string or argument list to execute. A list preserves spaces within arguments. Choose exactly one of run or uses.",
+          "title": "Run",
+          "x-ptk-template-context": "step"
+        },
+        "uses": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Registered plugin that executes this step. Supply its inputs in with.",
+          "title": "Uses"
+        },
+        "with": {
+          "additionalProperties": true,
+          "description": "Inputs passed to the plugin named in uses.",
+          "title": "With",
+          "type": "object",
+          "x-ptk-template-context": "step"
+        },
+        "when": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Condition evaluated against PTK execution symbols. The step is skipped when the expression is false.",
+          "title": "When"
+        },
+        "continue_on_error": {
+          "default": false,
+          "description": "Allow execution to continue after this step fails.",
+          "title": "Continue On Error",
+          "type": "boolean"
+        },
+        "timeout": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Maximum time for the step in seconds. Must be greater than zero.",
+          "title": "Timeout"
+        },
+        "retries": {
+          "default": 0,
+          "description": "Number of additional attempts after a failed step. Zero means no retries.",
+          "minimum": 0,
+          "title": "Retries",
+          "type": "integer"
+        },
+        "cwd": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Working directory for this step; defaults to the repository root. Supports PTK variable expressions.",
+          "title": "Cwd",
+          "x-ptk-template-context": "step"
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Environment variables added or overridden for this step. Values support PTK variables.",
+          "title": "Env",
+          "type": "object",
+          "x-ptk-template-context": "secret"
+        },
+        "secrets": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Map environment variable names to credential fields, for example TOKEN: artifactory.token. Store references here, not secret values.",
+          "title": "Secrets",
+          "type": "object"
+        },
+        "python": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PythonSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Python environment used for this command step. Choose one execution mode."
+        },
+        "passthrough": {
+          "default": false,
+          "description": "Accept extra command-line arguments passed after -- or targeted with --args-for. Only valid with run.",
+          "title": "Passthrough",
+          "type": "boolean"
+        },
+        "report": {
+          "default": true,
+          "description": "Include this step in the job report.",
+          "title": "Report",
+          "type": "boolean"
+        }
+      },
+      "title": "StepSpec",
+      "type": "object",
+      "x-ptk-initial": {
+        "run": "echo Hello"
+      },
+      "x-ptk-field-order": [
+        "only_cx",
+        "only_variants",
+        "omit_variants",
+        "needs",
+        "title",
+        "run",
+        "uses",
+        "with",
+        "when",
+        "continue_on_error",
+        "timeout",
+        "retries",
+        "cwd",
+        "env",
+        "secrets",
+        "python",
+        "passthrough",
+        "report"
       ]
     },
     "ToolSpec": {
@@ -2242,267 +2472,6 @@
         "max_workers",
         "jobs"
       ]
-    },
-    "StepBody": {
-      "additionalProperties": false,
-      "properties": {
-        "only_cx": {
-          "default": false,
-          "description": "Skip this step outside CX execution.",
-          "title": "Only Cx",
-          "type": "boolean"
-        },
-        "only_variants": {
-          "description": "Run this step only for these variants. Other variants skip it; this does not select a variant.",
-          "items": {
-            "type": "string"
-          },
-          "title": "Only Variants",
-          "type": "array"
-        },
-        "omit_variants": {
-          "description": "Skip this step for these variants. This does not change the job\u2019s selected variant.",
-          "items": {
-            "type": "string"
-          },
-          "title": "Omit Variants",
-          "type": "array"
-        },
-        "title": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Readable title used to describe this step.",
-          "title": "Title"
-        },
-        "run": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Command string or argument list to execute. A list preserves spaces within arguments. Choose exactly one of run, uses or steps.",
-          "title": "Run",
-          "x-ptk-template-context": "step"
-        },
-        "uses": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Registered plugin that executes this step. Supply its inputs in with.",
-          "title": "Uses"
-        },
-        "with": {
-          "additionalProperties": true,
-          "description": "Inputs passed to the plugin named in uses.",
-          "title": "With",
-          "type": "object",
-          "x-ptk-template-context": "step"
-        },
-        "steps": {
-          "anyOf": [
-            {
-              "items": {
-                "$ref": "#/$defs/StepEntry"
-              },
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Ordered child steps in this group. Enable parallel to run them concurrently.",
-          "title": "Steps"
-        },
-        "parallel": {
-          "default": false,
-          "description": "Run child steps concurrently. Only valid for a group containing steps.",
-          "title": "Parallel",
-          "type": "boolean"
-        },
-        "background": {
-          "default": false,
-          "description": "Start this command in the background. Only valid with run.",
-          "title": "Background",
-          "type": "boolean"
-        },
-        "when": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Condition evaluated against PTK execution symbols. The step is skipped when the expression is false.",
-          "title": "When"
-        },
-        "continue_on_error": {
-          "default": false,
-          "description": "Allow execution to continue after this step fails.",
-          "title": "Continue On Error",
-          "type": "boolean"
-        },
-        "timeout": {
-          "anyOf": [
-            {
-              "exclusiveMinimum": 0,
-              "type": "number"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Maximum time for the step in seconds. Must be greater than zero.",
-          "title": "Timeout"
-        },
-        "retries": {
-          "default": 0,
-          "description": "Number of additional attempts after a failed step. Zero means no retries.",
-          "minimum": 0,
-          "title": "Retries",
-          "type": "integer"
-        },
-        "cwd": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Working directory for this step. Supports PTK variable expressions.",
-          "title": "Cwd",
-          "x-ptk-template-context": "step"
-        },
-        "env": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "description": "Environment variables added or overridden for this step. Values support PTK variables.",
-          "title": "Env",
-          "type": "object",
-          "x-ptk-template-context": "secret"
-        },
-        "secrets": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "description": "Map environment variable names to credential fields, for example TOKEN: artifactory.token. Store references here, not secret values.",
-          "title": "Secrets",
-          "type": "object"
-        },
-        "python": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/PythonSpec"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Python environment used for this command step. Choose one execution mode."
-        },
-        "passthrough": {
-          "default": false,
-          "description": "Accept extra command-line arguments passed after -- or targeted with --args-for. Only valid with run.",
-          "title": "Passthrough",
-          "type": "boolean"
-        },
-        "report": {
-          "default": true,
-          "description": "Include this step in the job report.",
-          "title": "Report",
-          "type": "boolean"
-        }
-      },
-      "required": [],
-      "title": "Step",
-      "type": "object",
-      "x-ptk-initial": {
-        "run": "echo Hello"
-      },
-      "x-ptk-field-order": [
-        "only_cx",
-        "only_variants",
-        "omit_variants",
-        "title",
-        "run",
-        "uses",
-        "with",
-        "steps",
-        "parallel",
-        "background",
-        "when",
-        "continue_on_error",
-        "timeout",
-        "retries",
-        "cwd",
-        "env",
-        "secrets",
-        "python",
-        "passthrough",
-        "report"
-      ]
-    },
-    "StepEntry": {
-      "type": "object",
-      "minProperties": 1,
-      "maxProperties": 1,
-      "default": {
-        "step": {
-          "run": "echo Hello"
-        }
-      },
-      "x-ptk-entry-name": "step",
-      "description": "- step-name: {run|uses|steps: ...}  or  - step-name: \"command\"",
-      "additionalProperties": {
-        "anyOf": [
-          {
-            "$ref": "#/$defs/StepBody"
-          },
-          {
-            "type": "string",
-            "x-ptk-template-context": "step"
-          },
-          {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "x-ptk-template-context": "step"
-          }
-        ]
-      }
     }
   },
   "additionalProperties": false,

@@ -21,6 +21,13 @@ html_show_sourcelink = True
 # The reference YAML and the legacy Sphinx configuration are not build inputs.
 needs_types = [
     {
+        "directive": "ddec",
+        "title": "Design Decision",
+        "prefix": "DD_",
+        "color": "#DCEDE8",
+        "style": "node",
+    },
+    {
         "directive": "feature",
         "title": "Feature",
         "prefix": "FEAT_",

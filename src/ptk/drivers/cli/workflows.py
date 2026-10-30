@@ -187,7 +187,7 @@ def open_workflow_report(ctx, name, if_exists=False):
         console.print("[dim]no browser available here - open the file above[/]")
 
 
-def execute_workflow(ctx, name, *, dry_run=False):
+def execute_workflow(ctx, name, *, dry_run=False, graph=False):
     from ...adapters.locking import job_lock
     from ...application.use_cases.run import Cancelled, RunRequest
     from ...application.use_cases.workflow import (
@@ -200,6 +200,12 @@ def execute_workflow(ctx, name, *, dry_run=False):
     from . import console as present
 
     parent, entries, owner, spec, root = select(ctx, name)
+    if graph or dry_run:
+        from .graphs import show_graph
+
+        show_graph(root, name, "workflow", spec.jobs)
+        if graph and not dry_run:
+            return
     is_ci = parent.app.host.is_ci() if parent.ci is None else parent.ci
     if is_ci and not dry_run:
         raise PtkError(
@@ -404,10 +410,15 @@ def execute_workflow(ctx, name, *, dry_run=False):
 @click.option(
     "--dry-run", is_flag=True, help="Preview the workflow without executing jobs."
 )
+@click.option(
+    "--graph",
+    is_flag=True,
+    help="Show the dependency graph without preparing or executing jobs.",
+)
 @click.pass_context
 @guarded
-def run_workflow(ctx, name, dry_run):
-    execute_workflow(ctx, name, dry_run=dry_run)
+def run_workflow(ctx, name, dry_run, graph):
+    execute_workflow(ctx, name, dry_run=dry_run, graph=graph)
 
 
 def workflow_command(name, spec, *, hidden=False):
@@ -416,16 +427,21 @@ def workflow_command(name, spec, *, hidden=False):
 
     @click.pass_context
     @guarded
-    def run(ctx, dry_run):
-        execute_workflow(ctx, name, dry_run=dry_run)
+    def run(ctx, dry_run, graph):
+        execute_workflow(ctx, name, dry_run=dry_run, graph=graph)
 
     command = click.RichCommand(
         name,
         callback=run,
         params=[
             click.Option(
+                ["--graph"],
+                is_flag=True,
+                help="Show the dependency graph without executing jobs.",
+            ),
+            click.Option(
                 ["--dry-run"], is_flag=True, help="Preview without executing jobs."
-            )
+            ),
         ],
         help=f"{spec.help or f'Run workflow {name}.'} (local workflow)",
         hidden=hidden,

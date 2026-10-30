@@ -22,17 +22,15 @@ def project(root):
         return {
             "audience": audience,
             "params": {"word": {"default": "hello"}},
-            "steps": [
-                {
-                    "write": {
-                        "run": [
-                            sys.executable,
-                            "-c",
-                            f"from pathlib import Path; Path({marker!r}).write_text('done')",
-                        ]
-                    }
+            "steps": {
+                "write": {
+                    "run": [
+                        sys.executable,
+                        "-c",
+                        f"from pathlib import Path; Path({marker!r}).write_text('done')",
+                    ]
                 }
-            ],
+            },
         }
 
     write_project(

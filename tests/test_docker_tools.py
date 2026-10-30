@@ -45,20 +45,26 @@ class Installer:
 def project(write, load):
     return load(
         write(
-            project_files("""
-project: {name: docker-example}
+            project_files(
+                """\
+project:
+  name: docker-example
 tools:
   compiler:
     version: '>=12'
     check: compiler --version
     uv_tool: compiler==12.0
-requires_tools: [compiler]
+requires_tools:
+- compiler
 jobs:
   build:
-    requires_tools: [compiler]
+    requires_tools:
+    - compiler
     steps:
-      - hello: echo hello
-""")
+      hello:
+        run: echo hello
+"""
+            )
         )
     )
 

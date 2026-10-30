@@ -144,8 +144,8 @@ def validate(config: PtkConfig) -> list[PathProblem]:
                 None,
                 allow_secret=False,
             )
-        for i, step in enumerate(job.steps):
-            problems += _check_step(step, base + ("steps", i), config, job)
+        for name, step in job.steps.items():
+            problems += _check_step(step, base + ("steps", name), config, job)
     return problems
 
 
@@ -165,8 +165,6 @@ def _check_step(
     problems += _check_values(step.env, path + ("env",), config, job, allow_secret=True)
     for env_name, ref in step.secrets.items():
         problems += _check_secret(ref, path + ("secrets", env_name), config)
-    for i, child in enumerate(step.steps or []):
-        problems += _check_step(child, path + ("steps", i), config, job)
     return problems
 
 
@@ -295,6 +293,12 @@ def _check_dotted(
     elif in_substitution and ns == "git":
         if rest not in GIT_FIELDS:
             return f"unknown name '{ref}'{did_you_mean(rest, GIT_FIELDS)}"
+    elif in_substitution and ns == "steps":
+        name, _, attribute = rest.rpartition(".")
+        if job is None or name not in job.steps:
+            return f"unknown step reference {ref!r}"
+        if attribute not in {"build_dir", "reports_dir", "log_file"}:
+            return f"unavailable step field {ref!r}; only current-run step directories are provided"
     elif in_substitution and ns == "run":
         if first not in RUN_KEYS:
             return f"unknown name '{ref}'{did_you_mean(first, RUN_KEYS)}"

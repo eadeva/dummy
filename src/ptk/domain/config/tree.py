@@ -150,7 +150,7 @@ def get(node: Node, path: Path) -> Node | None:
 
 
 def parse_dotted(dotted: str) -> Path:
-    """``jobs.build.steps.0.run`` -> ('jobs', 'build', 'steps', 0, 'run')."""
+    """``jobs.build.steps.compile.run`` -> ('jobs', 'build', 'steps', 'compile', 'run')."""
     parts: list[str | int] = []
     for part in dotted.split("."):
         if not part:
@@ -184,62 +184,12 @@ def format_path(path: Path) -> str:
     return text
 
 
-def display_path(root: Node, path: Path) -> str:
-    """Readable path: list items written as ``- name: {...}`` show their name
-    (``steps.checks.steps.lint.run`` instead of ``steps[2].steps[0].run``)."""
-    parts: list[str | int] = []
-    current: Node | None = root
-    for part in path:
-        nxt = get(current, (part,)) if current is not None else None
-        if (
-            nxt is None
-            and current is not None
-            and current.is_map
-            and len(current.value) == 1
-        ):
-            only = next(iter(current.value))
-            if get(current.value[only], (part,)) is not None:
-                current = current.value[only]
-                nxt = get(current, (part,))
-        if (
-            isinstance(part, int)
-            and nxt is not None
-            and nxt.is_map
-            and len(nxt.value) == 1
-            and "name" not in nxt.value
-        ):
-            parts.append(next(iter(nxt.value)))
-        elif (
-            isinstance(part, str)
-            and parts
-            and parts[-1] == part
-            and current is not None
-            and not current.is_map
-        ):
-            continue
-        else:
-            parts.append(part)
-        current = nxt
-    return format_path(tuple(parts))
-
-
 def locate(root: Node, path: Path) -> Location | None:
-    """Best location for a validation error at ``path``.
-
-    Steps are written as ``- name: {...}`` but validated as ``{name: ..., ...}``,
-    so a path like ``steps[0].run`` is searched as ``steps[0].<name>.run`` too.
-    Falls back to the closest parent that has a location.
-    """
+    """Locate a field, using its nearest existing parent for missing fields."""
     current = root
     best = root.loc
     for part in path:
         nxt = get(current, (part,))
-        if nxt is None and current.is_map and len(current.value) == 1:
-            only_key = next(iter(current.value))
-            wrapper = current.value[only_key]
-            nxt = get(wrapper, (part,))
-            if nxt is not None:
-                current = wrapper
         if nxt is None:
             if isinstance(part, str) and current.is_map and part in current.key_locs:
                 return current.key_locs[part]

@@ -16,24 +16,6 @@ from ..errors import Problem
 from ..suggest import did_you_mean
 from .tree import Node, Path, format_path
 
-_STEP_MODEL = "StepSpec"
-
-
-def _named(path: Path) -> Path:
-    """Drop the list index in front of a step name: steps[1].compile -> steps.compile."""
-    result: list[str | int] = []
-    for i, part in enumerate(path):
-        if (
-            isinstance(part, int)
-            and i + 1 < len(path)
-            and isinstance(path[i + 1], str)
-            and i > 0
-            and path[i - 1] == "steps"
-        ):
-            continue
-        result.append(part)
-    return tuple(result)
-
 
 def _allowed_keys(model: type[BaseModel]) -> dict[str, str]:
     keys: dict[str, str] = {}
@@ -91,22 +73,13 @@ def _walk(
         if not node.is_map:
             return
         allowed = _allowed_keys(annotation)
-        if (
-            annotation.__name__ == _STEP_MODEL
-            and "name" not in node.value
-            and len(node.value) == 1
-        ):
-            ((step_name, body),) = node.value.items()
-            if not body.is_map:
-                return  # short form: "- name: <command>"
-            node, path = body, path + (step_name,)
         for key, child in node.value.items():
             if key not in allowed:
                 visible = [k for k in allowed if k != "with_"]
                 problems.append(
                     Problem(
                         f"unknown key '{key}'{did_you_mean(key, visible)}",
-                        path=format_path(_named(path + (key,))),
+                        path=format_path(path + (key,)),
                         location=node.key_locs.get(key) or child.loc,
                     )
                 )

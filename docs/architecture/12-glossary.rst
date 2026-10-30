@@ -11,7 +11,7 @@ Glossary
       and reporting policy.
 
    Workflow
-      Local orchestration of job calls, with sequential/parallel grouping and
+      Local orchestration of job calls, with explicit job dependencies and
       optional cross-repository routing in a VMR.
 
    Variant

@@ -18,7 +18,7 @@ test("inventory accepts the versioned CLI contract and isolated broken members",
 });
 
 test("malformed inventories produce actionable errors", () => {
-  for (const value of [null, {}, { schema_version: 2 }, { ...inventory(), root: "relative" }, { ...inventory(), projects: [null] }]) {
+  for (const value of [null, {}, { schema_version: 3 }, { ...inventory(), root: "relative" }, { ...inventory(), projects: [null] }]) {
     assert.throws(() => core.parseInventory(JSON.stringify(value)), /inventory|repository paths/);
   }
   const bad = inventory();
@@ -181,7 +181,7 @@ test("watch filtering ignores installed resources but respects PTK-reported sour
 
 
 test("configuration interface is required and unknown versions are rejected", () => {
-  for (const configuration of [undefined, null, { version: 2 }, { version: 1 }]) {
+  for (const configuration of [undefined, null, { version: 3 }, { version: 1 }]) {
     const doc = inventory();
     doc.projects[0].configuration = configuration;
     assert.throws(() => core.parseInventory(JSON.stringify(doc)), /configuration interface/);
@@ -224,19 +224,19 @@ test("PTK supplies cwd and alias routing without a config override", () => {
     const doc = inventory(); doc.projects[0].invocation = route;
     assert.throws(() => core.parseInventory(JSON.stringify(doc)), /repository paths/);
   }
-  assert.throws(() => core.parseInventory(JSON.stringify({ ...inventory(), schema_version: 2 })), /Update PTK/);
+  assert.throws(() => core.parseInventory(JSON.stringify({ ...inventory(), schema_version: 3 })), /Update PTK/);
 });
 
 test("run options retain literal repeated values and reject removed step choices", () => {
   const t = target();
   t.spec.run_options = [
-    builtinParam("start", { kind: "option", option: "--from", choices: ["configure", "compile"] }),
+    builtinParam("only_step", { kind: "option", option: "--only-step", choices: ["configure", "compile"] }),
     builtinParam("end", { kind: "option", option: "--to", choices: ["configure", "compile"] }),
     builtinParam("args_for", { kind: "option", option: "--args-for", multiple: true }),
     builtinParam("show_env", { kind: "option", option: "--env", is_flag: true }),
   ];
-  const runOptions = { start: ["configure"], end: ["compile"], args_for: ['compile=--dir "some folder"', 'compile=$(not-a-shell)'], show_env: ["true"] };
-  assert.deepEqual(core.argsFor(t, { preview: true, runOptions }), ["run", "build", "--from=configure", "--to=compile", '--args-for=compile=--dir "some folder"', "--args-for=compile=$(not-a-shell)", "--env", "--dry-run"]);
-  assert.throws(() => core.argsFor(t, { runOptions: { start: ["removed"] } }), /available value/);
+  const runOptions = { only_step: ["configure"], end: ["compile"], args_for: ['compile=--dir "some folder"', 'compile=$(not-a-shell)'], show_env: ["true"] };
+  assert.deepEqual(core.argsFor(t, { preview: true, runOptions }), ["run", "build", "--only-step=configure", "--to=compile", '--args-for=compile=--dir "some folder"', "--args-for=compile=$(not-a-shell)", "--env", "--dry-run"]);
+  assert.throws(() => core.argsFor(t, { runOptions: { only_step: ["removed"] } }), /available value/);
   assert.throws(() => core.argsFor(t, { runOptions }), /requires Dry run/);
 });

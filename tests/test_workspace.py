@@ -28,14 +28,9 @@ def repository(root, alias, *, config_path="config"):
             "vars": {"value": alias},
             "jobs": {
                 "build": {
-                    "steps": [
-                        {
-                            "hello": {
-                                "uses": "echo",
-                                "with": {"message": "${vars.value}"},
-                            }
-                        }
-                    ]
+                    "steps": {
+                        "hello": {"uses": "echo", "with": {"message": "${vars.value}"}}
+                    }
                 }
             },
         },
@@ -77,14 +72,12 @@ def test_config_default_directory_execution_root_and_discovery(tmp_path, monkeyp
     (config / "jobs/build.ptk.yml").write_text(
         yaml.safe_dump(
             {
-                "steps": [
-                    {
-                        "copy": {
-                            "uses": "files.copy",
-                            "with": {"files": ["input.txt"], "to": "out"},
-                        }
+                "steps": {
+                    "copy": {
+                        "uses": "files.copy",
+                        "with": {"files": ["input.txt"], "to": "out"},
                     }
-                ]
+                }
             }
         )
     )

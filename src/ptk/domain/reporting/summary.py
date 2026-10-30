@@ -14,6 +14,7 @@ def step_dict(result: StepResult) -> dict[str, Any]:
     data: dict[str, Any] = {
         "step": result.label,
         "kind": result.kind,
+        "needs": result.needs,
         "status": result.status.value,
         "start": round(result.start, 3),
         "duration": round(result.duration, 3),

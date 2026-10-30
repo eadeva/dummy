@@ -1,6 +1,6 @@
 # PTK configuration: this file owns its section or named entity.
 steps:
-- build:
+  build:
     uses: echo
     with:
       message: Building ${env.PROJECT_IDENTITY} (${vh.variant})

@@ -58,7 +58,7 @@ def test_rendered_page_shows_pipeline_and_escapes():
     doc.description = "<script>alert(1)</script>"
     html = render(doc)
     assert "<script>alert(1)" not in html and "&lt;script&gt;" in html
-    assert 'class="lanes"' in html and "runs in parallel" in html
+    assert "needs: compile" in html and "--only-step" in html
     assert "only if <code>COMPONENT_CAMERA and DISPLAY_SIZE &gt;= 10</code>" in html
     assert "https://" not in html  # self-contained, works offline
 

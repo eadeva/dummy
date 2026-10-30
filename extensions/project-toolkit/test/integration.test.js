@@ -47,7 +47,7 @@ function project(root, alias) {
         message: { default: "hello" }, verbose: { type: "bool", default: true },
         tags: { type: "list", default: ["one"] }, token: { type: "secret", env: "PTK_TEST_SECRET" },
       },
-      steps: [{ say: { uses: "echo", with: { message: "${params.message} ${params.verbose} ${params.tags}" } } }],
+      steps: {say: { uses: "echo", with: { message: "${params.message} ${params.verbose} ${params.tags}" } }},
     } },
     workflows: { verify: { jobs: { build: { job: "build" } } } },
   });
@@ -72,7 +72,7 @@ test("separate variant tasks execute real PTK processes concurrently with isolat
   ].join("\n"));
   fs.writeFileSync(path.join(root, "jobs/build.ptk.yml"), JSON.stringify({
     params: { output: { default: "${vh.variant}" } },
-    steps: [{ overlap: { run: [python, script, root, "${run.variant}", "${run.bin_dir}", "${params.output}"], timeout: 20 } }],
+    steps: {overlap: { run: [python, script, root, "${run.variant}", "${run.bin_dir}", "${params.output}"], timeout: 20 }},
   }));
   const doc = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));
   const target = core.availableTargets([{ inventory: doc }]).find(item => item.kind === "job");
@@ -98,12 +98,12 @@ test("installed PTK supplies the variable catalogue and raw job field capabiliti
   const file = path.join(root, "jobs/build.ptk.yml");
   const value = JSON.parse(fs.readFileSync(file, "utf8"));
   const state = { value, variables: config.variables, pathBindings: E.bindingsForFile(config, file) };
-  const entries = V.available(state, E.schemaForFile(config, file), ["steps", 0, "say", "with", "message"], S);
+  const entries = V.available(state, E.schemaForFile(config, file), ["steps", "say", "with", "message"], S);
   assert.ok(entries.some(entry => entry.reference === "git.short_commit"));
   assert.ok(entries.some(entry => entry.reference === "params.message"));
   assert.ok(!entries.some(entry => entry.reference === "params.token"));
   assert.ok(!entries.some(entry => entry.reference.startsWith("github.")));
-  assert.deepEqual(V.available(state, E.schemaForFile(config, file), ["steps", 0, "say", "uses"], S), []);
+  assert.deepEqual(V.available(state, E.schemaForFile(config, file), ["steps", "say", "uses"], S), []);
 });
 
 test("actual PTK inventory, preview, job parameters and variant inspection agree with extension arguments", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
@@ -125,11 +125,11 @@ test("actual PTK inventory, preview, job parameters and variant inspection agree
   invoke(root, core.argsFor(builtins.find(target => target.name === "self-service creds list")));
   invoke(root, core.argsFor(builtins.find(target => target.name === "self-service creds set"), { help: true }));
   invoke(root, core.argsFor(builtins.find(target => target.name === "--help"), { help: true }));
-  assert.deepEqual(fs.readdirSync(root, { recursive: true }), before);
+  assert.deepEqual(fs.readdirSync(root, { recursive: true }).filter(file => file !== ".ptk" && !file.startsWith(".ptk" + path.sep)), before);
   const options = { variant: "large", params: { message: "text with spaces;$(literal)", verbose: "false", tags: "one,two" } };
   const preview = invoke(root, core.argsFor(target, { ...options, preview: true }));
   assert.match(preview, /text with spaces/);
-  assert.deepEqual(fs.readdirSync(root, { recursive: true }), before);
+  assert.deepEqual(fs.readdirSync(root, { recursive: true }).filter(file => file !== ".ptk" && !file.startsWith(".ptk" + path.sep)), before);
   const output = invoke(root, core.argsFor(target, options));
   assert.match(output, /text with spaces;\$\(literal\)/);
   const run = JSON.parse(fs.readFileSync(path.join(root, "_logs/large/build/run.json"), "utf8"));
@@ -358,7 +358,7 @@ test("registered component edits create a local document and entity renames roun
   apply([{ op: "add", path: ["variants", "components", "networking", "features"], value: { TLS: { type: "bool", default: true } } }]);
   assert.ok(fs.existsSync(path.join(root, "src/networking/component.variants.ptk.yml")));
   assert.equal(config.value.variants.components.networking.features.TLS.default, true);
-  apply([{ op: "add", path: ["jobs", "check"], value: { steps: [{ inspect: { uses: "echo" } }] } }]);
+  apply([{ op: "add", path: ["jobs", "check"], value: { steps: {inspect: { uses: "echo" }} } }]);
   apply([{ op: "rename", path: ["jobs", "check"], name: "inspect" }]);
   assert.equal(fs.existsSync(path.join(root, "jobs/check.ptk.yml")), false);
   assert.ok(fs.existsSync(path.join(root, "jobs/inspect.ptk.yml")));
@@ -388,9 +388,9 @@ test("new configuration items from the installed schema validate with their requ
   assert.deepEqual(config.value.artifactory.events, { push: { path: "" } });
   add(["versioning"], "VersioningSpec");
   add(["jobs", "new-job"], "JobSpec");
-  add(["jobs", "new-job", "steps", 1], "StepEntry", config.value.jobs["new-job"].steps);
-  assert.deepEqual(config.value.jobs["new-job"].steps.map(item => Object.keys(item)[0]), ["step", "step_2"]);
-  add(["jobs", "new-job", "steps", 0, "step", "python"], "PythonSpec");
+  add(["jobs", "new-job", "steps", "step_2"], "StepSpec");
+  assert.deepEqual(Object.keys(config.value.jobs["new-job"].steps), ["step", "step_2"]);
+  add(["jobs", "new-job", "steps", "step", "python"], "PythonSpec");
   add(["workflows", "new-workflow"], "WorkflowSpec");
   assert.equal(config.value.workflows["new-workflow"].jobs.job.job, "build");
 });
@@ -425,17 +425,13 @@ test("PTK run-option metadata drives a real bounded job execution", { skip: !pyt
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk step choices "));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   project(root, "demo");
-  fs.writeFileSync(path.join(root, "jobs/build.ptk.yml"), JSON.stringify({ steps: [
-    { prepare: { uses: "echo", with: { message: "SHOULD_NOT_RUN_BEFORE" } } },
-    { compile: { title: "Compile firmware", uses: "echo", with: { message: "IN_SELECTED_RANGE" } } },
-    { package: { uses: "echo", with: { message: "SHOULD_NOT_RUN_AFTER" } } },
-  ] }));
+  fs.writeFileSync(path.join(root, "jobs/build.ptk.yml"), JSON.stringify({ steps: {prepare: { uses: "echo", with: { message: "SHOULD_NOT_RUN_BEFORE" } }, compile: { title: "Compile firmware", uses: "echo", with: { message: "IN_SELECTED_RANGE" } }, package: { uses: "echo", with: { message: "SHOULD_NOT_RUN_AFTER" } }} }));
   const doc = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));
   const target = core.availableTargets([{ inventory: doc }]).find(item => item.kind === "job");
-  const from = target.spec.run_options.find(option => option.name === "start");
+  const from = target.spec.run_options.find(option => option.name === "only_step");
   assert.deepEqual(from.choices, ["prepare", "compile", "package"]);
   assert.equal(from.suggestions[1].help, "Compile firmware");
-  const output = invoke(core.cwdFor(target), core.argsFor(target, { variant: "small", runOptions: { start: ["compile"], end: ["compile"] } }));
+  const output = invoke(core.cwdFor(target), core.argsFor(target, { variant: "small", runOptions: { only_step: ["compile"] } }));
   assert.match(output, /IN_SELECTED_RANGE/);
   assert.doesNotMatch(output, /SHOULD_NOT_RUN/);
 });

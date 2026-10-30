@@ -175,7 +175,6 @@
       crumbs.append(button("Configuration", () => navigate([]), "link"));
       selected.forEach((key, i) => {
         const path = selected.slice(0, i + 1);
-        if (typeof key === "number" && P.namedEntry(valueAt(path), path) === selected[i + 1]) return;
         crumbs.append(el("span", "/"), button(P.pathLabel(state.value, path), () => navigate(path), "link"));
       });
       main.append(crumbs, el("h2", P.pathLabel(state.value, selected)));
@@ -249,7 +248,7 @@
     }
     if (value !== null && typeof value === "object") {
       const summary = Array.isArray(value) ? `${value.length} items` : Object.keys(value).join(", ") || "Empty object";
-      const open = button("Edit fields →", () => navigate(P.namedEntry(value, path) ? [...path, P.namedEntry(value, path)] : path), "link");
+      const open = button("Edit fields →", () => navigate(path), "link");
       open.id = id;
       body.append(el("span", summary, { className: "field-summary", title: summary }), open);
     } else {
@@ -452,31 +451,42 @@
     const choices = state.variantChoices || [];
     if (!choices.length) return () => [];
     const section = el("section", undefined, { className: "run-variants" });
-    section.append(el("h2", state.kind === "workflow" ? "Owner variant" : "Variants"));
-    section.append(el("p", state.kind === "workflow" ? "Choose one owner variant. PTK applies its repository mappings." : "Select one or more variants to run in parallel. Choices apply to this run.", { className: "help" }));
+    section.append(el("h2", state.kind === "workflow" ? "Owner variants" : "Variants"));
+    section.append(el("p", "Select one or more variants to run in parallel. An empty selection automatically selects the project default." + (state.kind === "workflow" ? " PTK applies repository mappings separately to each owner variant." : ""), { className: "help" }));
     if (state.variantHelp) {
       const details = el("details"); details.append(el("summary", "Variant help"), el("p", state.variantHelp, { className: "help" })); section.append(details);
     }
-    const defaults = state.defaultVariant ? `Use project default (${state.defaultVariant})` : "Use project default (none configured)";
-    const inputs = [];
-    for (const item of [{ name: "", description: defaults }, ...choices]) {
+    const all = el("input", undefined, { type: "checkbox", "aria-label": "All variants" });
+    const allLabel = el("label", undefined, { className: "variant-choice" });
+    allLabel.append(all, el("span", "All variants")); section.append(allLabel);
+    const inputs = choices.map(item => {
       const label = el("label", undefined, { className: "variant-choice" });
-      const input = el("input", undefined, { type: state.kind === "workflow" ? "radio" : "checkbox", name: "run-variant", value: item.name, "aria-label": item.name || defaults });
-      input.checked = item.name ? state.useDefault !== true && selected.includes(item.name) : state.useDefault === true || !selected.length;
-      const text = el("span", item.name || defaults);
-      if (item.name && item.description) text.append(el("small", item.description, { className: "help" }));
+      const input = el("input", undefined, { type: "checkbox", name: "run-variant", value: item.name, "aria-label": item.name });
+      input.checked = selected.includes(item.name);
+      const text = el("span", item.name + (item.name === state.defaultVariant ? " (default)" : ""));
+      if (item.description) text.append(el("small", item.description, { className: "help" }));
       if (item.aliases?.length) text.append(el("small", `Aliases: ${item.aliases.join(", ")}`, { className: "help" }));
-      label.append(input, text); section.append(label); inputs.push(input);
-      input.addEventListener("change", () => {
-        if (input.checked && !item.name) for (const other of inputs) { if (other !== input) other.checked = false; }
-        else if (input.checked) inputs[0].checked = false;
-        if (!inputs.some(other => other.checked)) inputs[0].checked = true;
-        onChange(inputs.filter(other => other.checked && other.value).map(other => other.value));
-        showIssue("");
-      });
-    }
+      label.append(input, text); section.append(label);
+      return input;
+    });
+    const names = () => inputs.filter(input => input.checked).map(input => input.value);
+    const sync = () => {
+      if (!names().length) {
+        const defaultInput = inputs.find(input => input.value === state.defaultVariant);
+        if (defaultInput) defaultInput.checked = true;
+      }
+      all.checked = inputs.every(input => input.checked);
+      all.indeterminate = !all.checked && inputs.some(input => input.checked);
+      onChange(names()); showIssue("");
+    };
+    for (const input of inputs) input.addEventListener("change", sync);
+    all.addEventListener("change", () => { for (const input of inputs) input.checked = all.checked; sync(); });
+    // Establish the default before the first render without invoking the form callback.
+    if (!names().length) { const input = inputs.find(input => input.value === state.defaultVariant); if (input) input.checked = true; }
+    all.checked = inputs.every(input => input.checked);
+    all.indeterminate = !all.checked && inputs.some(input => input.checked);
     container.append(section);
-    return () => inputs.filter(input => input.checked && input.value).map(input => input.value);
+    return names;
   }
 
   function executionControls(container) {
@@ -518,7 +528,7 @@
         field.append(suggestions);
       }
       input.addEventListener("input", () => showIssue(""));
-      (spec.name === "start" || spec.name === "end" ? section : advanced).append(field);
+      (spec.name === "only_step" || spec.name === "end" ? section : advanced).append(field);
       controls.push({ spec, input });
     }
     section.append(advanced); container.append(section);
@@ -532,7 +542,7 @@
     app.replaceChildren();
     app.className = "parameter-editor";
     const header = el("header");
-    const variants = state.variants || (state.variant ? [state.variant] : []);
+    const variants = state.variants || [];
     header.append(el("div", `PTk / ${state.kind === "workflow" ? "Workflow" : "Job"} options`, { className: "brand" }), el("h1", state.name), el("p", [state.project, variants.length && `${variants.length > 1 ? "Variants (parallel)" : "Variant"}: ${variants.join(", ")}`].filter(Boolean).join(" · "), { className: "muted" }));
     app.append(header);
     const main = el("main", undefined, { className: "parameters" });

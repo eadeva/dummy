@@ -1,6 +1,6 @@
 # ptk — project tool kit
 
-A configuration-driven project CLI: jobs made of steps and step sets,
+A configuration-driven project CLI: jobs made of named steps with explicit dependencies,
 built-in variant handling, credentials, tool setup, shared base configs,
 unified logging and reporting. See [`reference/development-plan.md`](reference/development-plan.md) for the full plan.
 
@@ -208,7 +208,7 @@ and document schemas. See [configuration authoring](docs/guides/configuration.rs
 ```
 ptk [-c .main.ptk.yml] [--set PATH=VALUE]... [--ci/--no-ci] [-V VARIANT] [-v|-vv]
 ptk                                  run the default job (project.default_job)
-ptk JOB [--PARAM VALUE]... [--from STEP] [--to STEP] [--params FILE]
+ptk JOB [--PARAM VALUE]... [--only-step STEP] [--to STEP] [--params FILE]
            [-q] [--args-for STEP="ARGS"]... [-- ARGS]
 ptk JOB [--dry-run] [--env]       # run a job or preview its expanded plan
 ptk WORKFLOW [--dry-run]         # workflows are direct commands too
@@ -241,7 +241,6 @@ Exit codes: 0 passed, 1 failed, 2 usage/configuration error, 130 cancelled (Ctrl
 ## Running jobs
 
 ```yaml
-# config/ptk/jobs/build.ptk.yml
 params:
   jobs:
     type: int
@@ -250,36 +249,47 @@ params:
   toolchain:
     default: ${vh.data.toolchain}
 steps:
-- configure:
-  - cmake
-  - --preset
-  - ${vars.preset}
-- compile: cmake --build --preset ${vars.preset} -j ${params.jobs}
-- checks:
-    parallel: true
-    steps:
-    - lint:
-        run: tools/lint.py
-        python:
-          uvx: ruff==0.6.9
-    - unit:
-        run:
-        - pytest
-        - -q
-        python:
-          venv:
-            requirements: tools/req.txt
-        passthrough: true
-    - qac:
-        run: tools/qac.bat
-        when: COMPONENT_CAMERA
-        continue_on_error: true
-- upload:
+  configure:
+    run:
+    - cmake
+    - --preset
+    - ${vars.preset}
+  compile:
+    run: cmake --build --preset ${vars.preset} -j ${params.jobs}
+    needs:
+    - configure
+  lint:
+    run: tools/lint.py
+    python:
+      uvx: ruff==0.6.9
+    needs:
+    - compile
+  unit:
+    run:
+    - pytest
+    - -q
+    python:
+      venv:
+        requirements: tools/req.txt
+    passthrough: true
+    needs:
+    - compile
+  qac:
+    run: tools/qac.bat
+    when: COMPONENT_CAMERA
+    continue_on_error: true
+    needs:
+    - compile
+  upload:
     run: tools/upload.sh
     secrets:
       TOKEN: artifactory.token
     retries: 2
     timeout: 600
+    needs:
+    - lint
+    - unit
+    - qac
 ```
 
 * `.bat/.cmd` → `cmd /c`, `.ps1` → `pwsh -File`, `.sh` → `bash`, `.py` → Python via uv
@@ -298,10 +308,10 @@ steps:
 ## Workspace layout
 
 ```
-_builds/<variant>/<job>/<set>/<step>/    build folder per step (${run.build_dir})
+_builds/<variant>/<job>/<step>/    build folder per step (${run.build_dir})
 _bin/<variant>/                             binaries per variant
-_logs/<variant>/<job>/run.log            + <set>/<step>.log, events.jsonl, run.json, _history/
-_reports/<variant>/<job>/report.{json,xml,html,md} + <set>/<step>/ (tool results)
+_logs/<variant>/<job>/run.log            + <step>.log, events.jsonl, run.json, _history/
+_reports/<variant>/<job>/report.{json,xml,html,md} + <step>/ (tool results)
 ```
 
 ## Architecture
@@ -321,15 +331,17 @@ src/ptk/
 
 Dependencies point inwards only; the domain has no I/O.
 
-### Background jobs and variant inspection
+### Dependency execution and variant inspection
 
-- `background: true` lets a finite `run` step overlap subsequent steps; PTK waits at
-  the containing group's end and includes failures in the report.
+- Steps without `needs` may run concurrently. Dependencies define joins, and
+  `max_workers` bounds active steps. `--to` selects a prerequisite closure;
+  `--only-step` deliberately bypasses prerequisites. Both job and workflow dry-runs
+  show their graphs automatically; `--graph` inspects them without preparing commands.
 - `ptk variant list|show|explain` inspects variants without editing configuration.
   Select a variant before the command: `ptk -V debug build`.
 - `--ci/--no-ci` is maintainer-only. Automatic CI detection remains the default.
 
-See [background process limitations](docs/reference/execution.rst) and the [CLI reference](docs/reference/cli.rst).
+See [dependency execution and output responsibility](docs/reference/execution.rst) and the [CLI reference](docs/reference/cli.rst).
 
 ## Local workflows
 

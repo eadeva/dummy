@@ -1,7 +1,7 @@
 """Single-file HTML report (offline, no external resources, light/dark).
 
 The centre piece is a timeline: every step is a bar at its real start time and
-duration, so parallel sets and slow steps are visible at a glance.
+duration, so concurrent and slow steps are visible at a glance.
 """
 
 from __future__ import annotations
@@ -68,8 +68,6 @@ padding:3px 0;font-size:14px}
 .bar.passed{background:var(--pass)}.bar.failed,.bar.error{background:var(--fail)}
 .bar.skipped{background:transparent;border:1px dashed var(--skip)}.bar.cancelled{background:var(--cancel)}
 .bar.allowed{background:repeating-linear-gradient(45deg,var(--fail) 0 4px,transparent 4px 8px);border:1px solid var(--fail)}
-.row.set .label{font-weight:650}
-.row.set .bar{top:6px;bottom:6px;background:transparent;border:2px solid var(--accent);border-top:none}
 .legend{display:flex;flex-wrap:wrap;gap:14px;color:var(--muted);font-size:13px;margin-top:8px}
 .legend i{display:inline-block;width:12px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle}
 .problem{border-left:3px solid var(--fail);background:var(--paper);padding:10px 14px;margin:0 0 10px;border-radius:0 6px 6px 0}
@@ -156,10 +154,8 @@ def _row(step: ReportStep, total: float) -> str:
     if step.command:
         title += f"\n{step.command}"
     timing = f"{step.duration:.1f}s" if step.status in (PASSED, FAILED) else ""
-    indent = f"padding-left:{step.depth * 16}px"
-    cls = "row set" if step.kind == "set" else "row"
     return (
-        f'<div class="{cls}" title="{_e(title)}"><span class="label" style="{indent}">'
+        f'<div class="row" title="{_e(title)}"><span class="label">'
         f'<span class="{_e(step.status)}">●</span> {_e(step.name)}</span>'
         f'<span class="track"><span class="bar {_e(status)}" '
         f'style="left:{left:.2f}%;width:{max(width, 0.3):.2f}%"></span></span>'
@@ -243,7 +239,7 @@ def render(report: Report, *, link_root: Path | None = None) -> str:
         max((s.start + s.duration for s in report.steps), default=0),
         0.001,
     )
-    steps = [s for s in report.steps if s.kind != "set"]
+    steps = report.steps
     counts = {
         k: sum(1 for s in steps if s.status == k) for k in (PASSED, FAILED, SKIPPED)
     }
@@ -258,6 +254,27 @@ def render(report: Report, *, link_root: Path | None = None) -> str:
         )
     ]
     parts.append(_project_header(report))
+    selection = report.context.get("selection", {})
+    if selection.get("only_step"):
+        parts.append(
+            "<section><h2>Single-step execution</h2><p>Only "
+            + _e(selection["only_step"])
+            + " was selected. Prerequisites not run: "
+            + _e(", ".join(selection["omitted_dependencies"]) or "none")
+            + ". Required outputs must already exist; PTK does not restore outputs from previous runs.</p></section>"
+        )
+    parts.append(
+        '<section><h2>Dependencies</h2><div class="table-wrap"><table><tr><th>Step</th><th>Needs</th></tr>'
+        + "".join(
+            "<tr><td>"
+            + _e(step.label)
+            + "</td><td>"
+            + _e(", ".join(step.needs) or "ready")
+            + "</td></tr>"
+            for step in report.steps
+        )
+        + "</table></div></section>"
+    )
     figures = [
         ("Steps passed", counts[PASSED]),
         (
@@ -322,7 +339,7 @@ def render(report: Report, *, link_root: Path | None = None) -> str:
         f'<section><h2>Timeline</h2><div class="timeline">'
         f"{''.join(_row(s, total) for s in report.steps)}</div>"
         f'<div class="legend">{legend}<span>hatched: failure allowed</span>'
-        f"<span>bracket: step set</span></div></section>"
+        f"</div></section>"
     )
 
     if report.params:

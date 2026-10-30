@@ -233,10 +233,10 @@ def test_invalid_graphs_are_rejected_when_loading(jobs, message):
 @pytest.mark.parametrize(
     "value",
     [
-        {"steps": [{"build": "build"}]},
+        {"steps": {"build": {"run": "build"}}},
         {"parallel": True, "jobs": {"build": {"job": "build"}}},
         {"jobs": {"build": {"job": "build", "repo": "app"}}},
-        {"jobs": {"group": {"steps": [{"build": "build"}]}}},
+        {"jobs": {"group": {"steps": {"build": {"run": "build"}}}}},
         {"jobs": {"build": "build"}},
         {"jobs": {}},
         {"jobs": {"../escape": {"job": "build"}}},

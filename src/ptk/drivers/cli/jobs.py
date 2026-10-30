@@ -2,7 +2,7 @@
 
 Every job becomes a command with real, typed options for its parameters::
 
-    ptk -V b_us build --jobs 4 --build-type Debug --from compile -- extra args
+    ptk -V b_us build --jobs 4 --build-type Debug --only-step compile -- extra args
     ptk build --dry-run --jobs 4            # same options, nothing is executed
 
 Option values are only passed on when given; defaults are resolved by the
@@ -119,6 +119,11 @@ def param_option(name: str, spec: ParamSpec) -> click.Option:
 def common_options() -> list[click.Parameter]:
     params: list[click.Parameter] = [
         click.Option(
+            ["--graph"],
+            is_flag=True,
+            help="Show the dependency graph without preparing or executing commands.",
+        ),
+        click.Option(
             ["--all-variants"], is_flag=True, help="Run all concrete variants."
         ),
         SuggestedOption(
@@ -129,15 +134,15 @@ def common_options() -> list[click.Parameter]:
             shell_complete=complete_features,
         ),
         SuggestedOption(
-            ["--from", "start"],
+            ["--only-step", "only_step"],
             metavar="STEP",
-            help="Start at this top-level step.",
+            help="Run only this step, bypassing its prerequisites. Their required outputs must already exist.",
             shell_complete=complete_steps,
         ),
         SuggestedOption(
             ["--to", "end"],
             metavar="STEP",
-            help="Stop after this top-level step.",
+            help="Run this target and all its transitive prerequisites.",
             shell_complete=complete_steps,
         ),
         click.Option(
@@ -149,7 +154,7 @@ def common_options() -> list[click.Parameter]:
             ["--args-for"],
             multiple=True,
             metavar='STEP="ARGS"',
-            help="Extra arguments for one step with passthrough: true (STEP is a/b).",
+            help="Extra arguments for one step with passthrough: true (STEP is the configured step ID).",
             shell_complete=complete_passthrough,
         ),
     ]
@@ -196,11 +201,12 @@ def build_request(
     extra: tuple[str, ...] = (),
     all_variants: bool = False,
     features: tuple[str, ...] = (),
-    start: str | None = None,
+    only_step: str | None = None,
     end: str | None = None,
     params_path: Path | None = None,
     args_for: tuple[str, ...] = (),
     dry_run: bool = False,
+    graph: bool = False,
 ) -> RunRequest:
     from ...application.use_cases.run import RunRequest
 
@@ -230,11 +236,12 @@ def build_request(
         },
         params=params or {},
         params_file=params_file(params_path),
-        start=start,
+        only_step=only_step,
         end=end,
         passthrough=list(extra),
         args_for={k: shlex.split(v) for k, v in pairs(args_for, "--args-for").items()},
         dry_run=dry_run,
+        graph=graph,
         role=state_of(ctx).role(),
     )
 
@@ -249,6 +256,23 @@ def execute(
 ) -> None:
     state = state_of(ctx)
     project = state.project()
+    if request.graph and not request.dry_run:
+        from ...domain.execution.planning import select_steps
+        from .graphs import show_graph
+
+        name = request.job or project.config.project.default_job
+        if name not in project.config.jobs:
+            raise PtkError(f"unknown job {name!r}")
+        steps = project.config.jobs[name].steps
+        show_graph(
+            project.root,
+            name,
+            "job",
+            steps,
+            selected=select_steps(steps, request.end, request.only_step),
+            only_step=request.only_step,
+        )
+        return
     if request.all_variants and request.variant:
         raise PtkError("use --all-variants or --variant, not both")
     service = state.app.variants(project)
@@ -463,7 +487,7 @@ def job_command(name: str, spec: JobSpec, *, hidden: bool) -> click.Command:
             if spec.params[param].type == "secret":
                 given[param] = (
                     "********"
-                    if dry_run or state_of(ctx).clean
+                    if dry_run or options.get("graph") or state_of(ctx).clean
                     else click.prompt(param, hide_input=True)
                 )
         quiet = options.pop("quiet", False)

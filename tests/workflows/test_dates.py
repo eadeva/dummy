@@ -13,7 +13,7 @@ def test_parallel_workflow_jobs_share_the_invocation_date(tmp_path, monkeypatch)
     instant = datetime.fromisoformat("2026-10-26T15:07:00+01:00")
     monkeypatch.setattr(state, "create_app", lambda: create_app(started_at=instant))
     job = {
-        "steps": [{"stamp": {"uses": "echo", "with": {"message": "${date.timestamp}"}}}]
+        "steps": {"stamp": {"uses": "echo", "with": {"message": "${date.timestamp}"}}}
     }
     root = repository(
         tmp_path,

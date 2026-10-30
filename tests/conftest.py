@@ -52,10 +52,12 @@ def load():
     return _load
 
 
-MINIMAL = """
-project: {name: demo}
+MINIMAL = """\
+project:
+  name: demo
 jobs:
   build:
     steps:
-      - compile: "make all"
+      compile:
+        run: make all
 """

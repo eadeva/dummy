@@ -28,11 +28,11 @@ PTK. In remote workspaces run setup on the workspace host.
 
 Hover over a job to see Run, Dry Run, **Run Job or Workflow with Options** (gear) and
 **Show Help** (question mark), each with a tooltip. The gear opens the run-options form for jobs and workflows. Jobs offer multiple
-variant checkboxes, ``--from``/``--to`` step dropdowns in authored order, and
+variant checkboxes, ``--only-step``/``--to`` step dropdowns in authored order, and
 parameter overrides with help, defaults and declared choices. Step titles label
 the dropdown choices. **More run options** exposes feature overrides, per-step
 arguments and flags, with suggestions where PTK supplies them. ``--env`` requires
-**Dry run**. Repository workflows offer one owner variant and their help text;
+**Dry run**. Repository workflows offer multiple owner variants and their help text;
 PTK resolves the mapped jobs' variants. Workspace workflows have no owner-variant
 selector. Required non-secret job parameters open the form automatically. Help shows
 the job's ``--help`` without running it or asking for parameters.
@@ -60,10 +60,11 @@ variants; omitted values and template defaults resolve separately at runtime.
 Canceling the form starts nothing. Open Report opens each selected variant's report.
 Rerunning a task preserves its explicit variant even if the tree selection changes.
 The task picker lists selected variants separately; a hand-written task without
-a variant uses the project default. Repository workflows retain one owner variant.
+a variant uses the project default. Repository workflows also support multiple owner variants, each in a separate task.
 The choice is stored independently per job/workflow in VS Code's workspace state.
-**Use project default**, or unchecking the last explicit selection, restores the
-configured default. Abstract variants are excluded. This updates only the
+**All variants** selects every concrete variant. Unchecking the last selected
+variant checks the actual configured default variant automatically; there is no
+separate default checkbox. Abstract variants are excluded. This updates only the
 affected tree branch, without running PTK or rewriting configuration.
 Workflows use the selected owner variant and its repository variant mappings. Use **Display Variant**
 for resolved features and the report icon on a job or workflow to open its report.
@@ -81,7 +82,10 @@ metadata is followed by repository/project identity, variants and components,
 jobs and workflows, execution settings, tools and credentials, artifacts and
 versioning, then output settings. PTK exports explicit field-order metadata;
 JSON key sorting cannot change the display order. Optional-field choices follow
-the same rules. Lists keep their authored order, especially executable steps.
+the same rules. Lists keep their authored order. Jobs and workflows show dependency graph trees
+from PTK: Ready nodes first, then dependency levels, with every incoming edge
+listed on the node. A join appears once. Activating a node edits its definition.
+Levels are navigation groups, not scheduling barriers.
 Display ordering does not reorder YAML source files.
 
 Multiple folders, VMR members and workspace workflows are supported. Discovery
@@ -106,8 +110,8 @@ refreshes the tree. Click **PTK unavailable** to see the exact discovery error.
 
 Build from the repository root with ``ptk extension`` or ``uv run ptk extension``.
 The job checks Node.js 22+ and npm, installs the build dependencies, runs the
-checks and writes ``extensions/project-toolkit/project-toolkit-0.12.0.vsix``.
-Use ``ptk extension --dry-run`` to preview it. Node.js and npm must be on PATH.
+checks and writes ``extensions/project-toolkit/project-toolkit-0.13.0.vsix``.
+Use ``ptk self-service extension --dry-run`` to preview it. Node.js and npm must be on PATH.
 Set ``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
 integration tests. CX builds downloadable VSIX artifacts on Linux and Windows;
 Marketplace publication is separate. See the extension README for installation,
@@ -142,6 +146,8 @@ Discovery calls::
      - Launching PTK through VS Code tasks without a config-file override
    * - Run and built-in argument/option metadata, choices and descriptions
      - Step dropdowns, parameter help and value suggestions
+   * - Validated graph nodes, prerequisites and dependency depth
+     - Configuration navigation for job steps and workflow invocations
    * - Validation diagnostics and template-variable metadata
      - Errors, variable suggestions and field-specific insertion rules
 
@@ -176,8 +182,8 @@ operations and flags, including validation, reports, initialization,
 ``--variant``, ``--dry-run``, ``--param``, ``--clean`` and ``--re-run``.
 Changing those semantics can break compatibility even if the schema is unchanged.
 
-Extension 0.12.0 requires inventory ``schema_version: 3`` and per-project
-``configuration.version: 2``. These are interface versions, separate from the
+The extension requires inventory ``schema_version: 4`` and per-project
+``configuration.version: 3``. These are interface versions, separate from the
 PTK package version, extension version and project marker's ``schema_version``.
 Unsupported interface versions or malformed inventories are rejected with an
 error; there is no legacy parser or schema fallback.
@@ -227,7 +233,7 @@ JavaScript, run ``npm run build`` and reload the development window.
 To install a development build into your normal VS Code instead::
 
    uv run ptk extension
-   uv run ptk self-service extension --vsix extensions/project-toolkit/project-toolkit-0.12.0.vsix --force
+   uv run ptk self-service extension --vsix extensions/project-toolkit/project-toolkit-0.13.0.vsix --force
 
 Editable installs intentionally contain no built-in VSIX; supply ``--vsix`` for
 this workflow. Full ``uv run ptk package`` builds the release artifacts containing

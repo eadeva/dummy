@@ -3,8 +3,7 @@
 ``PrepareRun`` turns configuration + request into an :class:`JobPlan`
 (parameters, variant, environment, substituted steps, skip reasons); it has no
 side effects, so ``ptk JOB --dry-run`` is simply "prepare and show".
-``RunJob`` executes a plan through the ports: sequential and parallel step
-sets, retries, timeouts, ``continue_on_error`` and cancellation (Ctrl+C).
+``RunJob`` executes a dependency graph through the ports: bounded concurrency, retries, timeouts, ``continue_on_error`` and cancellation (Ctrl+C).
 """
 
 from __future__ import annotations
@@ -15,7 +14,6 @@ import threading
 import time
 import uuid
 from collections.abc import Callable, Mapping, Sequence
-from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -42,6 +40,7 @@ from ...domain.execution.model import (
 )
 from ...domain.execution.params import resolve_params
 from ...domain.execution.planning import PlanContext, plan_job
+from ...domain.graphs import ancestors
 from ...domain.logging import Level
 from ...domain.suggest import did_you_mean
 from ...domain.variants.model import ResolvedVariant
@@ -72,11 +71,12 @@ class RunRequest:
     feature_overrides: Mapping[str, str] = field(default_factory=dict)
     params: Mapping[str, Any] = field(default_factory=dict)  # from the command line
     params_file: Mapping[str, Any] = field(default_factory=dict)  # from --params FILE
-    start: str | None = None  # --from
+    only_step: str | None = None  # explicitly bypass prerequisites
     end: str | None = None  # --to
     passthrough: Sequence[str] = ()  # after "--"
     args_for: Mapping[str, list[str]] = field(default_factory=dict)
     dry_run: bool = False
+    graph: bool = False
     role: Role = "user"  # maintainer-only jobs are refused for users
 
 
@@ -311,6 +311,20 @@ class PrepareRun:
                     "version": version_scope,
                     "date": dates,
                     "git": git,
+                    "steps": {
+                        name: {
+                            "build_dir": str(
+                                layout.build_dir(variant_name, request.job, (name,))
+                            ),
+                            "reports_dir": str(
+                                layout.reports_dir(variant_name, request.job, (name,))
+                            ),
+                            "log_file": str(
+                                layout.step_log(variant_name, request.job, (name,))
+                            ),
+                        }
+                        for name in job.steps
+                    },
                 },
             )
 
@@ -410,7 +424,7 @@ class PrepareRun:
             passthrough=list(request.passthrough),
             args_for=dict(request.args_for),
         )
-        steps = plan_job(job.steps, ctx, start=request.start, end=request.end)
+        steps = plan_job(job.steps, ctx, only_step=request.only_step, end=request.end)
         plan = JobPlan(
             project=config.project.name,
             job=request.job,
@@ -443,7 +457,18 @@ class PrepareRun:
                 "tools": [dataclasses.asdict(s) for s in tool_statuses],
                 "required_tools": list(job.required_tool_names),
             },
+            max_workers=job.max_workers,
+            only_step=request.only_step,
+            omitted_dependencies=sorted(ancestors(job.steps)[request.only_step])
+            if request.only_step
+            else [],
         )
+        plan.report_context["selection"] = {
+            "to": request.end,
+            "only_step": request.only_step,
+            "omitted_dependencies": plan.omitted_dependencies,
+        }
+        validate_step_resources(plan, project.root)
         # resolve every secret the selected steps need now: a missing credential
         # stops the run before anything starts, and prompts never happen in the
         # middle of parallel steps
@@ -593,7 +618,19 @@ class RunJob:
         reports.mkdir(parents=True, exist_ok=True)
         plan.report_context = self._mask_context(plan.report_context)
         self._emit("run_started", plan)
-        results = self._run_sequence(plan.steps)
+        from ..scheduling import schedule
+
+        results = schedule(
+            {step.name: step for step in plan.steps},
+            {
+                step.name: [] if plan.only_step or step.skip_reason else step.spec.needs
+                for step in plan.steps
+            },
+            self._run_step,
+            self._not_run,
+            cancel,
+            min(plan.max_workers, self._max_parallel or plan.max_workers),
+        )
         status = _combine(results)
         if cancel.is_set():
             status = Status.CANCELLED
@@ -629,129 +666,33 @@ class RunJob:
             command.display()
         ), runtime.description if runtime else None
 
-    # -- tree --------------------------------------------------------------------------
-
-    def _run_sequence(self, steps: list[PlannedStep], cancel=None) -> list[StepResult]:
-        cancel = cancel or self._cancel
-        # Background jobs are scoped to this sequence, never detached. Preserve
-        # configuration order in summaries while observers receive live events.
-        results: list[StepResult | Future[StepResult]] = []
-        failed = False
-        workers = max(1, sum(s.spec.background for s in steps))
-        with ThreadPoolExecutor(
-            max_workers=workers, thread_name_prefix="ptk-bg"
-        ) as pool:
-            try:
-                for step in steps:
-                    failed = failed or any(
-                        r.done() and r.result().blocking_failure
-                        for r in results
-                        if isinstance(r, Future)
-                    )
-                    if failed or cancel.is_set():
-                        results.append(
-                            self._not_run(
-                                step,
-                                Status.CANCELLED if cancel.is_set() else Status.SKIPPED,
-                                "cancelled"
-                                if cancel.is_set()
-                                else "not run: an earlier step failed",
-                            )
-                        )
-                    elif step.spec.background and not step.skip_reason:
-                        results.append(pool.submit(self._run_step, step, cancel))
-                    else:
-                        result = self._run_step(step, cancel)
-                        results.append(result)
-                        failed = result.blocking_failure
-                return [r.result() if isinstance(r, Future) else r for r in results]
-            except BaseException:
-                # Signal subprocesses before executor shutdown waits for them.
-                self._cancel.set()
-                raise
-
-    def _run_parallel(self, steps: list[PlannedStep], cancel=None) -> list[StepResult]:
-        cancel = cancel or self._cancel
-        workers = max(1, min(len(steps), self._max_parallel or len(steps)))
-        with ThreadPoolExecutor(
-            max_workers=workers, thread_name_prefix="ptk-step"
-        ) as pool:
-            try:
-                return list(pool.map(lambda step: self._run_step(step, cancel), steps))
-            except BaseException:
-                self._cancel.set()
-                raise
-
     def _not_run(self, step: PlannedStep, status: Status, message: str) -> StepResult:
         result = StepResult(
-            step.path, step.name, step.kind, status=status, message=message
+            step.path,
+            step.name,
+            step.kind,
+            status=status,
+            message=message,
+            needs=list(step.spec.needs),
         )
-        self._emit(
-            "step_finished",
-            step,
-            result
-            if not step.children
-            else StepResult(
-                step.path,
-                step.name,
-                step.kind,
-                status=status,
-                message=message,
-                children=[
-                    StepResult(c.path, c.name, c.kind, status=status)
-                    for c in step.children
-                ],
-            ),
-        )
-        result.children = [self._not_run(c, status, message) for c in step.children]
+        self._emit("step_finished", step, result)
         return result
 
     def _run_step(self, step: PlannedStep, cancel=None) -> StepResult:
         cancel = cancel or self._cancel
-        if step.skip_reason:
-            return self._not_run(step, Status.SKIPPED, step.skip_reason)
         if cancel.is_set():
             return self._not_run(step, Status.CANCELLED, "cancelled")
-        if step.kind == "set":
-            self._emit("step_started", step, None)
-            start = time.monotonic()
-            for attempt in range(1, step.spec.retries + 2):
-                attempts = attempt
-                scope = CancellationScope(cancel, step.spec.timeout)
-                children = (
-                    self._run_parallel(step.children, scope)
-                    if step.spec.parallel
-                    else self._run_sequence(step.children, scope)
-                )
-                status = Status.FAILED if scope.expired else _combine(children)
-                if status is Status.PASSED or cancel.is_set():
-                    break
-            result = StepResult(
-                step.path,
-                step.name,
-                step.kind,
-                status=status,
-                attempts=attempts,
-                message=f"timed out after {step.spec.timeout:g}s"
-                if scope.expired
-                else "",
-                duration=time.monotonic() - start,
-                start=start - self._run_start,
-                children=children,
-            )
-            if result.status is Status.FAILED and step.spec.continue_on_error:
-                result.allowed_failure = True
-            self._emit("step_finished", step, result)
-            return result
+        if step.skip_reason:
+            return self._not_run(step, Status.SKIPPED, step.skip_reason)
         return self._run_leaf(step, cancel)
-
-    # -- leaves ------------------------------------------------------------------------
 
     def _run_leaf(self, step: PlannedStep, cancel) -> StepResult:
         prepared = self._prepared
         plan = prepared.plan
         layout = prepared.layout
-        result = StepResult(step.path, step.name, step.kind)
+        result = StepResult(
+            step.path, step.name, step.kind, needs=list(step.spec.needs)
+        )
         result.log_file = str(layout.step_log(plan.variant, plan.job, step.path))
         for folder in (
             layout.build_dir(plan.variant, plan.job, step.path),
@@ -980,3 +921,29 @@ def _combine(results: list[StepResult]) -> Status:
     if results and all(r.status is Status.SKIPPED for r in results):
         return Status.SKIPPED
     return Status.PASSED
+
+
+def validate_step_resources(plan: JobPlan, root: Path) -> None:
+    """Reject unordered commands which can synchronize the same uv environment."""
+    steps = {step.name: step for step in plan.steps if step.skip_reason is None}
+    dependencies = ancestors({step.name: step.spec for step in plan.steps})
+    resources = {}
+    for name, step in steps.items():
+        python = step.python
+        if python is None or python.project is None:
+            continue
+        project = (root / python.project).resolve()
+        environment = {**plan.base_env, **step.env}
+        venv = Path(environment.get("UV_PROJECT_ENVIRONMENT") or ".venv")
+        resources[name] = (project / venv).resolve()
+    for index, (name, resource) in enumerate(resources.items()):
+        for other in list(resources)[:index]:
+            if (
+                resource == resources[other]
+                and other not in dependencies[name]
+                and name not in dependencies[other]
+            ):
+                raise PtkError(
+                    f"steps {other!r} and {name!r} can run concurrently and share uv project environment {resource}; "
+                    "add a needs dependency or isolate their environments"
+                )

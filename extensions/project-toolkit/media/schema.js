@@ -65,7 +65,7 @@
       while (used.has(name)) name = `${base}_${index++}`;
       return name;
     };
-    function create(spec, seed, depth = 0, existing = []) {
+    function create(spec, seed, depth = 0) {
       if (depth > 30) throw new Error("This schema requires a recursive value. Use Raw YAML to define it.");
       spec = resolve(spec, root);
       const template = spec["x-ptk-initial"] ?? (spec.default !== null ? spec.default : undefined);
@@ -96,17 +96,12 @@
           const key = unused || uniqueName(spec["x-ptk-entry-name"] || "item", new Set(Object.keys(value)));
           value[key] = create(spec.properties?.[key] || spec.additionalProperties, undefined, depth + 1);
         }
-        if (spec["x-ptk-entry-name"] && spec.maxProperties === 1 && Object.keys(value).length === 1) {
-          const key = Object.keys(value)[0];
-          const name = uniqueName(key, new Set(existing.flatMap(item => object(item) ? Object.keys(item) : [])));
-          if (name !== key) value = { [name]: value[key] };
-        }
         return value;
       }
       if (spec.type === "array" || Array.isArray(value)) {
         const result = [];
         const items = Array.isArray(value) ? value : [];
-        for (let index = 0; index < Math.max(items.length, spec.minItems || 0); index++) result.push(create(spec.items, items[index], depth + 1, result));
+        for (let index = 0; index < Math.max(items.length, spec.minItems || 0); index++) result.push(create(spec.items, items[index], depth + 1));
         return result;
       }
       if (value !== undefined) return value;
@@ -115,7 +110,7 @@
       if (spec.minLength) return "value".repeat(Math.ceil(spec.minLength / 5)).slice(0, spec.minLength);
       return spec.type === "null" ? null : "";
     }
-    return create(schema, undefined, 0, context.existing || []);
+    return create(schema, undefined);
   }
   return { type, resolve, choices, effective, help, child, at, orderedEntries, initial };
 });

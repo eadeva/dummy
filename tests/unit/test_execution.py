@@ -12,7 +12,7 @@ from ptk.domain.execution.params import ParamError, resolve_params
 from ptk.domain.execution.planning import PlanContext, PlanError, plan_job
 
 
-def job(steps: list) -> JobSpec:
+def job(steps: dict) -> JobSpec:
     return JobSpec.model_validate({"steps": steps})
 
 
@@ -64,55 +64,52 @@ def test_param_errors():
 
 # --------------------------------------------------------------------------- planning
 
-STEPS = [
-    {"prepare": "echo prepare"},
-    {"build": ["make", "-j", "${params.jobs}"]},
-    {
-        "checks": {
-            "parallel": True,
-            "steps": [
-                {"lint": {"run": "lint", "when": "LINT"}},
-                {"test": {"run": ["pytest"], "passthrough": True}},
-            ],
-        }
-    },
-    {"package": "zip"},
-]
+STEPS = {
+    "prepare": {"run": "echo prepare"},
+    "build": {"run": ["make", "-j", "${params.jobs}"], "needs": ["prepare"]},
+    "lint": {"run": "lint", "when": "LINT", "needs": ["build"]},
+    "test": {"run": ["pytest"], "passthrough": True, "needs": ["build"]},
+    "package": {"run": "zip", "needs": ["lint", "test"]},
+}
 
 
 def test_plan_substitutes_and_evaluates_conditions():
     steps = plan_job(job(STEPS).steps, ctx(symbols={"LINT": False}, params={"jobs": 4}))
     build = steps[1]
     assert build.run == ["make", "-j", "4"]
-    lint, test = steps[2].children
+    lint, test = steps[2:4]
     assert lint.skip_reason == "condition is false: LINT"
-    assert test.skip_reason is None and test.label == "checks/test"
+    assert test.skip_reason is None and test.label == "test"
 
 
-def test_from_to_range():
-    steps = plan_job(
-        job(STEPS).steps, ctx(params={"jobs": 1}), start="build", end="checks"
-    )
-    assert [s.skip_reason is None for s in steps] == [False, True, True, False]
-    assert steps[2].children[1].skip_reason is None
+def test_to_selects_prerequisite_closure():
+    steps = plan_job(job(STEPS).steps, ctx(params={"jobs": 1}), end="test")
+    assert [s.name for s in steps if s.skip_reason is None] == [
+        "prepare",
+        "build",
+        "test",
+    ]
     with pytest.raises(PlanError, match="did you mean 'build'"):
-        plan_job(job(STEPS).steps, ctx(), start="biuld")
-    with pytest.raises(PlanError, match="comes after"):
-        plan_job(
-            job(STEPS).steps, ctx(params={"jobs": 1}), start="package", end="build"
-        )
+        plan_job(job(STEPS).steps, ctx(), end="biuld")
 
 
-def test_skipped_set_skips_children():
+def test_only_step_bypasses_prerequisites_and_rejects_to():
+    steps = plan_job(job(STEPS).steps, ctx(params={"jobs": 1}), only_step="build")
+    assert [s.name for s in steps if s.skip_reason is None] == ["build"]
+    with pytest.raises(PlanError, match="not both"):
+        plan_job(job(STEPS).steps, ctx(), only_step="test", end="build")
+
+
+def test_to_does_not_select_unrelated_branches():
     steps = plan_job(job(STEPS).steps, ctx(params={"jobs": 1}), end="build")
-    assert all(child.skip_reason for child in steps[2].children)
+    assert all(step.skip_reason for step in steps[2:])
 
 
 def test_passthrough():
     steps = plan_job(
         job(STEPS).steps, ctx(params={"jobs": 1}, passthrough=["-k", "a b"])
     )
-    assert steps[2].children[1].run == ["pytest", "-k", "a b"]
+    assert steps[3].run == ["pytest", "-k", "a b"]
     with pytest.raises(PlanError, match="no selected step"):
         plan_job(
             job(STEPS).steps, ctx(params={"jobs": 1}, passthrough=["x"]), end="build"
@@ -120,21 +117,24 @@ def test_passthrough():
 
 
 def test_passthrough_ambiguous_needs_args_for():
-    steps = [
-        {"a": {"run": "x", "passthrough": True}},
-        {"b": {"run": "y", "passthrough": True}},
-    ]
+    steps = {
+        "a": {"run": "x", "passthrough": True},
+        "b": {"run": "y", "passthrough": True, "needs": ["a"]},
+    }
     with pytest.raises(PlanError, match="ambiguous"):
         plan_job(job(steps).steps, ctx(passthrough=["1"]))
     planned = plan_job(job(steps).steps, ctx(args_for={"b": ["--fast", "it's"]}))
     assert planned[1].run == "y --fast 'it'\"'\"'s'"
     with pytest.raises(PlanError, match="does not accept"):
-        plan_job(job([{"a": "x"}]).steps, ctx(args_for={"a": ["1"]}))
+        plan_job(job({"a": {"run": "x"}}).steps, ctx(args_for={"a": ["1"]}))
 
 
 def test_unknown_reference_is_reported_with_step():
     with pytest.raises(PlanError, match="step 'build'.*did you mean"):
-        plan_job(job([{"build": "make ${params.jbos}"}]).steps, ctx(params={"jobs": 1}))
+        plan_job(
+            job({"build": {"run": "make ${params.jbos}"}}).steps,
+            ctx(params={"jobs": 1}),
+        )
 
 
 # --------------------------------------------------------------------------- environment
@@ -173,7 +173,7 @@ def test_windows_path_is_case_insensitive():
 
 
 def one(run, **spec):
-    return plan_job(job([{"s": {"run": run, **spec}}]).steps, ctx())[0]
+    return plan_job(job({"s": {"run": run}}).steps, ctx())[0]
 
 
 def test_list_runs_directly_and_string_through_shell():
@@ -241,12 +241,12 @@ def test_python_runtime_for_scripts_and_commands():
     uvx = PythonRuntime(
         "uvx",
         script_prefix=["uv", "run"],
-        command_prefix=["uv", "tool", "run", "--from", "ruff"],
+        command_prefix=["uv", "tool", "run", "--only-step", "ruff"],
     )
     cmd = build_command(
         one(["ruff", "check"]), env={}, cwd=".", os_name="linux", python=uvx
     )
-    assert cmd.argv == ["uv", "tool", "run", "--from", "ruff", "ruff", "check"]
+    assert cmd.argv == ["uv", "tool", "run", "--only-step", "ruff", "ruff", "check"]
 
 
 @pytest.mark.parametrize("os_name", ["windows", "linux"])

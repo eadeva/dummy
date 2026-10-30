@@ -111,47 +111,38 @@ class InitProject:
                         "help": "Message to display",
                     }
                 },
-                "steps": [
-                    {
-                        "greet": {
-                            "uses": "echo",
-                            "with": {"message": "${params.message}"},
-                        }
+                "steps": {
+                    "greet": {"uses": "echo", "with": {"message": "${params.message}"}},
+                    "version": {
+                        "uses": "echo",
+                        "with": {
+                            "message": "Version ${version.projects."
+                            + alias
+                            + ".value} (${vh.variant})"
+                        },
+                        "needs": ["greet"],
                     },
-                    {
-                        "version": {
-                            "uses": "echo",
-                            "with": {
-                                "message": "Version ${version.projects."
-                                + alias
-                                + ".value} (${vh.variant})"
-                            },
-                        }
-                    },
-                ],
+                },
             },
             "jobs/build.ptk.yml": {
                 "help": "Generate version files for C/C++ and CMake",
-                "steps": [
-                    {
-                        "header": {
-                            "uses": "version.generate",
-                            "with": {
-                                "format": "c_header",
-                                "output": "${run.bin_dir}/generated/version.h",
-                            },
-                        }
+                "steps": {
+                    "header": {
+                        "uses": "version.generate",
+                        "with": {
+                            "format": "c_header",
+                            "output": "${run.bin_dir}/generated/version.h",
+                        },
                     },
-                    {
-                        "cmake": {
-                            "uses": "version.generate",
-                            "with": {
-                                "format": "cmake",
-                                "output": "${run.bin_dir}/generated/version.cmake",
-                            },
-                        }
+                    "cmake": {
+                        "uses": "version.generate",
+                        "with": {
+                            "format": "cmake",
+                            "output": "${run.bin_dir}/generated/version.cmake",
+                        },
+                        "needs": ["header"],
                     },
-                ],
+                },
             },
             "project.variants.ptk.yml": {"default": "debug"},
             "variants/debug.ptk.yml": {

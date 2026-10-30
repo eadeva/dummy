@@ -40,7 +40,7 @@ CONTEXTS = ["vars", "default", "environment", "job", "step", "secret", "destinat
 
 
 def annotate_schema(schema):
-    """Mark only values the runtime actually substitutes, including short steps."""
+    """Mark only values the runtime actually substitutes, including named steps."""
     defs = schema["$defs"]
     schema["properties"]["vars"]["x-ptk-template-context"] = "vars"
     for definition, fields in {
@@ -51,13 +51,10 @@ def annotate_schema(schema):
         },
         "JobSpec": {"env": "job"},
         "ParamSpec": {"default": "default"},
-        "StepBody": {"run": "step", "cwd": "step", "with": "step", "env": "secret"},
+        "StepSpec": {"run": "step", "cwd": "step", "with": "step", "env": "secret"},
     }.items():
         for name, context in fields.items():
             defs[definition]["properties"][name]["x-ptk-template-context"] = context
-    for branch in defs["StepEntry"]["additionalProperties"]["anyOf"]:
-        if branch.get("type") in {"string", "array"}:
-            branch["x-ptk-template-context"] = "step"
     schema["properties"]["artifactory"]["x-ptk-template-context"] = "destination"
 
 
@@ -184,6 +181,16 @@ def catalogue(value, environment_names=()):
     for name in paths(value.get("vars"), "vars"):
         add(name, "Variables", "Configured variable; resolved at runtime.")
     for job_name, job in mapping(value.get("jobs")).items():
+        for step_name in mapping(mapping(job).get("steps")):
+            for field in ("build_dir", "reports_dir", "log_file"):
+                add(
+                    f"steps.{step_name}.{field}",
+                    "Steps",
+                    f"Current-run {field.replace('_', ' ')} for step {step_name}. Declare needs when consuming its files.",
+                    ["step", "secret"],
+                    job=job_name,
+                )
+
         for name, spec in mapping(mapping(job).get("params")).items():
             secret = mapping(spec).get("type") == "secret"
             add(

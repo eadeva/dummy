@@ -25,18 +25,37 @@ def test_local_utc_and_custom_date_parts_share_one_instant():
 
 def test_job_defaults_vars_environment_and_steps_freeze_the_clock(write, load):
     root = write(
-        project_files("""
-project: {name: demo}
-vars: {folder: "out/${date.timestamp}"}
-environment: {set: {GLOBAL_DATE: "${date.utc.timestamp}"}}
+        project_files(
+            """\
+project:
+  name: demo
+vars:
+  folder: out/${date.timestamp}
+environment:
+  set:
+    GLOBAL_DATE: ${date.utc.timestamp}
 jobs:
   build:
-    params: {stamp: {default: "${date.timestamp}"}}
-    env: {JOB_DATE: "${date.timestamp}"}
+    params:
+      stamp:
+        default: ${date.timestamp}
+    env:
+      JOB_DATE: ${date.timestamp}
     steps:
-      - first: {uses: echo, with: {message: "${vars.folder}/${params.stamp}"}}
-      - second: {uses: echo, with: {message: "${date.timestamp}/${date.utc.timestamp}"}, env: {STEP_DATE: "${date.iso}"}}
-""")
+      first:
+        uses: echo
+        with:
+          message: ${vars.folder}/${params.stamp}
+      second:
+        uses: echo
+        with:
+          message: ${date.timestamp}/${date.utc.timestamp}
+        env:
+          STEP_DATE: ${date.iso}
+        needs:
+        - first
+"""
+        )
     )
     app = create_app(started_at=AT)
     project = load(root)

@@ -34,12 +34,12 @@ function builtinCommands() {
 
 function inventory(root = path.resolve("test project")) {
   return {
-    schema_version: 3, mode: "repository", root, ci: false, workflows: [], commands: [],
+    schema_version: 4, mode: "repository", root, ci: false, workflows: [], commands: [],
     projects: [{
       alias: "demo", name: "Demo", root, entry_file: path.join(root, ".main.ptk.yml"),
       invocation: { cwd: root, prefix: [] },
       config_files: [path.join(root, ".main.ptk.yml")],
-      configuration: { version: 2, bindings: [], documents: [], schema: { properties: { project: {}, jobs: {}, variants: {} } }, value: { jobs: { build: { help: "Build" } } }, sources: [], files: [path.join(root, ".main.ptk.yml")] },
+      configuration: { version: 3, graphs: [], bindings: [], documents: [], schema: { properties: { project: {}, jobs: {}, variants: {} } }, value: { jobs: { build: { help: "Build" } } }, sources: [], files: [path.join(root, ".main.ptk.yml")] },
       capabilities: { variants: true, validate: true, reports: true },
       default_variant: "small",
       commands: builtinCommands(),

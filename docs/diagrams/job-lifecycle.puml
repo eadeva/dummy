@@ -23,11 +23,11 @@ PTK -> PTK : load, validate, prepare
 alt configuration / preparation failed
   PTK --> Caller : error; no job starts
 else dry run
-  PTK --> Caller : preview only
+  PTK --> Caller : graph + prepared preview
 else run
   group Per selected variant
     PTK -> PTK : acquire job / variant lock
-    PTK -> Steps : execute configured steps and groups
+    PTK -> Steps : schedule ready steps by needs
     Steps --> PTK : status + logs + tool results
     PTK -> Reports : retain evidence; import and export
     Reports --> PTK : report paths and report problems

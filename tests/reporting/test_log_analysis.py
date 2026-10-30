@@ -95,7 +95,15 @@ def make_summary(tmp_path):
                 },
             ],
         },
-        "steps": [{"step": "compile", "status": "passed", "log_file": str(log)}],
+        "steps": [
+            {
+                "step": "compile",
+                "status": "passed",
+                "log_file": str(log),
+                "kind": "run",
+                "needs": [],
+            }
+        ],
     }
 
 
@@ -231,17 +239,15 @@ def test_defaults_removed_fields_and_real_job_history(tmp_path):
             "project": {"name": "demo"},
             "jobs": {
                 "build": {
-                    "steps": [
-                        {
-                            "compile": {
-                                "run": [
-                                    sys.executable,
-                                    "-c",
-                                    "print('WARNING: SDK is deprecated')",
-                                ]
-                            }
+                    "steps": {
+                        "compile": {
+                            "run": [
+                                sys.executable,
+                                "-c",
+                                "print('WARNING: SDK is deprecated')",
+                            ]
                         }
-                    ]
+                    }
                 }
             },
             "log_analysis": {

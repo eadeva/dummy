@@ -158,7 +158,7 @@ def test_git_is_lazy_and_cached_across_defaults_vars_environment_and_steps(tmp_p
         entry,
         {
             "project": {"name": "demo"},
-            "jobs": {"go": {"steps": [{"one": "echo plain"}]}},
+            "jobs": {"go": {"steps": {"one": {"run": "echo plain"}}}},
         },
     )
     app = create_app(environ={})
@@ -183,15 +183,14 @@ def test_git_is_lazy_and_cached_across_defaults_vars_environment_and_steps(tmp_p
                 "go": {
                     "params": {"sha": {"default": "${git.short_commit}"}},
                     "env": {"TAG": "${git.tag}"},
-                    "steps": [
-                        {"one": "echo ${git.commit} ${vars.sha}"},
-                        {
-                            "two": {
-                                "uses": "echo",
-                                "with": {"message": "${git.short_commit}"},
-                            }
+                    "steps": {
+                        "one": {"run": "echo ${git.commit} ${vars.sha}"},
+                        "two": {
+                            "uses": "echo",
+                            "with": {"message": "${git.short_commit}"},
+                            "needs": ["one"],
                         },
-                    ],
+                    },
                 }
             },
         },
@@ -246,7 +245,7 @@ def test_real_cli_preparation_and_artifact_destinations_resolve_git_without_vers
         entry,
         {
             "project": {"name": "demo"},
-            "jobs": {"go": {"steps": [{"one": "echo ${git.short_commit}"}]}},
+            "jobs": {"go": {"steps": {"one": {"run": "echo ${git.short_commit}"}}}},
             "artifactory": {
                 "url": "https://example.invalid/artifactory",
                 "repository": "builds",

@@ -56,7 +56,7 @@ def test_vscode_setup_installs_tasks_skills_and_working_offline_links(
         == "PTK Log Analyzer"
     )
     schema = json.loads((tmp_path / ".github/ptk/config-schema.json").read_text())
-    assert "StepEntry" in schema["$defs"]
+    assert "StepSpec" in schema["$defs"]
     assert (
         tmp_path / ".github/ptk/examples/artifacts/config/artifactory_paths.ptk.yml"
     ).is_file()

@@ -12,16 +12,19 @@ Establish the target
 1. Identify the requested outcome: explanation, diagnosis, edit, validation or
    execution. Reuse the user's selected repository and authorized scope. For an
    ambiguous target, inspect available projects before asking a focused question.
+
 2. Use the project's chosen PTK launcher and environment. Inspect ``ptk --version``
    and relevant ``--help``. Do not install, upgrade or activate another PTK merely
    to inspect a project. A consumer project need not contain PTK's Python source,
    build scripts, development dependency groups or tests.
+
 3. Prefer ``ptk describe --json`` for permitted commands, projects, variants,
    parameters and execution routes. Request ``--configuration`` only for authored
    values, diagnostics, source provenance, document ownership, schema or template
    capabilities. Use each project's ``invocation.cwd`` and ``invocation.prefix``
    with its supplied command/help paths. Put global options before the repository
    alias. Do not implement another loader or infer permission from a visible file.
+
 4. Treat ``JOB``, ``VARIANT``, ``ALIAS``, ``FEATURE`` and example paths as placeholders.
    Use discovered names and parameter choices; inspect each selected variant's
    defaults. Absence of variants, tools, components, credentials or a default job

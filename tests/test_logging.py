@@ -28,22 +28,40 @@ pytestmark = pytest.mark.skipif(sys.platform.startswith("win"), reason="POSIX sh
 
 HOST = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": "/tmp"}
 
-PROJECT = """
-project: {name: logs, default_job: go}
+PROJECT = """\
+project:
+  name: logs
+  default_job: go
 logging_history_backups: KEEP
 credentials:
-  repo: {fields: [token]}
+  repo:
+    fields:
+    - token
 jobs:
   go:
-    params: {who: {default: me}}
+    params:
+      who:
+        default: me
     steps:
-      - hello: {run: "echo hi $TOKEN", secrets: {TOKEN: repo.token}}
-      - set:
-          parallel: true
-          steps:
-            - a: "echo A"
-            - b: {run: "exit 3", continue_on_error: true}
-      - flaky: {run: "test -f .once || (touch .once; exit 2)", retries: 1}
+      hello:
+        run: echo hi $TOKEN
+        secrets:
+          TOKEN: repo.token
+      a:
+        run: echo A
+        needs:
+        - hello
+      b:
+        run: exit 3
+        continue_on_error: true
+        needs:
+        - hello
+      flaky:
+        run: test -f .once || (touch .once; exit 2)
+        retries: 1
+        needs:
+        - a
+        - b
 """
 
 
@@ -104,8 +122,8 @@ def test_logs_events_and_summary(write):
         "run.json",
         "events.jsonl",
         "hello.log",
-        "set/a.log",
-        "set/b.log",
+        "a.log",
+        "b.log",
         "flaky.log",
     }
     events = [
@@ -114,10 +132,7 @@ def test_logs_events_and_summary(write):
     assert events[0]["event"] == "run_started" and events[-1]["event"] == "run_finished"
     assert events[0]["param_sources"] == {"who": "default"}
     finished = {e["step"]: e for e in events if e["event"] == "step_finished"}
-    assert (
-        finished["set/b"]["allowed_failure"] is True
-        and finished["set/b"]["exit_code"] == 3
-    )
+    assert finished["b"]["allowed_failure"] is True and finished["b"]["exit_code"] == 3
     assert finished["flaky"]["attempts"] == 2
     warnings = [e["text"] for e in events if e.get("level") == "warning"]
     assert "exit code 2 - retry 1/1" in warnings
@@ -125,15 +140,14 @@ def test_logs_events_and_summary(write):
     assert summary["status"] == "passed" and summary["params"] == {"who": "me"}
     assert [s["step"] for s in summary["steps"]] == [
         "hello",
-        "set",
-        "set/a",
-        "set/b",
+        "a",
+        "b",
         "flaky",
     ]
     # debug details are in the files, trace (full environment) is not at level info
     run_log = (folder / "run.log").read_text()
     assert "debug: cwd" in run_log and "trace:" not in run_log
-    assert "[set/a] A" in run_log
+    assert "[a] A" in run_log
     # the secret is nowhere
     for file in folder.rglob("*"):
         if file.is_file():
@@ -156,7 +170,7 @@ def test_history_is_kept_and_pruned(write):
     history = root / LOGS / "_history"
     assert sorted(p.name for p in history.iterdir()) == ids[1:3]
     assert json.loads((root / LOGS / "run.json").read_text())["run_id"] == ids[3]
-    assert (history / ids[2] / "set" / "a.log").is_file()
+    assert (history / ids[2] / "a.log").is_file()
 
 
 def test_keep_history_zero_keeps_only_latest(write):

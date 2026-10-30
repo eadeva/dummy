@@ -162,7 +162,7 @@ on Linux and Windows and uploads the VSIX. Controller tests use an injected VS C
 extension-host acceptance remains a manual check. See :doc:`/guides/editor`.
 
 Plugin selection and generators are documented in :doc:`/reference/plugins`; variant inspection
-and matrix commands in :doc:`/reference/cli`; background process behavior in :doc:`/reference/execution`.
+and matrix commands in :doc:`/reference/cli`; step dependency behavior in :doc:`/reference/execution`.
 Real machine-wide tool/credential setup still needs acceptance on target machines.
 Publishing and merging are separate decisions.
 

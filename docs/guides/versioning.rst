@@ -131,20 +131,17 @@ variables are removed before the current snapshot's variables are injected.
 Only the current repository is resolved by default. Explicit VMR dependencies
 can be declared globally or on individual jobs::
 
-   # config/ptk/versioning.ptk.yml
    project:
      source: literal
      version: 1.2.3
    dependencies:
      frontend:
        variant: release
-
-   # config/ptk/jobs/package.ptk.yml
    version_dependencies:
      engine:
        variant: debug
    steps:
-   - show:
+     show:
        uses: echo
        with:
          message: Frontend ${version.projects.frontend.value}

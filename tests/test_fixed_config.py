@@ -23,7 +23,11 @@ def test_only_known_documents_and_registered_components_are_loaded(write, load):
         files(
             **{
                 "config/project.ptk.yml": "name: demo\ncomponents: {networking: {path: src/networking}}",
-                "config/jobs/build.ptk.yml": "steps: [{compile: {run: make}}]",
+                "config/jobs/build.ptk.yml": """\
+steps:
+  compile:
+    run: make
+""",
                 "config/variants/debug.ptk.yml": "features: {TLS: true}",
                 "config/project.variants.ptk.yml": "default: debug",
                 "src/networking/component.variants.ptk.yml": "features: {TLS: {type: bool}}",
@@ -35,7 +39,7 @@ def test_only_known_documents_and_registered_components_are_loaded(write, load):
         )
     )
     project = load(root)
-    assert project.config.jobs["build"].steps[0].name == "compile"
+    assert list(project.config.jobs["build"].steps) == ["compile"]
     assert VariantService(project).resolve().values["TLS"] is True
     assert (
         project.location(
@@ -78,7 +82,17 @@ def test_entity_names_and_locations_are_checked(write, load, name):
 
 
 def test_main_is_metadata_only_and_documents_are_section_scoped(write, load):
-    root = write(files(**{"config/jobs/build.ptk.yml": "jobs: {build: {steps: []}}"}))
+    root = write(
+        files(
+            **{
+                "config/jobs/build.ptk.yml": """\
+jobs:
+  build:
+    steps: {}
+"""
+            }
+        )
+    )
     with pytest.raises(ConfigError, match="unknown key"):
         load(root)
     (root / "config/jobs/build.ptk.yml").unlink()
@@ -199,7 +213,7 @@ def test_editor_reports_file_schemas_ownership_fingerprints_and_errors(write):
     result = runner.invoke(cli, args, cwd=root)
     assert result.exit_code == 0, result.output
     config = json.loads(result.output)["projects"][0]["configuration"]
-    assert config["version"] == 2
+    assert config["version"] == 3
     binding = next(b for b in config["bindings"] if b["path"] == ["jobs", "*"])
     assert binding["file"] == str(root / "config/jobs/{name}.ptk.yml")
     assert binding["document_path"] == []

@@ -48,8 +48,6 @@ def to_junit(report: Report) -> str:
         )
     counts = {"tests": 0, "failures": 0, "errors": 0, "skipped": 0}
     for step in report.steps:
-        if step.kind == "set":
-            continue
         counts["tests"] += 1
         parent = step.label.rsplit("/", 1)[0] if "/" in step.label else report.job
         case = ET.SubElement(
@@ -154,13 +152,12 @@ def to_markdown(report: Report) -> str:
         lines.append("")
     lines += ["| Step | Result | Time |", "|---|---|---|"]
     for step in report.steps:
-        indent = "&nbsp;&nbsp;" * step.depth
         result = step.status + (" (allowed)" if step.allowed_failure else "")
         if step.message and step.status != PASSED:
             result += f": {step.message}"
         time = f"{step.duration:.1f}s" if step.status in (PASSED, FAILED) else ""
         lines.append(
-            f"| {indent}{ICON.get(step.status, '')} {_cell(step.name)} | {_cell(result)} | {time} |"
+            f"| {ICON.get(step.status, '')} {_cell(step.name)} | {_cell(result)} | {time} |"
         )
     lines.append("")
     totals = report.test_totals()

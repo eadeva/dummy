@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable
-from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from ...domain.errors import PtkError
 from ...domain.execution.model import Status
 from ...domain.workflows import WorkflowJob, WorkflowSpec
+from ..scheduling import schedule
 from .run import Cancelled, PreparedRun
 
 
@@ -183,45 +183,13 @@ class RunWorkflow:
             )
             return result
 
-        pending = {job.id: job for job in plan.jobs}
-        completed: dict[str, WorkflowJobResult] = {}
-        running = {}
-        with ThreadPoolExecutor(max_workers=plan.spec.max_workers) as pool:
-            while pending or running:
-                # Harvest before scheduling so prerequisites release their dependents
-                # immediately, without waiting for unrelated branches in a wave.
-                for future in list(running):
-                    if future.done():
-                        completed[running.pop(future)] = future.result()
-                for name, node in list(pending.items()):
-                    if cancel.is_set():
-                        completed[name] = record(
-                            node, Status.CANCELLED, "workflow cancelled"
-                        )
-                    elif not all(
-                        dependency in completed for dependency in node.spec.needs
-                    ):
-                        continue
-                    else:
-                        blocked = [
-                            f"{dependency} ({completed[dependency].status.value})"
-                            for dependency in node.spec.needs
-                            if completed[dependency].status != Status.PASSED
-                            and not completed[dependency].allowed_failure
-                        ]
-                        if blocked:
-                            completed[name] = record(
-                                node,
-                                Status.SKIPPED,
-                                "blocked by needs: " + ", ".join(blocked),
-                            )
-                        elif len(running) < plan.spec.max_workers:
-                            running[pool.submit(visit, node)] = name
-                        else:
-                            continue
-                    del pending[name]
-                if running:
-                    wait(running, timeout=0.1, return_when=FIRST_COMPLETED)
-        results = [completed[job.id] for job in plan.jobs]
+        results = schedule(
+            {job.id: job for job in plan.jobs},
+            {job.id: job.spec.needs for job in plan.jobs},
+            visit,
+            record,
+            cancel,
+            plan.spec.max_workers,
+        )
         status = Status.CANCELLED if cancel.is_set() else combine(results)
         return WorkflowResult(plan.name, status, time.monotonic() - started, results)

@@ -175,110 +175,65 @@ test("multi-variant actions preflight the whole selection and retain cleanup/rep
   assert.match(h.errors.at(-1), /selected variant is no longer available/);
 });
 
-test("job quick pick supports multiple checks, defaults and cancellation; workflows stay single", async t => {
-  const h = harness(t);
-  await h.controller.ready();
-  h.picks.push((items, options) => { assert.equal(options.canPickMany, true); return items; });
-  await h.command("selectVariant", h.target());
-  await h.command("run", h.target());
-  assert.deepEqual(h.tasks.map(task => task.definition.variant), ["small", "large"]);
-  h.picks.push(() => undefined);
+test("jobs and workflows offer multiple and all variants; clearing selects the real default", async t => {
+  const h = harness(t); await h.controller.ready();
+  for (const group of ["Jobs", "Workflows"]) {
+    const target = jobNode(h, group);
+    const checked = () => target.children.filter(item => h.controller.provider.getTreeItem(item).checkboxState.state === 1).map(item => item.label);
+    assert.deepEqual(checked(), ["small"]);
+    assert.ok(!target.children.some(item => item.label === "Use project default"));
+    await h.checkbox([[target.children.find(item => item.allVariants), 1]]);
+    assert.deepEqual(checked(), ["All variants", "small", "large"]);
+    const before = h.tasks.length;
+    await h.command("run", target);
+    assert.deepEqual(h.tasks.slice(before).map(task => task.definition.variant), ["small", "large"]);
+    await h.checkbox([[target.children.find(item => item.allVariants), 0]]);
+    assert.deepEqual(checked(), ["small"]);
+    await h.checkbox([[target.children.find(item => item.variantName === "small"), 0]]);
+    assert.deepEqual(checked(), ["small"]);
+  }
+  h.picks.push((items, options) => { assert.equal(options.canPickMany, true); return items.filter(item => item.all); });
   await h.command("selectVariant", h.target());
   assert.match(h.controller.provider.getTreeItem(jobNode(h)).description, /small, large/);
-  const workflow = jobNode(h, "Workflows");
-  await h.checkbox(workflow.children.filter(item => item.variantName).map(item => [item, 1]));
-  assert.equal(workflow.children.filter(item => h.controller.provider.getTreeItem(item).checkboxState.state === 1).length, 1);
-  await h.checkbox([[jobNode(h).children[0], 1]]);
-  assert.equal(h.controller.provider.getTreeItem(jobNode(h)).description, "small");
+  h.picks.push(() => undefined); await h.command("selectVariant", h.target());
+  assert.match(h.controller.provider.getTreeItem(jobNode(h)).description, /small, large/);
 });
 
 test("configuration tree uses meaningful root order and scalar fields before collections", async t => {
-  const doc = inventory();
-  doc.projects[0].configuration.schema = require("../media/config-schema.json");
+  const doc = inventory(); doc.projects[0].configuration.schema = require("../media/config-schema.json");
   doc.projects[0].configuration.value = {
-    jobs: { build: { env: {}, steps: [{ zeta: "echo first" }, { alpha: "echo second" }], help: "Build", audience: "all" } },
-    project: { components: {}, description: "Demo", name: "Project" }, repository: { config_path: "config", alias: "demo" },
+    jobs: {build: {env: {}, steps: {zeta: {run: "echo first"}, alpha: {run: "echo second"}}, help: "Build", audience: "all"}},
+    project: {components: {}, description: "Demo", name: "Project"}, repository: {config_path: "config", alias: "demo"},
   };
-  const h = harness(t, [doc]);
-  await h.controller.ready();
+  const h = harness(t, [doc]); await h.controller.ready();
   const config = h.controller.provider.getChildren()[0].children[0].children.find(item => item.label === "Configuration");
   assert.deepEqual(config.children.slice(0, 11).map(item => item.label), ["schema_version", "ptk_version", "virtual_monorepo", "logging_history_backups", "repository", "project", "variants", "Components", "jobs", "workflows", "vars"]);
   const job = config.children.find(item => item.label === "jobs").children[0];
   assert.deepEqual(job.children.map(item => item.label), ["help", "audience", "env", "steps"]);
-  assert.deepEqual(job.children.at(-1).children.map(item => item.configPath.at(-1)), [0, 1]);
+  assert.deepEqual(job.children.at(-1).children.map(item => item.configPath.at(-1)), ["zeta", "alpha"]);
 });
 
-test("job variant checkboxes keep multiple choices without discovery or changing configuration", async t => {
-  const h = harness(t);
-  await h.controller.ready();
-  assert.equal(h.treeOptions().manageCheckboxStateManually, true);
-  const node = jobNode(h), choices = node.children;
-  const checked = () => choices.filter(item => h.controller.provider.getTreeItem(item).checkboxState.state === 1).map(item => item.label);
-  assert.deepEqual(checked(), ["Use project default"]);
-  assert.ok(choices.every(item => !item.project.variants.find(v => v.name === item.variantName)?.abstract));
-  const calls = h.calls.length;
-  const before = JSON.stringify(node.project.configuration);
-  await h.checkbox([[choices.find(item => item.variantName === "large"), 1]]);
-  assert.deepEqual(h.changedElements.at(-1), [node]);
-  assert.deepEqual(checked(), ["large"]);
-  assert.match(h.controller.provider.getTreeItem(node).description, /large/);
-  await h.command("run", node);
-  assert.equal(h.tasks[0].definition.variant, "large");
-  assert.equal(h.calls.length, calls);
-  assert.equal(JSON.stringify(node.project.configuration), before);
-  await h.checkbox([[choices.find(item => item.variantName === "small"), 1]]);
-  assert.deepEqual(checked(), ["small", "large"]);
-  await h.command("run", node);
-  assert.deepEqual(h.tasks.slice(1).map(task => task.definition.variant), ["large", "small"]);
-  await h.checkbox([[choices.find(item => item.variantName === "large"), 0]]);
-  assert.deepEqual(checked(), ["small"]);
-  await h.checkbox([[choices.find(item => item.variantName === "small"), 0]]);
-  assert.deepEqual(checked(), ["Use project default"]);
-  await h.command("run", node);
-  assert.equal(h.tasks.at(-1).definition.variant, "small");
-});
-
-test("checkbox selections remain independent for jobs, workflows and repositories", async t => {
-  const h = harness(t, [inventory(), inventory(path.resolve("second"))]);
-  await h.controller.ready();
-  const job = jobNode(h), workflow = jobNode(h, "Workflows");
-  await h.checkbox([[job.children.find(item => item.variantName === "large"), 1]]);
-  await h.command("run", workflow);
-  await h.command("run", h.target("job", 1));
-  assert.deepEqual(h.tasks.map(task => task.definition.variant), ["small", "small"]);
-  assert.equal(h.controller.provider.getTreeItem(workflow.children[0]).checkboxState.state, 1);
-  const refreshed = jobNode(h);
-  assert.deepEqual(refreshed.children.map(item => item.id), job.children.map(item => item.id));
-  assert.equal(h.controller.provider.getTreeItem(refreshed.children.find(item => item.variantName === "large")).checkboxState.state, 1);
-});
-
-test("checkboxes serialize rapid changes and reject removed or abstract variants", async t => {
-  const doc = inventory(), h = harness(t, [doc]);
-  await h.controller.ready();
-  const choices = jobNode(h).children;
-  await Promise.all([h.checkbox([[choices.find(item => item.variantName === "large"), 1]]), h.checkbox([[choices.find(item => item.variantName === "small"), 1]])]);
-  await h.command("run", h.target());
-  assert.deepEqual(h.tasks.map(task => task.definition.variant), ["large", "small"]);
-  doc.projects[0].variants.find(item => item.name === "large").abstract = true;
-  await h.controller.refresh();
+test("checkbox changes are scoped, serialized and do not reload configuration", async t => {
+  const doc = inventory(), h = harness(t, [doc, inventory(path.resolve("second"))]); await h.controller.ready();
+  const target = jobNode(h), choices = target.children, calls = h.calls.length;
+  const before = JSON.stringify(target.project.configuration);
+  await Promise.all([h.checkbox([[choices.find(item => item.variantName === "large"), 1]]), h.checkbox([[choices.find(item => item.variantName === "small"), 0]])]);
+  assert.equal(h.controller.provider.getTreeItem(target).description, "large");
+  assert.equal(h.controller.provider.getTreeItem(jobNode(h, "Workflows")).description, "small");
+  assert.deepEqual(h.changedElements.at(-1), [target]);
+  assert.equal(h.calls.length, calls); assert.equal(JSON.stringify(target.project.configuration), before);
+  await h.command("run", h.target("job", 1)); assert.equal(h.tasks.at(-1).definition.variant, "small");
+  doc.projects[0].variants.find(item => item.name === "large").abstract = true; await h.controller.refresh();
   await h.checkbox([[choices.find(item => item.variantName === "large"), 1]]);
   assert.match(h.errors[0], /variant is no longer available/);
-  assert.equal(jobNode(h).children.some(item => item.variantName === "large"), false);
 });
 
-test("no default keeps a visible reset choice and a stale saved variant falls back safely", async t => {
-  const doc = inventory();
-  delete doc.projects[0].default_variant;
-  const h = harness(t, [doc]);
-  await h.controller.ready();
-  const node = jobNode(h);
-  h.state.set(`variant:${node.project.entry_file}:job:${node.name}`, "removed");
-  assert.equal(h.controller.provider.getTreeItem(node.children[0]).checkboxState.state, 1);
-  assert.equal(node.children[0].description, "No default configured");
-  await h.checkbox([[node.children[0], 0]]);
-  assert.equal(h.controller.provider.getTreeItem(node.children[0]).checkboxState.state, 1);
-  h.api.workspace.isTrusted = false;
-  await h.checkbox([[node.children[1], 1]]);
+test("without a configured default no checkbox pretends to select one", async t => {
+  const doc = inventory(); delete doc.projects[0].default_variant;
+  const h = harness(t, [doc]); await h.controller.ready(); const node = jobNode(h);
+  h.state.set(`variant:${node.project.entry_file}:job:${node.name}`, ["removed"]);
+  assert.ok(node.children.every(item => h.controller.provider.getTreeItem(item).checkboxState.state === 0));
+  h.api.workspace.isTrusted = false; await h.checkbox([[node.children[1], 1]]);
   assert.match(h.errors[0], /Trust this workspace/);
 });
 
@@ -794,10 +749,10 @@ test("variant selection uses only the per-target setting", async t => {
   assert.deepEqual(h.tasks[0].execution.args, ["--variant", "small", "run", "build"]);
 });
 
-test("configuration list entries use names and values and skip named-step wrappers", async t => {
+test("configuration values and named steps have readable labels", async t => {
   const doc = inventory();
   doc.projects[0].configuration.value = {
-    jobs: { build: { steps: [{ compile: { run: "make" } }, { test: { uses: "echo" } }, { run: "echo direct", name: "Direct step" }] } },
+    jobs: { build: { steps: {compile: { run: "make" }, test: { uses: "echo" }, direct: {run: "echo direct"}} } },
     environment: { keep: ["PATH", "HOME", "PATH"] },
     artifactory: { events: { push: { path: "branches" } } },
   };
@@ -806,8 +761,8 @@ test("configuration list entries use names and values and skip named-step wrappe
   const config = h.controller.provider.getChildren()[0].children[0].children.find(node => node.label === "Configuration");
   const jobs = config.children.find(node => node.label === "jobs");
   const steps = jobs.children[0].children[0];
-  assert.deepEqual(steps.children.map(node => node.label), ["compile", "test", "Direct step"]);
-  assert.deepEqual(steps.children[0].configPath, ["jobs", "build", "steps", 0, "compile"]);
+  assert.deepEqual(steps.children.map(node => node.label), ["compile", "test", "direct"]);
+  assert.deepEqual(steps.children[0].configPath, ["jobs", "build", "steps", "compile"]);
   assert.deepEqual(steps.children[0].children.map(node => node.label), ["run"]);
   assert.equal(steps.children[0].icon, "terminal");
   assert.equal(jobs.icon, "tasklist");
@@ -816,7 +771,7 @@ test("configuration list entries use names and values and skip named-step wrappe
   assert.equal(new Set(keep.children.map(node => node.id)).size, 3);
   assert.ok(keep.children.every(node => !node.icon && !node.description));
   await h.command("openConfig", steps.children[0]);
-  assert.deepEqual(h.opened.at(-1).path, ["jobs", "build", "steps", 0, "compile"]);
+  assert.deepEqual(h.opened.at(-1).path, ["jobs", "build", "steps", "compile"]);
 });
 
 test("unchanged refreshes and edit preflight do not redraw the tree; identities survive saves", async t => {
@@ -852,7 +807,7 @@ test("an editor save waits for a superseding refresh instead of acknowledging an
   });
   const saved = h.editorActions.project(doc.projects[0].entry_file);
   await firstStarted;
-  doc.projects[0].configuration.value.jobs.added = { steps: [{ hello: { run: "echo hello" } }] };
+  doc.projects[0].configuration.value.jobs.added = { steps: {hello: { run: "echo hello" }} };
   const watcherRefresh = h.controller.refresh();
   releaseFirst();
   await nextStarted;
@@ -874,14 +829,14 @@ test("tree icons use distinct theme colours for jobs, workflows and configuratio
 
 test("job run form selects multiple variants and restores the same step range", async t => {
   const doc = inventory();
-  doc.projects[0].jobs[0].run_options = [builtinParam("start", { kind: "option", option: "--from", choices: ["compile"] })];
+  doc.projects[0].jobs[0].run_options = [builtinParam("only_step", { kind: "option", option: "--only-step", choices: ["compile"] })];
   const h = harness(t, [doc]); await h.controller.ready();
-  h.forms.push(() => ({ params: {}, preview: true, variants: ["small", "large"], runOptions: { start: ["compile"] } }));
+  h.forms.push(() => ({ params: {}, preview: true, variants: ["small", "large"], runOptions: { only_step: ["compile"] } }));
   await h.command("runWithParameters", h.target());
   assert.equal(h.tasks.length, 2);
   for (const task of h.tasks) {
-    assert.deepEqual(task.definition.runOptions, { start: ["compile"] });
-    assert.ok(task.execution.args.includes("--from=compile"));
+    assert.deepEqual(task.definition.runOptions, { only_step: ["compile"] });
+    assert.ok(task.execution.args.includes("--only-step=compile"));
     assert.deepEqual((await h.api.taskProvider.resolveTask(task)).execution.args, task.execution.args);
   }
   assert.deepEqual(h.errors, []);
@@ -901,15 +856,33 @@ test("workflow gear opens owner variant choices and preserves dry run", async t 
 
 test("a step removed while the run form is open prevents the entire variant batch", async t => {
   const doc = inventory();
-  const option = builtinParam("start", { kind: "option", option: "--from", choices: ["configure", "compile"] });
+  const option = builtinParam("only_step", { kind: "option", option: "--only-step", choices: ["configure", "compile"] });
   doc.projects[0].jobs[0].run_options = [option];
   const h = harness(t, [doc]); await h.controller.ready();
   h.forms.push(async () => {
     option.choices = ["configure"];
     await h.controller.refresh();
-    return { params: {}, preview: false, variants: ["small", "large"], runOptions: { start: ["compile"] } };
+    return { params: {}, preview: false, variants: ["small", "large"], runOptions: { only_step: ["compile"] } };
   });
   await h.command("runWithParameters", h.target());
   assert.equal(h.tasks.length, 0);
   assert.match(h.errors[0], /available value/);
+});
+
+
+test("configuration graph trees use PTK metadata for job and workflow joins", async t => {
+  const doc = inventory(), config = doc.projects[0].configuration;
+  config.value = {jobs: {build: {steps: {start: {uses: "echo"}, left: {uses: "echo", needs: "start"}, right: {uses: "echo", needs: "start"}, join: {uses: "echo", needs: ["left", "right"]}}}}, workflows: {verify: {jobs: {start: {job: "build"}, left: {job: "build", needs: "start"}, right: {job: "build", needs: "start"}, join: {job: "build", needs: ["left", "right"]}}}}};
+  const nodes = [{id: "start", needs: [], depth: 0}, {id: "left", needs: ["start"], depth: 1}, {id: "right", needs: ["start"], depth: 1}, {id: "join", needs: ["left", "right"], depth: 2}];
+  config.graphs = [{path: ["jobs", "build", "steps"], nodes}, {path: ["workflows", "verify", "jobs"], nodes}];
+  const h = harness(t, [doc]); await h.controller.ready();
+  const tree = h.controller.provider.getChildren()[0].children[0].children.find(item => item.label === "Configuration");
+  for (const section of ["jobs", "workflows"]) {
+    const graph = tree.children.find(item => item.label === section).children[0].children[0];
+    assert.deepEqual(graph.children.map(level => level.label), ["Ready", "Dependency level 1", "Dependency level 2"]);
+    const items = graph.children.flatMap(level => level.children);
+    assert.deepEqual(items.map(node => node.label), ["start", "left", "right", "join"]);
+    const join = items.at(-1); assert.equal(join.description, "needs: left, right");
+    await h.command("openConfig", join); assert.deepEqual(h.opened.at(-1).path, [...config.graphs[section === "jobs" ? 0 : 1].path, "join"]);
+  }
 });

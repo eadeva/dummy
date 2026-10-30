@@ -16,7 +16,7 @@ test("HTML log analysis filters dispositions and severities, counts occurrences 
     { id: "sdk", match: { severity: "warning", message_regex: "^Old SDK" }, action: "justify", reason: "Upgrade planned <next>" },
     { id: "expected", match: { message_regex: "^expected failure$" }, action: "ignore", reason: "Negative test" },
   ] } }));
-  fs.writeFileSync(path.join(root, "jobs/build.ptk.yml"), JSON.stringify({ steps: [{ compile: { run: [python, "-c", "print('src/main.cpp:42: error: unresolved motor_start'); print('WARNING: active warning'); print('WARNING: active warning'); print('WARNING: Old SDK'); print('ERROR: expected failure'); print('ERROR: <script>window.injected=true</script>')"] } }] }));
+  fs.writeFileSync(path.join(root, "jobs/build.ptk.yml"), JSON.stringify({ steps: {compile: { run: [python, "-c", "print('src/main.cpp:42: error: unresolved motor_start'); print('WARNING: active warning'); print('WARNING: active warning'); print('WARNING: Old SDK'); print('ERROR: expected failure'); print('ERROR: <script>window.injected=true</script>')"] }} }));
   const result = spawnSync(python, ["-m", "ptk", "build"], { cwd: root, encoding: "utf8", env: { ...process.env, PYTHONPATH: path.join(repo, "src"), PTK_ROLE: "user", PTK_CI: "0" }, timeout: 30000 });
   assert.equal(result.status, 0, result.stdout + result.stderr);
   const browser = await chromium.launch({ headless: true, executablePath: process.env.PTK_TEST_CHROMIUM, args: ["--no-sandbox"] });

@@ -42,7 +42,7 @@ ICON = {
 
 
 class ConsoleObserver:
-    """Streams output; steps inside parallel sets get a ``[step]`` prefix."""
+    """Streams output; concurrent steps get a ``[step]`` prefix."""
 
     def __init__(
         self, console: Console, *, quiet: bool = False, level: Level = Level.INFO
@@ -51,31 +51,23 @@ class ConsoleObserver:
         self._quiet = quiet
         self._level = level
         self._parallel: set[tuple[str, ...]] = set()
-        self._quiet_sets: set[tuple[str, ...]] = set()
         self._lock = threading.Lock()
 
     def run_started(self, plan: JobPlan) -> None:
-        def mark(step: PlannedStep, inside: bool) -> None:
-            if inside:
-                self._parallel.add(step.path)
-            for child in step.children:
-                mark(child, inside or step.spec.parallel)
-
-        for step in plan.steps:
-            mark(step, False)
+        self._parallel = {step.path for step in plan.steps}
+        if plan.only_step:
+            self._print(
+                f"[yellow]Only step {escape(plan.only_step)}; prerequisites not run: {escape(', '.join(plan.omitted_dependencies) or 'none')}. Required outputs must already exist.[/]"
+            )
         variant = f" [dim]variant[/] {escape(plan.variant)}" if plan.variant else ""
         self._print(
             f"[bold]ptk {escape(plan.job)}[/]{variant} [dim]run {plan.run_id}[/]"
         )
 
     def step_started(self, step: PlannedStep, command: str | None) -> None:
-        if step.kind == "set":
-            mode = "parallel" if step.spec.parallel else "sequential"
-            self._print(f"[bold cyan]▶ {escape(step.label)}[/] [dim]({mode})[/]")
-        else:
-            self._print(
-                f"[bold cyan]▶ {escape(step.label)}[/] [dim]{escape(command or '')}[/]"
-            )
+        self._print(
+            f"[bold cyan]▶ {escape(step.label)}[/] [dim]{escape(command or '')}[/]"
+        )
 
     def output(self, step: PlannedStep, line: str) -> None:
         if self._quiet:
@@ -94,10 +86,6 @@ class ConsoleObserver:
         self._print(f"{self._prefix(step)}[{style}]{level.label}: {escape(text)}[/]")
 
     def step_finished(self, step: PlannedStep, result: StepResult) -> None:
-        if result.status in (Status.SKIPPED, Status.CANCELLED) and result.children:
-            self._quiet_sets.add(step.path)
-        if any(step.path[:i] in self._quiet_sets for i in range(1, len(step.path))):
-            return  # inside a set that was not run: the set line says it all
         style = STYLE[result.status]
         message = result.message if result.message != result.status.value else ""
         detail = f" [dim]{escape(message)}[/]" if message else ""
@@ -141,12 +129,7 @@ def summary(console: Console, result: RunResult) -> None:
         extra = f" [dim]{escape(step.message)}[/]" if show else ""
         if step.allowed_failure:
             extra += " [yellow](allowed)[/]"
-        child = node.add(
-            f"[{style}]{ICON[step.status]} {escape(step.name)}{timing}[/]{extra}"
-        )
-        if step.status not in (Status.SKIPPED, Status.CANCELLED):
-            for sub in step.children:
-                add(child, sub)
+        node.add(f"[{style}]{ICON[step.status]} {escape(step.name)}{timing}[/]{extra}")
 
     for step in result.steps:
         add(tree, step)
@@ -165,6 +148,17 @@ def dry_run(
     show_env: bool = False,
 ) -> None:
     plan = prepared.plan
+    from .graphs import show_graph
+
+    show_graph(
+        prepared.project.root,
+        plan.job,
+        "job",
+        {step.name: step.spec for step in plan.steps},
+        selected={step.name for step in plan.steps if step.skip_reason is None},
+        variant=plan.variant,
+        only_step=plan.only_step,
+    )
     head = f"[bold]{escape(plan.job)}[/] [dim](dry run - nothing is executed)[/]"
     if plan.variant:
         head += f"  variant [bold]{escape(plan.variant)}[/]"
@@ -182,14 +176,13 @@ def dry_run(
                 f"[dim]– {escape(step.name)}: skipped ({escape(step.skip_reason)})[/]"
             )
             return
-        if step.kind == "set":
-            mode = "parallel" if step.spec.parallel else "sequential"
-            child = node.add(f"[bold cyan]{escape(step.name)}[/] [dim]({mode})[/]")
-            for sub in step.children:
-                add(child, sub)
-            return
         command, python = runner.describe(prepared, step)
         child = node.add(f"[bold cyan]{escape(step.name)}[/]  {escape(command)}")
+        child.add(
+            "needs: " + escape(", ".join(step.spec.needs))
+            if step.spec.needs
+            else "ready"
+        )
         details = []
         if step.cwd not in (".", ""):
             details.append(f"cwd {step.cwd}")

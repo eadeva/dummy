@@ -8,7 +8,7 @@ environment:
 env:
   UV_PROJECT_ENVIRONMENT: ${project.root}/.ptk/venvs/package
 steps:
-- prepare:
+  prepare:
     python:
       project: .
       groups:

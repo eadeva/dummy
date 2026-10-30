@@ -63,26 +63,37 @@ def test_test_counts_include_errors_but_not_skips_in_executed():
 def test_run_captures_variant_versions_tools_and_survives_config_changes(write, load):
     root = write(
         project_files(
-            """
-project: {name: example}
-repository: {alias: engine, config_path: .}
+            """\
+project:
+  name: example
+repository:
+  alias: engine
+  config_path: .
 versioning:
-  project: {source: literal, version: '3.4.5'}
+  project:
+    source: literal
+    version: 3.4.5
 variants:
   default: debug
   variants:
-    debug: {description: Debug build}
+    debug:
+      description: Debug build
 tools:
   python:
     docker: false
-    check: 'PYTHON --version'
+    check: PYTHON --version
     version: '>=3.12'
 jobs:
   build:
-    requires_tools: [python]
+    requires_tools:
+    - python
     steps:
-      - hello: {run: [PYTHON, -c, 'print("hello")']}
-""".replace("PYTHON", json.dumps(sys.executable))
+      hello:
+        run:
+        - PYTHON
+        - -c
+        - print("hello")
+""".replace("PYTHON", sys.executable)
         )
     )
     app = create_app(environ={"PTK_DOCKER": "1"})

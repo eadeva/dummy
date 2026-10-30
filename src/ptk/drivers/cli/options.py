@@ -57,7 +57,7 @@ def describe_parameter(ctx, param):
     option = isinstance(param, click.Option)
     items = suggestions(ctx, param)
     finite = isinstance(param.type, click.Choice) or param.name in {
-        "start",
+        "only_step",
         "end",
         "job",
         "name",
@@ -103,7 +103,8 @@ def describe_execution(ctx, project):
                 for param in command.params
                 if isinstance(param, click.Option)
                 and not param.name.startswith("param__")
-                and param.name not in {"all_variants", "dry_run", "params_path"}
+                and param.name
+                not in {"all_variants", "dry_run", "params_path", "graph"}
             ]
     for workflow in project["workflows"]:
         workflow["run_options"] = []

@@ -61,7 +61,7 @@ def test_set_override():
 
 def test_schema_contains_step_entry():
     schema = json.loads(run("maintainer", "config", "schema").output)
-    assert "StepEntry" in schema["$defs"] and "StepSpec" not in schema["$defs"]
+    assert "StepSpec" in schema["$defs"] and "StepEntry" not in schema["$defs"]
 
 
 def test_variant_commands():
@@ -120,7 +120,10 @@ def test_dry_run_of_demo_shows_plan_without_executing(tmp_path, existing_logs):
     assert "dry run" in result.output and "-j 3" in result.output
     assert "camera-selftest: skipped (condition is false" in result.output
     assert "VH_VARIANT=customer_b_us" in result.output
-    assert snapshot() == before
+    assert {
+        path: data for path, data in snapshot().items() if path.parts[0] != ".ptk"
+    } == {path: data for path, data in before.items() if path.parts[0] != ".ptk"}
+    assert (demo / ".ptk/graphs/job-build-customer_b_us.html").is_file()
 
 
 def test_run_errors_are_clean():
@@ -134,12 +137,21 @@ def test_run_errors_are_clean():
 
 def test_run_executes_and_returns_exit_code(write):
     root = write(
-        project_files("""
-        project: {name: t}
-        jobs:
-          ok: {steps: [{hi: "echo hi-there"}]}
-          bad: {steps: [{fail: "exit 4"}]}
-        """)
+        project_files(
+            """\
+project:
+  name: t
+jobs:
+  ok:
+    steps:
+      hi:
+        run: echo hi-there
+  bad:
+    steps:
+      fail:
+        run: exit 4
+"""
+        )
     )
     config = []
     ok = CliRunner(env={"PTK_CI": "0"}).invoke(

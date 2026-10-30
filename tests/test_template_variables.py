@@ -22,7 +22,7 @@ def test_catalogue_is_available_without_git_or_resolving_secret_environment(
                         "token": {"type": "secret"},
                         "mode": {"default": "fast"},
                     },
-                    "steps": [{"echo": "echo ${git.short_commit}"}],
+                    "steps": {"echo": {"run": "echo ${git.short_commit}"}},
                 }
             },
             "credentials": {"service": {"fields": ["token"]}},

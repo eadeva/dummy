@@ -22,10 +22,24 @@ def make_project(root):
     file = root / ".main.ptk.yml"
     write_project(
         file,
-        "repository: {alias: demo, config_path: .}\n"
-        "project: {name: demo}\n"
-        "jobs: {build: {steps: [{hello: {uses: echo}}]}}\n"
-        "credentials: {remote: {providers: [env, keyring, vault]}}\n",
+        """\
+repository:
+  alias: demo
+  config_path: .
+project:
+  name: demo
+jobs:
+  build:
+    steps:
+      hello:
+        uses: echo
+credentials:
+  remote:
+    providers:
+    - env
+    - keyring
+    - vault
+""",
         encoding="utf-8",
     )
     (root / "maintainers.ptk.yml").write_text(

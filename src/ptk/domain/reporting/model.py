@@ -89,14 +89,11 @@ class ReportStep:
     command: str = ""
     log_file: str = ""
     allowed_failure: bool = False
+    needs: list[str] = field(default_factory=list)
 
     @property
     def name(self) -> str:
-        return self.label.rsplit("/", 1)[-1]
-
-    @property
-    def depth(self) -> int:
-        return self.label.count("/")
+        return self.label
 
 
 @dataclass
@@ -154,11 +151,7 @@ class Report:
         return Counter(f.level for f in self.findings)
 
     def failed_steps(self) -> list[ReportStep]:
-        return [
-            s
-            for s in self.steps
-            if s.status in (FAILED, "cancelled") and s.kind != "set"
-        ]
+        return [s for s in self.steps if s.status in (FAILED, "cancelled")]
 
 
 def from_summary(
@@ -167,7 +160,8 @@ def from_summary(
     steps = [
         ReportStep(
             label=s["step"],
-            kind=s.get("kind", "run"),
+            kind=s["kind"],
+            needs=list(s["needs"]),
             status=s.get("status", "pending"),
             start=float(s.get("start", 0.0)),
             duration=float(s.get("duration", 0.0)),

@@ -57,7 +57,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
               const selection = selections.get(key) || [];
               selections.delete(key);
               const installed = await configuration(document.uri);
-              if (!installed?.schema || installed.version !== 2) return state({ error: "No compatible PTK project schema is available. Open the project and refresh PTK, or use Raw YAML.", schema: {}, selection });
+              if (!installed?.schema || installed.version !== 3) return state({ error: "No compatible PTK project schema is available. Open the project and refresh PTK, or use Raw YAML.", schema: {}, selection });
               const schema = projectEdits.schemaForFile(installed, document.uri.fsPath);
               configurationValue = installed.value;
               variables = installed.variables;
@@ -124,7 +124,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
       return panels.get(key).webview.postMessage({ type: "navigate", selection });
     }
     let config = owner.project.configuration;
-    if (!config || config.version !== 2) throw new Error("The installed PTK does not support this configuration editor. Update PTK and the extension together.");
+    if (!config || config.version !== 3) throw new Error("The installed PTK does not support this configuration editor. Update PTK and the extension together.");
     const panel = vscode.window.createWebviewPanel(viewType, `${owner.project.alias}: Configuration`, vscode.ViewColumn.Active, { retainContextWhenHidden: true });
     panels.set(key, panel);
     let version = 1, chain = Promise.resolve(), disposed = false;
@@ -218,7 +218,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
           if (message.type === "ready") return panel.webview.postMessage({ type: "state", mode: "parameters", name: target.name,
             kind: target.kind, project: target.project?.alias, help: target.spec.help,
             variantChoices: (target.project?.variants || []).filter(item => !item.abstract),
-            defaultVariant: target.project?.default_variant, variantHelp: target.project?.variant_help, useDefault: options.useDefault,
+            defaultVariant: target.project?.default_variant, variantHelp: target.project?.variant_help,
             runOptions: target.spec.run_options || [], params: (target.spec.params || []).filter(spec => spec.type !== "secret"),
             preview: options.preview, variant: options.variant, variants: options.variants, reRun: !!options.reRun });
           if (message.type === "cancel") return finish();
@@ -230,7 +230,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
             if (runOptions.show_env?.[0] === "true" && !message.preview) throw new Error("Include environment requires Dry run.");
             const variants = message.variants || [];
             if (!Array.isArray(variants) || variants.some(name => !target.project?.variants.some(item => item.name === name && !item.abstract)) ||
-                new Set(variants).size !== variants.length || target.kind === "workflow" && variants.length > 1) throw new Error("Choose available variants.");
+                new Set(variants).size !== variants.length) throw new Error("Choose available variants.");
             if (!variants.length && target.project?.variants.some(item => !item.abstract) && !target.project.default_variant) throw new Error("Select a variant; this project has no default.");
             finish({ params: message.params, preview: message.preview, runOptions, variants });
           }

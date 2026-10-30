@@ -5,27 +5,28 @@ params:
     default: Hello from ptk
     help: Text to put in the artifact
 steps:
-- prepare:
+  prepare:
     run:
     - demo.py
     - prepare
     - ${params.message}
     python:
       interpreter: cli
-- checks:
-    parallel: true
-    steps:
-    - unit:
-        run:
-        - demo.py
-        - test
-        - ${params.message}
-        python:
-          interpreter: cli
-    - extra:
-        run:
-        - demo.py
-        - extra
-        python:
-          interpreter: cli
-        when: CHECKS
+  unit:
+    run:
+    - demo.py
+    - test
+    - ${params.message}
+    python:
+      interpreter: cli
+    needs:
+    - prepare
+  extra:
+    run:
+    - demo.py
+    - extra
+    python:
+      interpreter: cli
+    when: CHECKS
+    needs:
+    - prepare

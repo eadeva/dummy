@@ -46,27 +46,18 @@ def project(tmp_path, monkeypatch):
             "jobs": {
                 "build": {
                     "params": {"branch": {"default": "${git.branch}"}},
-                    "steps": [
-                        {
-                            "z_configure": {
-                                "run": "echo configure",
-                                "title": "Prepare build files",
-                            }
+                    "steps": {
+                        "z_configure": {
+                            "run": "echo configure",
+                            "title": "Prepare build files",
                         },
-                        {
-                            "compile": {
-                                "steps": [
-                                    {
-                                        "compiler": {
-                                            "run": "echo compile",
-                                            "passthrough": True,
-                                        }
-                                    }
-                                ]
-                            }
+                        "compile": {
+                            "run": "echo compile",
+                            "passthrough": True,
+                            "needs": ["z_configure"],
                         },
-                        {"package": "echo package"},
-                    ],
+                        "package": {"run": "echo package", "needs": ["compile"]},
+                    },
                 }
             },
             "workflows": {
@@ -105,11 +96,11 @@ def test_help_inventory_and_completion_share_read_only_suggestions(
     info = doc["projects"][0]
     assert info["invocation"] == {"cwd": str(project), "prefix": []}
     options = {param["name"]: param for param in info["jobs"][0]["run_options"]}
-    assert options["start"]["choices"] == ["z_configure", "compile", "package"]
-    assert options["end"]["choices"] == options["start"]["choices"]
-    assert options["start"]["suggestions"][0]["help"] == "Prepare build files"
+    assert options["only_step"]["choices"] == ["z_configure", "compile", "package"]
+    assert options["end"]["choices"] == options["only_step"]["choices"]
+    assert options["only_step"]["suggestions"][0]["help"] == "Prepare build files"
     assert options["args_for"]["choices"] == []
-    assert options["args_for"]["suggestions"][0]["value"] == "compile/compiler="
+    assert options["args_for"]["suggestions"][0]["value"] == "compile="
     assert info["workflows"][0]["run_options"] == []
     complete = BashComplete(cli, {}, "ptk", "_PTK_COMPLETE")
     values = lambda args, partial: {
@@ -122,7 +113,7 @@ def test_help_inventory_and_completion_share_read_only_suggestions(
         "COMPONENT_CORE=true",
         "COMPONENT_CORE=false",
     }
-    assert values(["build", "--args-for"], "") == {"compile/compiler="}
+    assert values(["build", "--args-for"], "") == {"compile="}
     assert snapshot(project) == before
 
 

@@ -22,23 +22,42 @@ HOST = {
     "PTK_ROLE": "user",
 }
 
-PROJECT = """
-project: {name: t, default_job: build}
+PROJECT = """\
+project:
+  name: t
+  default_job: build
 jobs:
   build:
     help: Build it
     params:
-      jobs: {type: int, default: 2, help: Parallel jobs}
-      mode: {type: choice, choices: [debug, release], default: release}
-      fast: {type: bool, default: false}
-      targets: {type: list, default: [all]}
-      build_type: {default: x}
+      jobs:
+        type: int
+        default: 2
+        help: Parallel jobs
+      mode:
+        type: choice
+        choices:
+        - debug
+        - release
+        default: release
+      fast:
+        type: bool
+        default: false
+      targets:
+        type: list
+        default:
+        - all
+      build_type:
+        default: x
     steps:
-      - show: "echo jobs=${params.jobs} mode=${params.mode} fast=${params.fast} targets=${params.targets} bt=${params.build_type}"
+      show:
+        run: echo jobs=${params.jobs} mode=${params.mode} fast=${params.fast} targets=${params.targets} bt=${params.build_type}
   publish:
     help: Publish a release
     audience: maintainer
-    steps: [{up: "echo uploading"}]
+    steps:
+      up:
+        run: echo uploading
 """
 
 
@@ -68,7 +87,7 @@ def test_job_help_has_typed_options(invoke):
         "--targets",
         "--build-type",
         "default: 2",
-        "--from",
+        "--only-step",
     ):
         assert text in out, text
 

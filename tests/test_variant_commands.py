@@ -32,16 +32,14 @@ def setup(tmp_path):
                 "jobs": {
                     "go": {
                         "params": {"who": {"default": "world"}},
-                        "steps": [
-                            {
-                                "show": {
-                                    "uses": "echo",
-                                    "with": {
-                                        "message": "${vh.features.SIZE} ${params.who}"
-                                    },
-                                }
+                        "steps": {
+                            "show": {
+                                "uses": "echo",
+                                "with": {
+                                    "message": "${vh.features.SIZE} ${params.who}"
+                                },
                             }
-                        ],
+                        },
                     }
                 },
             }
@@ -91,7 +89,7 @@ def test_matrix_failure_preserves_later_runs(tmp_path):
 
     file = setup(tmp_path)
     config = read_project(file)
-    config["jobs"]["go"]["steps"].append(
+    config["jobs"]["go"]["steps"].update(
         {
             "fail_small": {
                 "run": [sys.executable, "-c", "raise SystemExit(3)"],

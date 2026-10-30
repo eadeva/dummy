@@ -55,18 +55,20 @@ def test_yaml_anchors_and_merge_keys(write):
 def test_locate_and_display_path_for_steps(write):
     root = write(
         {
-            "fragment.ptk.yml": """
-        jobs:
-          build:
-            steps:
-              - first: {run: a}
-              - group:
-                  steps:
-                    - inner: {run: b}
-    """
+            "fragment.ptk.yml": """\
+jobs:
+  build:
+    steps:
+      first:
+        run: a
+      inner:
+        run: b
+        needs:
+        - first
+"""
         }
     )
     node, _ = read(root)
-    path = ("jobs", "build", "steps", 1, "steps", 0, "run")
+    path = ("jobs", "build", "steps", "inner", "run")
     assert t.locate(node, path).line == 7
-    assert t.display_path(node, path) == "jobs.build.steps.group.steps.inner.run"
+    assert t.format_path(path) == "jobs.build.steps.inner.run"

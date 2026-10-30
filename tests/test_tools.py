@@ -139,10 +139,10 @@ tools:
 jobs:
   build:
     requires_tools: [mytool]
-    steps: [{{use: "mytool --version"}}]
+    steps: {{use: {{run: "mytool --version"}}}}
   other:
     requires_tools: [ancient]
-    steps: [{{x: "true"}}]
+    steps: {{x: {{run: "true"}}}}
 """
 
 
@@ -298,7 +298,7 @@ def test_job_versions_coexist_and_path_contains_only_selected_tools(
         "jobs": {
             name: {
                 "requires_tools": {"selectedtool": spec},
-                "steps": [{"version": {"run": ["selectedtool", "--version"]}}],
+                "steps": {"version": {"run": ["selectedtool", "--version"]}},
             }
             for name, spec in definitions.items()
         },
@@ -326,7 +326,7 @@ def test_job_versions_coexist_and_path_contains_only_selected_tools(
         )
 
     # A step cannot silently override PATH to the other version after preflight.
-    data["jobs"]["one"]["steps"][0]["version"]["env"] = {
+    data["jobs"]["one"]["steps"]["version"]["env"] = {
         "PATH": second_paths[0] + ":/usr/bin:/bin"
     }
     write(project_files(yaml.safe_dump(data)))

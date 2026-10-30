@@ -10,8 +10,8 @@ Runtime view
    :download:`Edit the PlantUML source <../diagrams/job-lifecycle.puml>`.
 
 This sequence focuses on a normal job request. A failed lock acquisition stops
-that run before its steps start. A preview executes no job steps and writes no
-run outputs. Reporting problems are recorded separately from execution status.
+that run before its steps start. A preview executes no job steps and writes only
+a graph preview under ``.ptk/graphs``, without run outputs. Reporting problems are recorded separately from execution status.
 
 Loading and command discovery
 -----------------------------
@@ -20,6 +20,7 @@ Loading and command discovery
 2. Project discovery locates the marker within repository boundaries.
 3. The loader reads conventional files and registered component documents,
    preserves provenance, and validates local and cross-document rules.
+
 4. The driver exposes permitted jobs/workflows and their typed options.
    Validation can report a missing or broken project without requiring a job.
 
@@ -29,11 +30,14 @@ Job execution
 1. Resolve requested variants, execution filters and parameter precedence.
 2. Prepare paths, substitutions, environment, tools and credential requirements.
    A dry run previews the plan without executing steps or writing run reports.
+
 3. Acquire the job/variant run lock and prepare current/history storage.
-4. Execute ordered steps, nested groups and eligible background work. Apply
+4. Schedule ready steps from their ``needs`` graph, up to ``max_workers``. Apply
    configured timeouts, retries, conditional execution and failure policies.
-5. Join background work at its defined boundary. Cancellation reaches active
+
+5. Wait for all running steps; blocked dependents retain a skip reason. Cancellation reaches active
    child processes; Python handlers must cooperate with the cancellation token.
+
 6. Store the execution summary and captured report inputs, import contributions,
    export requested formats and apply the local report-opening policy.
 

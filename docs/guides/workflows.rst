@@ -15,9 +15,8 @@ task; a **step** invokes a command, script or built-in/plugin action inside
 that job. A job can run directly, without belonging to a workflow.
 
 A workflow's ``jobs`` mapping contains named job invocations and their ``needs``
-dependencies. A job's ``steps`` list contains ordered executable steps or nested
-step groups. Job steps retain their existing ordering, parallel groups, background
-processes and ``--from`` / ``--to`` behavior; ``needs`` belongs to workflow jobs.
+dependencies. A job's ``steps`` mapping contains named executable steps with
+its own ``needs`` edges. Dependencies stay within their respective scopes. See :doc:`/reference/execution` for job-step selection.
 
 For example, ``verify`` can call ``build`` and then ``test``. The ``build`` job
 can contain ``configure`` and ``compile`` steps that call the chosen build tool.

@@ -14,7 +14,7 @@ from ptk.drivers.cli.main import cli
 
 
 def command(code):
-    return {"steps": [{"run": {"run": [sys.executable, "-c", code]}}]}
+    return {"steps": {"run": {"run": [sys.executable, "-c", code]}}}
 
 
 def repository(root, alias="app", *, jobs=None, workflows=None, extra=None):
@@ -48,7 +48,7 @@ def test_discovery_preview_then_sequential_calls_and_immutable_reports(tmp_path)
         "from pathlib import Path; import os, sys; assert os.environ['PTK_JOB'] == sys.argv[2] == 'build'; assert 'PTK_ACTION' not in os.environ; p=Path('order.txt'); p.write_text((p.read_text() if p.exists() else '') + sys.argv[1]); print(sys.argv[1])"
     )
     job["params"] = {"word": {"default": "x"}}
-    job["steps"][0]["run"]["run"].extend(["${params.word}", "${run.job}"])
+    job["steps"]["run"]["run"].extend(["${params.word}", "${run.job}"])
     root = repository(
         tmp_path,
         jobs={"build": job},
@@ -66,7 +66,15 @@ def test_discovery_preview_then_sequential_calls_and_immutable_reports(tmp_path)
     before = sorted(p.relative_to(root) for p in root.rglob("*"))
     preview = invoke(root, "workflow", "run", "verify", "--dry-run")
     assert preview.exit_code == 0, preview.output
-    assert sorted(p.relative_to(root) for p in root.rglob("*")) == before
+    assert (
+        sorted(
+            p.relative_to(root)
+            for p in root.rglob("*")
+            if p.relative_to(root).parts[0] != ".ptk"
+        )
+        == before
+    )
+    assert (root / ".ptk/graphs/workflow-verify.html").is_file()
     result = invoke(root, "workflow", "run", "verify")
     assert result.exit_code == 0, result.output
     assert (root / "order.txt").read_text() == "AB"
@@ -168,7 +176,7 @@ def test_reject_parallel_output_and_uv_environment_collisions(tmp_path):
     result = invoke(root, "workflow", "run", "bad", "--dry-run")
     assert result.exit_code != 0 and "can run concurrently and share" in result.output
     a = command("pass")
-    a["steps"][0]["run"]["python"] = {"project": "."}
+    a["steps"]["run"]["python"] = {"project": "."}
     write_project(
         root / ".main.ptk.yml",
         {**read_project(root / ".main.ptk.yml"), "jobs": {"a": a, "b": a}},
@@ -257,7 +265,7 @@ def test_parallel_python_calls_use_their_resolved_venv_paths(tmp_path, level):
     jobs = {}
     for name in ("a", "b"):
         job = command("pass")
-        step = job["steps"][0]["run"]
+        step = job["steps"]["run"]
         step["python"] = {"project": "."}
         job["env"] = {"UV_PROJECT_ENVIRONMENT": "${project.root}/shared"}
         target = job if level == "job" else step
@@ -272,7 +280,7 @@ def test_parallel_python_calls_use_their_resolved_venv_paths(tmp_path, level):
     )
     preview = invoke(root, "workflow", "run", "verify", "--dry-run")
     assert preview.exit_code == 0, preview.output
-    target = jobs["b"] if level == "job" else jobs["b"]["steps"][0]["run"]
+    target = jobs["b"] if level == "job" else jobs["b"]["steps"]["run"]
     target["env"]["UV_PROJECT_ENVIRONMENT"] = "${project.root}/.ptk/venvs/b/../a"
     write_project(
         root / ".main.ptk.yml", {**read_project(root / ".main.ptk.yml"), "jobs": jobs}

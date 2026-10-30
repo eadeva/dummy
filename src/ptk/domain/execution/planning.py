@@ -1,11 +1,7 @@
 """Build the plan of a job (pure).
 
-* ``--from`` / ``--to`` select a range of top-level steps (phases)
-* ``when:`` conditions are evaluated with variant symbols, ``variant``, ``os``,
-  ``ci`` and the namespaces ``params``, ``vars``, ``env``, ``vh``
-* ``${...}`` in run / cwd / env / with are substituted (per step, so
-  ``${run.build_dir}`` is the step's own folder)
-* pass-through arguments are appended to steps marked ``passthrough: true``
+Named steps use explicit dependencies. --to selects a prerequisite closure;
+--only-step deliberately bypasses prerequisite execution.
 """
 
 from __future__ import annotations
@@ -18,6 +14,7 @@ from .. import expressions
 from ..config.model import StepSpec
 from ..config.substitution import Scope, SubstitutionError
 from ..errors import PtkError
+from ..graphs import ancestors
 from ..suggest import did_you_mean
 from .model import PlannedStep
 
@@ -34,46 +31,42 @@ class PlanContext:
     args_for: dict[str, list[str]] = field(default_factory=dict)  # step label -> args
 
 
-def select_range(steps: list[StepSpec], start: str | None, end: str | None) -> set[str]:
-    names = [s.name for s in steps]
-    for label, value in (("--from", start), ("--to", end)):
-        if value is not None and value not in names:
+def select_steps(
+    steps: dict[str, StepSpec], end: str | None, only_step: str | None
+) -> set[str]:
+    if end and only_step:
+        raise PlanError("use --to or --only-step, not both")
+    for option, name in (("--to", end), ("--only-step", only_step)):
+        if name is not None and name not in steps:
             raise PlanError(
-                f"{label}: unknown step '{value}'{did_you_mean(value, names)} (steps: {', '.join(names)})"
+                f"{option}: unknown step {name!r}{did_you_mean(name, steps)} (steps: {', '.join(steps)})"
             )
-    first = names.index(start) if start else 0
-    last = names.index(end) if end else len(names) - 1
-    if first > last:
-        raise PlanError(f"--from '{start}' comes after --to '{end}'")
-    return set(names[first : last + 1])
+    if only_step:
+        return {only_step}
+    return {end, *ancestors(steps)[end]} if end else set(steps)
 
 
 def plan_job(
-    steps: list[StepSpec],
+    steps: dict[str, StepSpec],
     ctx: PlanContext,
     *,
-    start: str | None = None,
     end: str | None = None,
+    only_step: str | None = None,
 ) -> list[PlannedStep]:
-    selected = select_range(steps, start, end)
+    selected = select_steps(steps, end, only_step)
     planned = [
-        _plan(
-            step,
-            (step.name,),
-            ctx,
-            None if step.name in selected else "outside --from/--to range",
-        )
-        for step in steps
+        _plan(step, (name,), ctx, None if name in selected else "not selected")
+        for name, step in steps.items()
     ]
     _apply_passthrough(planned, ctx)
     return planned
 
 
 def _plan(
-    step: StepSpec, path: tuple[str, ...], ctx: PlanContext, inherited_skip: str | None
+    step: StepSpec, path: tuple[str, ...], ctx: PlanContext, selection_skip: str | None
 ) -> PlannedStep:
     label = "/".join(path)
-    skip = inherited_skip
+    skip = selection_skip
     if skip is None and step.only_cx and not ctx.symbols.get("ci", False):
         skip = "only_cx: step requires CX/CI"
     if skip is None:
@@ -100,8 +93,6 @@ def _plan(
             node.with_ = scope(step.with_)
         except SubstitutionError as exc:
             raise PlanError(f"step '{label}': {exc}") from None
-    for child in step.steps or []:
-        node.children.append(_plan(child, path + (child.name,), ctx, skip))
     return node
 
 

@@ -9,11 +9,11 @@ test("field ordering survives alphabetized JSON and keeps scalars before nested 
       ? Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, child]) => [key, alphabetize(child)])) : value;
   }
   const sorted = alphabetize(schema);
-  const job = { steps: [{ z: "first" }, { a: "second" }], env: {}, audience: "all", help: "Build" };
+  const job = { steps: {z: {run: "first"}, a: {run: "second"}}, env: {}, audience: "all", help: "Build" };
   assert.deepEqual(S.orderedEntries(sorted.$defs.JobSpec, job, sorted).map(([key]) => key), ["help", "audience", "env", "steps"]);
   assert.deepEqual(S.orderedEntries(sorted, { workflows: {}, project: {}, artifactory: {}, jobs: {}, repository: {}, ptk_version: ">=1" }, sorted).map(([key]) => key), ["ptk_version", "repository", "project", "jobs", "workflows", "artifactory"]);
   const steps = S.at(sorted, { jobs: { build: job } }, ["jobs", "build", "steps"], sorted);
-  assert.deepEqual(S.orderedEntries(steps, job.steps, sorted), [["0", job.steps[0]], ["1", job.steps[1]]]);
+  assert.deepEqual(S.orderedEntries(steps, job.steps, sorted), [["z", job.steps.z], ["a", job.steps.a]]);
   assert.deepEqual(Object.keys(job), ["steps", "env", "audience", "help"], "presentation does not mutate the configuration");
 });
 
@@ -29,7 +29,7 @@ test("field help preserves context through references and includes defaults and 
   const spec = { description: "Purpose of this field", anyOf: [{ $ref: "#/$defs/Nested" }, { type: "null" }], default: null };
   assert.equal(S.effective(spec, {}, root).description, "Purpose of this field");
   assert.match(S.help(spec, {}, root), /Purpose of this field\nType: object \/ null · Default: null/);
-  assert.match(S.help(schema.$defs.StepBody.properties.retries, 0, schema), /additional attempts[\s\S]*Default: 0 · Minimum: 0/);
+  assert.match(S.help(schema.$defs.StepSpec.properties.retries, 0, schema), /additional attempts[\s\S]*Default: 0 · Minimum: 0/);
   assert.match(S.help(schema.$defs.ParamSpec.properties.env, null, schema), /parameter/);
 });
 
@@ -62,11 +62,11 @@ test("runtime Artifactory and versioning templates have their required descendan
   assert.deepEqual(S.initial(schema.$defs.PythonSpec, schema), { interpreter: "cli" });
 });
 
-test("new named steps avoid collisions with all existing names", () => {
-  const existing = [{ step: {} }, { step_2: {} }, { step_4: {} }];
-  assert.deepEqual(S.initial(schema.$defs.StepEntry, schema, { existing }), { step_3: { run: "echo Hello" } });
-  const list = { type: "array", minItems: 2, items: { $ref: "#/$defs/StepEntry" } };
-  assert.deepEqual(S.initial(list, schema).map(item => Object.keys(item)[0]), ["step", "step_2"]);
+test("new jobs create a named step with required executable fields", () => {
+  assert.deepEqual(S.initial(schema.$defs.JobSpec, schema), {steps: {step: {run: "echo Hello"}}});
+  assert.deepEqual(S.initial(schema.$defs.StepSpec, schema), {run: "echo Hello"});
+  assert.equal(schema.$defs.StepEntry, undefined);
+  assert.equal(schema.$defs.StepBody, undefined);
 });
 
 test("new workflows reference an existing job and do not invent an unavailable one", () => {

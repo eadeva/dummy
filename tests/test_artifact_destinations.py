@@ -24,8 +24,8 @@ def make_project(root, alias="demo", extra=None):
         "versioning": {"project": {"source": "literal", "version": "1.2.3"}},
         "variants": {"default": "debug", "variants": {"debug": {}, "release": {}}},
         "jobs": {
-            "package": {"steps": [{"build": {"uses": "echo"}}]},
-            "docs": {"steps": [{"html": {"uses": "echo"}}]},
+            "package": {"steps": {"build": {"uses": "echo"}}},
+            "docs": {"steps": {"html": {"uses": "echo"}}},
         },
         **(extra or {}),
     }

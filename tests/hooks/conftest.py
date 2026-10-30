@@ -48,17 +48,15 @@ def repository(root, *, alias="app", enabled=True, output=None):
             "jobs": {
                 "build": {
                     "open_report": None,
-                    "steps": [
-                        {
-                            "run": {
-                                "run": [
-                                    sys.executable,
-                                    "-c",
-                                    "from pathlib import Path; Path('job-ran').touch()",
-                                ]
-                            }
+                    "steps": {
+                        "run": {
+                            "run": [
+                                sys.executable,
+                                "-c",
+                                "from pathlib import Path; Path('job-ran').touch()",
+                            ]
                         }
-                    ],
+                    },
                 }
             },
         },

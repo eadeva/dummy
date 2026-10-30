@@ -3,13 +3,15 @@ params:
   jobs:
     type: int
 steps:
-- describe:
+  describe:
     uses: echo
     with:
       message: Building ${vh.variant} with ${params.jobs} jobs
-- generate:
+  generate:
     uses: variant.generate
     with:
       generators:
       - header
       output: _bin/${vh.variant}
+    needs:
+    - describe

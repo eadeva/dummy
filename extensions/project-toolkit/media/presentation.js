@@ -6,14 +6,7 @@
   "use strict";
   const object = value => value !== null && typeof value === "object" && !Array.isArray(value);
   const compact = value => String(value).replace(/\s+/g, " ").trim().slice(0, 90);
-  function namedEntry(value, path) {
-    if (typeof path.at(-1) !== "number" || path.at(-2) !== "steps" || !object(value)) return undefined;
-    const keys = Object.keys(value);
-    return keys.length === 1 && object(value[keys[0]]) ? keys[0] : undefined;
-  }
-  function listLabel(value, path = []) {
-    const named = namedEntry(value, path);
-    if (named) return named;
+  function listLabel(value) {
     if (Array.isArray(value)) return value.map(item => object(item) ? listLabel(item) : compact(item)).join(" · ").slice(0, 90) || "Empty list";
     if (!object(value)) return value === null ? "Not set" : compact(value) || "Empty value";
     for (const key of ["name", "id", "job", "uses", "path", "run", "description"]) {
@@ -32,7 +25,7 @@
     variants: "layers", tools: "tools", credentials: "key", environment: "terminal",
     vars: "symbol-variable", params: "settings-gear", param_defaults: "settings-gear",
     artifactory: "package", events: "calendar", versioning: "versions", configs: "settings-gear",
-    layout: "folder", logging_history_backups: "history", report_formats: "graph", log_analysis: "search", steps: "list-ordered",
+    layout: "folder", logging_history_backups: "history", report_formats: "graph", log_analysis: "search", steps: "git-merge",
   };
   function icon(value, path) {
     if (!path.length) return "settings-gear";
@@ -40,10 +33,10 @@
     if (path.length === 2 && path[0] === "jobs") return "play-circle";
     if (path.length === 2 && path[0] === "workflows") return "git-merge";
     if (path.at(-2) === "events") return "calendar";
-    if (path.includes("steps") && typeof path.at(-2) === "number") return value?.steps ? "list-tree" : "terminal";
-    if (path.at(-1) === "steps") return "list-ordered";
+    if (path.at(-2) === "steps") return "terminal";
+    if (path.at(-1) === "steps") return "git-merge";
     if (Array.isArray(value)) return "list-unordered";
     return object(value) ? "symbol-object" : undefined;
   }
-  return { namedEntry, listLabel, pathLabel, icon };
+  return { listLabel, pathLabel, icon };
 });

@@ -51,12 +51,11 @@ class HelpParam:
 @dataclass
 class HelpStep:
     name: str
-    kind: str  # run | uses | set
+    kind: str  # run | uses
     title: str
-    detail: str  # command, "uses x", "parallel"/"sequential"
+    detail: str  # command or plugin
     when: str | None
     flags: list[str]
-    children: list[HelpStep] = field(default_factory=list)
 
 
 @dataclass
@@ -67,7 +66,7 @@ class HelpJob:
     params: list[HelpParam]
     steps: list[HelpStep]
     requires_tools: list[str]
-    phases: list[str]  # names usable with --from / --to
+    phases: list[str]  # names usable with --only-step / --to
     passthrough: list[str]  # steps accepting "-- args"
     usage: str = ""
     is_default: bool = False
@@ -157,9 +156,9 @@ class BuildHelp:
                     help=job.help,
                     audience=job.audience,
                     params=[_param(n, p) for n, p in job.params.items()],
-                    steps=[_step(s) for s in job.steps],
+                    steps=[_step(name, s) for name, s in job.steps.items()],
                     requires_tools=job.required_tool_names,
-                    phases=[s.name for s in job.steps],
+                    phases=list(job.steps),
                     passthrough=[
                         "/".join(path) for path, s in _walk(job.steps) if s.passthrough
                     ],
@@ -239,14 +238,12 @@ def _param(name: str, spec: ParamSpec) -> HelpParam:
     )
 
 
-def _step(step: StepSpec) -> HelpStep:
-    if step.steps is not None:
-        detail = "parallel" if step.parallel else "sequential"
-    elif step.uses:
+def _step(name: str, step: StepSpec) -> HelpStep:
+    if step.uses:
         detail = f"uses {step.uses}" + (f" {step.with_}" if step.with_ else "")
     else:
         detail = step.run if isinstance(step.run, str) else " ".join(step.run or [])
-    flags = []
+    flags = ["needs: " + ", ".join(step.needs)] if step.needs else ["ready"]
     if step.python is not None:
         p = step.python
         flags.append(
@@ -274,21 +271,18 @@ def _step(step: StepSpec) -> HelpStep:
     if step.secrets:
         flags.append("secrets: " + ", ".join(sorted(step.secrets)))
     return HelpStep(
-        step.name,
+        name,
         step.kind,
         step.title or "",
         detail,
         step.when,
         flags,
-        [_step(c) for c in step.steps or []],
     )
 
 
-def _walk(steps: list[StepSpec], prefix: tuple[str, ...] = ()):
-    for s in steps:
-        path = prefix + (s.name,)
-        yield path, s
-        yield from _walk(s.steps or [], path)
+def _walk(steps: dict[str, StepSpec]):
+    for name, step in steps.items():
+        yield (name,), step
 
 
 def _cred_env(name: str, fields: list[str], mapping: dict[str, str]) -> dict[str, str]:

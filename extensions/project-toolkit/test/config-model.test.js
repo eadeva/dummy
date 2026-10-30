@@ -31,7 +31,7 @@ test("field edits preserve comments, anchors and aliases", () => {
 test("new jobs use model fields and produce authored named steps", () => {
   const value = S.initial(schema.$defs.JobSpec, schema);
   const text = model.edit("jobs: {}\n", [{ op: "add", path: ["jobs", "test"], value }]);
-  assert.deepEqual(YAML.parse(text), { jobs: { test: { steps: [{ step: { run: "echo Hello" } }] } } });
+  assert.deepEqual(YAML.parse(text), { jobs: { test: { steps: {step: { run: "echo Hello" }} } } });
   assert.equal(S.at(schema, YAML.parse(text), ["jobs", "test", "open_report"], schema).default, null);
   const nullable = schema.$defs.ParamSpec.properties.choices;
   assert.deepEqual(S.initial(nullable, schema), []);
@@ -95,7 +95,7 @@ test("YAML scalar semantics match PTK and large integers and timestamps stay int
 });
 
 test("renaming a job preserves its comments and does not replace an existing job", () => {
-  const text = "jobs:\n  # job comment\n  old: {steps: []}\n  other: {steps: []}\n";
+  const text = "jobs:\n  # job comment\n  old: {steps: {}}\n  other: {steps: {}}\n";
   const result = model.edit(text, [{ op: "rename", path: ["jobs", "old"], name: "build" }]);
   assert.ok(result.includes("# job comment"));
   assert.deepEqual(Object.keys(YAML.parse(result).jobs), ["build", "other"]);

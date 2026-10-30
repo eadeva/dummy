@@ -4,9 +4,14 @@ from dataclasses import asdict
 from math import isfinite
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from ...domain.config import tree as t
 from ...domain.config.layout import editor_layout
+from ...domain.config.model import JobSpec
 from ...domain.config.template_variables import catalogue
+from ...domain.graphs import describe_graph
+from ...domain.workflows import WorkflowSpec
 from .project import ExportSchema
 from .role import command_allowed, visible
 from .variants import VariantService
@@ -50,9 +55,25 @@ def describe_configuration(
             sources.append(
                 {"path": list(path), "file": str(file), "line": location.line}
             )
+    graphs = []
+    for section, model, child in (
+        ("jobs", JobSpec, "steps"),
+        ("workflows", WorkflowSpec, "jobs"),
+    ):
+        entries = value.get(section, {}) if isinstance(value, dict) else {}
+        if not isinstance(entries, dict):
+            continue
+        for name, authored in entries.items():
+            path = [section, name, child]
+            try:
+                spec = model.model_validate(authored)
+                graphs.append({"path": path, **describe_graph(getattr(spec, child))})
+            except ValidationError as exc:
+                graphs.append({"path": path, "nodes": [], "error": str(exc)})
     schema = ExportSchema().execute()
     return {
-        "version": 2,
+        "version": 3,
+        "graphs": graphs,
         "fingerprints": fingerprints or {},
         **editor_layout(root / ".main.ptk.yml", tree, schema),
         "schema": schema,

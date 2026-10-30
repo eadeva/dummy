@@ -199,7 +199,7 @@ def describe(ctx, as_json, configuration):
                 }
                 projects.append(item)
     result = {
-        "schema_version": 3,
+        "schema_version": 4,
         "ptk_version": parent.app.version,
         "mode": "workspace" if workspace else "repository",
         "root": str(root),

@@ -31,7 +31,7 @@ def test_quickstart(tmp_path, variant):
     report = json.loads((folder / "report.json").read_text())
     assert report["status"] == "passed"
     assert report["totals"]["tests"] == {"passed": 1}
-    extra = next(s for s in report["steps"] if s["label"] == "checks/extra")
+    extra = next(s for s in report["steps"] if s["label"] == "extra")
     assert extra["status"] == ("passed" if variant == "debug" else "skipped")
     for suffix in ("html", "xml", "md"):
         assert (folder / f"report.{suffix}").is_file()

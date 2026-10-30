@@ -30,7 +30,7 @@ function parseInventory(text) {
   try { doc = JSON.parse(text); } catch {
     throw new Error("PTK did not return JSON. Update PTK and Project Toolkit together.");
   }
-  if (!object(doc) || doc.schema_version !== 3 || !Array.isArray(doc.projects) ||
+  if (!object(doc) || doc.schema_version !== 4 || !Array.isArray(doc.projects) ||
       !Array.isArray(doc.workflows) || !doc.workflows.every(item => named(item) && commandPath(item.command) && runOptions(item.run_options)) || !absolute(doc.root) || typeof doc.ci !== "boolean") {
     throw new Error("Unsupported PTK inventory. Update PTK and Project Toolkit together.");
   }
@@ -41,7 +41,7 @@ function parseInventory(text) {
       throw new Error("Invalid repository paths in PTK inventory.");
     }
     const config = project.configuration;
-    if (!object(config) || config.version !== 2 || !object(config.schema) || config.value !== null && !object(config.value) ||
+    if (!object(config) || config.version !== 3 || !object(config.schema) || !Array.isArray(config.graphs) || !config.graphs.every(graph => object(graph) && Array.isArray(graph.path) && graph.path.length === 3 && graph.path.every(part => typeof part === "string") && Array.isArray(graph.nodes) && graph.nodes.every(node => typeof node.id === "string" && Array.isArray(node.needs) && node.needs.every(id => typeof id === "string") && Number.isInteger(node.depth) && node.depth >= 0)) || config.value !== null && !object(config.value) ||
         !Array.isArray(config.bindings) || !Array.isArray(config.documents) || !Array.isArray(config.files) || !config.files.every(absolute) ||
         !Array.isArray(config.sources) || !config.sources.every(source => object(source) && absolute(source.file) &&
           Array.isArray(source.path) && source.path.every(key => typeof key === "string" || Number.isSafeInteger(key) && key >= 0))) {

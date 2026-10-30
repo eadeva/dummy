@@ -98,31 +98,32 @@ def test_builtin_generation_copy_clean_and_configs(tmp_path):
                 "variants": {"variants": {"demo": {}}},
                 "jobs": {
                     "go": {
-                        "steps": [
-                            {"sync": {"uses": "configs.sync"}},
-                            {"ensure": {"uses": "tools.ensure", "with": {"tools": []}}},
-                            {
-                                "gen": {
-                                    "uses": "variant.generate",
-                                    "with": {"generators": list(GENERATORS)},
-                                }
+                        "steps": {
+                            "sync": {"uses": "configs.sync"},
+                            "ensure": {
+                                "uses": "tools.ensure",
+                                "with": {"tools": []},
+                                "needs": ["sync"],
                             },
-                            {
-                                "copy": {
-                                    "uses": "files.copy",
-                                    "with": {
-                                        "files": "_builds/demo/go/gen/variant.h",
-                                        "to": "_bin/demo",
-                                    },
-                                }
+                            "gen": {
+                                "uses": "variant.generate",
+                                "with": {"generators": list(GENERATORS)},
+                                "needs": ["ensure"],
                             },
-                            {
-                                "clean": {
-                                    "uses": "files.clean",
-                                    "with": {"paths": ["_builds/demo/go/gen"]},
-                                }
+                            "copy": {
+                                "uses": "files.copy",
+                                "with": {
+                                    "files": "_builds/demo/go/gen/variant.h",
+                                    "to": "_bin/demo",
+                                },
+                                "needs": ["gen"],
                             },
-                        ]
+                            "clean": {
+                                "uses": "files.clean",
+                                "with": {"paths": ["_builds/demo/go/gen"]},
+                                "needs": ["copy"],
+                            },
+                        }
                     }
                 },
             }

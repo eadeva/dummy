@@ -1,6 +1,6 @@
 # PTK configuration: this file owns its section or named entity.
 steps:
-- prepare:
+  prepare:
     uses: echo
     with:
       message: Prepared ${date.timestamp}

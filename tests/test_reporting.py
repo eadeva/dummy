@@ -92,48 +92,51 @@ SUMMARY = {
     "params": {"jobs": 4},
     "param_sources": {"jobs": "command line"},
     "steps": [
-        {"step": "build", "kind": "run", "status": "passed", "start": 0, "duration": 4},
         {
-            "step": "checks",
-            "kind": "set",
-            "status": "failed",
-            "start": 4,
-            "duration": 6,
+            "step": "build",
+            "kind": "run",
+            "status": "passed",
+            "start": 0,
+            "duration": 4,
+            "needs": [],
         },
         {
-            "step": "checks/lint",
+            "step": "lint",
             "kind": "run",
             "status": "failed",
             "start": 4,
             "duration": 2,
             "allowed_failure": True,
             "message": "exit code 1",
+            "needs": [],
         },
         {
-            "step": "checks/test",
+            "step": "test",
             "kind": "run",
             "status": "failed",
             "start": 4,
             "duration": 6,
             "message": "exit code 2",
             "command": "pytest <&>",
-            "log_file": "/w/_logs/v1/ci/checks/test.log",
+            "log_file": "/w/_logs/v1/ci/test.log",
+            "needs": [],
         },
         {
             "step": "docs",
             "kind": "run",
             "status": "skipped",
             "message": "condition is false",
+            "needs": [],
         },
     ],
 }
 
 
 def report():
-    step = importers.parse_junit(ET.fromstring(JUNIT), "checks/test", "results.xml")
+    step = importers.parse_junit(ET.fromstring(JUNIT), "test", "results.xml")
     from ptk.domain.reporting.model import Contribution
 
-    return from_summary(SUMMARY, [Contribution("checks/test", suites=step)], "0.1")
+    return from_summary(SUMMARY, [Contribution("test", suites=step)], "0.1")
 
 
 def test_junit_export():
@@ -146,9 +149,7 @@ def test_junit_export():
     )
     lint = next(c for c in own if c.get("name") == "lint")
     assert lint.find("failure") is None and "allowed" in lint.find("system-out").text
-    assert (
-        imported.get("name") == "checks/test: unit" and imported.get("failures") == "1"
-    )
+    assert imported.get("name") == "test: unit" and imported.get("failures") == "1"
 
 
 def test_markdown_and_json_export():
@@ -170,7 +171,7 @@ def test_html_export(tmp_path):
     assert "<h1>Job - ci</h1>" in page
     assert "<title>Job - ci failed - p</title>" in page
     assert "pytest &lt;&amp;&gt;" in page and "<&>" not in page
-    assert 'href="../../../_logs/v1/ci/checks/test.log"' in page
+    assert 'href="../../../_logs/v1/ci/test.log"' in page
     assert "What failed" in page and "parser.bad" in page
     assert 'class="bar allowed"' in page and "https://" not in page
     assert "1 (1 allowed)" not in page  # lint allowed, test blocking -> "2 (1 allowed)"
@@ -179,16 +180,40 @@ def test_html_export(tmp_path):
 
 # --------------------------------------------------------------------------- end to end
 
-PROJECT = """
-project: {name: rep, default_job: ci}
-environment: {keep: [JUNIT]}
-report_formats: [json, junit, html, markdown, github]
+PROJECT = """\
+project:
+  name: rep
+  default_job: ci
+environment:
+  keep:
+  - JUNIT
+report_formats:
+- json
+- junit
+- html
+- markdown
+- github
 jobs:
   ci:
     steps:
-      - unit: 'printf "%s" "$JUNIT" > "$PTK_STEP_REPORTS_DIR/results.xml"'
-      - grab: {uses: report.import, with: {files: ["tools/*.sarif", "tools/*.sarif"]}}
-      - none: {uses: report.import, with: {files: [nothing/*.xml], optional: true}}
+      unit:
+        run: printf "%s" "$JUNIT" > "$PTK_STEP_REPORTS_DIR/results.xml"
+      grab:
+        uses: report.import
+        with:
+          files:
+          - tools/*.sarif
+          - tools/*.sarif
+        needs:
+        - unit
+      none:
+        uses: report.import
+        with:
+          files:
+          - nothing/*.xml
+          optional: true
+        needs:
+        - grab
 """
 
 
@@ -234,10 +259,20 @@ def test_reports_after_run(project):
 
 def test_report_import_without_match_fails(write):
     root = write(
-        project_files("""
-        project: {name: x}
-        jobs: {go: {steps: [{grab: {uses: report.import, with: {files: [no/*.xml]}}}]}}
-        """)
+        project_files(
+            """\
+project:
+  name: x
+jobs:
+  go:
+    steps:
+      grab:
+        uses: report.import
+        with:
+          files:
+          - no/*.xml
+"""
+        )
     )
     result = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
         cli, ["go"], catch_exceptions=False, cwd=root
@@ -270,11 +305,18 @@ def test_report_export_and_history(project, monkeypatch):
 
 def test_reporting_disabled(write):
     root = write(
-        project_files("""
-        project: {name: x}
-        report_formats: []
-        jobs: {go: {steps: [{a: "echo hi"}]}}
-        """)
+        project_files(
+            """\
+project:
+  name: x
+report_formats: []
+jobs:
+  go:
+    steps:
+      a:
+        run: echo hi
+"""
+        )
     )
     result = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
         cli, ["go"], catch_exceptions=False, cwd=root

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -82,9 +81,7 @@ def validation_problems(
                 )
             )
             message = error["msg"].removeprefix("Value error, ")
-            problems.append(
-                Problem(message, t.display_path(tree, path), t.locate(tree, path))
-            )
+            problems.append(Problem(message, t.format_path(path), t.locate(tree, path)))
         return _dedupe(problems)
     return []
 
@@ -330,7 +327,7 @@ class LoadProject:
                 ]
             )
         semantic = [
-            Problem(message, t.display_path(tree, path), t.locate(tree, path))
+            Problem(message, t.format_path(path), t.locate(tree, path))
             for path, message in config_rules.validate(config)
         ]
         if semantic:
@@ -474,35 +471,6 @@ class ExportSchema:
 
     def execute(self) -> dict[str, Any]:
         schema = PtkConfig.model_json_schema(by_alias=True)
-        defs = schema.get("$defs", {})
-        step = defs.get("StepSpec")
-        if step:
-            body = json.loads(json.dumps(step))
-            body["properties"].pop("name", None)
-            body["required"] = [r for r in body.get("required", []) if r != "name"]
-            body["title"] = "Step"
-            defs["StepBody"] = body
-            entry = {
-                "type": "object",
-                "minProperties": 1,
-                "maxProperties": 1,
-                "default": {"step": {"run": "echo Hello"}},
-                "x-ptk-entry-name": "step",
-                "description": '- step-name: {run|uses|steps: ...}  or  - step-name: "command"',
-                "additionalProperties": {
-                    "anyOf": [
-                        {"$ref": "#/$defs/StepBody"},
-                        {"type": "string"},
-                        {"type": "array", "items": {"type": "string"}},
-                    ]
-                },
-            }
-            defs["StepEntry"] = entry
-            text = json.dumps(schema).replace(
-                '"#/$defs/StepSpec"', '"#/$defs/StepEntry"'
-            )
-            schema = json.loads(text)
-            schema["$defs"].pop("StepSpec", None)
         # Form creation hints belong to the installed PTK schema. They describe
         # a valid starting shape without changing runtime configuration defaults.
         definitions = schema.get("$defs", {})
@@ -518,7 +486,7 @@ class ExportSchema:
             },
             "ToolbaseSource": {"package": "tool", "version": "1.0.0"},
             "PythonSpec": {"interpreter": "cli"},
-            "StepBody": {"run": "echo Hello"},
+            "StepSpec": {"run": "echo Hello"},
             "WorkflowJob": {"job": "hello"},
             "VersionSource": {"source": "literal", "version": "0.1.0"},
             "VersioningSpec": {"project": {}},
@@ -530,6 +498,7 @@ class ExportSchema:
         definitions["ArtifactoryStructure"]["properties"]["events"][
             "x-ptk-entry-name"
         ] = "push"
+        definitions["JobSpec"]["properties"]["steps"]["x-ptk-entry-name"] = "step"
         definitions["WorkflowSpec"]["properties"]["jobs"]["x-ptk-entry-name"] = "job"
         definitions["WorkflowJob"]["properties"]["job"]["x-ptk-reference"] = {
             "path": ["jobs"],

@@ -6,7 +6,7 @@ env:
 environment:
   inherit_path: true
 steps:
-- pytest:
+  pytest:
     python:
       project: .
       groups:

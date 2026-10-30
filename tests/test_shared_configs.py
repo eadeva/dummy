@@ -88,14 +88,21 @@ def test_pre_commit_merge():
     }
 
 
-PROJECT = """
-project: {name: cfg}
+PROJECT = """\
+project:
+  name: cfg
 configs:
-  pre-commit: {overlay: ptk/pc.yaml}
+  pre-commit:
+    overlay: ptk/pc.yaml
   ruff: {}
-  clang-format: {overlay: ptk/cf.yaml}
+  clang-format:
+    overlay: ptk/cf.yaml
   clang-tidy: {}
-jobs: {noop: {steps: [{x: "true"}]}}
+jobs:
+  noop:
+    steps:
+      x:
+        run: 'true'
 """
 
 

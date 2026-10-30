@@ -16,29 +16,56 @@ from tests.project_files import project_files
 
 HOST = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": "/tmp"}
 
-PROJECT = """
-project: {name: t, default_job: hello}
-vars: {flavour: vanilla}
+PROJECT = """\
+project:
+  name: t
+  default_job: hello
+vars:
+  flavour: vanilla
 variants:
   default: slow
   components:
     core:
       features:
-        SPEED: {type: int, default: 1}
+        SPEED:
+          type: int
+          default: 1
   variants:
-    slow: {components: [core], data: {mode: careful}}
-    fast: {components: [core], features: {SPEED: 9}, data: {mode: quick}}
+    slow:
+      components:
+      - core
+      data:
+        mode: careful
+    fast:
+      components:
+      - core
+      features:
+        SPEED: 9
+      data:
+        mode: quick
 jobs:
   hello:
     params:
-      who: {default: world}
-      mode: {type: choice, choices: [careful, quick], default: "${vh.data.mode}"}
-      taste: {default: "${vars.flavour}-${env:TASTE:-plain}"}
-      speed: {type: int, default: "${vh.features.SPEED}"}
+      who:
+        default: world
+      mode:
+        type: choice
+        choices:
+        - careful
+        - quick
+        default: ${vh.data.mode}
+      taste:
+        default: ${vars.flavour}-${env:TASTE:-plain}
+      speed:
+        type: int
+        default: ${vh.features.SPEED}
     steps:
-      - say: "echo hello ${params.who} ${params.mode} ${params.taste} ${params.speed}"
+      say:
+        run: echo hello ${params.who} ${params.mode} ${params.taste} ${params.speed}
   other:
-    steps: [{x: "echo other"}]
+    steps:
+      x:
+        run: echo other
 """
 
 
@@ -76,7 +103,7 @@ def test_parameter_defaults_per_variant_vars_and_env(write):
 
 
 def test_template_default_is_type_checked_at_run_time(write):
-    root = write(project_files(PROJECT.replace("mode: quick}", "mode: reckless}")))
+    root = write(project_files(PROJECT.replace("mode: quick", "mode: reckless")))
     with pytest.raises(
         PtkError, match="parameter 'mode': expected one of careful, quick"
     ):
@@ -102,7 +129,9 @@ def test_duplicate_defaults_are_rejected_across_files(write):
     ],
 )
 def test_invalid_default_references_are_config_errors(write, snippet, message):
-    root = write(project_files(PROJECT.replace("who: {default: world}", snippet)))
+    root = write(
+        project_files(PROJECT.replace("who:\n        default: world", snippet))
+    )
     with pytest.raises(ConfigError, match=message.replace("$", r"\$")):
         create_app(environ={}).load_project.execute(root)
 
@@ -125,7 +154,7 @@ def test_default_job_must_exist_and_be_public(write):
 
 
 def test_no_job_and_no_default(write):
-    root = write(project_files(PROJECT.replace(", default_job: hello", "")))
+    root = write(project_files(PROJECT.replace("  default_job: hello\n", "")))
     with pytest.raises(PtkError, match="no project.default_job"):
         prepare(root, variant="slow")
 

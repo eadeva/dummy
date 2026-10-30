@@ -7,11 +7,11 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
 
 1. Install PTK using `install/install.ps1` or `install/install.sh`. Both install
    the extension bundled in the Python package when VS Code is available. The CLI must
-   support `ptk describe --json --configuration` (inventory version 3 and configuration interface version 2).
+   support `ptk describe --json --configuration` (inventory version 4 and configuration interface version 3).
 2. If PTK was installed directly with uv, run `ptk self-service extension` afterwards.
    Alternatively, in VS Code run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.12.0.vsix`. You can also use
-   `code --install-extension project-toolkit-0.12.0.vsix`.
+   `project-toolkit-0.13.0.vsix`. You can also use
+   `code --install-extension project-toolkit-0.13.0.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -75,8 +75,8 @@ Some action paths and flags are known by the extension, including validation,
 reports, initialization, variants, dry runs and cleanup; the schema alone is
 not the full contract.
 
-Extension 0.12.0 requires inventory `schema_version: 3` and
-`configuration.version: 2`. These are independent of package/release numbers
+Extension 0.13.0 requires inventory `schema_version: 4` and
+`configuration.version: 3`. These are independent of package/release numbers
 and the project marker's schema version. Unsupported interfaces are rejected;
 there is no legacy parser or runtime schema fallback. Breaking changes must
 update the affected interface version, extension and integration tests together.
@@ -120,10 +120,10 @@ labels and icon shapes also identify each category.
   prints an **Info** message that it has not run yet or its saved report was
   removed. The action does not run the job/workflow or prompt for parameters.
 - Use **Run Job or Workflow with Options** (gear) on either kind of target.
-  Jobs offer multiple variant checkboxes and `--from`/`--to` dropdowns showing
+  Jobs offer multiple variant checkboxes and `--only-step`/`--to` dropdowns showing
   the actual step names and titles. **More run options** provides feature and
   step-argument suggestions plus flags with help; `--env` requires **Dry run**.
-  Workflows offer their help and one owner variant, with mappings resolved by PTK.
+  Workflows offer their help and multiple/all owner variants, with mappings resolved by PTK.
   Workspace workflows have no owner-variant selector. Saved tasks retain run
   options; choices are rechecked before starting the selected batch.
 - Job parameters appear in the same form with text/number fields, boolean checkboxes, choices,
@@ -133,11 +133,11 @@ labels and icon shapes also identify each category.
   expressions and resolved when PTK runs. Choose **Run job**, **Dry run** or
   **Cancel**. Lists use comma-separated values. Secret parameters stay in their
   declared credential environment and are excluded from the form.
-- Expand a job to check one or more variants. Run starts them in parallel, each
+- Expand a job or workflow to check one or more variants. Run starts them in parallel, each
   with a named task and dedicated terminal. Repository workflows select one owner
   variant. Selection is
   stored independently for that row in VS Code workspace state. Choose
-  **Use project default** to clear it. PTK configuration files are unchanged.
+  **All variants** to select every concrete variant, or clear it to select the actual default variant automatically. PTK configuration files are unchanged.
 - Use **Display Variant** to inspect resolved features. Edit variant definitions
   in the configuration tree and form, or in raw YAML.
 - Expand **Workflows** to run or dry-run local workflows. Workflows retain their
@@ -237,14 +237,14 @@ without `.main.ptk.yml` displays **No PTK project found** and offers **PTK init*
 which asks for the configuration directory.
 
 Expand a job or repository workflow to see variant checkboxes, or use its existing
-variant selector. Jobs accept multiple variants; workflows retain one owner variant.
-**Use project default** clears explicit selections and follows the configured default.
+variant selector. Jobs accept multiple variants; workflows also accept multiple owner variants.
+**All variants** selects every concrete variant. Clearing the selection checks the actual default variant automatically.
 Unchecking the last selected variant also restores this default. Abstract variants
 cannot be selected. Selected names appear beside the parent row and are remembered
 independently per target. Checkbox changes update that branch without reloading PTK
 or the form.
 
-Run, Dry Run, Clean and Re-run start a separate task for every selected job variant
+Run, Dry Run, Clean and Re-run start a separate task for every selected job or workflow variant
 in parallel. The parameter form opens once; explicit overrides apply to all selected
 variants, while omitted values and template defaults resolve independently in PTK.
 Canceling the form launches nothing. Open Report opens each selected variant's report.
@@ -267,7 +267,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.12.0.vsix`. Use `ptk extension --dry-run`
+`extensions/project-toolkit/project-toolkit-0.13.0.vsix`. Use `ptk self-service extension --dry-run`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:
@@ -325,3 +325,11 @@ Browser regression tests exercise the actual form scripts, including slow typing
 focus/cursor preservation and navigation. Install Playwright with Chromium to run
 them, or set `PTK_TEST_PLAYWRIGHT` to its module path and `PTK_TEST_CHROMIUM` to a
 Chromium executable. Without Playwright these tests are explicitly skipped.
+
+
+Jobs and workflows under **Configuration** use graph metadata supplied by PTK.
+Expand **Ready** and dependency levels to inspect nodes. Each node appears once;
+its description lists all prerequisites, and selecting it opens its fields.
+Levels are navigation aids, not execution barriers. Invalid graphs show PTK's
+error while their current-format fields remain editable. Dry-runs include a
+terminal dependency summary and a link to an offline SVG/HTML graph.

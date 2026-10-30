@@ -6,17 +6,19 @@ requires_tools:
 environment:
   inherit_path: true
 steps:
-- dependencies:
+  dependencies:
     cwd: ${project.root}/extensions/project-toolkit
     run:
     - npm
     - ci
     - --include=dev
     timeout: 600
-- package:
+  package:
     cwd: ${project.root}/extensions/project-toolkit
     run:
     - npm
     - run
     - package
     timeout: 600
+    needs:
+    - dependencies

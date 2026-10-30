@@ -7,7 +7,7 @@ params:
     - unit
     - smoke
 steps:
-- tests:
+  tests:
     uses: echo
     with:
       message: 'Testing ${env.PROJECT_IDENTITY}: ${params.suite} (${vh.variant})'

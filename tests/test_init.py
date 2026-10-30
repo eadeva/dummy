@@ -225,7 +225,13 @@ def test_scaffold_discovered_fragments_variants_and_ci(tmp_path):
         assert project.config.credentials == {}
     # New jobs are discovered without editing any existing configuration file.
     (tmp_path / "ptk/jobs/check.ptk.yml").write_text(
-        "steps:\n  - check: {uses: echo, with: {message: discovered}}\n"
+        """\
+steps:
+  check:
+    uses: echo
+    with:
+      message: discovered
+"""
     )
     result = CliRunner(env={"PTK_CI": "0"}).invoke(cli, ["check"], cwd=tmp_path)
     assert result.exit_code == 0, result.output

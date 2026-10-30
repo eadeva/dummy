@@ -56,9 +56,7 @@ def test_project_dependency_groups_reach_uv_before_the_command(tmp_path, run):
     manager = UvPythonEnvManager(None, uv="/tools/uv")
     spec = PythonSpec(project="project with spaces", groups=["dev", "docs"])
     runtime = manager.runtime(spec, tmp_path, create=False)
-    step = PlannedStep(
-        path=("docs",), spec=StepSpec(name="docs", run=run, python=spec), run=run
-    )
+    step = PlannedStep(path=("docs",), spec=StepSpec(run=run, python=spec), run=run)
     command = build_command(
         step, env={}, cwd=str(tmp_path), os_name="linux", python=runtime
     )

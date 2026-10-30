@@ -66,27 +66,17 @@ background:var(--code);color:var(--muted);white-space:nowrap}
 .tag.req{background:var(--cond-soft);color:var(--cond)}
 .tag.maint{background:transparent;color:var(--cond);border:1px solid var(--cond)}
 .tag.def{background:var(--rail-soft);color:var(--rail)}
-/* the pipeline: sequential steps on a rail, parallel sets as lanes */
-ol.rail{list-style:none;margin:8px 0 0;padding:0 0 0 26px;position:relative}
-ol.rail::before{content:"";position:absolute;left:8px;top:10px;bottom:14px;width:2px;background:var(--rail);opacity:.35}
-.node{position:relative;margin:0 0 14px}
-ol.rail>.node::before{content:"";position:absolute;left:-23px;top:6px;width:12px;height:12px;border-radius:50%;
-background:var(--paper);border:2px solid var(--rail)}
-ol.rail>.node.set::before{border-radius:3px;background:var(--rail)}
+/* Named steps and their declared dependencies. */
+ul.steps{list-style:none;margin:0;padding:0}
+.node{margin:12px 0;padding:12px;border:1px solid var(--line);border-radius:6px}
 .node-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
 .node-name{font-weight:650}.node-title{color:var(--muted)}
-.mode{font-size:13px;color:var(--rail)}
 .node pre{margin:4px 0 0;background:var(--code);padding:6px 10px;border-radius:4px;overflow-x:auto;
 white-space:pre-wrap;overflow-wrap:anywhere}
 .cond{display:inline-block;margin-top:4px;font-size:13px;color:var(--cond);background:var(--cond-soft);
 padding:1px 8px;border-radius:3px}
 .cond code{background:transparent;padding:0;color:inherit}
 .chips{margin-top:4px}
-.lanes{list-style:none;padding-left:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-top:8px;
-padding-top:10px;border-top:2px solid var(--rail)}
-.lane{background:var(--paper);border:1px solid var(--line);border-top:3px solid var(--rail);border-radius:0 0 4px 4px;
-padding:8px 12px}
-.node.lane{margin:0}
 .notes{margin:10px 0 0;padding-left:18px;color:var(--muted)}.notes li{margin:2px 0}
 .empty{color:var(--muted);font-style:italic}
 .hidden{display:none!important}
@@ -142,23 +132,11 @@ def _node(step: HelpStep, extra: str = "") -> str:
         else ""
     )
     chips = f'<div class="chips">{_tags(step.flags)}</div>' if step.flags else ""
-    if step.kind == "set":
-        parallel = step.detail == "parallel"
-        head += f'<span class="mode">{"runs in parallel" if parallel else "runs in order"}</span></div>'
-        if parallel:
-            inner = (
-                '<ul class="lanes">'
-                + "".join(_node(c, " lane") for c in step.children)
-                + "</ul>"
-            )
-        else:
-            inner = _rail(step.children)
-        return f'<li class="node set{extra}">{head}{cond}{chips}{inner}</li>'
     return f'<li class="node{extra}">{head}</div><pre>{_e(step.detail)}</pre>{cond}{chips}</li>'
 
 
-def _rail(steps: list[HelpStep]) -> str:
-    return '<ol class="rail">' + "".join(_node(s) for s in steps) + "</ol>"
+def _steps(steps: list[HelpStep]) -> str:
+    return '<ul class="steps">' + "".join(_node(s) for s in steps) + "</ul>"
 
 
 def _job(job: HelpJob) -> str:
@@ -188,9 +166,9 @@ def _job(job: HelpJob) -> str:
             '<h3>Parameters</h3><div class="table-wrap"><table><tr><th>Option</th><th>Type</th>'
             f"<th>Default</th><th>From env</th><th>Description</th></tr>{rows}</table></div>"
         )
-    parts.append(f"<h3>Steps</h3>{_rail(job.steps)}")
+    parts.append(f"<h3>Steps</h3>{_steps(job.steps)}")
     notes = [
-        "Start or stop at a top-level step with <code>--from</code> / <code>--to</code>: "
+        "Run a step and its prerequisites with <code>--to STEP</code>, or explicitly bypass prerequisites with <code>--only-step STEP</code>: "
         + ", ".join(f"<code>{_e(p)}</code>" for p in job.phases)
     ]
     if job.passthrough:
@@ -282,7 +260,7 @@ def render(doc: HelpDocument) -> str:
             "ptk                               # run the default job\n"
             "ptk JOB --dry-run                # see what would run\n"
             "ptk JOB --NAME VALUE           # run it with a parameter\n"
-            "ptk JOB --from STEP -- ARGS\n"
+            "ptk JOB --only-step STEP -- ARGS\n"
             "ptk variant list"
         )
     )

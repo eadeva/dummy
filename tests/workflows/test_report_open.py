@@ -57,9 +57,7 @@ def invoke(write):
                         "jobs": {
                             "check": {
                                 "open_report": child_policy,
-                                "steps": [
-                                    {"run": {"run": [sys.executable, "-c", code]}}
-                                ],
+                                "steps": {"run": {"run": [sys.executable, "-c", code]}},
                             }
                         },
                     }

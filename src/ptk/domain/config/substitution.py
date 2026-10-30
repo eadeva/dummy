@@ -39,6 +39,7 @@ NAMESPACES = (
     "version",
     "date",
     "git",
+    "steps",
 )
 
 
@@ -148,6 +149,14 @@ class Scope:
             return self.secret(rest)
         if ns == "vars":
             return self._var(rest)
+        if ns == "steps" and ns in self.namespaces:
+            name, _, field = rest.rpartition(".")
+            try:
+                return self.namespaces[ns][name][field]
+            except KeyError:
+                raise SubstitutionError(
+                    f"step reference {ref!r} is unavailable; only current-run step directories are provided"
+                ) from None
         if ns not in self.namespaces:
             known = [
                 n

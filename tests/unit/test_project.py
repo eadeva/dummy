@@ -44,17 +44,31 @@ def test_unknown_keys_with_suggestions_and_lines(write, load):
 
 def test_semantic_errors(write, load):
     root = write(
-        project_files("""
-        project: {name: demo, default_job: biuld}
-        vars: {x: "${vars.y}"}
-        jobs:
-          build:
-            requires_tools: [cmak]
-            params: {jobs: {type: int, default: 2}}
-            steps:
-              - compile: {run: "make -j${params.job}", when: "params.jobs > 1 and FOO"}
-              - leak: {run: "curl -H ${secret:repo.token}"}
-    """)
+        project_files(
+            """\
+project:
+  name: demo
+  default_job: biuld
+vars:
+  x: ${vars.y}
+jobs:
+  build:
+    requires_tools:
+    - cmak
+    params:
+      jobs:
+        type: int
+        default: 2
+    steps:
+      compile:
+        run: make -j${params.job}
+        when: params.jobs > 1 and FOO
+      leak:
+        run: curl -H ${secret:repo.token}
+        needs:
+        - compile
+"""
+        )
     )
     with pytest.raises(ConfigError) as exc:
         load(root)

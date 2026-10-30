@@ -6,16 +6,29 @@ from ptk.domain.config.model import PtkConfig
 from ptk.domain.errors import ConfigError
 from tests.project_files import project_files
 
-MAIN = """
-project: {name: shared}
+MAIN = """\
+project:
+  name: shared
 jobs:
   build:
-    params: {jobs: {type: int}, own: {type: int, default: 2}}
-    steps: [{echo: {uses: echo}}]
+    params:
+      jobs:
+        type: int
+      own:
+        type: int
+        default: 2
+    steps:
+      echo:
+        uses: echo
   test:
     requires_tools: []
-    params: {jobs: {type: int, default: 3}}
-    steps: [{echo: {uses: echo}}]
+    params:
+      jobs:
+        type: int
+        default: 3
+    steps:
+      echo:
+        uses: echo
 """
 
 
@@ -100,7 +113,7 @@ def test_required_and_explicit_null_do_not_inherit_defaults():
                         "a": {"type": "int", "required": True},
                         "b": {"type": "int", "default": None},
                     },
-                    "steps": [{"echo": {"uses": "echo"}}],
+                    "steps": {"echo": {"uses": "echo"}},
                 }
             },
         }
@@ -120,7 +133,7 @@ def test_global_tools_without_jobs_and_true_preserves_settings():
             "requires_tools": {"git": {"version": ">=2"}},
             "tools": {"git": {}},
             "jobs": {
-                "go": {"requires_tools": ["git"], "steps": [{"x": {"uses": "echo"}}]}
+                "go": {"requires_tools": ["git"], "steps": {"x": {"uses": "echo"}}}
             },
         }
     )

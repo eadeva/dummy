@@ -136,9 +136,9 @@ def steps(ctx, param, incomplete):
     job = _job(ctx)
     return (
         [
-            CompletionItem(step.name, help=step.title or "Top-level step")
-            for step in job.steps
-            if step.name.startswith(incomplete)
+            CompletionItem(name, help=step.title or "Step")
+            for name, step in job.steps.items()
+            if name.startswith(incomplete)
         ]
         if job
         else []
@@ -149,15 +149,12 @@ def passthrough_steps(ctx, param, incomplete):
     job = _job(ctx)
     values = {}
 
-    def visit(steps, prefix=""):
-        for step in steps:
-            name = f"{prefix}{step.name}"
-            if step.passthrough:
-                values[name + "="] = step.title or "Additional command arguments"
-            visit(step.steps or [], name + "/")
-
     if job:
-        visit(job.steps)
+        values = {
+            name + "=": step.title or "Additional command arguments"
+            for name, step in job.steps.items()
+            if step.passthrough
+        }
     return _items(values, incomplete)
 
 

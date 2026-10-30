@@ -86,20 +86,17 @@ def test_installed_plugin_distribution_end_to_end(tmp_path, monkeypatch):
                 "credentials": {"remote": {"providers": ["custom"]}},
                 "jobs": {
                     "go": {
-                        "steps": [
-                            {
-                                "custom": {
-                                    "uses": "custom.echo",
-                                    "env": {"TOKEN": "${secret:remote.token}"},
-                                }
+                        "steps": {
+                            "custom": {
+                                "uses": "custom.echo",
+                                "env": {"TOKEN": "${secret:remote.token}"},
                             },
-                            {
-                                "gen": {
-                                    "uses": "variant.generate",
-                                    "with": {"generators": ["custom"]},
-                                }
+                            "gen": {
+                                "uses": "variant.generate",
+                                "with": {"generators": ["custom"]},
+                                "needs": ["custom"],
                             },
-                        ]
+                        }
                     }
                 },
             }

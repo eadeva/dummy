@@ -1,6 +1,6 @@
 # PTK configuration: this file owns its section or named entity.
 steps:
-- check:
+  check:
     uses: echo
     with:
       message: Tests would run here

@@ -134,11 +134,6 @@ class FileLogObserver:
         self._event("run_started", params=plan.params, param_sources=plan.param_sources)
 
     def step_started(self, step: PlannedStep, command: str | None) -> None:
-        if step.kind == "set":
-            mode = "parallel" if step.spec.parallel else "sequential"
-            self._line(f"[{step.label}] start ({mode})")
-            self._event("step_started", step=step.label, kind="set", mode=mode)
-            return
         assert self._plan is not None
         path = Path(
             self._layout.step_log(self._plan.variant, self._plan.job, step.path)

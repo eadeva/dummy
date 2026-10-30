@@ -2,7 +2,7 @@
   "name": "project-toolkit",
   "displayName": "Project Toolkit",
   "description": "Run PTK jobs, workflows and built-in commands, browse help, select variants and open reports.",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "publisher": "eadeva",
   "license": "UNLICENSED",
   "private": true,
@@ -241,7 +241,7 @@
           "type": "string",
           "default": "ptk",
           "scope": "resource",
-          "description": "PTK executable or absolute path. For a prepared uv environment, set this to uv and arguments to [\"run\", \"--no-sync\", \"ptk\"]. The extension also adds --no-sync to legacy uv run settings so launching PTK does not reinstall packages."
+          "description": "PTK executable or absolute path. For a prepared uv environment, set this to uv and arguments to [\"run\", \"--no-sync\", \"ptk\"]. The extension enforces --no-sync for uv run so launching PTK does not reinstall packages."
         },
         "projectToolkit.arguments": {
           "type": "array",
@@ -339,7 +339,7 @@
                 "type": "string"
               }
             },
-            "description": "PTK run option values, keyed by inventory parameter name. For example start: [\"configure\"], end: [\"build\"]."
+            "description": "PTK run option values, keyed by inventory parameter name. For example end: [\"build\"] includes prerequisites, while only_step: [\"build\"] runs just that step."
           }
         },
         "when": "processExecutionSupported && isWorkspaceTrusted"

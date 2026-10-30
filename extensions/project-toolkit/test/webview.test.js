@@ -35,7 +35,7 @@ async function form(t, value = { vars: { first: "original", second: "other", unu
 }
 
 test("form orders scalar fields first, follows root priorities and preserves step order", options, async t => {
-  const h = await form(t, { workflows: {}, project: { name: "Demo" }, jobs: { build: { env: {}, steps: [{ zeta: { run: "echo first" } }, { alpha: { run: "echo second" } }], audience: "all", help: "Build" } }, repository: { alias: "demo" }, ptk_version: ">=1" }, []);
+  const h = await form(t, { workflows: {}, project: { name: "Demo" }, jobs: { build: { env: {}, steps: {zeta: { run: "echo first" }, alpha: { run: "echo second" }}, audience: "all", help: "Build" } }, repository: { alias: "demo" }, ptk_version: ">=1" }, []);
   assert.deepEqual(await h.page.locator("label.name").allTextContents(), ["ptk_version", "repository", "project", "jobs", "workflows"]);
   const navigate = selection => h.page.evaluate(selection => window.dispatchEvent(new MessageEvent("message", { data: { type: "navigate", selection } })), selection);
   await navigate(["jobs", "build"]);
@@ -58,7 +58,7 @@ test("parameter form names all parallel variants without pre-filling dynamic ove
 });
 
 test("compact rows fit more fields and schema help is accessible without editing", options, async t => {
-  const h = await form(t, { jobs: { build: { help: "Build the project", only_cx: false, audience: "all", open_report: "on_errors", env: {}, params: {}, requires_tools: {}, steps: [{ compile: { run: "make" } }] } } }, ["jobs", "build"]);
+  const h = await form(t, { jobs: { build: { help: "Build the project", only_cx: false, audience: "all", open_report: "on_errors", env: {}, params: {}, requires_tools: {}, steps: {compile: { run: "make" }} } } }, ["jobs", "build"]);
   const rows = await h.page.locator(".field").evaluateAll(rows => rows.map(row => row.getBoundingClientRect().height));
   assert.ok(rows.every(height => height <= 55), JSON.stringify(rows));
   assert.equal(await h.page.getByRole("button", { name: "Add field", exact: true }).isVisible(), true);
@@ -77,7 +77,7 @@ test("compact rows fit more fields and schema help is accessible without editing
 });
 
 test("compact configuration reflows in narrow editors and displays optional-field help", options, async t => {
-  const h = await form(t, { jobs: { build: { steps: [{ compile: { run: "make", timeout: 30, retries: 2 } }] } } }, ["jobs", "build", "steps", 0, "compile"]);
+  const h = await form(t, { jobs: { build: { steps: {compile: { run: "make", timeout: 30, retries: 2 }} } } }, ["jobs", "build", "steps", "compile"]);
   await h.page.setViewportSize({ width: 380, height: 850 });
   await h.page.getByRole("combobox", { name: "Optional field", exact: true }).selectOption("passthrough");
   assert.match(await h.page.locator(".add .help").innerText(), /--args-for/);
@@ -144,9 +144,9 @@ test("failed saves retain the entered value and do not retry automatically", opt
 });
 
 test("tree navigation opens named step fields with readable breadcrumbs", options, async t => {
-  const h = await form(t, { jobs: { build: { steps: [{ compile: { run: "make" } }] } } }, ["jobs", "build", "steps"]);
+  const h = await form(t, { jobs: { build: { steps: {compile: { run: "make" }} } } }, ["jobs", "build", "steps"]);
   assert.deepEqual(await h.page.locator("label.name").allTextContents(), ["compile"]);
-  await h.page.evaluate(() => window.dispatchEvent(new MessageEvent("message", { data: { type: "navigate", selection: ["jobs", "build", "steps", 0, "compile"] } })));
+  await h.page.evaluate(() => window.dispatchEvent(new MessageEvent("message", { data: { type: "navigate", selection: ["jobs", "build", "steps", "compile"] } })));
   assert.equal(await h.field("run").inputValue(), "make");
   assert.deepEqual(await h.page.locator(".crumbs button").allTextContents(), ["Configuration", "jobs", "build", "steps", "compile"]);
 });
@@ -179,16 +179,18 @@ test("an unfinished numeric value survives a structural acknowledgement", option
   assert.equal((await h.edits()).length, 1);
 });
 
-test("adding a second list item during a save uses the acknowledged list position", options, async t => {
-  const h = await form(t, { jobs: { build: { steps: [] } } }, ["jobs", "build", "steps"]);
-  await h.page.getByRole("button", { name: "Add item", exact: true }).click();
+test("adding a second named step during a save retains its name and required fields", options, async t => {
+  const h = await form(t, {jobs: {build: {steps: {}}}}, ["jobs", "build", "steps"]);
+  const name = h.page.getByRole("textbox", {name: "New field name", exact: true});
+  await name.fill("first"); await h.page.getByRole("button", {name: "Add field", exact: true}).click();
   const [first] = await h.edits();
-  await h.page.getByRole("button", { name: "Add item", exact: true }).click();
-  h.value.jobs.build.steps.push(first.operations[0].value);
-  await h.state({ ack: first.id });
+  await name.fill("second"); await h.page.getByRole("button", {name: "Add field", exact: true}).click();
+  h.value.jobs.build.steps.first = first.operations[0].value;
+  await h.state({ack: first.id});
   const second = (await h.edits())[1];
-  assert.equal(second.operations[0].path.at(-1), 1);
-  assert.notDeepEqual(Object.keys(second.operations[0].value), Object.keys(first.operations[0].value));
+  assert.equal(second.operations[0].path.at(-1), "second");
+  assert.deepEqual(first.operations[0].value, {run: "echo Hello"});
+  assert.deepEqual(second.operations[0].value, {run: "echo Hello"});
 });
 
 test("a structural reply retains the next add-field name and caret", options, async t => {
@@ -324,22 +326,21 @@ test("literal fields do not offer variable insertion and keyboard opening does n
 test("run form shows authored choices and help and submits one variant batch", options, async t => {
   const { builtinParam } = require("./fixtures");
   const h = await form(t);
-  await h.state({ mode: "parameters", kind: "job", name: "build", project: "demo", variants: ["small"], useDefault: true, defaultVariant: "small",
+  await h.state({ mode: "parameters", kind: "job", name: "build", project: "demo", variants: ["small"], defaultVariant: "small",
     variantChoices: [{ name: "small", description: "Quick developer build", aliases: ["dev"] }, { name: "large", description: "Full build" }],
     runOptions: [
-      builtinParam("start", { kind: "option", option: "--from", help: "Start at this top-level step.", choices: ["configure", "compile"], suggestions: [{ value: "configure", help: "Prepare build files" }] }),
-      builtinParam("end", { kind: "option", option: "--to", help: "Stop after this top-level step.", choices: ["configure", "compile"] }),
+      builtinParam("only_step", { kind: "option", option: "--only-step", help: "Run only this step, bypassing prerequisites.", choices: ["configure", "compile"], suggestions: [{ value: "configure", help: "Prepare build files" }] }),
+      builtinParam("end", { kind: "option", option: "--to", help: "Run this step and its prerequisites.", choices: ["configure", "compile"] }),
       builtinParam("features", { kind: "option", option: "--feature", multiple: true, help: "Override a variant feature.", suggestions: [{ value: "MODE=", help: "Compilation mode" }] }),
     ], params: [{ name: "mode", type: "choice", choices: ["Debug", "Release"], help: "Choose compiler optimization", default: "Debug" }],
   });
   assert.match(await h.page.locator("main").innerText(), /Quick developer build/);
   assert.match(await h.page.locator("main").innerText(), /Aliases: dev/);
-  assert.deepEqual(await h.field("--from").locator("option").allTextContents(), ["Use default", "configure — Prepare build files", "compile"]);
-  await h.field("--from").selectOption("configure");
-  await h.field("--to").selectOption("compile");
+  assert.deepEqual(await h.field("--only-step").locator("option").allTextContents(), ["Use default", "configure — Prepare build files", "compile"]);
+  await h.field("--only-step").selectOption("configure");
   await h.page.getByRole("checkbox", { name: "small", exact: true }).check();
   await h.page.getByRole("checkbox", { name: "large", exact: true }).check();
-  assert.equal(await h.page.getByRole("checkbox", { name: "Use project default (small)", exact: true }).isChecked(), false);
+  assert.equal(await h.page.getByRole("checkbox", { name: "All variants", exact: true }).isChecked(), true);
   assert.equal(await h.field("mode").isDisabled(), true);
   await h.page.getByText("More run options", { exact: true }).click();
   await h.page.getByRole("button", { name: "MODE=", exact: true }).click();
@@ -351,22 +352,25 @@ test("run form shows authored choices and help and submits one variant batch", o
   await h.page.getByRole("button", { name: "Dry run", exact: true }).click();
   const message = await h.page.evaluate(() => window.messages.at(-1));
   assert.deepEqual(message.variants, ["small", "large"]);
-  assert.deepEqual(message.runOptions, { start: ["configure"], end: ["compile"], features: ["MODE=fast"] });
+  assert.deepEqual(message.runOptions, { only_step: ["configure"], features: ["MODE=fast"] });
   assert.deepEqual(message.params, {});
   assert.equal(message.preview, true);
 });
 
-test("workflow run form provides a single owner variant and workflow help", options, async t => {
+test("workflow run form supports all owner variants and automatic default selection", options, async t => {
   const h = await form(t);
   await h.state({ mode: "parameters", kind: "workflow", name: "verify", help: "Run all validation jobs", project: "demo", variants: ["small"],
     variantChoices: [{ name: "small" }, { name: "large" }], defaultVariant: "small", runOptions: [], params: [] });
   assert.match(await h.page.locator("main").innerText(), /Run all validation jobs/);
-  await h.page.getByRole("radio", { name: "large", exact: true }).check();
-  assert.equal(await h.page.getByRole("radio", { name: "small", exact: true }).isChecked(), false);
+  await h.page.getByRole("checkbox", { name: "All variants", exact: true }).check();
+  assert.equal(await h.page.getByRole("checkbox", { name: "small", exact: true }).isChecked(), true);
+  await h.page.getByRole("checkbox", { name: "All variants", exact: true }).uncheck();
+  assert.equal(await h.page.getByRole("checkbox", { name: "small", exact: true }).isChecked(), true);
+  await h.page.getByRole("checkbox", { name: "large", exact: true }).check();
   assert.equal(await h.page.getByRole("combobox").count(), 0);
   await h.page.getByRole("button", { name: "Run workflow", exact: true }).click();
   const message = await h.page.evaluate(() => window.messages.at(-1));
-  assert.deepEqual(message.variants, ["large"]);
+  assert.deepEqual(message.variants, ["small", "large"]);
   assert.deepEqual(message.runOptions, {});
   assert.equal(message.preview, false);
 });

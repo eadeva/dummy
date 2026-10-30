@@ -17,14 +17,14 @@ params:
     default: ${vh.data.toolchain}
     help: Compiler toolchain
 steps:
-- configure:
+  configure:
     run:
     - cmake
     - --preset
     - ${vars.preset}
     - -DCMAKE_BUILD_TYPE=${params.build_type}
     - -DTOOLCHAIN=${params.toolchain}
-- compile:
+  compile:
     run:
     - cmake
     - --build
@@ -32,13 +32,16 @@ steps:
     - ${vars.preset}
     - -j
     - ${params.jobs}
-- checks:
-    parallel: true
-    steps:
-    - lint:
-        run: tools/lint.py
-        python:
-          uvx: ruff==0.6.9
-    - camera-selftest:
-        run: tools/camera_selftest.sh
-        when: COMPONENT_CAMERA and DISPLAY_SIZE >= 10
+    needs:
+    - configure
+  lint:
+    run: tools/lint.py
+    python:
+      uvx: ruff==0.6.9
+    needs:
+    - compile
+  camera-selftest:
+    run: tools/camera_selftest.sh
+    when: COMPONENT_CAMERA and DISPLAY_SIZE >= 10
+    needs:
+    - compile

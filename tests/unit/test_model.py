@@ -31,33 +31,70 @@ def test_workflow_requires_job_and_schema_uses_job_names():
     assert "JobSpec" in schema["$defs"] and "ActionSpec" not in schema["$defs"]
 
 
-def test_step_short_forms():
-    assert StepSpec.model_validate({"compile": "make"}).run == "make"
-    assert StepSpec.model_validate({"compile": ["make", "-j4"]}).run == ["make", "-j4"]
-    step = StepSpec.model_validate(
-        {"checks": {"parallel": True, "steps": [{"a": "x"}, {"b": "y"}]}}
+def test_named_step_mapping_and_dependencies():
+    job = JobSpec.model_validate(
+        {
+            "steps": {
+                "compile": {"run": ["make", "-j4"]},
+                "test": {"uses": "echo", "needs": "compile"},
+            }
+        }
     )
-    assert step.kind == "set" and [s.name for s in step.steps] == ["a", "b"]
-    assert [s.name for s in step.walk()] == ["checks", "a", "b"]
+    assert job.steps["test"].needs == ["compile"]
+    assert job.steps["compile"].kind == "run"
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        [{"compile": "make"}],
+        {"compile": "make"},
+        {"compile": ["make"]},
+        {"compile": {"run": "make", "parallel": True}},
+        {"compile": {"run": "make", "background": True}},
+        {"compile": {"steps": {"nested": {"run": "make"}}}},
+        {"compile": {"run": "make", "name": "old"}},
+    ],
+)
+def test_only_current_step_format_is_accepted(raw):
+    with pytest.raises(ValidationError):
+        JobSpec.model_validate({"steps": raw})
 
 
 @pytest.mark.parametrize(
     "raw, message",
     [
-        ({"x": {"run": "a", "uses": "b"}}, "exactly one of"),
-        ({"x": {"run": "a", "parallel": True}}, "only allowed for step sets"),
-        (
-            {"x": {"uses": "a", "python": {"uvx": "ruff"}}},
-            "only allowed together with run",
-        ),
-        ({"x": {"run": "a", "with": {"k": 1}}}, "only allowed together with uses"),
-        ({"x": {"steps": [{"a": "1"}, {"a": "2"}]}}, "duplicate step name"),
-        ({"bad name": "x"}, "step name"),
+        ({"run": "a", "uses": "b"}, "exactly one of"),
+        ({"uses": "a", "python": {"uvx": "ruff"}}, "only allowed together with run"),
+        ({"run": "a", "with": {"k": 1}}, "only allowed together with uses"),
     ],
 )
 def test_step_rules(raw, message):
     with pytest.raises(ValidationError, match=message):
         StepSpec.model_validate(raw)
+
+
+@pytest.mark.parametrize(
+    "steps, message",
+    [
+        ({"bad name": {"run": "x"}}, "invalid step ID"),
+        ({"a": {"run": "x", "needs": "missing"}}, "unknown"),
+        ({"a": {"run": "x", "needs": "a"}}, "cannot need itself"),
+        ({"a": {"run": "x"}, "b": {"run": "x", "needs": ["a", "a"]}}, "repeat"),
+        ({"a": {"run": "x", "needs": "b"}, "b": {"run": "x", "needs": "a"}}, "cycle"),
+    ],
+)
+def test_invalid_step_graph_is_rejected(steps, message):
+    with pytest.raises(ValidationError, match=message):
+        JobSpec.model_validate({"steps": steps})
+
+
+@pytest.mark.parametrize("other", ["Compile", "compile."])
+def test_step_ids_have_distinct_portable_output_folders(other):
+    with pytest.raises(ValidationError, match="share an output folder"):
+        JobSpec.model_validate(
+            {"steps": {"compile": {"uses": "echo"}, other: {"uses": "echo"}}}
+        )
 
 
 def test_python_spec_exactly_one():
@@ -79,13 +116,18 @@ def test_params_convert_and_validate():
     with pytest.raises(ValueError, match="one of"):
         ParamSpec(type="choice", choices=["a"]).convert("b")
     with pytest.raises(ValidationError, match="reserved"):
-        JobSpec.model_validate({"params": {"from": {}}, "steps": [{"a": "x"}]})
+        JobSpec.model_validate(
+            {"params": {"only_step": {}}, "steps": {"a": {"run": "x"}}}
+        )
 
 
 def test_reserved_job_names_and_defaults():
     with pytest.raises(ValidationError, match="reserved"):
         PtkConfig.model_validate(
-            {"project": {"name": "x"}, "jobs": {"config": {"steps": [{"a": "b"}]}}}
+            {
+                "project": {"name": "x"},
+                "jobs": {"config": {"steps": {"a": {"run": "b"}}}},
+            }
         )
     cfg = PtkConfig.model_validate({"project": {"name": "x"}})
     assert (

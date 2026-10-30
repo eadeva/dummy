@@ -28,7 +28,7 @@ def test_inventory_is_read_only_filters_roles_and_omits_secret_values(tmp_path):
     data = read_project(entry)
     data["jobs"]["secret-job"] = {
         "audience": "maintainer",
-        "steps": [{"echo": "echo private"}],
+        "steps": {"echo": {"run": "echo private"}},
     }
     data["jobs"]["go"]["params"]["token"] = {"type": "secret", "env": "EXAMPLE_TOKEN"}
     data["workflows"] = {
@@ -46,7 +46,7 @@ def test_inventory_is_read_only_filters_roles_and_omits_secret_values(tmp_path):
         ).invoke(cli, base, cwd=Path(entry).parent)
         assert result.exit_code == 0, result.output
         doc = json.loads(result.output)
-        assert doc["schema_version"] == 3 and doc["mode"] == "repository"
+        assert doc["schema_version"] == 4 and doc["mode"] == "repository"
         project = doc["projects"][0]
         commands = command_paths(project["commands"])
         assert {
@@ -250,7 +250,7 @@ def test_exported_configuration_fields_have_model_owned_help():
             assert spec.get("description", "").strip(), f"{name}.{field} has no help"
     for definition, model, field in [
         ("JobSpec", JobSpec, "only_variants"),
-        ("StepBody", StepSpec, "only_variants"),
+        ("StepSpec", StepSpec, "only_variants"),
         ("ParamSpec", ParamSpec, "env"),
     ]:
         assert (

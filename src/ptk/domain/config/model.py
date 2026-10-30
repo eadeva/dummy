@@ -4,15 +4,7 @@ Entry point is ``.main.ptk.yml``. Conventional documents own each section or
 named entity; registered components own their local feature definitions.
 Unknown keys are errors everywhere.
 
-Steps are written as an ordered list of single-key mappings::
-
-    steps:
-      - configure: "cmake --preset ${vh.variant}"        # short form = run
-      - compile: {run: [cmake, --build, .], timeout: 600}
-      - checks:
-          parallel: true
-          steps:
-            - lint: {run: tools/lint.py, python: {uvx: "ruff==0.6.9"}}
+Steps are a mapping of IDs to commands or plugins with explicit needs dependencies.
 """
 
 from __future__ import annotations
@@ -31,13 +23,13 @@ from pydantic import (
 )
 
 from ..artifacts import ArtifactoryStructure
+from ..graphs import IDENTIFIER, DependencyId, validate_graph
 from ..variants.model import ProductLineSpec
 from ..versioning import VersionDependency, VersioningSpec
 from ..workflows import WorkflowFile, WorkflowSpec
 
 JOB_RE = re.compile(r"^[a-z][a-z0-9_-]*$")
 PARAM_RE = re.compile(r"^[a-z][a-z0-9_]*$")
-STEP_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 
 RESERVED_JOBS = {
@@ -62,7 +54,8 @@ RESERVED_JOBS = {
 RESERVED_PARAMS = {
     "clean",
     "re_run",
-    "from",
+    "only_step",
+    "graph",
     "to",
     "variant",
     "all_variants",
@@ -331,19 +324,6 @@ class PythonSpec(_Strict):
 # --------------------------------------------------------------------------- steps
 
 
-def normalize_step_entry(raw: Any) -> Any:
-    """``{name: body}`` -> ``{"name": name, **body}``; string body -> ``run``."""
-    if isinstance(raw, dict) and "name" not in raw and len(raw) == 1:
-        ((name, body),) = raw.items()
-        if body is None:
-            body = {}
-        if isinstance(body, (str, list)):
-            body = {"run": body}
-        if isinstance(body, dict):
-            return {"name": str(name), **body}
-    return raw
-
-
 class StepSpec(_Strict):
     only_cx: bool = Field(
         default=False, description="Skip this step outside CX execution."
@@ -356,15 +336,24 @@ class StepSpec(_Strict):
         description="Skip this step for these variants. This does not change the job’s selected variant.",
         default_factory=list,
     )
-    name: str = Field(
-        description="Unique step name within its group. Written as the YAML mapping key."
+    needs: list[DependencyId] = Field(
+        default_factory=list,
+        description="Step IDs that must succeed first. Accepts one ID or a list; omission makes the step immediately eligible.",
     )
+
+    @field_validator(
+        "needs", mode="before", json_schema_input_type=DependencyId | list[DependencyId]
+    )
+    @classmethod
+    def _needs(cls, value):
+        return [value] if isinstance(value, str) else value
+
     title: str | None = Field(
         default=None, description="Readable title used to describe this step."
     )
     run: str | list[str] | None = Field(
         default=None,
-        description="Command string or argument list to execute. A list preserves spaces within arguments. Choose exactly one of run, uses or steps.",
+        description="Command string or argument list to execute. A list preserves spaces within arguments. Choose exactly one of run or uses.",
     )
     uses: str | None = Field(
         default=None,
@@ -374,18 +363,6 @@ class StepSpec(_Strict):
         description="Inputs passed to the plugin named in uses.",
         default_factory=dict,
         alias="with",
-    )
-    steps: list[StepSpec] | None = Field(
-        default=None,
-        description="Ordered child steps in this group. Enable parallel to run them concurrently.",
-    )
-    parallel: bool = Field(
-        default=False,
-        description="Run child steps concurrently. Only valid for a group containing steps.",
-    )
-    background: bool = Field(
-        default=False,
-        description="Start this command in the background. Only valid with run.",
     )
     when: str | None = Field(
         default=None,
@@ -406,7 +383,7 @@ class StepSpec(_Strict):
     )
     cwd: str | None = Field(
         default=None,
-        description="Working directory for this step. Supports PTK variable expressions.",
+        description="Working directory for this step; defaults to the repository root. Supports PTK variable expressions.",
     )
     env: dict[str, str] = Field(
         description="Environment variables added or overridden for this step. Values support PTK variables.",
@@ -428,11 +405,6 @@ class StepSpec(_Strict):
         default=True, description="Include this step in the job report."
     )
 
-    @model_validator(mode="before")
-    @classmethod
-    def _normalize(cls, raw: Any) -> Any:
-        return normalize_step_entry(raw)
-
     @field_validator("env", mode="before")
     @classmethod
     def _env_strings(cls, v: Any) -> Any:
@@ -442,45 +414,19 @@ class StepSpec(_Strict):
 
     @model_validator(mode="after")
     def _check(self) -> StepSpec:
-        if not STEP_RE.match(self.name):
-            raise ValueError(
-                f"step name {self.name!r} may only contain letters, digits, '_', '.', '-'"
-            )
-        kinds = [k for k in ("run", "uses", "steps") if getattr(self, k) is not None]
-        if len(kinds) != 1:
-            raise ValueError(
-                f"step '{self.name}' needs exactly one of: run, uses, steps"
-            )
-        if self.background and self.run is None:
-            raise ValueError("background is only allowed for run steps")
-        if self.parallel and self.steps is None:
-            raise ValueError("'parallel' is only allowed for step sets (steps:)")
+        if (self.run is None) == (self.uses is None):
+            raise ValueError("step needs exactly one of: run, uses")
         if self.python is not None and self.run is None:
             raise ValueError("'python' is only allowed together with run")
         if self.with_ and self.uses is None:
             raise ValueError("'with' is only allowed together with uses")
         if self.passthrough and self.run is None:
             raise ValueError("'passthrough' is only allowed together with run")
-        if self.steps is not None:
-            _unique([s.name for s in self.steps], f"step set '{self.name}'")
         return self
 
     @property
     def kind(self) -> str:
-        return "set" if self.steps is not None else ("uses" if self.uses else "run")
-
-    def walk(self):
-        yield self
-        for child in self.steps or []:
-            yield from child.walk()
-
-
-def _unique(names: list[str], where: str) -> None:
-    seen: set[str] = set()
-    for name in names:
-        if name in seen:
-            raise ValueError(f"duplicate step name '{name}' in {where}")
-        seen.add(name)
+        return "uses" if self.uses else "run"
 
 
 # --------------------------------------------------------------------------- jobs
@@ -531,9 +477,13 @@ class JobSpec(_Strict):
         description="Environment variables supplied to this job’s steps. Step settings can override them.",
         default_factory=dict,
     )
-    steps: list[StepSpec] = Field(
-        description="Ordered steps executed by this job. At least one step is required.",
+    max_workers: int = Field(
+        default=4, ge=1, le=32, description="Maximum concurrent steps in this job."
+    )
+    steps: dict[str, StepSpec] = Field(
+        description="Named steps with explicit needs dependencies. YAML order only controls presentation.",
         min_length=1,
+        json_schema_extra={"propertyNames": {"pattern": IDENTIFIER}},
     )
 
     @field_validator("requires_tools", mode="before")
@@ -558,13 +508,12 @@ class JobSpec(_Strict):
         return v
 
     @model_validator(mode="after")
-    def _steps_unique(self) -> JobSpec:
-        _unique([s.name for s in self.steps], "job")
+    def _step_graph(self) -> JobSpec:
+        validate_graph(self.steps, "step")
         return self
 
     def walk_steps(self):
-        for step in self.steps:
-            yield from step.walk()
+        return iter(self.steps.values())
 
 
 # --------------------------------------------------------------------------- environment / tools / credentials

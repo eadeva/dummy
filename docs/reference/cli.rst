@@ -185,7 +185,7 @@ Examples (``<Tab>`` means press the key)::
    ptk build --<Tab><Tab>           # options for the configured build job
    ptk build --build-type <Tab>     # declared choice values
    ptk --variant <Tab><Tab>         # concrete variants and aliases
-   ptk build --from <Tab><Tab>      # top-level step names
+   ptk build --only-step <Tab><Tab> # step IDs
    ptk build --to <Tab><Tab>        # inclusive final step
    ptk build --feature MODE=<Tab>   # declared enum/bool feature values
    ptk build --args-for <Tab>       # eligible passthrough step paths
@@ -200,9 +200,9 @@ completion; free-text and secret values are not guessed.
 
 ``ptk --help`` also lists available concrete variants and aliases beside
 ``--variant``. ``ptk JOB --help`` lists the job's top-level step names beside
-``--from`` and ``--to``, in execution order. Long lists show the first 12 values;
+``--only-step`` and ``--to``, in authored order. Long lists show the first 12 values;
 Tab completion offers the complete set. These hints use the same project metadata
-as the extension's run-options form. ``--from``/``--to`` apply to jobs; workflows
+as the extension's run-options form. ``--only-step``/``--to`` apply to jobs; workflows
 select one owner variant and use their configured job mappings.
 
 Each completion request starts a short-lived PTK process and reads the required
@@ -526,9 +526,8 @@ For a CMake build job with a passthrough step running ``cmake --build build``, u
 Bazel's ``clean`` is a subcommand, not a ``-clean`` flag. Configure a dedicated
 job, for example::
 
-   # config/ptk/jobs/bazel-clean.ptk.yml
    steps:
-   - clean:
+     clean:
        run:
        - bazel
        - clean

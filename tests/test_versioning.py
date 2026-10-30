@@ -36,52 +36,46 @@ def test_run_snapshot_env_and_generators_are_consistent(write, load):
             },
             "jobs": {
                 "build": {
-                    "steps": [
-                        {
-                            "change": {
-                                "run": [
-                                    sys.executable,
-                                    "-c",
-                                    "from pathlib import Path; Path('VERSION').write_text('9.0.0')",
-                                ]
-                            }
+                    "steps": {
+                        "change": {
+                            "run": [
+                                sys.executable,
+                                "-c",
+                                "from pathlib import Path; Path('VERSION').write_text('9.0.0')",
+                            ]
                         },
-                        {
-                            "capture": {
-                                "run": [
-                                    sys.executable,
-                                    "-c",
-                                    "import os,json; from pathlib import Path; Path('env.json').write_text(json.dumps({k:v for k,v in os.environ.items() if k.startswith('PTK_VERSION_')}))",
-                                ]
-                            }
+                        "capture": {
+                            "run": [
+                                sys.executable,
+                                "-c",
+                                "import os,json; from pathlib import Path; Path('env.json').write_text(json.dumps({k:v for k,v in os.environ.items() if k.startswith('PTK_VERSION_')}))",
+                            ],
+                            "needs": ["change"],
                         },
-                        {
-                            "header": {
-                                "uses": "version.generate",
-                                "with": {
-                                    "format": "header",
-                                    "output": "generated/version.h",
-                                },
-                            }
+                        "header": {
+                            "uses": "version.generate",
+                            "with": {
+                                "format": "header",
+                                "output": "generated/version.h",
+                            },
+                            "needs": ["capture"],
                         },
-                        {
-                            "cmake": {
-                                "uses": "version.generate",
-                                "with": {
-                                    "format": "cmake",
-                                    "output": "generated/version.cmake",
-                                },
-                            }
+                        "cmake": {
+                            "uses": "version.generate",
+                            "with": {
+                                "format": "cmake",
+                                "output": "generated/version.cmake",
+                            },
+                            "needs": ["header"],
                         },
-                        {
-                            "echo": {
-                                "uses": "echo",
-                                "with": {
-                                    "message": "${version.projects.demo.components.core.value}"
-                                },
-                            }
+                        "echo": {
+                            "uses": "echo",
+                            "with": {
+                                "message": "${version.projects.demo.components.core.value}"
+                            },
+                            "needs": ["cmake"],
                         },
-                    ]
+                    }
                 }
             },
         },
@@ -119,7 +113,7 @@ def test_dry_run_discovers_without_writing(write, load):
         write,
         {
             "versioning": {"project": {"source": "literal", "version": "2.0.0"}},
-            "jobs": {"go": {"steps": [{"echo": {"uses": "echo"}}]}},
+            "jobs": {"go": {"steps": {"echo": {"uses": "echo"}}}},
         },
     )
     result = CliRunner().invoke(cli, ["go", "--dry-run"], cwd=root)

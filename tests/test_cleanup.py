@@ -169,16 +169,19 @@ def test_job_filters_error_steps_skip_and_only_cx_hidden(tmp_path):
         "build": {**command("pass"), "only_variants": ["release"]},
         "ci": {**command("pass"), "only_cx": True},
         "check": {
-            "steps": [
-                {
-                    "skip": {
-                        "uses": "echo",
-                        "with": {"message": "never"},
-                        "omit_variants": ["debug"],
-                    }
+            "steps": {
+                "skip": {
+                    "uses": "echo",
+                    "with": {"message": "never"},
+                    "omit_variants": ["debug"],
                 },
-                {"cx": {"uses": "echo", "with": {"message": "never"}, "only_cx": True}},
-            ]
+                "cx": {
+                    "uses": "echo",
+                    "with": {"message": "never"},
+                    "only_cx": True,
+                    "needs": ["skip"],
+                },
+            }
         },
     }
     repository(tmp_path, jobs=jobs, extra=variant_config())

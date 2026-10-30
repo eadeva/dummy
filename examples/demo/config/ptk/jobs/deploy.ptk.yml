@@ -2,7 +2,7 @@
 help: Upload binaries (maintainers only)
 audience: maintainer
 steps:
-- upload:
+  upload:
     run:
     - python
     - tools/upload.py

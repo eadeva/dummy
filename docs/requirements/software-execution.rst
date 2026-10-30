@@ -13,13 +13,13 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :verification_criteria: Multi-variant CLI tests produce one result per selected variant and reject disallowed selections before running.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_EXECUTION
-   :tags: implemented
+   :tags: partial
 
    PTK shall accept multiple eligible job variants, prepare each variant separately and execute selected variants concurrently with distinct outputs.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
-   **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
+   **Implementation:** Partial: the CLI prepares the full selection but executes variants in order. The extension launches separate variant tasks concurrently; the following source and tests are candidate verification evidence, not an acceptance record.
 
    **Evidence:** ``src/ptk/drivers/cli/jobs.py``; ``tests/test_cli_jobs.py``.
 
@@ -110,7 +110,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :security: false
    :legal: false
    :status: under review
-   :verification_criteria: Filesystem snapshots remain unchanged and fake/real process observers see no job step execution during dry-run.
+   :verification_criteria: Only graph previews are written; run-output snapshots remain unchanged and process observers see no job step execution during dry-run.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
@@ -130,12 +130,12 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :security: false
    :legal: false
    :status: under review
-   :verification_criteria: Control tests cover successful retries, exhausted retries, skipped conditions, timeout and group failure outcomes.
+   :verification_criteria: Control tests cover successful retries, exhausted retries, skipped conditions, timeout and dependency failure outcomes.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall honor configured conditions, sequential/parallel groups, retries, timeouts and continue-on-error rules and preserve failure information in results.
+   PTK shall honor configured conditions, explicit step dependencies, bounded concurrency, retries, timeouts and continue-on-error rules and preserve failure information in results.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -163,25 +163,65 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
 
    **Evidence:** ``src/ptk/adapters/process.py``; ``tests/workflows/test_scheduler.py``.
 
-.. req-sw:: Join finite background work
+.. req-sw:: Complete all scheduled step work
    :id: REQ_Sw_BACKGROUND
    :req_type: functional
    :safety: QM
    :security: false
    :legal: false
-   :status: under review
-   :verification_criteria: Background tests cover joining, failure, timeout and cancellation without orphaned unbounded job work.
+   :status: accepted
+   :verification_criteria: Step graph tests verify overlapping independent commands, joins, failure propagation, timeout and cancellation without orphaned work.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall associate background steps with an execution scope and join them at its defined boundary before completing that scope.
+   PTK shall wait for all active steps before completing a job, scheduling ready steps by explicit dependencies within the configured worker limit.
 
-   **Origin:** Derived from the current CLI implementation and regression tests; requires review.
+   **Origin:** The approved step dependency design supersedes the previous background-mode mechanism while retaining the requirement to join active work.
 
-   **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
+   **Implementation:** Implemented; the tests are candidate verification evidence, not an acceptance record.
 
-   **Evidence:** ``src/ptk/application/use_cases/run.py``; ``tests/test_background.py``.
+   **Evidence:** ``tests/test_step_graphs.py``; ``tests/test_controls.py``.
+
+.. req-sw:: Select a dependency closure or one explicit step
+   :id: REQ_Sw_STEP_SELECTION
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: accepted
+   :verification_criteria: Tests verify out-of-order declarations, transitive prerequisite selection, exclusion of unrelated work, mutually exclusive options and omitted-prerequisite notices in preview and report.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_EXECUTION
+   :tags: implemented
+
+   PTK shall support selecting a target step with all its transitive prerequisites, or explicitly selecting only that step while listing omitted prerequisites and requiring the user to supply necessary existing outputs.
+
+   **Origin:** User-approved partial execution option 3.
+
+   **Implementation:** Implemented; the tests are candidate verification evidence, not an acceptance record.
+
+   **Evidence:** ``tests/test_step_graphs.py``; ``tests/unit/test_execution.py``.
+
+.. req-sw:: Inspect execution dependency graphs
+   :id: REQ_Sw_GRAPH_INSPECTION
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: accepted
+   :verification_criteria: Job and workflow graph inspection shows nodes and all edges without executing commands; both dry-run paths include graph previews by default.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_EXECUTION
+   :tags: implemented
+
+   PTK shall expose job and workflow dependency graphs through a graph-only option and include them automatically in dry-run output.
+
+   **Origin:** User request for graph inspection and automatic dry-run graphs.
+
+   **Implementation:** Implemented; the tests are candidate verification evidence, not an acceptance record.
+
+   **Evidence:** ``tests/test_step_graphs.py``; ``tests/workflows/test_cli.py``.
 
 .. req-sw:: Schedule local job workflows
    :id: REQ_Sw_WORKFLOWS

@@ -43,10 +43,9 @@ class CommandSpec:
 
 @dataclass
 class PlannedStep:
-    path: tuple[str, ...]  # names from the job down to this step
+    path: tuple[str, ...]  # one named step relative to the job output folder
     spec: StepSpec
-    children: list[PlannedStep] = field(default_factory=list)
-    skip_reason: str | None = None  # condition false, outside --from/--to, ...
+    skip_reason: str | None = None  # condition false, not selected, ...
     run: str | list[str] | None = None  # after substitution (+ pass-through args)
     cwd: str = "."
     env: dict[str, str] = field(default_factory=dict)  # step env (substituted)
@@ -55,7 +54,7 @@ class PlannedStep:
 
     @property
     def name(self) -> str:
-        return self.spec.name
+        return self.path[0]
 
     @property
     def kind(self) -> str:
@@ -63,7 +62,7 @@ class PlannedStep:
 
     @property
     def title(self) -> str:
-        return self.spec.title or self.spec.name
+        return self.spec.title or self.name
 
     @property
     def label(self) -> str:
@@ -75,8 +74,6 @@ class PlannedStep:
 
     def walk(self):
         yield self
-        for child in self.children:
-            yield from child.walk()
 
 
 @dataclass
@@ -93,6 +90,9 @@ class JobPlan:
     ]  # host/isolated env + config env + generated PTK_/VH_ vars + job env
     dirs: dict[str, str]  # bin_dir, log_dir, reports_dir (job level)
 
+    max_workers: int = 4
+    only_step: str | None = None
+    omitted_dependencies: list[str] = field(default_factory=list)
     report_context: dict[str, Any] = field(default_factory=dict)
     log_analysis: dict[str, Any] = field(default_factory=dict)
 
@@ -115,7 +115,7 @@ class StepResult:
     command: str = ""
     log_file: str | None = None
     allowed_failure: bool = False  # failed, but continue_on_error was set
-    children: list[StepResult] = field(default_factory=list)
+    needs: list[str] = field(default_factory=list)
 
     @property
     def label(self) -> str:
@@ -130,8 +130,6 @@ class StepResult:
 
     def walk(self):
         yield self
-        for child in self.children:
-            yield from child.walk()
 
 
 @dataclass

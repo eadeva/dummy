@@ -156,7 +156,7 @@ def test_windows_script(tmp_path, suffix):
     )
     powershell = shutil.which("pwsh") or shutil.which("powershell")
     assert suffix != ".ps1" or powershell, "Windows CI needs PowerShell"
-    spec = StepSpec(name="native", run=[str(script)])
+    spec = StepSpec(run=[str(script)])
     step = PlannedStep(path=("native",), spec=spec, run=spec.run)
     command = build_command(
         step,
@@ -179,10 +179,20 @@ def test_cli_redirected_legacy_encoding_does_not_abort_job(tmp_path):
     config = tmp_path / ".main.ptk.yml"
     write_project(
         config,
-        "repository: {alias: demo, config_path: .}\n"
-        "project: {name: demo}\n"
-        "jobs:\n  hello:\n    steps:\n"
-        "      - greet: {uses: echo, with: {message: 'caf\u00e9 \U0001f9ea'}}\n",
+        """\
+repository:
+  alias: demo
+  config_path: .
+project:
+  name: demo
+jobs:
+  hello:
+    steps:
+      greet:
+        uses: echo
+        with:
+          message: "caf\\xE9 \\U0001F9EA"
+""",
     )
     result = subprocess.run(
         [sys.executable, "-m", "ptk.drivers.cli.main", "hello"],

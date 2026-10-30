@@ -6,11 +6,11 @@ const S = require("../media/schema");
 const schema = require("../media/config-schema.json");
 function fixture() {
   return {
-    config: { version: 2, value: { project: { name: "demo" }, jobs: { build: { help: "Build", steps: [{ compile: { run: "make" } }] } } }, bindings: [
+    config: { version: 3, value: { project: { name: "demo" }, jobs: { build: { help: "Build", steps: {compile: { run: "make" }} } } }, bindings: [
       { file: "/repo/config/jobs/{name}.ptk.yml", path: ["jobs", "*"], document_path: [] },
       { file: "/repo/config/project.ptk.yml", path: ["project", "name"], document_path: ["name"] },
     ] },
-    docs: new Map([["/repo/config/project.ptk.yml", "name: demo\n"], ["/repo/config/jobs/build.ptk.yml", "# preserve\nhelp: Build\nsteps: [{compile: {run: make}}]\n"]]),
+    docs: new Map([["/repo/config/project.ptk.yml", "name: demo\n"], ["/repo/config/jobs/build.ptk.yml", "# preserve\nhelp: Build\nsteps: {compile: {run: make}}\n"]]),
   };
 }
 
@@ -35,9 +35,9 @@ test("project fields are written without a project wrapper", () => {
 });
 test("new jobs create their conventional document", () => {
   const { config, docs } = fixture();
-  const edits = plan(config, docs, [{ op: "add", path: ["jobs", "check"], value: { steps: [{ lint: { run: "ruff" } }] } }]);
+  const edits = plan(config, docs, [{ op: "add", path: ["jobs", "check"], value: { steps: {lint: { run: "ruff" }} } }]);
   assert.equal(edits.size, 1);
-  assert.equal(YAML.parse(edits.get("/repo/config/jobs/check.ptk.yml")).steps[0].lint.run, "ruff");
+  assert.equal(YAML.parse(edits.get("/repo/config/jobs/check.ptk.yml")).steps.lint.run, "ruff");
 });
 test("removing an entity deletes its document", () => {
   const { config, docs } = fixture();
@@ -55,11 +55,11 @@ test("entity filenames cannot escape their conventional directory", () => {
 });
 test("list edits stay in the entity document", () => {
   const { config, docs } = fixture();
-  const edits = plan(config, docs, [{ op: "set", path: ["jobs", "build", "steps", 0, "compile", "run"], value: "make all" }]);
-  assert.equal(YAML.parse(edits.get("/repo/config/jobs/build.ptk.yml")).steps[0].compile.run, "make all");
+  const edits = plan(config, docs, [{ op: "set", path: ["jobs", "build", "steps", "compile", "run"], value: "make all" }]);
+  assert.equal(YAML.parse(edits.get("/repo/config/jobs/build.ptk.yml")).steps.compile.run, "make all");
 });
 test("component features use the exact file provided by PTK", () => {
-  const config = { version: 2, value: { variants: { components: { networking: {} } } }, bindings: [{ file: "/repo/src/net/component.variants.ptk.yml", path: ["variants", "components", "networking"], document_path: [] }] };
+  const config = { version: 3, value: { variants: { components: { networking: {} } } }, bindings: [{ file: "/repo/src/net/component.variants.ptk.yml", path: ["variants", "components", "networking"], document_path: [] }] };
   const edits = plan(config, new Map(), [{ op: "add", path: ["variants", "components", "networking", "features"], value: { TLS: { type: "bool" } } }]);
   assert.deepEqual(YAML.parse(edits.get("/repo/src/net/component.variants.ptk.yml")), { features: { TLS: { type: "bool" } } });
 });

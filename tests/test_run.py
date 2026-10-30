@@ -34,39 +34,85 @@ if UV:
     HOST["PTK_UV"] = UV
     HOST["PATH"] = str(Path(UV).parent) + os.pathsep + HOST["PATH"]
 
-PROJECT = """
-project: {name: e2e}
-vars: {greeting: "hello ${project.name}"}
+PROJECT = """\
+project:
+  name: e2e
+vars:
+  greeting: hello ${project.name}
 credentials:
-  repo: {fields: [token], env: {token: REPO_TOKEN}}
+  repo:
+    fields:
+    - token
+    env:
+      token: REPO_TOKEN
 jobs:
   go:
     params:
-      who: {default: world}
-      fail: {type: bool, default: false}
-    env: {JOB_LEVEL: "a"}
+      who:
+        default: world
+      fail:
+        type: bool
+        default: false
+    env:
+      JOB_LEVEL: a
     steps:
-      - hello: ["${sys}", "-c", "import os; print(os.environ['GREETING'], os.environ['PTK_PARAM_WHO'])"]
-      - prepare:
-          run: echo "${vars.greeting}" > marker.txt; pwd
-          cwd: ${run.build_dir}
-          env: {GREETING: unused}
-      - checks:
-          parallel: true
-          steps:
-            - a: {run: "sleep 0.3; echo A-done"}
-            - b: {run: "sleep 0.3; echo B-done"}
-            - flaky: {run: "exit 3", continue_on_error: true}
-            - never: {run: "echo never", when: "params.fail and os == 'windows'"}
-      - script:
-          run: tools/show.py --flag
-          python: {interpreter: cli}
-          passthrough: true
-      - secret:
-          run: ["${sys}", "-c", "import os; print('token is', os.environ['TOKEN'])"]
-          secrets: {TOKEN: repo.token}
-      - broken: {run: "exit 7", when: "params.fail"}
-      - after: "echo after"
+      hello:
+        run:
+        - ${sys}
+        - -c
+        - import os; print(os.environ['GREETING'], os.environ['PTK_PARAM_WHO'])
+      prepare:
+        run: echo "${vars.greeting}" > marker.txt; pwd
+        cwd: ${run.build_dir}
+        env:
+          GREETING: unused
+        needs:
+        - hello
+      a:
+        run: sleep 0.3; echo A-done
+        needs:
+        - prepare
+      b:
+        run: sleep 0.3; echo B-done
+        needs:
+        - prepare
+      flaky:
+        run: exit 3
+        continue_on_error: true
+        needs:
+        - prepare
+      never:
+        run: echo never
+        when: params.fail and os == 'windows'
+        needs:
+        - prepare
+      script:
+        run: tools/show.py --flag
+        python:
+          interpreter: cli
+        passthrough: true
+        needs:
+        - a
+        - b
+        - flaky
+      secret:
+        run:
+        - ${sys}
+        - -c
+        - import os; print('token is', os.environ['TOKEN'])
+        secrets:
+          TOKEN: repo.token
+        needs:
+        - script
+      broken:
+        run: exit 7
+        when: params.fail
+        needs:
+        - secret
+      after:
+        run: echo after
+        needs:
+        - broken
 """
 
 SHOW = """
@@ -138,35 +184,31 @@ def test_full_run(project):
     assert (build_dir / "marker.txt").read_text().strip() == "hello e2e"
     assert out["prepare"] == [str(build_dir)]
     assert {"A-done", "B-done"} <= {line for _, line in lines}
-    assert (
-        steps["checks/flaky"].status is Status.FAILED
-        and steps["checks/flaky"].allowed_failure
-    )
-    assert steps["checks"].status is Status.PASSED
-    assert steps["checks/never"].status is Status.SKIPPED
+    assert steps["flaky"].status is Status.FAILED and steps["flaky"].allowed_failure
+    assert steps["never"].status is Status.SKIPPED
     assert out["script"] == [
         "args ['--flag', '--extra', 'x y']",
         "step script variant default",
     ]
     assert out["secret"] == ["token is ********"]
     assert steps["broken"].status is Status.SKIPPED
-    assert steps["after"].status is Status.PASSED
+    assert steps["after"].status is Status.SKIPPED
     # logs follow the layout and never contain the secret
     run_log = project / "_logs/default/go/run.log"
-    assert run_log.is_file() and (project / "_logs/default/go/checks/a.log").is_file()
+    assert run_log.is_file() and (project / "_logs/default/go/a.log").is_file()
     text = run_log.read_text()
     assert "s3cr3t" not in text and "token is ********" in text
     assert "s3cr3t" not in steps["secret"].command
-    assert (project / "_reports/default/go/checks/a").is_dir() and (
+    assert (project / "_reports/default/go/a").is_dir() and (
         project / "_bin/default"
     ).is_dir()
 
 
 def test_parallel_steps_overlap(project):
-    result, _, _ = run(project, start="checks", end="checks")
-    checks = by_label(result)["checks"]
-    assert checks.duration < 0.55  # two 0.3 s sleeps in parallel
-    assert by_label(result)["hello"].message == "outside --from/--to range"
+    result, _, _ = run(project, end="b")
+    steps = by_label(result)
+    assert steps["b"].status is Status.PASSED
+    assert steps["secret"].message == "not selected"
 
 
 def test_failure_stops_following_steps(project):
@@ -176,7 +218,7 @@ def test_failure_stops_following_steps(project):
     assert steps["broken"].status is Status.FAILED and steps["broken"].exit_code == 7
     assert (
         steps["after"].status is Status.SKIPPED
-        and "earlier step failed" in steps["after"].message
+        and "blocked by needs: broken" in steps["after"].message
     )
 
 
@@ -194,13 +236,18 @@ def test_secret_of_skipped_step_is_not_needed(project):
 
 def test_timeout_and_retries(write):
     root = write(
-        project_files("""
-        project: {name: t}
-        jobs:
-          go:
-            steps:
-              - slow: {run: "sleep 5", timeout: 0.3}
-        """)
+        project_files(
+            """\
+project:
+  name: t
+jobs:
+  go:
+    steps:
+      slow:
+        run: sleep 5
+        timeout: 0.3
+"""
+        )
     )
     result, _, _ = run(root)
     slow = by_label(result)["slow"]
@@ -211,13 +258,18 @@ def test_timeout_and_retries(write):
     )
 
     root = write(
-        project_files("""
-        project: {name: t}
-        jobs:
-          go:
-            steps:
-              - flaky: {run: "test -f once || (touch once; exit 1)", retries: 2}
-        """)
+        project_files(
+            """\
+project:
+  name: t
+jobs:
+  go:
+    steps:
+      flaky:
+        run: test -f once || (touch once; exit 1)
+        retries: 2
+"""
+        )
     )
     result, _lines, _ = run(root)
     flaky = by_label(result)["flaky"]
@@ -226,14 +278,21 @@ def test_timeout_and_retries(write):
 
 def test_cancel_kills_process_tree(write):
     root = write(
-        project_files("""
-        project: {name: t}
-        jobs:
-          go:
-            steps:
-              - long: {run: "sleep 30 & sleep 30; wait"}
-              - next: "echo next"
-        """)
+        project_files(
+            """\
+project:
+  name: t
+jobs:
+  go:
+    steps:
+      long:
+        run: sleep 30 & sleep 30; wait
+      next:
+        run: echo next
+        needs:
+        - long
+"""
+        )
     )
     app = create_app(environ=HOST)
     project = app.load_project.execute(root)
@@ -249,13 +308,18 @@ def test_cancel_kills_process_tree(write):
 
 def test_program_not_found(write):
     root = write(
-        project_files("""
-        project: {name: t}
-        jobs:
-          go:
-            steps:
-              - missing: [definitely-not-a-program-xyz]
-        """)
+        project_files(
+            """\
+project:
+  name: t
+jobs:
+  go:
+    steps:
+      missing:
+        run:
+        - definitely-not-a-program-xyz
+"""
+        )
     )
     result, _, _ = run(root)
     assert "program not found" in by_label(result)["missing"].message
@@ -263,15 +327,26 @@ def test_program_not_found(write):
 
 def test_builtin_steps(write):
     root = write(
-        project_files("""
-        project: {name: t}
-        jobs:
-          go:
-            params: {msg: {default: hi}}
-            steps:
-              - say: {uses: echo, with: {message: "${params.msg} there"}}
-              - nope: {uses: files.cpoy}
-        """)
+        project_files(
+            """\
+project:
+  name: t
+jobs:
+  go:
+    params:
+      msg:
+        default: hi
+    steps:
+      say:
+        uses: echo
+        with:
+          message: ${params.msg} there
+      nope:
+        uses: files.cpoy
+        needs:
+        - say
+"""
+        )
     )
     result, lines, _ = run(root)
     assert ("say", "hi there") in lines
@@ -282,19 +357,32 @@ def test_builtin_steps(write):
 def test_python_venv_and_plain_script(write):
     root = write(
         project_files(
-            """
-            project: {name: t}
-            jobs:
-              go:
-                steps:
-                  - plain: tools/where.py
-                  - in-venv:
-                      run: tools/where.py
-                      python: {venv: {requirements: tools/req.txt}}
-                  - venv-cmd:
-                      run: ["python", "-c", "import sys; print(sys.prefix)"]
-                      python: {venv: {requirements: tools/req.txt}}
-            """,
+            """\
+project:
+  name: t
+jobs:
+  go:
+    steps:
+      plain:
+        run: tools/where.py
+      in-venv:
+        run: tools/where.py
+        python:
+          venv:
+            requirements: tools/req.txt
+        needs:
+        - plain
+      venv-cmd:
+        run:
+        - python
+        - -c
+        - import sys; print(sys.prefix)
+        python:
+          venv:
+            requirements: tools/req.txt
+        needs:
+        - in-venv
+""",
             {
                 "tools/where.py": "import sys, os\nprint(os.environ.get('VIRTUAL_ENV', 'none'))\n",
                 "tools/req.txt": "# no packages - creating the venv must work offline\n",

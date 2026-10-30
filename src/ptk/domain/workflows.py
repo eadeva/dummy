@@ -3,21 +3,19 @@
 from __future__ import annotations
 
 import re
-from graphlib import CycleError, TopologicalSorter
-from typing import Annotated, Any, Literal
+from typing import Any, Literal
 
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
-    StringConstraints,
     field_validator,
     model_validator,
 )
 
+from .graphs import IDENTIFIER, DependencyId, ancestors, validate_graph
+
 NAME = r"^[a-z][a-z0-9_-]*$"
-INVOCATION = r"^[A-Za-z0-9][A-Za-z0-9_.-]*$"
-InvocationId = Annotated[str, StringConstraints(pattern=INVOCATION)]
 
 
 class WorkflowJob(BaseModel):
@@ -26,7 +24,7 @@ class WorkflowJob(BaseModel):
         description="Job to invoke: JOB in the owner's repository or REPO:JOB. Workspace-owned workflows require REPO:JOB.",
         pattern=r"^(?:[a-z][a-z0-9_-]*:)?[a-z][a-z0-9_-]*$",
     )
-    needs: list[InvocationId] = Field(
+    needs: list[DependencyId] = Field(
         default_factory=list,
         description="Invocation IDs that must succeed before this job starts. Accepts one ID or a list. Omit for an immediately eligible job.",
     )
@@ -39,7 +37,7 @@ class WorkflowJob(BaseModel):
     )
 
     @field_validator(
-        "needs", mode="before", json_schema_input_type=InvocationId | list[InvocationId]
+        "needs", mode="before", json_schema_input_type=DependencyId | list[DependencyId]
     )
     @classmethod
     def _needs(cls, value):
@@ -76,43 +74,16 @@ class WorkflowSpec(BaseModel):
     jobs: dict[str, WorkflowJob] = Field(
         description="Named job invocations. IDs are local to this workflow and are referenced by needs. YAML order controls presentation only.",
         min_length=1,
-        json_schema_extra={"propertyNames": {"pattern": INVOCATION}},
+        json_schema_extra={"propertyNames": {"pattern": IDENTIFIER}},
     )
 
     @model_validator(mode="after")
     def _graph(self):
-        for name, job in self.jobs.items():
-            if not re.fullmatch(INVOCATION, name):
-                raise ValueError(f"invalid workflow invocation ID {name!r}")
-            for dependency in job.needs:
-                if dependency == name:
-                    raise ValueError(f"workflow job {name!r} cannot need itself")
-                if dependency not in self.jobs:
-                    raise ValueError(
-                        f"workflow job {name!r} needs unknown invocation {dependency!r}"
-                    )
-        try:
-            tuple(
-                TopologicalSorter(
-                    {name: job.needs for name, job in self.jobs.items()}
-                ).static_order()
-            )
-        except CycleError as exc:
-            raise ValueError(
-                "workflow dependency cycle: " + " -> ".join(exc.args[1])
-            ) from None
+        validate_graph(self.jobs, "workflow job")
         return self
 
-    def ancestors(self) -> dict[str, set[str]]:
-        """Transitive prerequisites, after graph validation."""
-        result: dict[str, set[str]] = {}
-        for name in TopologicalSorter(
-            {name: job.needs for name, job in self.jobs.items()}
-        ).static_order():
-            result[name] = set(self.jobs[name].needs)
-            for dependency in self.jobs[name].needs:
-                result[name].update(result[dependency])
-        return result
+    def ancestors(self):
+        return ancestors(self.jobs)
 
 
 class WorkflowFile(BaseModel):

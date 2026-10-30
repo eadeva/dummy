@@ -148,14 +148,14 @@ function createController(vscode, context, editorFactory = createEditors) {
   const variantKey = target => `variant:${target.project.entry_file}:${target.kind}:${target.name}`;
   const explicitVariants = target => {
     const saved = context.workspaceState.get(variantKey(target));
-    const names = Array.isArray(saved) ? saved : typeof saved === "string" ? [saved] : [];
+    const names = Array.isArray(saved) ? saved : [];
     return [...new Set(names)].filter(name => target.project.variants.some(item => !item.abstract && item.name === name));
   };
   const variantsFor = target => {
     const names = explicitVariants(target);
-    if (names.length) return target.kind === "job" ? names : names.slice(0, 1);
-    const fallback = core.selectedVariant(target.project);
-    return fallback ? [fallback] : [];
+    if (names.length) return names;
+    const defaultVariant = core.selectedVariant(target.project);
+    return defaultVariant ? [defaultVariant] : [];
   };
   const variantDescription = target => variantsFor(target).join(", ");
   const targetNodes = new Map();
@@ -165,14 +165,14 @@ function createController(vscode, context, editorFactory = createEditors) {
     const variants = target.project.variants.filter(item => !item.abstract);
     if (!variants.length) return [];
     return [
-      { label: "Use project default", variantName: undefined, description: target.project.default_variant || "No default configured" },
+      { label: "All variants", allVariants: true, description: "Run all concrete variants in parallel" },
       ...variants.map(item => ({ label: item.name, name: item.name, variantName: item.name, description: item.description })),
     ].map(item => ({
       ...item, project: target.project, folder: target.folder, root: target.root,
       kind: "variant-choice", target, icon: "layers",
-      contextValue: item.variantName ? "variant" : "variant-default",
+      contextValue: item.allVariants ? "variant-all" : "variant",
       id: JSON.stringify([target.folder.uri.fsPath, variantKey(target), "choice", item.variantName ?? null]),
-      tooltip: [item.description, target.kind === "job" ? `Select variants for job ${target.name}. Selected variants run in parallel. Use project default clears the explicit selection.` : `Select one variant for workflow ${target.name}. Other jobs and workflows keep their own selection.`].filter(Boolean).join("\n"),
+      tooltip: [item.description, `Select variants for ${target.kind} ${target.name}. Selected variants run in parallel. Clearing the selection selects the project default automatically.`].filter(Boolean).join("\n"),
     }));
   }
 
@@ -195,19 +195,20 @@ function createController(vscode, context, editorFactory = createEditors) {
     }
     for (const updates of choices.values()) {
       const target = await chooseTarget(updates[0].element.target);
-      const names = new Set(explicitVariants(target));
+      const names = new Set(variantsFor(target));
       for (const { element, state } of updates) {
         const checked = state === vscode.TreeItemCheckboxState.Checked;
         const name = element.variantName;
         if (checked && name && !target.project.variants.some(item => !item.abstract && item.name === name)) {
           throw new Error("This variant is no longer available. Refresh projects and choose a variant.");
         }
-        if (checked) {
-          if (!name || target.kind !== "job") names.clear();
-          if (name) names.add(name);
-        } else if (name) names.delete(name);
+        if (element.allVariants) {
+          names.clear();
+          if (checked) for (const variant of target.project.variants) if (!variant.abstract) names.add(variant.name);
+        } else if (checked) names.add(name);
+        else names.delete(name);
       }
-      await context.workspaceState.update(variantKey(target), names.size ? target.kind === "job" ? [...names] : [...names][0] : undefined);
+      await context.workspaceState.update(variantKey(target), names.size ? [...names] : undefined);
       variantChanged(target);
     }
   }
@@ -250,8 +251,6 @@ function createController(vscode, context, editorFactory = createEditors) {
     const config = common.project.configuration;
     const sources = new Map(config.sources.map(source => [JSON.stringify(source.path), source]));
     function field(value, configPath, label) {
-      const name = presentation.namedEntry(value, configPath);
-      if (name) return field(value[name], [...configPath, name], name);
       const source = sources.get(JSON.stringify(configPath));
       const object = value !== null && typeof value === "object";
       const node = { ...common, kind: "configuration", configPath, label,
@@ -261,6 +260,27 @@ function createController(vscode, context, editorFactory = createEditors) {
         description: value === undefined ? "not configured" : object || typeof configPath.at(-1) === "number" ? "" : String(value),
       };
       if (object) node.children = schemaTools.orderedEntries(schemaTools.at(config.schema, config.value, configPath, config.schema), value, config.schema).filter(([key]) => !(key === "components" && configPath.length === 1 && ["project", "variants"].includes(configPath[0]))).map(([key, child]) => field(child, [...configPath, Array.isArray(value) ? Number(key) : key], Array.isArray(value) ? presentation.listLabel(child, [...configPath, Number(key)]) : key));
+      const graph = config.graphs.find(item => JSON.stringify(item.path) === JSON.stringify(configPath));
+      if (graph && !graph.error) {
+        const levels = [...new Set(graph.nodes.map(item => item.depth))].sort((a, b) => a - b);
+        node.icon = "git-merge";
+        node.tooltip = "Dependency graph supplied by PTK. Levels are not execution barriers; each node starts when its own prerequisites finish.";
+        node.children = levels.map(depth => ({
+          label: depth === 0 ? "Ready" : `Dependency level ${depth}`,
+          icon: "git-branch", collapsed: false,
+          id: `${node.id}:level:${depth}`,
+          tooltip: "Each item appears once. Needs lists every incoming dependency, including joins.",
+          children: graph.nodes.filter(item => item.depth === depth).map(item => {
+            const child = field(value[item.id], [...configPath, item.id], item.id);
+            child.description = item.needs.length ? `needs: ${item.needs.join(", ")}` : "ready";
+            child.tooltip = `${child.description}\n${child.tooltip}`;
+            return child;
+          }),
+        }));
+      } else if (graph?.error) {
+        node.description = "invalid graph";
+        node.tooltip = graph.error;
+      }
       node.command = { command: "project-toolkit.openConfig", title: "Edit configuration", arguments: [node] };
       return node;
     }
@@ -357,8 +377,8 @@ function createController(vscode, context, editorFactory = createEditors) {
         item.description = [variantDescription(element), element.kind === "workflow" && element.ci ? "dry-run only on CI" : element.spec.default ? "default" : ""].filter(Boolean).join(" · ");
       }
       if (element.kind === "variant-choice") {
-        const selected = explicitVariants(element.target);
-        const checked = element.variantName ? selected.includes(element.variantName) : !selected.length;
+        const selected = variantsFor(element.target);
+        const checked = element.allVariants ? element.target.project.variants.filter(variant => !variant.abstract).every(variant => selected.includes(variant.name)) : selected.includes(element.variantName);
         item.checkboxState = {
           state: checked ? vscode.TreeItemCheckboxState.Checked : vscode.TreeItemCheckboxState.Unchecked,
           tooltip: element.tooltip,
@@ -428,21 +448,14 @@ function createController(vscode, context, editorFactory = createEditors) {
       return;
     }
     const choices = target.project.variants.filter(v => !v.abstract);
-    if (target.kind === "job") {
-      const current = explicitVariants(target);
-      const selected = await vscode.window.showQuickPick(choices.map(v => ({ label: v.name, description: v.description, name: v.name, picked: current.includes(v.name) })),
-        { canPickMany: true, placeHolder: `Variants for job ${target.name} · run in parallel · clear all to use project default` });
-      if (!selected) return;
-      await context.workspaceState.update(variantKey(target), selected.length ? selected.map(item => item.name) : undefined);
-      variantChanged(target);
-      return variantsFor(target);
-    }
+    const current = variantsFor(target);
     const selected = await vscode.window.showQuickPick([
-      { label: "Use project default", description: target.project.default_variant || "No default configured", reset: true },
-      ...choices.map(v => ({ label: v.name, description: v.description, name: v.name })),
-    ], { placeHolder: `Variant for ${target.kind} ${target.name}${target.kind === "workflow" ? " (repository mappings apply)" : ""}` });
+      { label: "All variants", description: "Run all concrete variants in parallel", all: true },
+      ...choices.map(v => ({ label: v.name, description: v.description, name: v.name, picked: current.includes(v.name) })),
+    ], { canPickMany: true, placeHolder: `Variants for ${target.kind} ${target.name} · run in parallel · clear to select the project default` });
     if (!selected) return;
-    await context.workspaceState.update(variantKey(target), selected.reset ? undefined : selected.name);
+    const names = selected.some(item => item.all) ? choices.map(item => item.name) : selected.map(item => item.name);
+    await context.workspaceState.update(variantKey(target), names.length ? names : undefined);
     variantChanged(target);
     return variantsFor(target);
   }
@@ -513,7 +526,7 @@ function createController(vscode, context, editorFactory = createEditors) {
     if (form) {
       const result = await editors.parameters(target, {
         preview, variant: variants.length === 1 ? variants[0] : undefined, variants,
-        useDefault: !target.project || !explicitVariants(target).length, ...cleanup,
+        ...cleanup,
       });
       if (!result) return;
       params = result.params;

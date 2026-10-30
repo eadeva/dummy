@@ -24,7 +24,7 @@ def fields(schema):
 
 
 def sections(schema, root):
-    """Index reachable objects by configuration path, including recursive steps."""
+    """Index reachable objects by configuration path, including named step and workflow mappings."""
     definitions = schema.get("$defs", {})
     paths = {}
     pending = deque([(root, schema)])

@@ -44,7 +44,7 @@ def invoke(write, monkeypatch):
                 "Path(os.environ['PTK_STEP_REPORTS_DIR'], 'tests.xml').write_text("
                 "'<testsuite><testcase name=\"bad\"><failure/></testcase></testsuite>')"
             )
-        job = {"steps": [{"check": {"run": [sys.executable, "-c", code]}}]}
+        job = {"steps": {"check": {"run": [sys.executable, "-c", code]}}}
         if policy is not None:
             job["open_report"] = policy
         config = {
@@ -154,7 +154,13 @@ def test_report_error_conditions(status, level, problem, step_status, expected):
         {
             "status": status,
             "steps": [
-                {"step": "check", "status": step_status, "allowed_failure": True}
+                {
+                    "step": "check",
+                    "status": step_status,
+                    "allowed_failure": True,
+                    "kind": "run",
+                    "needs": [],
+                }
             ],
         },
         [
@@ -171,7 +177,7 @@ def test_report_error_conditions(status, level, problem, step_status, expected):
 def test_invalid_open_report_is_rejected():
     with pytest.raises(ValidationError):
         JobSpec.model_validate(
-            {"open_report": "sometimes", "steps": [{"hello": "echo hello"}]}
+            {"open_report": "sometimes", "steps": {"hello": {"run": "echo hello"}}}
         )
 
 
@@ -179,15 +185,27 @@ def test_explicit_job_report_handles_missing_runs_without_hiding_errors(
     write, monkeypatch
 ):
     root = write(
-        project_files("""
-        project: {name: report-open}
-        variants: {default: small, variants: {small: {}, large: {}}}
-        layout: {reports: custom-reports}
-        report_formats: []
-        jobs:
-          build:
-            steps: [{hello: {uses: echo, with: {message: hello}}}]
-    """)
+        project_files(
+            """\
+project:
+  name: report-open
+variants:
+  default: small
+  variants:
+    small: {}
+    large: {}
+layout:
+  reports: custom-reports
+report_formats: []
+jobs:
+  build:
+    steps:
+      hello:
+        uses: echo
+        with:
+          message: hello
+"""
+        )
     )
     opened = []
     monkeypatch.setattr(

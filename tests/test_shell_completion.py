@@ -49,10 +49,16 @@ def project(tmp_path, monkeypatch):
                         "token": {"type": "secret", "env": "COMPLETION_SECRET"},
                         "branch": {"default": "${git.branch}"},
                     },
-                    "steps": [{"configure": "echo config"}, {"compile": "echo build"}],
+                    "steps": {
+                        "configure": {"run": "echo config"},
+                        "compile": {"run": "echo build", "needs": ["configure"]},
+                    },
                 },
-                "publish": {"audience": "maintainer", "steps": [{"push": "echo push"}]},
-                "ci-only": {"only_cx": True, "steps": [{"push": "echo push"}]},
+                "publish": {
+                    "audience": "maintainer",
+                    "steps": {"push": {"run": "echo push"}},
+                },
+                "ci-only": {"only_cx": True, "steps": {"push": {"run": "echo push"}}},
             },
             "workflows": {
                 "all": {"help": "Build everything", "jobs": {"make": {"job": "build"}}},
@@ -92,11 +98,13 @@ def test_commands_options_and_typed_values(project, shell):
     )
     assert not {"publish", "private", "ci-only", "self-setup"} & complete(shell=shell)
     assert complete(incomplete="bu", shell=shell) == {"build"}
-    assert {"--build-type", "--enabled", "--no-enabled", "--from"} <= complete(
+    assert {"--build-type", "--enabled", "--no-enabled", "--only-step"} <= complete(
         ["build"], "--", shell
     )
     assert complete(["build", "--build-type"], "D", shell) == {"Debug"}
-    assert complete(["build", "--dry-run", "--from"], "con", shell) == {"configure"}
+    assert complete(["build", "--dry-run", "--only-step"], "con", shell) == {
+        "configure"
+    }
     assert complete(["build", "--to"], "com", shell) == {"compile"}
     assert complete(["maintainer", "config", "show", "--format"], "j", shell) == set()
 
@@ -236,8 +244,8 @@ def test_vmr_repositories_jobs_workflows_and_variants(tmp_path, monkeypatch):
     monkeypatch.setattr(App, "configure_project", forbidden)
     assert {"firmware", "bootloader", "everything"} <= complete()
     assert "build" in complete(["firmware"])
-    assert "--from" in complete(["firmware", "build"], "--")
-    assert complete(["firmware", "build", "--from"], "h") == {"hello"}
+    assert "--only-step" in complete(["firmware", "build"], "--")
+    assert complete(["firmware", "build", "--only-step"], "h") == {"hello"}
     assert complete(["--variant"], "d") == {"debug", "dev"}
     assert complete(["firmware", "variant", "show"], "d") == {"debug", "dev"}
     assert complete(["workflow", "run"], "f") == {"firmware/all"}
