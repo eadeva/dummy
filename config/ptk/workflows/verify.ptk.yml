@@ -12,4 +12,4 @@ jobs:
   docs:
     job: docs
   extension:
-    job: check
+    job: extension

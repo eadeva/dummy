@@ -98,8 +98,8 @@ of the target job name. For example::
 
 ``compile`` runs first; ``unit`` and ``integration`` can run concurrently;
 ``package`` starts after both succeed. ``needs`` references invocation IDs, never
-repository aliases or target job names. Multiple invocations may call the same
-job with different parameters; order them with dependencies when they share outputs.
+repository aliases or target job names. Each repository/job pair may appear once
+per workflow. Different repositories may expose jobs with the same name.
 
 Each invocation accepts:
 
@@ -131,7 +131,12 @@ discovery and ``requires_tools`` overrides continue to apply.
 Failure, preflight and isolation
 --------------------------------
 
-Loading rejects unknown dependencies, repeated dependencies, self-dependencies and
+Each repository/job pair can be chosen only once in a workflow, including calls
+with different parameters. An unqualified local target and its owner-qualified
+form identify the same job. The same job name in another repository is distinct;
+the same job may still participate in different workflows.
+
+Loading rejects duplicate job targets, unknown dependencies, repeated dependencies, self-dependencies and
 cycles; cycle errors show the dependency path. PTK prepares every job before
 starting the first. Unknown repositories/jobs,
 invalid parameters/variants, unsatisfied declared tool/credential requirements
@@ -233,8 +238,7 @@ The workflow also writes an immutable summary and child HTML/JSON reports under:
 
 Repository-owned workflows honor the owner's layout/report directory; workspace
 workflows use the workspace's ``_reports``. Child report snapshots include their
-own log copies so repeated sequential calls do not redirect earlier report links
-to newer logs. Workflow reports use colored status cards and per-column filters.
+own log copies so later runs do not redirect earlier report links to newer logs. Workflow reports use colored status cards and per-column filters.
 Their table shows invocation IDs, ``needs``, targets, status and skip reasons.
 The JSON summary exposes the same information in its ``jobs`` list.
 Open a child report for its project versions, tool dependencies and test details.

@@ -19,7 +19,7 @@ function harness(text = "jobs: {}\n") {
     const callbacks = new Set(), closed = new Set();
     const p = { messages: [], isDisposed: false, options: {}, revealed: false,
       webview: {
-        cspSource: "http://ptk.test", asWebviewUri: uri => `http://ptk.test/${path.basename(uri.fsPath)}`,
+        cspSource: "http://ptk.test", asWebviewUri: uri => `http://ptk.test/${path.relative(path.resolve(__dirname, "../media"), uri.fsPath).split(path.sep).join("/")}`,
         onDidReceiveMessage: callback => subscribe(callbacks, callback),
         postMessage: async message => { p.messages.push(message); await p.onPost?.(message); return true; },
       },
@@ -56,7 +56,7 @@ function harness(text = "jobs: {}\n") {
     },
     commands: { executeCommand: async (...args) => executed.push(args) },
   };
-  const editors = createEditors(api, context, { changed: () => changed++, validate: async () => validations++, configuration: () => ({ version: 5, schema: require("../media/config-schema.json"), documents: [{ file: document.uri.fsPath, schema: require("../media/config-schema.json") }] }) });
+  const editors = createEditors(api, context, { changed: () => changed++, validate: async () => validations++, configuration: () => ({ version: 5, value: require("../src/config-model").inspect(text).value, schema: require("../media/config-schema.json"), documents: [{ file: document.uri.fsPath, schema: require("../media/config-schema.json") }] }) });
   return { api, context, document, editors, panels, executed, errors, edits, external,
     changeCount: () => changed, validationCount: () => validations,
     setAccepted: value => { accepted = value; }, setSaved: value => { saved = value; },

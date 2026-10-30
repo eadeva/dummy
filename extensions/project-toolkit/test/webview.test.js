@@ -19,7 +19,7 @@ async function form(t, value = { vars: { first: "original", second: "other", unu
     window.acquireVsCodeApi = () => ({ getState: () => ({}), setState() {}, postMessage(message) { window.messages.push(message); } });
   });
   await page.addStyleTag({ path: path.join(media, "editor.css") });
-  for (const file of ["schema.js", "presentation.js", "variables.js", "editor.js"]) await page.addScriptTag({ path: path.join(media, file) });
+  for (const file of ["schema.js", "presentation.js", "variables.js", "dependencies.js", "graph-engine/dagre.min.js", "graph-editor.js", "editor.js"]) await page.addScriptTag({ path: path.join(media, file) });
   let version = 1;
   async function state(extra = {}) {
     await page.evaluate(message => window.dispatchEvent(new MessageEvent("message", { data: message })), {
@@ -143,12 +143,96 @@ test("failed saves retain the entered value and do not retry automatically", opt
   assert.match(await h.page.locator("#issue").textContent(), /Source file changed/);
 });
 
+test("a rejected connection does not trap the editor in a retry before the next selection", options, async t => {
+  const h = await form(t, { jobs: { build: { steps: {check: {run: "check"}, test: {run: "test"}} } } }, ["jobs", "build", "steps", "test"]);
+  await h.page.getByLabel("Add prerequisite", { exact: true }).selectOption("check");
+  await h.page.getByRole("button", { name: "Connect", exact: true }).click();
+  const [edit] = await h.edits();
+  await h.state({ ack: edit.id, issue: "Source changed. Review the refreshed configuration." });
+  assert.equal(await h.page.locator(".dependency-edge").count(), 0);
+  await h.page.getByLabel("Select step", { exact: true }).selectOption("check");
+  assert.equal(await h.field("run").inputValue(), "check");
+  assert.equal((await h.edits()).length, 1);
+  await h.page.getByLabel("Add prerequisite", { exact: true }).selectOption("test");
+  await h.page.getByRole("button", { name: "Connect", exact: true }).click();
+  assert.equal((await h.edits()).length, 2);
+  assert.equal((await h.edits())[1].operations[0].prerequisite, "test");
+});
+
+test("workflow job selection excludes duplicates and adding a reused target makes no edit", options, async t => {
+  const h = await form(t, { repository: { alias: "app" }, jobs: {check: {steps: {}}, test: {steps: {}}}, workflows: {verify: {jobs: {a: {job: "check"}, b: {job: "app:check"}}}} }, ["workflows", "verify", "jobs", "b"]);
+  assert.match(await h.page.locator(".dependency-editor [role=alert]").innerText(), /only be chosen once/);
+  assert.deepEqual(await h.page.locator("datalist option").evaluateAll(options => options.map(option => option.value)), ["test"]);
+  await h.field("job").fill("test"); await h.field("job").blur();
+  const [edit] = await h.edits();
+  h.value.workflows.verify.jobs.b.job = "test";
+  await h.state({ ack: edit.id });
+  assert.equal(await h.page.locator(".dependency-node").count(), 2);
+  await h.page.evaluate(() => window.dispatchEvent(new MessageEvent("message", { data: { type: "navigate", selection: ["workflows", "verify", "jobs"] } })));
+  await h.page.getByLabel("New field name", { exact: true }).fill("third");
+  await h.page.getByLabel("Job to add", { exact: true }).fill("app:check");
+  await h.page.getByRole("button", { name: "Add field", exact: true }).click();
+  assert.match(await h.page.locator("#issue").innerText(), /only be chosen once/);
+  assert.equal((await h.edits()).length, 1);
+  await h.page.getByLabel("Job to add", { exact: true }).fill("other:check");
+  await h.page.getByRole("button", { name: "Add field", exact: true }).click();
+  assert.equal((await h.edits()).length, 2);
+  assert.equal((await h.edits())[1].operations[0].value.job, "other:check");
+});
+
+test("editing a needs field detects a loop without leaving the configuration form", options, async t => {
+  const h = await form(t, {jobs: {build: {steps: {a: {run: "a", needs: []}, b: {run: "b", needs: "a"}}}}}, ["jobs", "build", "steps", "b"]);
+  await h.field("needs").fill("b"); await h.field("needs").blur();
+  const [edit] = await h.edits();
+  h.value.jobs.build.steps.b.needs = "b";
+  await h.state({ ack: edit.id });
+  assert.match(await h.page.locator(".dependency-editor [role=alert]").innerText(), /itself/);
+  assert.equal(await h.field("run").inputValue(), "b");
+});
+
 test("tree navigation opens named step fields with readable breadcrumbs", options, async t => {
   const h = await form(t, { jobs: { build: { steps: {compile: { run: "make" }} } } }, ["jobs", "build", "steps"]);
   assert.deepEqual(await h.page.locator("label.name").allTextContents(), ["compile"]);
   await h.page.evaluate(() => window.dispatchEvent(new MessageEvent("message", { data: { type: "navigate", selection: ["jobs", "build", "steps", "compile"] } })));
   assert.equal(await h.field("run").inputValue(), "make");
   assert.deepEqual(await h.page.locator(".crumbs button").allTextContents(), ["Configuration", "jobs", "build", "steps", "compile"]);
+});
+
+test("invalid graph configuration keeps fields and raw YAML usable and recovers after repair", options, async t => {
+  const h = await form(t, { jobs: { build: { steps: {check: {run: "check"}, test: {run: "test", needs: ["missing"]}} } } }, ["jobs", "build", "steps", "test"]);
+  assert.match(await h.page.locator(".dependency-editor [role=alert]").innerText(), /unknown prerequisite/);
+  assert.equal(await h.field("run").inputValue(), "test");
+  assert.equal(await h.page.getByRole("button", { name: "Raw YAML", exact: true }).isEnabled(), true);
+  await h.page.getByRole("button", { name: "Remove prerequisite missing from test" }).click();
+  const [edit] = await h.edits();
+  h.value.jobs.build.steps.test.needs = [];
+  await h.state({ ack: edit.id });
+  assert.equal(await h.page.locator(".dependency-node").count(), 2);
+  h.value.jobs.build.steps.test.title = { invalid: "field type" };
+  h.value.jobs.build.steps.test.needs = ["check"];
+  h.value.jobs.build.steps.check.needs = ["test"];
+  await h.state({ validationError: "Configuration validation failed: cycle and invalid title" });
+  assert.match(await h.page.locator("#validation-error").innerText(), /validation failed/);
+  assert.match(await h.page.locator(".dependency-editor [role=alert]").innerText(), /cycle/);
+  await h.page.getByRole("button", { name: "Remove prerequisite check from test" }).click();
+  const last = (await h.edits()).at(-1);
+  h.value.jobs.build.steps.test.needs = [];
+  await h.state({ ack: last.id, validationError: "title must be a string" });
+  assert.equal(await h.page.locator(".dependency-node").count(), 2);
+  assert.equal(await h.field("run").inputValue(), "test");
+  h.value.jobs.build.steps.test.needs = 17;
+  await h.state({ validationError: "needs must be a name or list" });
+  assert.match(await h.page.locator(".dependency-editor [role=alert]").innerText(), /needs must be a name or list/);
+  assert.equal(await h.field("needs").inputValue(), "17");
+  assert.equal(await h.page.getByRole("button", { name: "Save & validate", exact: true }).isEnabled(), true);
+  h.value.jobs.build.steps.test.needs = [];
+  await h.page.evaluate(() => { window.savedGraphMount = PtkGraphEditor.mount; PtkGraphEditor.mount = () => { throw new Error("layout failed"); }; });
+  await h.state();
+  assert.match(await h.page.getByRole("alert").filter({ hasText: "Graph could not be displayed" }).innerText(), /layout failed/);
+  assert.equal(await h.field("run").inputValue(), "test");
+  await h.page.evaluate(() => { PtkGraphEditor.mount = window.savedGraphMount; });
+  await h.state();
+  assert.equal(await h.page.locator(".dependency-node").count(), 2);
 });
 
 test("save notifications arriving during another edit do not release its pending acknowledgement", options, async t => {

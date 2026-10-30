@@ -77,3 +77,16 @@ test("unowned fields cannot be silently discarded when editing a parent", () => 
   const { config, docs } = fixture();
   assert.throws(() => plan(config, docs, [{ op: "set", path: ["project"], value: { name: "demo", unknown: 1 } }]), /provide a configuration file/);
 });
+
+test("graph connections update only the owning job document and survive invalid unrelated fields", () => {
+  const { config, docs } = fixture();
+  config.value.jobs.build.help = 123; // PTK reports this error; graph repair remains possible.
+  config.value.jobs.build.steps.test = { run: "test", needs: [] };
+  docs.set("/repo/config/jobs/build.ptk.yml", "# preserve\nhelp: 123\nsteps:\n  compile: {run: make}\n  test: {run: test, needs: []}\n");
+  const edits = plan(config, docs, [{ op: "dependency", path: ["jobs", "build", "steps", "test"], prerequisite: "compile", remove: false }]);
+  assert.equal(edits.size, 1);
+  const text = edits.get("/repo/config/jobs/build.ptk.yml");
+  assert.match(text, /# preserve/);
+  assert.equal(YAML.parse(text).help, 123);
+  assert.deepEqual(YAML.parse(text).steps.test.needs, ["compile"]);
+});

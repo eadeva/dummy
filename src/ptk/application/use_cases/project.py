@@ -500,6 +500,8 @@ class ExportSchema:
         ] = "push"
         definitions["JobSpec"]["properties"]["steps"]["x-ptk-entry-name"] = "step"
         definitions["WorkflowSpec"]["properties"]["jobs"]["x-ptk-entry-name"] = "job"
+        definitions["JobSpec"]["properties"]["steps"]["x-ptk-graph"] = "step"
+        definitions["WorkflowSpec"]["properties"]["jobs"]["x-ptk-graph"] = "job"
         definitions["WorkflowJob"]["properties"]["job"]["x-ptk-reference"] = {
             "path": ["jobs"],
             "label": "job",

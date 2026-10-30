@@ -1,6 +1,7 @@
 "use strict";
 
 const YAML = require("yaml");
+const dependencies = require("../media/dependencies");
 const forbidden = new Set(["__proto__", "prototype", "constructor"]);
 
 // Use PyYAML's scalar spelling rules. YAML 1.1 implementations differ on y/n,
@@ -124,7 +125,24 @@ function edit(text, operations) {
       parent.set(key, doc.createNode(operation.value));
     } else {
       if (!exists) throw new Error(`Field ${key} no longer exists.`);
-      if (op === "remove") parent.delete(key);
+      if (op === "dependency") {
+        const targetPath = [...path, "needs"];
+        if (state.locked.some(prefix => prefix.every((key, i) => targetPath[i] === key) || targetPath.every((key, i) => prefix[i] === key))) throw new Error("This dependency uses a complex YAML value. Use Raw YAML to edit it.");
+        const graph = path.slice(0, -1).reduce((value, key) => value?.[key], state.value);
+        dependencies.update(graph, operation.prerequisite, key, operation.remove);
+        const target = parent.get(key, true);
+        if (!YAML.isMap(target)) throw new Error("The dependent must be a mapping.");
+        let needs = target.get("needs", true);
+        if (YAML.isScalar(needs)) {
+          const list = doc.createNode([]);
+          list.add(needs); target.set("needs", list); needs = list;
+        }
+        if (operation.remove) needs.items = needs.items.filter(item => item.value !== operation.prerequisite);
+        else {
+          if (!needs) { needs = doc.createNode([]); target.set("needs", needs); }
+          needs.add(operation.prerequisite);
+        }
+      } else if (op === "remove") parent.delete(key);
       else if (op === "rename") {
         if (!YAML.isMap(parent) || typeof operation.name !== "string" || !operation.name.trim() || forbidden.has(operation.name)) throw new Error("Invalid field name.");
         if (parent.has(operation.name)) throw new Error(`Field ${operation.name} already exists.`);

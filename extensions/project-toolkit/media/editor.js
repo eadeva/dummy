@@ -1,4 +1,4 @@
-/* global acquireVsCodeApi, PtkSchema, PtkPresentation, PtkVariables */
+/* global acquireVsCodeApi, PtkSchema, PtkPresentation, PtkVariables, PtkDependencies, PtkGraphEditor */
 "use strict";
 (() => {
   const vscode = acquireVsCodeApi();
@@ -11,6 +11,7 @@
   const expandedHelp = new Set();
   let pointerActive = false, renderPending = false;
   let variablePicker;
+  let disposeGraph;
   let parameterDraft = {};
   const stored = vscode.getState() || {};
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -94,10 +95,31 @@
       remember(); renderConfiguration();
     });
   }
-  function control(value, spec, onValue, id) {
+  function control(value, spec, onValue, id, path) {
     const resolved = S.effective(spec, value, schema);
     let input;
-    if (resolved.enum) {
+    if (typeof value === "string" && resolved["x-ptk-reference"]) {
+      const reference = resolved["x-ptk-reference"];
+      const configuration = state.logical ? state.value : state.configurationValue;
+      const graph = path && PtkDependencies.context(schema, state.value, path, S);
+      const names = graph?.kind === "job" && path.at(-1) === "job"
+        ? PtkDependencies.availableJobs(configuration, graph.value, graph.selected)
+        : Object.keys(reference.path.reduce((value, key) => value?.[key], configuration) || {});
+      if (reference["allow-custom"]) {
+        input = el("input", undefined, { id, type: "text", list: `${id}-choices` });
+        input.value = value;
+        const list = el("datalist", undefined, { id: `${id}-choices` });
+        names.forEach(name => list.append(el("option", name, { value: name })));
+        app.append(list);
+        input.addEventListener("input", () => onValue(input.value));
+        input.addEventListener("blur", () => { if (!rendering) flush(); });
+      } else {
+        input = el("select", undefined, { id });
+        for (const name of new Set([value, ...names])) input.append(el("option", name, { value: name }));
+        input.value = value;
+        input.addEventListener("change", () => { onValue(input.value); flush(); });
+      }
+    } else if (resolved.enum) {
       input = el("select", undefined, { id });
       const values = resolved.enum.includes(value) ? resolved.enum : [value, ...resolved.enum];
       for (const option of values) input.append(el("option", String(option), { value: String(option) }));
@@ -145,6 +167,7 @@
         value: active.value, invalid: active.getAttribute("aria-invalid"), numberInvalid: active.getAttribute("data-number-invalid"),
         draft: active.hasAttribute("data-ui-draft") || [...queue.values()].some(op => `field-${JSON.stringify(op.path)}` === active.id) } : undefined;
       const scroll = [window.scrollX, window.scrollY];
+      disposeGraph?.(); disposeGraph = undefined;
       app.replaceChildren();
       app.className = "configuration";
       const header = el("header");
@@ -179,6 +202,28 @@
         crumbs.append(el("span", "/"), button(P.pathLabel(state.value, path), () => navigate(path), "link"));
       });
       main.append(crumbs, el("h2", P.pathLabel(state.value, selected)));
+      const graph = PtkDependencies.context(schema, state.value, selected, S);
+      if (graph) {
+        graph.owner = (state.logical ? state.value : state.configurationValue)?.repository?.alias;
+        const canvas = el("div"); main.append(canvas);
+        const locked = id => {
+          const path = [...graph.path, id, "needs"];
+          return state.locked.some(prefix => prefix.every((key, i) => path[i] === key) || path.every((key, i) => prefix[i] === key));
+        };
+        try {
+          disposeGraph = PtkGraphEditor.mount(canvas, graph, {
+            navigate,
+            locked,
+            connect: (from, to, remove) => afterEdits(() => {
+              // Recheck after any queued field save before applying the edge edit.
+              PtkDependencies.update(valueAt(graph.path), from, to, remove);
+              change({ op: "dependency", path: [...graph.path, to], prerequisite: from, remove }, true);
+            }),
+          });
+        } catch (error) {
+          canvas.replaceChildren(el("p", `Graph could not be displayed: ${error.message}. Configuration fields remain available below.`, { className: "notice error", role: "alert" }));
+        }
+      }
       const value = valueAt(selected);
       const spec = S.at(schema, state.value, selected, schema);
       const resolved = S.effective(spec, value, schema);
@@ -253,7 +298,9 @@
       open.id = id;
       body.append(el("span", summary, { className: "field-summary", title: summary }), open);
     } else {
-      const input = control(value, spec, next => change({ op: "set", path, value: next }), id);
+      const graphContext = PtkDependencies.context(schema, state.value, path, S);
+      const graphChange = graphContext && ["job", "title", "needs"].includes(path[graphContext.path.length + 1]);
+      const input = control(value, spec, next => change({ op: "set", path, value: next, ...(graphChange ? { render: true } : {}) }), id, path);
       const hint = el("p", required ? "Required — enter a value." : "Empty — enter a value.", { className: "empty-field-message", id: `${id}-empty` });
       const markEmpty = () => {
         const empty = typeof value === "string" ? !input.value.trim() : value === null && required;
@@ -410,6 +457,17 @@
       for (const key of options) name.append(el("option", key, { value: key }));
     } else if (!isList) name = el("input", undefined, { placeholder: isJobs ? "e.g. build" : "Field name", "aria-label": isJobs ? "New job name" : "New field name" });
     const help = el("p", "", { className: "help" });
+    let jobTarget;
+    const configuration = state.logical ? state.value : state.configurationValue;
+    if (resolved["x-ptk-graph"] === "job") {
+      jobTarget = el("input", undefined, { id: `add-job-${JSON.stringify(containerPath)}`, "data-ui-draft": "true", "aria-label": "Job to add", placeholder: "Job or repository:job", list: "workflow-job-choices" });
+      const list = el("datalist", undefined, { id: "workflow-job-choices" });
+      const choices = PtkDependencies.availableJobs(configuration, value);
+      choices.forEach(job => list.append(el("option", job, { value: job })));
+      jobTarget.value = uiDrafts.get(jobTarget.id) ?? choices[0] ?? "";
+      jobTarget.addEventListener("input", () => uiDrafts.set(jobTarget.id, jobTarget.value));
+      row.append(jobTarget, list);
+    }
     if (name) {
       name.id = `add-name-${JSON.stringify(containerPath)}`;
       name.setAttribute("data-ui-draft", "true");
@@ -436,6 +494,12 @@
         const currentSpec = S.at(schema, state.value, containerPath, schema);
         const child = S.child(currentSpec, current, index, schema);
         const next = S.initial(child, schema, { name: key, existing: isList ? current : [], configuration: state.configurationValue || state.value });
+        if (jobTarget) {
+          if (!jobTarget.value.trim()) throw new Error("Choose an unused job or enter a repository:job target.");
+          next.job = jobTarget.value.trim();
+          PtkDependencies.validateTargets({ ...current, [key]: next }, configuration?.repository?.alias);
+          uiDrafts.delete(jobTarget.id);
+        }
         const directory = S.resolve(child, schema)["x-ptk-directory-template"];
         if (directory) next.path = directory.replace("{name}", key);
         if (name?.tagName === "INPUT" && uiDrafts.get(name.id)?.trim() === key) {
@@ -634,7 +698,9 @@
       if (own && message.issue) {
         const drafts = [...queue.values()];
         queue.clear();
-        for (const operation of [...submitted, ...drafts]) queue.set(JSON.stringify(operation.path), operation);
+        // A rejected connection is an action, not a text draft. Do not replay
+        // it ahead of the user's repair or next selection after a stale save.
+        for (const operation of [...submitted.filter(op => op.op !== "dependency"), ...drafts]) queue.set(JSON.stringify(operation.path), operation);
       }
       commitRequested = false; deferred.length = 0;
       issue = message.issue || "The document changed outside this form. Review the refreshed fields before editing again.";

@@ -182,10 +182,10 @@ def test_run_error_becomes_failed_result_with_reason():
     assert result.jobs[0].message == "job lock held"
 
 
-def test_transitive_dependencies_protect_repeated_jobs_even_in_reverse_yaml_order():
+def test_transitive_dependencies_order_distinct_jobs_even_in_reverse_yaml_order():
     prepared = plan(
         {
-            "again": {"job": "build", "needs": "middle"},
+            "again": {"job": "package", "needs": "middle"},
             "middle": {"job": "test", "needs": "first"},
             "first": {"job": "build"},
         }
@@ -200,9 +200,46 @@ def test_transitive_dependencies_protect_repeated_jobs_even_in_reverse_yaml_orde
     assert calls == ["first", "middle", "again"]
 
 
-def test_unordered_calls_sharing_resources_are_rejected_even_with_one_worker():
-    with pytest.raises(PtkError, match="'a' and 'b'.*add a needs dependency"):
+def test_repeated_jobs_are_rejected_even_with_one_worker():
+    with pytest.raises(ValidationError, match="only be chosen once per workflow"):
         plan({"a": {"job": "build"}, "b": {"job": "build"}}, max_workers=1)
+
+
+def test_repeated_jobs_remain_invalid_when_ordered():
+    with pytest.raises(ValidationError, match="only be chosen once per workflow"):
+        WorkflowSpec(jobs={"a": {"job": "build"}, "b": {"job": "build", "needs": "a"}})
+
+
+def test_local_and_qualified_owner_job_are_one_identity():
+    from ptk.domain.config.model import PtkConfig
+
+    common = {
+        "repository": {"alias": "app", "config_path": "config"},
+        "project": {"name": "app"},
+    }
+    with pytest.raises(ValidationError, match="only be chosen once per workflow"):
+        PtkConfig.model_validate(
+            {
+                **common,
+                "workflows": {
+                    "verify": {
+                        "jobs": {"a": {"job": "build"}, "b": {"job": "app:build"}}
+                    }
+                },
+            }
+        )
+    config = PtkConfig.model_validate(
+        {
+            **common,
+            "workflows": {
+                "verify": {
+                    "jobs": {"a": {"job": "build"}, "b": {"job": "other:build"}}
+                },
+                "another": {"jobs": {"a": {"job": "build"}}},
+            },
+        }
+    )
+    assert len(config.workflows["verify"].jobs) == 2
 
 
 @pytest.mark.parametrize(

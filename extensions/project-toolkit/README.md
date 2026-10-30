@@ -10,8 +10,8 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
    support `ptk describe --json --configuration` (inventory version 4 and configuration interface version 5).
 2. If PTK was installed directly with uv, run `ptk self-service extension` afterwards.
    Alternatively, in VS Code run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.15.0.vsix`. You can also use
-   `code --install-extension project-toolkit-0.15.0.vsix`.
+   `project-toolkit-0.16.0.vsix`. You can also use
+   `code --install-extension project-toolkit-0.16.0.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -75,7 +75,7 @@ Some action paths and flags are known by the extension, including validation,
 reports, initialization, variants, dry runs and cleanup; the schema alone is
 not the full contract.
 
-Extension 0.15.0 requires inventory `schema_version: 4` and
+Extension 0.16.0 requires inventory `schema_version: 4` and
 `configuration.version: 5`. These are independent of package/release numbers
 and the project marker's schema version. Unsupported interfaces are rejected;
 there is no legacy parser or runtime schema fallback. Breaking changes must
@@ -190,6 +190,26 @@ or merge implementation and does not substitute a bundled schema for the runtime
 PTK and the extension must both support this configuration interface. Discovery
 reports an error if the installed PTK does not provide it.
 
+Job and workflow forms include an offline graphical dependency canvas. Click a
+node or use **Select step** / **Select job** to edit its fields. Drag from a
+prerequisite's bottom connector onto a dependent to add a `needs` connection,
+or use **Add prerequisite → Connect**. Named prerequisite buttons remove edges.
+Self-links, duplicate connections and cycles are rejected before writing.
+Escape cancels dragging; dropdowns and buttons support keyboard-only editing.
+Workflow job fields suggest unused local jobs and retain repository-qualified targets.
+Each repository/job pair can occur once per workflow, even when calls would be
+sequential. Local and owner-qualified names are the same identity; the same job
+name in another repository remains distinct. Step IDs and prerequisite choices
+are unique within their job. Loops are detected while configuring, including
+after editing needs fields, and by PTK validation before execution.
+
+Graph edits preserve definition order and other prerequisites, and use the
+normal document/fingerprint checks. Layout is automatic; it is not saved in
+YAML. Invalid configurations keep their diagnostics, fields and Raw YAML access
+so users can repair them. Other validation errors do not disable graph repairs;
+PTK still performs full project validation. No graph action runs project scripts
+or changes their responsibility for inputs, outputs and side effects.
+
 Text and number fields stay local while you type. Leaving a field, pressing
 **Save** / **Ctrl/Cmd+S**, or navigating to another section applies the finished
 edit; the project form then saves and reloads it through PTK. Checkboxes, choices
@@ -267,7 +287,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.15.0.vsix`. Use `ptk self-service extension --dry-run`
+`extensions/project-toolkit/project-toolkit-0.16.0.vsix`. Use `ptk self-service extension --dry-run`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:

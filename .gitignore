@@ -16,4 +16,5 @@ docs/_build/
 
 # VS Code extension dependencies and build output
 extensions/project-toolkit/node_modules/
+extensions/project-toolkit/media/graph-engine/
 *.vsix

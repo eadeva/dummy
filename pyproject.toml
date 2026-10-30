@@ -66,6 +66,7 @@ cache-keys = [
   {file = "extensions/project-toolkit/src/**"},
   {file = "extensions/project-toolkit/media/**"},
   {file = "extensions/project-toolkit/test/**"},
+  {file = "extensions/project-toolkit/scripts/**"},
   {file = "extensions/project-toolkit/README.md"},
   {file = "extensions/project-toolkit/.vscodeignore"},
   {git = {commit = true, tags = true}},

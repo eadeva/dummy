@@ -21,7 +21,7 @@ NAME = r"^[a-z][a-z0-9_-]*$"
 class WorkflowJob(BaseModel):
     model_config = ConfigDict(extra="forbid")
     job: str = Field(
-        description="Job to invoke: JOB in the owner's repository or REPO:JOB. Workspace-owned workflows require REPO:JOB.",
+        description="Job to invoke once in this workflow: JOB in the owner's repository or REPO:JOB. The same job name in another repository is distinct. Workspace-owned workflows require REPO:JOB.",
         pattern=r"^(?:[a-z][a-z0-9_-]*:)?[a-z][a-z0-9_-]*$",
     )
     needs: list[DependencyId] = Field(
@@ -80,7 +80,19 @@ class WorkflowSpec(BaseModel):
     @model_validator(mode="after")
     def _graph(self):
         validate_graph(self.jobs, "workflow job")
+        self.validate_job_targets()
         return self
+
+    def validate_job_targets(self, owner: str | None = None):
+        seen = {}
+        for invocation, call in self.jobs.items():
+            target = call.job if ":" in call.job else f"{owner or ''}:{call.job}"
+            if target in seen:
+                raise ValueError(
+                    f"job {target.lstrip(':')!r} can only be chosen once per workflow; "
+                    f"invocations {seen[target]!r} and {invocation!r} refer to it"
+                )
+            seen[target] = invocation
 
     def ancestors(self):
         return ancestors(self.jobs)

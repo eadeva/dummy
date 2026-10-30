@@ -1,0 +1,114 @@
+"use strict";
+const test = require("node:test"), assert = require("node:assert/strict");
+const fs = require("node:fs/promises"), path = require("node:path");
+const { harness } = require("./editor-harness");
+const model = require("../src/config-model");
+let chromium;
+try { ({ chromium } = require(process.env.PTK_TEST_PLAYWRIGHT || "playwright")); } catch {}
+const media = path.resolve(__dirname, "../media");
+const theme = ":root{--vscode-foreground:#d4d7df;--vscode-editor-background:#181c24;--vscode-font-family:system-ui;--vscode-font-size:13px;--vscode-descriptionForeground:#a6b0c1;--vscode-input-background:#242b38;--vscode-input-foreground:#e7eaf0;--vscode-panel-border:#424c60;--vscode-focusBorder:#ab99ff;--vscode-charts-blue:#6db5f6;--vscode-button-background:#7361ce;--vscode-button-foreground:white;--vscode-button-secondaryBackground:#2b3342;--vscode-button-secondaryForeground:#e7eaf0;--vscode-errorForeground:#ff9b9b}";
+
+test("shipped graphical editor connects by drag and dropdown, saves real YAML, and follows external edits", { skip: !chromium && "Requires Playwright" }, async t => {
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.PTK_TEST_CHROMIUM, args: ["--no-sandbox"] });
+  t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1180, height: 1100 } });
+  const errors = [], requests = [];
+  page.on("pageerror", error => errors.push(error.message));
+  const original = "# My project\njobs:\n  build:\n    steps:\n      check: {run: check}\n      test: {run: test, needs: [check]}\n      package: {run: package, needs: [test]}\n      docs: {run: docs}\nworkflows:\n  verify:\n    jobs:\n      build: {job: build}\n      deploy: {job: other:deploy, needs: [build]}\n";
+  const h = harness(original);
+  const panel = await h.resolve();
+  await h.editors.open(h.document.uri, ["jobs", "build", "steps", "package"]);
+  await page.route("**/*", async route => {
+    const url = new URL(route.request().url());
+    if (url.origin !== "http://ptk.test") { requests.push(url.href); return route.abort(); }
+    if (url.pathname === "/index.html") return route.fulfill({ contentType: "text/html", body: panel.webview.html });
+    const body = await fs.readFile(path.join(media, url.pathname.slice(1)));
+    return route.fulfill({ contentType: url.pathname.endsWith("css") ? "text/css" : "application/javascript", body: url.pathname.endsWith("css") ? Buffer.concat([Buffer.from(theme), body]) : body });
+  });
+  await page.exposeFunction("ptkHost", message => panel.receive(message));
+  await page.addInitScript(() => { window.acquireVsCodeApi = () => ({ postMessage: message => window.ptkHost(message), getState: () => ({}), setState() {} }); });
+  panel.onPost = message => page.evaluate(data => window.dispatchEvent(new MessageEvent("message", { data })), message);
+  await page.goto("http://ptk.test/index.html");
+  await h.editors.open(h.document.uri, ["jobs", "build", "steps", "package"]);
+  await page.locator(".dependency-node").first().waitFor();
+  assert.equal(await page.locator(".dependency-node").count(), 4);
+  assert.equal(await page.locator(".dependency-edge").count(), 2);
+  assert.deepEqual(await page.getByLabel("Add prerequisite", { exact: true }).locator("option").evaluateAll(options => options.map(option => option.value)), ["", "check", "docs"]);
+  async function drag(from, to, cancel = false) {
+    const source = await page.locator(`.dependency-outlet[data-source="${from}"]`).boundingBox();
+    const target = await page.locator(`.dependency-node[data-node-id="${to}"] rect`).boundingBox();
+    await page.mouse.move(source.x + source.width / 2, source.y + source.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 12 });
+    if (cancel) { await page.locator(".dependency-viewport").focus(); await page.keyboard.press("Escape"); }
+    await page.mouse.up();
+  }
+  await drag("docs", "package", true);
+  assert.equal(h.edits.length, 0);
+  await drag("docs", "package");
+  await page.waitForFunction(() => document.querySelectorAll(".dependency-edge").length === 3);
+  assert.deepEqual(model.inspect(h.document.getText()).value.jobs.build.steps.package.needs, ["test", "docs"]);
+  assert.ok(h.document.getText().startsWith("# My project"));
+  await drag("package", "check");
+  await page.getByRole("alert").filter({ hasText: "cycle" }).waitFor();
+  assert.equal(h.edits.length, 1);
+  await drag("test", "package");
+  await page.getByRole("alert").filter({ hasText: "already exists" }).waitFor();
+  assert.equal(h.edits.length, 1);
+  await page.getByRole("button", { name: "Remove prerequisite docs from package", exact: true }).click();
+  await page.waitForFunction(() => document.querySelectorAll(".dependency-edge").length === 2);
+  await page.getByLabel("Add prerequisite", { exact: true }).selectOption("docs");
+  await page.getByRole("button", { name: "Connect", exact: true }).click();
+  await page.waitForFunction(() => document.querySelectorAll(".dependency-edge").length === 3);
+  await page.getByLabel("Select step", { exact: true }).selectOption("check");
+  await page.getByLabel("run", { exact: true }).waitFor();
+  assert.equal(await page.getByLabel("run", { exact: true }).inputValue(), "check");
+  assert.deepEqual(await page.getByLabel("Add prerequisite", { exact: true }).locator("option").evaluateAll(options => options.map(option => option.value)), ["", "docs"]);
+  const node = page.getByRole("button", { name: "Edit step package", exact: true });
+  await node.focus(); await node.press("Enter");
+  assert.equal(await page.getByLabel("run", { exact: true }).inputValue(), "package");
+  const zoom = await page.getByLabel("Graph zoom").textContent();
+  await page.getByRole("button", { name: "Zoom in", exact: true }).click();
+  assert.notEqual(await page.getByLabel("Graph zoom").textContent(), zoom);
+  await page.getByRole("button", { name: "Fit", exact: true }).click();
+  if (process.env.PTK_UI_SCREENSHOTS) await page.screenshot({ path: path.join(process.env.PTK_UI_SCREENSHOTS, "graph-editor.png"), fullPage: true });
+  await page.setViewportSize({ width: 390, height: 900 });
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await page.setViewportSize({ width: 1180, height: 1100 });
+  h.external(original);
+  await page.waitForFunction(() => document.querySelectorAll(".dependency-edge").length === 2);
+  await h.editors.open(h.document.uri, ["workflows", "verify", "jobs", "deploy"]);
+  await page.getByLabel("Select job", { exact: true }).waitFor();
+  assert.equal(await page.getByLabel("Select job", { exact: true }).inputValue(), "deploy");
+  assert.match(await page.locator(".dependency-node").last().textContent(), /other:deploy/);
+  assert.equal(await page.getByLabel("job", { exact: true }).inputValue(), "other:deploy");
+  assert.equal(await page.locator("datalist option").count(), 0);
+  // Repeated calls to one repository job are diagnosed while the form stays usable.
+  h.external("workflows:\n  verify:\n    jobs:\n      check: {job: check}\n      test: {job: test}\n      package: {job: package, needs: [check, test, extension]}\n      docs: {job: docs}\n      extension: {job: check}\n");
+  await h.editors.open(h.document.uri, ["workflows", "verify", "jobs", "package"]);
+  await page.getByRole("alert").filter({ hasText: "only be chosen once" }).waitFor();
+  await page.getByLabel("Select job", { exact: true }).selectOption("extension");
+  assert.equal(await page.getByLabel("job", { exact: true }).inputValue(), "check");
+  await page.getByLabel("job", { exact: true }).fill("extension");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.waitForFunction(() => document.querySelectorAll(".dependency-node").length === 5);
+  await page.getByLabel("Select job", { exact: true }).selectOption("package");
+  assert.equal(await page.locator(".dependency-node").count(), 5);
+  assert.equal(await page.locator(".dependency-edge").count(), 3);
+  assert.equal(await page.locator('.dependency-node[data-node-id="check"]').count(), 1);
+  assert.equal(await page.locator('.dependency-node[data-node-id="extension"]').count(), 1);
+  assert.equal(await page.getByRole("button", { name: "Remove prerequisite extension from package", exact: true }).count(), 1);
+  await page.getByLabel("Select job", { exact: true }).selectOption("extension");
+  assert.equal(await page.getByLabel("job", { exact: true }).inputValue(), "extension");
+  // A conventional job file uses its installed JobSpec schema, not logical root paths.
+  h.external("steps:\n  check: {run: check}\n  test: {run: test}\n");
+  const schema = require("../media/config-schema.json");
+  await panel.onPost({ ...panel.messages.at(-1), schema: { $ref: "#/$defs/JobSpec", $defs: schema.$defs } });
+  await h.editors.open(h.document.uri, ["steps", "test"]);
+  await page.getByLabel("Select step", { exact: true }).waitFor();
+  await page.getByLabel("Add prerequisite", { exact: true }).selectOption("check");
+  await page.getByRole("button", { name: "Connect", exact: true }).click();
+  await page.waitForFunction(() => document.querySelectorAll(".dependency-edge").length === 1);
+  assert.deepEqual(model.inspect(h.document.getText()).value.steps.test.needs, ["check"]);
+  assert.deepEqual(errors, []); assert.deepEqual(requests, []);
+});

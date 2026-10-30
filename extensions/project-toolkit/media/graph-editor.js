@@ -1,0 +1,164 @@
+/* global dagre, PtkDependencies */
+"use strict";
+window.PtkGraphEditor = (() => {
+  function mount(container, context, { navigate, connect, locked }) {
+    const D = PtkDependencies;
+    const html = (tag, text, attrs = {}) => {
+      const node = document.createElement(tag);
+      if (text !== undefined) node.textContent = text;
+      for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+      return node;
+    };
+    const svgEl = (tag, attrs = {}, text) => {
+      const node = document.createElementNS("http://www.w3.org/2000/svg", tag);
+      for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+      if (text !== undefined) node.textContent = text;
+      return node;
+    };
+    const button = (text, action, label = text) => {
+      const node = html("button", text, { type: "button", class: "secondary", "aria-label": label });
+      node.addEventListener("click", action); return node;
+    };
+    const root = html("section", undefined, { class: "dependency-editor", "aria-label": "Dependency graph" });
+    container.append(root);
+    const toolbar = html("div", undefined, { class: "dependency-toolbar" });
+    const select = html("select", undefined, { id: "graph-selection", "aria-label": `Select ${context.kind}` });
+    select.append(html("option", `Select a ${context.kind}…`, { value: "" }));
+    let entries = [], error;
+    try {
+      entries = D.nodes(context.value); D.validate(entries);
+      if (context.kind === "job") D.validateTargets(context.value, context.owner);
+    } catch (issue) { error = issue.message; }
+    for (const id of Object.keys(context.value || {})) {
+      const node = entries.find(node => node.id === id);
+      select.append(html("option", node?.label && node.label !== id ? `${id} · ${node.label}` : id, { value: id }));
+    }
+    select.value = context.selected || "";
+    select.addEventListener("change", () => navigate(select.value ? [...context.path, select.value] : context.path));
+    toolbar.append(html("label", `Select ${context.kind}`, { for: "graph-selection" }), select);
+    root.append(toolbar, html("p", "Prerequisites → dependents. Drag a bottom connector onto another node to add a dependency. Joins wait for every prerequisite.", { class: "help" }));
+    const message = html("p", error || "", { class: "notice error", role: "alert" });
+    message.hidden = !error; root.append(message);
+    function issue(text) { message.textContent = text; message.hidden = !text; }
+    function write(from, to, remove = false) {
+      try {
+        if (locked(to)) throw new Error("These dependencies are locked. Use Raw YAML to edit them.");
+        D.update(context.value, from, to, remove);
+        connect(from, to, remove); issue("");
+      } catch (error) { issue(error.message); }
+    }
+    const selected = entries.find(node => node.id === context.selected);
+    if (selected) {
+      const controls = html("div", undefined, { class: "dependency-needs" });
+      controls.append(html("strong", `${selected.id} needs`));
+      if (!selected.needs.length) controls.append(html("span", "No prerequisites", { class: "muted" }));
+      for (const from of selected.needs) {
+        const remove = button(`${from} ×`, () => write(from, selected.id, true), `Remove prerequisite ${from} from ${selected.id}`);
+        remove.disabled = locked(selected.id); controls.append(remove);
+      }
+      const choices = html("select", undefined, { id: "graph-prerequisite", "aria-label": "Add prerequisite" });
+      choices.append(html("option", "Choose prerequisite…", { value: "" }));
+      for (const from of entries) {
+        try { D.update(context.value, from.id, selected.id); }
+        catch { continue; }
+        choices.append(html("option", from.id, { value: from.id }));
+      }
+      const add = button("Connect", () => write(choices.value, selected.id));
+      add.disabled = true; choices.disabled = locked(selected.id) || choices.options.length === 1;
+      choices.addEventListener("change", () => { add.disabled = !choices.value || locked(selected.id); });
+      controls.append(choices, add); root.append(controls);
+    }
+    if (error) return () => {};
+    if (!entries.length) { root.append(html("p", `No ${context.kind}s yet. Add one below.`, { class: "empty" })); return () => {}; }
+    const viewport = html("div", undefined, { class: "dependency-viewport", tabindex: "0", "aria-label": "Dependency canvas; scroll to pan" });
+    const svg = svgEl("svg", { role: "group", "aria-label": "Prerequisites to dependents" });
+    viewport.append(svg); root.append(viewport);
+    const graph = new dagre.graphlib.Graph().setGraph({ rankdir: "TB", nodesep: 36, ranksep: 65, marginx: 30, marginy: 30 }).setDefaultEdgeLabel(() => ({}));
+    const measure = document.createElement("canvas").getContext("2d");
+    function wrap(text, font) {
+      measure.font = font; const lines = []; let line = "";
+      for (const char of text) {
+        if (line && measure.measureText(line + char).width > 196) { lines.push(line); line = ""; }
+        line += char;
+      }
+      if (line) lines.push(line); return lines;
+    }
+    for (const node of entries) {
+      const lines = wrap(node.id, "600 14px system-ui");
+      const subtitle = node.label && node.label !== node.id ? wrap(node.label, "12px system-ui") : [];
+      graph.setNode(node.id, { width: 224, height: 34 + lines.length * 19 + subtitle.length * 16, lines, subtitle });
+    }
+    for (const node of entries) for (const need of node.needs) graph.setEdge(need, node.id);
+    dagre.layout(graph);
+    const { width, height } = graph.graph();
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    const defs = svgEl("defs"), marker = svgEl("marker", { id: "editor-graph-arrow", markerWidth: 8, markerHeight: 8, refX: 7, refY: 4, orient: "auto", markerUnits: "userSpaceOnUse" });
+    marker.append(svgEl("path", { d: "M0 0 L8 4 L0 8z" })); defs.append(marker); svg.append(defs);
+    for (const edge of graph.edges()) {
+      svg.append(svgEl("path", {
+        d: graph.edge(edge).points.map((point, i) => `${i ? "L" : "M"}${point.x},${point.y}`).join(" "),
+        class: "dependency-edge", "data-from": edge.v, "data-to": edge.w,
+        "data-active": String([edge.v, edge.w].includes(context.selected)), "marker-end": "url(#editor-graph-arrow)",
+      }));
+    }
+    for (const node of entries) {
+      const box = graph.node(node.id);
+      const group = svgEl("g", { class: "dependency-node", "data-node-id": node.id, transform: `translate(${box.x - box.width / 2},${box.y - box.height / 2})` });
+      const body = svgEl("g", { tabindex: "0", role: "button", "aria-label": `Edit ${context.kind} ${node.id}`, "aria-pressed": String(node.id === context.selected) });
+      body.append(svgEl("rect", { width: box.width, height: box.height, rx: 8 }));
+      body.append(svgEl("title", {}, `${node.id}\nNeeds: ${node.needs.join(", ") || "none"}`));
+      let y = 24;
+      for (const text of box.lines) { body.append(svgEl("text", { x: 14, y }, text)); y += 19; }
+      for (const text of box.subtitle) { body.append(svgEl("text", { x: 14, y, class: "dependency-subtitle" }, text)); y += 16; }
+      body.addEventListener("click", () => navigate([...context.path, node.id]));
+      body.addEventListener("keydown", event => { if (["Enter", " "].includes(event.key)) { event.preventDefault(); navigate([...context.path, node.id]); } });
+      group.append(body);
+      group.append(svgEl("circle", { cx: box.width / 2, cy: 0, r: 6, class: "dependency-inlet" }));
+      const port = svgEl("circle", { cx: box.width / 2, cy: box.height, r: 9, class: "dependency-outlet", "data-source": node.id });
+      port.append(svgEl("title", {}, `Drag from ${node.id} to a dependent; or select the dependent and choose Add prerequisite.`));
+      group.append(port); svg.append(group);
+    }
+    let scale = 1, fitting = true, disposed = false, drag;
+    const output = html("output", "100%", { "aria-label": "Graph zoom" });
+    function zoom(next) {
+      const x = (viewport.scrollLeft + viewport.clientWidth / 2) / scale, y = (viewport.scrollTop + viewport.clientHeight / 2) / scale;
+      scale = Math.max(.05, Math.min(3, next));
+      svg.style.width = `${width * scale}px`; svg.style.height = `${height * scale}px`;
+      output.value = `${Math.round(scale * 100)}%`;
+      viewport.scrollLeft = x * scale - viewport.clientWidth / 2; viewport.scrollTop = y * scale - viewport.clientHeight / 2;
+    }
+    function fit() { if (disposed) return; fitting = true; zoom(Math.min(1, (viewport.clientWidth - 8) / width, (viewport.clientHeight - 8) / height)); viewport.scrollLeft = 0; viewport.scrollTop = 0; }
+    toolbar.append(button("−", () => { fitting = false; zoom(scale / 1.25); }, "Zoom out"), output, button("+", () => { fitting = false; zoom(scale * 1.25); }, "Zoom in"), button("Fit", fit));
+    const preview = svgEl("path", { class: "dependency-preview", visibility: "hidden" }); svg.append(preview);
+    function cancel() { drag = undefined; preview.setAttribute("visibility", "hidden"); }
+    viewport.addEventListener("pointerdown", event => {
+      const from = event.target.closest("[data-source]")?.dataset.source;
+      if (event.button !== 0 || !from && event.target.closest(".dependency-node")) return;
+      if (!from && event.pointerType === "touch") return;
+      drag = { from, x: event.clientX, y: event.clientY, left: viewport.scrollLeft, top: viewport.scrollTop };
+      viewport.setPointerCapture(event.pointerId); event.preventDefault();
+      if (from) preview.setAttribute("visibility", "visible");
+    });
+    viewport.addEventListener("pointermove", event => {
+      if (!drag) return;
+      if (!drag.from) { viewport.scrollLeft = drag.left + drag.x - event.clientX; viewport.scrollTop = drag.top + drag.y - event.clientY; return; }
+      const source = graph.node(drag.from), point = svg.createSVGPoint();
+      point.x = event.clientX; point.y = event.clientY;
+      const end = point.matrixTransform(svg.getScreenCTM().inverse());
+      preview.setAttribute("d", `M${source.x},${source.y + source.height / 2} L${end.x},${end.y}`);
+    });
+    viewport.addEventListener("pointerup", event => {
+      const from = drag?.from;
+      const to = document.elementFromPoint(event.clientX, event.clientY)?.closest(".dependency-node")?.dataset.nodeId;
+      cancel();
+      if (from && to) { event.preventDefault(); write(from, to); }
+    });
+    viewport.addEventListener("pointercancel", cancel);
+    viewport.addEventListener("lostpointercapture", cancel);
+    viewport.addEventListener("keydown", event => { if (event.key === "Escape") cancel(); });
+    const observer = new ResizeObserver(() => { if (fitting) fit(); }); observer.observe(viewport);
+    requestAnimationFrame(fit);
+    return () => { disposed = true; cancel(); observer.disconnect(); };
+  }
+  return { mount };
+})();

@@ -253,6 +253,11 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
 
    PTK shall define workflows as named job invocations with explicit needs dependencies, resolve qualified REPO:JOB targets and owner variant mappings, reject invalid graphs before execution, schedule ready jobs within one concurrency limit, block dependents of failed or skipped prerequisites unless failure is tolerated, and reject local workflow execution in CX mode.
 
+   Each repository/job pair shall occur at most once per workflow, including
+   sequential calls and local/owner-qualified spellings of the same target.
+   Identical job names in different repositories remain distinct. Configuration
+   validation shall detect cycles and duplicate targets before execution.
+
    **Origin:** User-approved workflow jobs/needs design, including qualified VMR targets and removal of group-based workflow scheduling.
 
    **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.

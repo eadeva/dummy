@@ -137,3 +137,27 @@ footer { position: sticky; bottom: 0; background: var(--vscode-editor-background
 .run-suggestions button { padding: 3px 6px; font-size: 11px; }
 .run-options summary, .run-variants summary { cursor: pointer; margin: 8px 0; }
 @media (max-width: 480px) { .run-option { grid-template-columns: 1fr; } .run-option .help, .run-suggestions { grid-column: 1; } }
+
+.dependency-editor { margin: 12px 0 20px; padding: 12px; border: 1px solid var(--vscode-panel-border, #777); border-radius: 6px; min-width: 0; }
+.dependency-toolbar, .dependency-needs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
+.dependency-toolbar label { font-weight: 600; }
+.configuration .dependency-toolbar select, .configuration .dependency-needs select { width: auto; max-width: 100%; flex: 1; min-width: 140px; }
+.dependency-toolbar output { font-size: 12px; min-width: 3em; text-align: center; }
+.dependency-needs { padding: 10px 0 2px; }
+.dependency-needs strong { overflow-wrap: anywhere; }
+.dependency-viewport { height: 380px; overflow: auto; margin-top: 10px; background: var(--vscode-editorWidget-background, var(--vscode-editor-background)); border: 1px solid var(--vscode-panel-border, #777); border-radius: 5px; position: relative; cursor: grab; }
+.dependency-viewport svg { display: block; max-width: none; min-width: 1px; }
+.dependency-node { cursor: pointer; }
+.dependency-node rect { fill: var(--vscode-input-background, #eee); stroke: var(--vscode-charts-blue, #478bd2); stroke-width: 1.5; }
+.dependency-node [aria-pressed=true] rect, .dependency-node :focus-visible rect { stroke: var(--vscode-focusBorder, #8a6df0); stroke-width: 3; }
+.dependency-node text { fill: var(--vscode-foreground, #222); font: 600 14px system-ui; pointer-events: none; }
+.dependency-node .dependency-subtitle { font-size: 12px; font-weight: 400; }
+.dependency-node .dependency-inlet, .dependency-node .dependency-outlet { fill: var(--vscode-editor-background, white); stroke: var(--vscode-charts-blue, #478bd2); stroke-width: 2; }
+.dependency-outlet { cursor: crosshair; touch-action: none; }
+.dependency-outlet:hover { fill: var(--vscode-charts-blue, #478bd2); }
+.dependency-edge, .dependency-preview { fill: none; stroke: var(--vscode-descriptionForeground, #777); stroke-width: 1.7; }
+.dependency-edge[data-active=true] { stroke: var(--vscode-focusBorder, #8a6df0); stroke-width: 2.5; }
+.dependency-preview { stroke: var(--vscode-focusBorder, #8a6df0); stroke-dasharray: 5 4; pointer-events: none; }
+.dependency-editor marker path { fill: var(--vscode-descriptionForeground, #777); }
+@media (max-width: 480px) { .dependency-editor { padding: 8px; } .dependency-viewport { height: 320px; } }
+@media (forced-colors: active) { .dependency-node rect, .dependency-node circle { fill: Canvas; stroke: CanvasText; } .dependency-node text { fill: CanvasText; } .dependency-edge, .dependency-preview { stroke: CanvasText; } }

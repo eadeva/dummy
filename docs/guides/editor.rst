@@ -96,6 +96,48 @@ fields; dependency branches contain dependents, not scalar field lists. Independ
 branches can overlap; the tree is not a serial timeline.
 Display ordering does not reorder YAML source files.
 
+Opening a job, workflow or one of its nodes also shows an editable graphical
+canvas in the configuration form. It uses the same bundled Dagre engine as
+reports, with prerequisites above dependents and shared nodes drawn once. Select
+a node on the canvas or use **Select step** / **Select job** to open its fields.
+The workflow selector lists invocation IDs and their job targets; dependencies
+refer to invocation IDs. A repository's job can be selected only once in a
+workflow: ``check`` and ``this-repo:check`` identify the same job, while
+``another-repo:check`` is distinct. Already used jobs are omitted from the target
+suggestions. The add-invocation controls also reject reused targets. Step IDs
+are unique within their job, and a prerequisite can be selected only once.
+These rules do not restrict reuse of a job in a different workflow or of a step
+name in a different job.
+
+Drag a node's bottom connector onto a dependent to add that node to the
+dependent's ``needs``. Alternatively select the dependent, choose **Add
+prerequisite**, and press **Connect**. This dropdown excludes self-links,
+existing connections and edges that would create a cycle. Remove a connection
+with its named prerequisite button. Keyboard users can select nodes with Enter
+or Space and edit every connection through the dropdown/buttons. Escape cancels
+a drag. Zoom, fit and background dragging help with larger graphs. Workflow
+``job`` fields suggest configured local jobs and accept explicit repository:job
+targets.
+
+Connection edits preserve other prerequisites, YAML order and unrelated fields.
+They pass through the existing version/fingerprint checks and write the owning
+document. Logical project forms save and reload through PTK; individual file
+forms use VS Code's document save and undo behavior. Dragging creates scheduling
+dependencies; it does not reorder definitions, run commands or establish artifact
+contracts. Positions are automatic and are not stored in YAML.
+
+Validation errors stay visible without disabling the configuration editor.
+An invalid graph displays its diagnostic while fields and Raw YAML remain
+available. Existing missing or cyclic references can be removed one at a time;
+new connections are checked in both the webview and the host before writing.
+Cycles are detected while configuring, including after editing needs fields;
+PTK also rejects cycles and repeated job targets during configuration validation.
+Malformed dependency fields can be repaired through their normal field controls
+or Raw YAML. Other project validation errors do not prevent graph repairs. PTK
+remains responsible for full configuration validation and execution permissions.
+Graph field metadata is supplied by the installed schema; there is no embedded
+schema fallback or legacy configuration conversion.
+
 Multiple folders, VMR members and workspace workflows are supported. Discovery
 uses PTK's role-filtered inventory; commands still enforce permissions in the CLI.
 Configuration changes trigger a refresh. Errors appear on project nodes and in
@@ -118,7 +160,7 @@ refreshes the tree. Click **PTK unavailable** to see the exact discovery error.
 
 Build from the repository root with ``ptk extension`` or ``uv run ptk extension``.
 The job checks Node.js 22+ and npm, installs the build dependencies, runs the
-checks and writes ``extensions/project-toolkit/project-toolkit-0.15.0.vsix``.
+checks and writes ``extensions/project-toolkit/project-toolkit-0.16.0.vsix``.
 Use ``ptk self-service extension --dry-run`` to preview it. Node.js and npm must be on PATH.
 Set ``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
 integration tests. CX builds downloadable VSIX artifacts on Linux and Windows;
@@ -241,7 +283,7 @@ JavaScript, run ``npm run build`` and reload the development window.
 To install a development build into your normal VS Code instead::
 
    uv run ptk extension
-   uv run ptk self-service extension --vsix extensions/project-toolkit/project-toolkit-0.15.0.vsix --force
+   uv run ptk self-service extension --vsix extensions/project-toolkit/project-toolkit-0.16.0.vsix --force
 
 Editable installs intentionally contain no built-in VSIX; supply ``--vsix`` for
 this workflow. Full ``uv run ptk package`` builds the release artifacts containing

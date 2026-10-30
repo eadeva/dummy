@@ -2,7 +2,7 @@
   "name": "project-toolkit",
   "displayName": "Project Toolkit",
   "description": "Run PTK jobs, workflows and built-in commands, browse help, select variants and open reports.",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "publisher": "eadeva",
   "license": "UNLICENSED",
   "private": true,
@@ -359,11 +359,15 @@
     ]
   },
   "scripts": {
-    "check": "node --check src/core.js && node --check src/extension.js && node --check src/config-model.js && node --check src/editors.js && node --check src/parameters.js && node --check media/schema.js && node --check media/presentation.js && node --check media/editor.js && node --check media/variables.js",
+    "check": "node --check src/core.js && node --check src/extension.js && node --check src/config-model.js && node --check src/editors.js && node --check src/parameters.js && node --check media/schema.js && node --check media/presentation.js && node --check media/editor.js && node --check media/variables.js && node --check media/dependencies.js && node --check media/graph-editor.js",
     "test": "node --test test/*.test.js",
     "package": "vsce package --no-dependencies --skip-license",
     "vscode:prepublish": "npm run check && npm test && npm run build",
-    "build": "esbuild src/extension.js --bundle --platform=node --target=node20 --external:vscode --outfile=dist/extension.js"
+    "build": "esbuild src/extension.js --bundle --platform=node --target=node20 --external:vscode --outfile=dist/extension.js",
+    "prepare:graph": "node scripts/prepare-graph.cjs",
+    "precheck": "npm run prepare:graph",
+    "pretest": "npm run prepare:graph",
+    "prebuild": "npm run prepare:graph"
   },
   "devDependencies": {
     "@vscode/vsce": "4.0.0",

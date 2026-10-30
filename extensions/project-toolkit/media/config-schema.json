@@ -872,7 +872,8 @@
           },
           "title": "Steps",
           "type": "object",
-          "x-ptk-entry-name": "step"
+          "x-ptk-entry-name": "step",
+          "x-ptk-graph": "step"
         }
       },
       "required": [
@@ -2345,7 +2346,7 @@
       "additionalProperties": false,
       "properties": {
         "job": {
-          "description": "Job to invoke: JOB in the owner's repository or REPO:JOB. Workspace-owned workflows require REPO:JOB.",
+          "description": "Job to invoke once in this workflow: JOB in the owner's repository or REPO:JOB. The same job name in another repository is distinct. Workspace-owned workflows require REPO:JOB.",
           "pattern": "^(?:[a-z][a-z0-9_-]*:)?[a-z][a-z0-9_-]*$",
           "title": "Job",
           "type": "string",
@@ -2457,7 +2458,8 @@
           },
           "title": "Jobs",
           "type": "object",
-          "x-ptk-entry-name": "job"
+          "x-ptk-entry-name": "job",
+          "x-ptk-graph": "job"
         }
       },
       "required": [

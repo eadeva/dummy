@@ -45,18 +45,18 @@ def summaries(root):
 
 def test_discovery_preview_then_sequential_calls_and_immutable_reports(tmp_path):
     job = command(
-        "from pathlib import Path; import os, sys; assert os.environ['PTK_JOB'] == sys.argv[2] == 'build'; assert 'PTK_ACTION' not in os.environ; p=Path('order.txt'); p.write_text((p.read_text() if p.exists() else '') + sys.argv[1]); print(sys.argv[1])"
+        "from pathlib import Path; import os, sys; assert os.environ['PTK_JOB'] == sys.argv[2]; assert sys.argv[2] in ('build', 'test'); assert 'PTK_ACTION' not in os.environ; p=Path('order.txt'); p.write_text((p.read_text() if p.exists() else '') + sys.argv[1]); print(sys.argv[1])"
     )
     job["params"] = {"word": {"default": "x"}}
     job["steps"]["run"]["run"].extend(["${params.word}", "${run.job}"])
     root = repository(
         tmp_path,
-        jobs={"build": job},
+        jobs={"build": job, "test": job},
         workflows={
             "verify": {
                 "jobs": {
                     "one": {"job": "build", "params": {"word": "A"}},
-                    "two": {"job": "build", "params": {"word": "B"}, "needs": ["one"]},
+                    "two": {"job": "test", "params": {"word": "B"}, "needs": ["one"]},
                 }
             }
         },
@@ -91,10 +91,10 @@ def test_discovery_preview_then_sequential_calls_and_immutable_reports(tmp_path)
     assert len(reports) == 2
     for report in reports:
         data = json.loads(report.read_text())
-        assert data["job"] == "build"
+        assert data["job"] in {"build", "test"}
         assert "action" not in data
         child_html = report.with_suffix(".html").read_text(encoding="utf-8")
-        assert "<h1>Job - build</h1>" in child_html
+        assert f"<h1>Job - {data['job']}</h1>" in child_html
         log = Path(data["steps"][0]["log_file"])
         assert log.is_relative_to(report.parent)
         assert data["params"]["word"] in log.read_text()
@@ -151,6 +151,7 @@ def test_failure_controls_sequential_continuation(tmp_path, continued):
 def test_all_calls_are_preflighted_before_running(tmp_path, call, error):
     jobs = {
         "build": command("from pathlib import Path; Path('ran').touch()"),
+        "first": command("from pathlib import Path; Path('ran').touch()"),
         "restricted": {**command("print('secret')"), "audience": "maintainer"},
     }
     root = repository(
@@ -158,7 +159,7 @@ def test_all_calls_are_preflighted_before_running(tmp_path, call, error):
         jobs=jobs,
         workflows={
             "verify": {
-                "jobs": {"first": {"job": "build"}, "bad": {**call, "needs": ["first"]}}
+                "jobs": {"first": {"job": "first"}, "bad": {**call, "needs": ["first"]}}
             }
         },
     )
@@ -174,13 +175,9 @@ def test_reject_parallel_output_and_uv_environment_collisions(tmp_path):
         workflows={"bad": {"jobs": {"one": {"job": "build"}, "two": {"job": "build"}}}},
     )
     result = invoke(root, "workflow", "run", "bad", "--dry-run")
-    assert result.exit_code != 0 and "can run concurrently and share" in result.output
+    assert result.exit_code != 0 and "only be chosen once per workflow" in result.output
     a = command("pass")
     a["steps"]["run"]["python"] = {"project": "."}
-    write_project(
-        root / ".main.ptk.yml",
-        {**read_project(root / ".main.ptk.yml"), "jobs": {"a": a, "b": a}},
-    )
     write_workflows(
         (root / "config/workflow.ptk.yml").parent / "workflows",
         yaml.safe_load(
@@ -192,6 +189,10 @@ def test_reject_parallel_output_and_uv_environment_collisions(tmp_path):
                 }
             )
         )["workflows"],
+    )
+    write_project(
+        root / ".main.ptk.yml",
+        {**read_project(root / ".main.ptk.yml"), "jobs": {"a": a, "b": a}},
     )
     result = invoke(root, "workflow", "run", "bad", "--dry-run")
     assert result.exit_code != 0 and "uv project environment" in result.output
@@ -440,14 +441,20 @@ def test_qualified_underscore_targets_and_invocation_ids_are_distinct(tmp_path):
         jobs={"job_name": command("print('qualified target')")},
         workflows={"local_flow": {"jobs": {"owner_call": {"job": "job_name"}}}},
     )
-    (tmp_path / ".main.ptk.yml").write_text("virtual_monorepo: true\nmembers: [app]\n")
+    repository(tmp_path / "other", "other_repo", jobs={"job_name": command("pass")})
+    (tmp_path / ".main.ptk.yml").write_text(
+        "virtual_monorepo: true\nmembers: [app, other]\n"
+    )
     write_workflows(
         tmp_path / "workflows",
         {
             "verify": {
                 "jobs": {
                     "first_call": {"job": "my_repo:job_name"},
-                    "second_call": {"job": "my_repo:job_name", "needs": "first_call"},
+                    "second_call": {
+                        "job": "other_repo:job_name",
+                        "needs": "first_call",
+                    },
                 }
             }
         },
@@ -468,7 +475,7 @@ def test_qualified_underscore_targets_and_invocation_ids_are_distinct(tmp_path):
         yaml.safe_load(shown.output)["workflows"]["verify"]["jobs"]["second_call"][
             "job"
         ]
-        == "my_repo:job_name"
+        == "other_repo:job_name"
     )
 
 

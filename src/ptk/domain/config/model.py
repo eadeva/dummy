@@ -1009,6 +1009,17 @@ class PtkConfig(_Strict):
             return to_plain(apply_defaults(from_plain(value)))
         return value
 
+    @model_validator(mode="after")
+    def _workflow_job_targets(self):
+        for name, workflow in self.workflows.items():
+            try:
+                workflow.validate_job_targets(
+                    self.repository.alias if self.repository else None
+                )
+            except ValueError as exc:
+                raise ValueError(f"workflow {name!r}: {exc}") from exc
+        return self
+
     @field_validator("param_defaults")
     @classmethod
     def _default_names(cls, value: dict[str, Any]) -> dict[str, Any]:

@@ -1,5 +1,6 @@
 """Real tagged builds and Git-free sdist rebuilds; run in release environments."""
 
+import io
 import os
 import shutil
 import subprocess
@@ -128,6 +129,18 @@ def test_tagged_build_and_frozen_sdist_rebuild(tmp_path):
     ):
         resource = "ptk/resources/extension/project-toolkit.vsix"
         assert original.read(resource) == rebuilt_wheel.read(resource)
+        with zipfile.ZipFile(io.BytesIO(original.read(resource))) as extension:
+            for name in (
+                "dagre.min.js",
+                "dagre.LICENSE.txt",
+                "dagre.min.js.LEGAL.txt",
+                "README.txt",
+            ):
+                assert extension.read(
+                    f"extension/media/graph-engine/{name}"
+                ) == original.read(f"ptk/adapters/graph_assets/{name}")
+            assert extension.read("extension/media/graph-editor.js")
+            assert extension.read("extension/media/dependencies.js")
         for name in (
             "dagre.min.js",
             "dagre.LICENSE.txt",

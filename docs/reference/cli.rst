@@ -484,7 +484,7 @@ deletes the same folders, then executes. They are mutually exclusive and apply t
 jobs and workflows. Clean-only does not install tools/hooks, resolve credentials,
 run version commands or require job parameter values. Re-run preflights execution
 before deletion. Workflow cleanup covers every referenced job in its resolved
-repository and variant, deduplicating repeated calls. Job/step execution filters
+repository and variant, deduplicating identical output paths. Job/step execution filters
 still apply; a disallowed job variant is a configuration error, not a silent skip.
 
 ``clean-all`` removes the repository's complete output folders across every job

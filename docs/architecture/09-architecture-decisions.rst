@@ -104,6 +104,9 @@ not imply that every related future capability has been implemented.
 
    **Decision:** Use a jobs mapping keyed by invocation ID, with job targets and needs edges. VMR targets use REPO:JOB. Validate graph and known output/environment conflicts before execution; bound ready jobs with max_workers.
 
+   Each repository/job pair may appear once per workflow; see the identity and
+   configuration-time validation clarification in :need:`DD_GRAPH_EDITING`.
+
    **Alternatives considered:** Sequential/parallel groups and positional step lists were rejected.
 
    **Consequences:** Failures block dependent chains, independent branches continue, and tolerated failures remain visible. Workflows run locally; CX orchestration remains external.
@@ -295,6 +298,60 @@ not imply that every related future capability has been implemented.
    verify that wheel and sdist rebuilds retain these resources and licenses.
 
    **Related requirement:** :need:`REQ_Sw_GRAPH_INSPECTION`.
+
+.. ddec:: Graphical dependency editing with recoverable validation
+   :id: DD_GRAPH_EDITING
+   :status: accepted
+
+   **Context:** The report diagram makes joins clearer than a tree. Users want
+   the same graphical overview while editing, selection dropdowns, and dragging
+   that connects prerequisites. Configuration validation must not make the
+   extension unusable when a project needs repair.
+
+   **Decision:** Keep the sidebar for navigation and add a graphical canvas to
+   job/workflow configuration forms. Reuse the pinned Dagre engine and license
+   notices through a build-time copy from the report assets. Show one node per
+   authored step or workflow invocation. Click a node or use the job/step
+   dropdown to edit its fields. Drag from a prerequisite's bottom connector onto
+   its dependent, or choose a prerequisite from a dropdown. Both actions add
+   one explicit needs edge; named removal buttons remove one connection.
+   Layout remains automatic, with prerequisite-to-dependent direction.
+
+   **Identity and uniqueness:** Each repository/job pair may occur once within
+   a workflow, even when parameters differ or dependencies would serialize the
+   calls. Unqualified local and owner-qualified targets identify the same job;
+   the same job name in another repository is distinct. Step IDs are unique
+   within a job and prerequisite selections cannot repeat. Selectors exclude
+   used choices; explicit YAML is subject to the same configuration validation.
+   Jobs remain reusable across different workflows. This supersedes the earlier
+   allowance for sequential repeated calls to one job.
+
+   **Validation boundary:** Installed schema metadata marks graph fields.
+   Client checks assist editing; they do not duplicate PTK's full configuration
+   validation or substitute a bundled schema. The host checks requested edge
+   changes against the current authored graph and existing source-version
+   guards before writing. Cycles, self-links and duplicate additions are
+   rejected without changing YAML. Invalid loaded graphs show a diagnostic
+   while fields and Raw YAML remain available. Removal may repair missing or
+   cyclic references incrementally. Other validation errors remain visible and
+   do not prevent repair. Loop diagnostics are also refreshed when needs fields
+   are edited, without waiting for a run. PTK still validates the whole project
+   on reload/run.
+
+   **Alternatives considered:** Reordering a list cannot represent joins and
+   would obscure whether order or dependencies control execution. User feedback
+   explicitly selected connecting dependencies. Free node positioning would
+   introduce layout state unrelated to execution. Blocking the whole form on
+   validation failure would prevent users from correcting their configuration.
+
+   **Consequences:** Graph edits use the normal YAML editing/ownership path,
+   preserving other prerequisites, comments and definition order. Keyboard
+   dropdowns/buttons provide the same operations as dragging. No connection
+   runs commands, transfers artifacts or changes project responsibility under
+   :need:`DD_EXECUTION_BOUNDARIES`. The schema graph hint is an additive change;
+   inventory version 4 and configuration version 5 retain their meaning.
+
+   **Related requirement:** :need:`REQ_Sw_SCHEMA_AUTHORITY`.
 
 .. ddec:: Collapsible report graphs preserve recorded evidence
    :id: DD_REPORT_GRAPHS

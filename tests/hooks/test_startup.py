@@ -92,6 +92,10 @@ def test_vmr_workflow_checks_each_participant_before_any_job(
     workspace = tmp_path / "vmr"
     a = repository(workspace / "a", alias="a")
     b = repository(workspace / "b", alias="b")
+    (a / "config/jobs/verify.ptk.yml").write_text(
+        (a / "config/jobs/build.ptk.yml").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
     unused = repository(workspace / "unused", alias="unused")
     (unused / ".pre-commit-config.yaml").unlink()
     (workspace / ".main.ptk.yml").write_text("virtual_monorepo: true\n")
@@ -106,7 +110,7 @@ def test_vmr_workflow_checks_each_participant_before_any_job(
                             "jobs": {
                                 "one": {"job": "a:build"},
                                 "two": {"job": "b:build"},
-                                "again": {"job": "a:build", "needs": ["one", "two"]},
+                                "again": {"job": "a:verify", "needs": ["one", "two"]},
                             },
                         }
                     }

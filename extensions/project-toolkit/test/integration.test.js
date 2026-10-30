@@ -53,6 +53,32 @@ function project(root, alias) {
   });
 }
 
+test("PTK validation failures remain editable inventory and recover without an interface error", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk invalid graph "));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  project(root, "demo");
+  const file = path.join(root, "jobs/build.ptk.yml");
+  for (const steps of [
+    { check: { run: "check", needs: ["missing"] } },
+    { check: { run: "check", needs: ["test"] }, test: { run: "test", needs: ["check"] } },
+    { check: { run: "check", needs: 17 } },
+    { check: { run: "check", title: { invalid: true } } },
+  ]) {
+    fs.writeFileSync(file, JSON.stringify({ steps }));
+    const inventory = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));
+    const current = inventory.projects[0];
+    assert.ok(current.error);
+    assert.deepEqual(current.configuration.value.jobs.build.steps, steps);
+    assert.ok(current.configuration.graphs.find(graph => graph.path[1] === "build").error);
+    assert.equal(current.configuration.schema.$defs.JobSpec.properties.steps["x-ptk-graph"], "step");
+    assert.ok(current.configuration.bindings.some(binding => binding.path[0] === "jobs"));
+  }
+  fs.writeFileSync(file, JSON.stringify({ steps: { check: { run: "check" }, test: { run: "test", needs: ["check"] } } }));
+  const repaired = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"])).projects[0];
+  assert.equal(repaired.error, undefined);
+  assert.equal(repaired.configuration.graphs[0].nodes.length, 2);
+});
+
 test("separate variant tasks execute real PTK processes concurrently with isolated outputs", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, async t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk parallel variants "));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

@@ -4,8 +4,6 @@ from dataclasses import asdict
 from math import isfinite
 from pathlib import Path
 
-from pydantic import ValidationError
-
 from ...domain.config import tree as t
 from ...domain.config.layout import editor_layout
 from ...domain.config.model import JobSpec
@@ -67,8 +65,15 @@ def describe_configuration(
             path = [section, name, child]
             try:
                 spec = model.model_validate(authored)
+                if isinstance(spec, WorkflowSpec):
+                    repository = value.get("repository")
+                    spec.validate_job_targets(
+                        repository.get("alias")
+                        if isinstance(repository, dict)
+                        else None
+                    )
                 graphs.append({"path": path, **describe_graph(getattr(spec, child))})
-            except ValidationError as exc:
+            except ValueError as exc:
                 graphs.append(
                     {"path": path, "nodes": [], "tree": [], "error": str(exc)}
                 )
