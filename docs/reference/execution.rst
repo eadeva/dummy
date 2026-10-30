@@ -70,6 +70,81 @@ that resolve to the same uv project environment, even with one worker. Separate
 ``UV_PROJECT_ENVIRONMENT`` values or a ``needs`` edge resolve that conflict.
 PTK cannot infer every resource accessed by arbitrary commands.
 
+.. _execution-boundaries:
+
+Execution guarantees and limits
+-------------------------------
+
+PTK orchestrates declared commands and records their results. Its dependency
+graph represents **declared scheduling relationships**, not a discovered or
+verified graph of file inputs and outputs. These limits apply equally to steps
+inside a job and job invocations inside a workflow.
+
+.. list-table:: Responsibility boundaries
+   :header-rows: 1
+   :widths: 20 35 45
+
+   * - Area
+     - PTK provides
+     - Project authors and invoked tools provide
+   * - Dependencies
+     - Validation of declared IDs and edges; scheduling after prerequisites pass
+       or their failures are explicitly allowed.
+     - All required ordering. PTK does not discover file reads/writes, infer
+       missing edges, or transfer artifacts along an edge.
+   * - Inputs and outputs
+     - Configured storage paths, logging, report collection and managed cleanup.
+     - Checks that required inputs exist and are current, and that commands
+       produce the expected files, contents and versions. There is no general
+       step input/output contract or automatic artifact validation.
+   * - Isolation
+     - Per-step storage conventions and composed command environments.
+     - Any required filesystem, process, network or device isolation. Commands
+       and plugins execute with the user's permissions; PTK does not sandbox
+       them or restrict them to their step directories.
+   * - Concurrent resources
+     - Worker limits, job/variant run locks, and preflight checks for known
+       overlapping job storage and uv project environments.
+     - Coordination of other shared files, caches, generated sources, devices
+       and services. These checks are not a general resource-locking system and
+       do not prevent unrelated processes from accessing those resources.
+   * - Reuse and recovery
+     - Explicit partial-run selection, retries, cancellation and retained run
+       evidence.
+     - Input freshness, safe reuse, repeatable side effects and recovery from
+       partial writes. PTK does not perform dependency-based up-to-date checks,
+       content-addressed artifact caching, automatic output restoration or
+       transactional rollback of command side effects.
+
+For example, if ``compile`` returns success without creating the expected binary,
+``package`` can still become eligible through ``needs: compile``. The command or
+handler must check that binary itself or declare a validation step which fails
+when it is missing or invalid. A path such as ``${steps.compile.build_dir}``
+identifies a location; it does not create a dependency or assert that anything
+has been written there. An allowed failure can likewise release a consumer
+without producing its required artifacts.
+
+Distinct step folders and ``environment.isolate: true`` do not prevent a command
+from writing into another step's directory or the repository. Setting ``cwd``
+only changes the starting directory. Cleanup path checks protect PTK's own
+cleanup operation; they do not restrict what an executed command can delete.
+Use an explicitly configured external container, VM or other execution boundary
+when isolation is required. Build tools invoked by PTK can enforce their own
+input/output, caching or sandboxing rules; PTK does not add those guarantees.
+
+Worker counts limit scheduled work, not total system load or exclusive resource
+ownership. Workflow and job limits compose, invoked tools can start their own
+workers, and other PTK runs or external processes may run concurrently.
+``max_workers: 1`` is not a substitute for correct ``needs`` relationships.
+Retries may repeat writes or remote actions; cancellation cannot undo completed
+side effects. Project commands must handle those cases explicitly.
+
+A graph preview therefore cannot prove that a build will work or that independent
+branches are safe to run together. A green report node records the execution
+outcome, not general proof of artifact validity or reproducibility. See the
+current-scope decision :need:`DD_EXECUTION_BOUNDARIES` and
+:need:`DD_ROOT_CWD`.
+
 Selecting part of a job
 -----------------------
 
@@ -131,6 +206,8 @@ reasons; omitted steps remain visible. ``--only-step`` lists prerequisites that
 will not run and retains their edges. Generated graph previews are the only
 preview files written; run outputs, logs and reports are untouched. ``--graph``
 alone shows authored topology, not the outcome of runtime conditions.
+The graph does not discover or verify artifact dependencies; see
+:ref:`execution-boundaries`.
 
 The extension consumes the same PTK-provided tree projection. Expand final
 targets to inspect their prerequisites; both canonical nodes and shared
@@ -153,6 +230,8 @@ allowed-failure nodes amber. Each node also spells out its state; failure allowe
 remains explicit. Selecting a node shows its duration and recorded reason,
 including blocked dependencies and steps omitted by partial execution. The
 timeline remains the source of actual execution order and overlap.
+Node colours describe recorded execution states, not checked input/output
+contracts; see :ref:`execution-boundaries`.
 
 ``report: false`` excludes a step's details and results as before. Its ID and
 prerequisite edges remain as a **Details hidden** node, so the graph cannot imply

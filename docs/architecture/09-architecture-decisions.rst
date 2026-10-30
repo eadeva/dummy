@@ -120,7 +120,7 @@ not imply that every related future capability has been implemented.
 
    **Alternatives considered:** Keeping ordered lists, nested groups or a second background scheduling mechanism was rejected.
 
-   **Consequences:** Authors must declare ordering. A skipped prerequisite blocks dependents, and limits on concurrent jobs and steps compose.
+   **Consequences:** Authors must declare ordering. A skipped prerequisite blocks dependents, and limits on concurrent jobs and steps compose. Edges do not declare or validate artifact inputs/outputs; :need:`DD_EXECUTION_BOUNDARIES` defines that responsibility boundary.
 
    **Related requirement:** :need:`REQ_Sw_CONTROL`.
 
@@ -134,9 +134,55 @@ not imply that every related future capability has been implemented.
 
    **Alternatives considered:** Changing default cwd to the step build folder was explicitly rejected.
 
-   **Consequences:** Commands can write elsewhere. Authors must coordinate shared writes and external resources; PTK catches known uv environment conflicts but cannot infer arbitrary script behavior.
+   **Consequences:** Commands can write elsewhere. Authors must coordinate shared writes and external resources; PTK catches known uv environment conflicts but cannot infer arbitrary script behavior. Composed environments and cleanup path guards do not sandbox executed commands; see :need:`DD_EXECUTION_BOUNDARIES`.
 
    **Related requirement:** :need:`REQ_Sw_ENVIRONMENT`.
+
+.. ddec:: Explicit execution boundaries and project-owned artifact contracts
+   :id: DD_EXECUTION_BOUNDARIES
+   :status: accepted
+
+   **Context:** A dependency tree and per-step output folders can suggest stronger
+   guarantees than PTK actually implements. Build commands can access arbitrary
+   paths, shared caches, hardware and remote systems. Scheduling success does not
+   establish that the expected artifacts exist or are valid.
+
+   **Decision:** Keep the current responsibility boundary explicit. PTK validates
+   declared dependency graphs, schedules their nodes, composes environments,
+   provides storage conventions, guards managed cleanup and records outcomes.
+   It detects specific known storage/uv environment conflicts and applies
+   job/variant run locks. Project commands, plugins and invoked build tools own
+   input/output validation, undeclared resource coordination and side effects.
+   PTK supplies no general step input/output contract, file-access discovery,
+   freshness tracking, artifact cache or filesystem/process/network sandbox.
+   Repository-root cwd remains the default; changing cwd or providing separate
+   directories does not restrict access to other locations.
+
+   **Alternatives considered:** Inferring dependencies from command text cannot
+   account for arbitrary scripts and external resources. Universal artifact
+   tracking and sandboxing would require explicit contracts and execution-backend
+   support beyond the current scheduler. They are not implemented or promised by
+   the graph work; this record does not permanently rule out a future proposal.
+
+   **Consequences:** A needs edge waits for a prerequisite's accepted execution
+   outcome; it neither transfers files nor checks their existence, freshness or
+   correctness. continue_on_error can release a dependent without its artifacts.
+   Separate folders and filtered environments do not prevent shared writes.
+   Worker limits are not resource locks, and other invocations/processes can
+   still access external resources. Retries can repeat side effects; cancellation
+   and cleanup cannot roll back arbitrary writes or remote actions. --only-step
+   leaves prerequisite outputs to the caller, without restoring historical
+   artifacts. Commands must validate their inputs/results and coordinate shared
+   state; callers needing isolation must supply an appropriate external boundary.
+
+   **Presentation:** Guides, graph previews and reports must not imply automatic
+   I/O dependency discovery, artifact correctness, race freedom or reproducible
+   execution. Green nodes record execution outcomes. The concrete responsibility
+   table is in :ref:`execution-boundaries`.
+
+   **Related requirements:** :need:`REQ_Sw_CONTROL`, :need:`REQ_Sw_ENVIRONMENT`,
+   :need:`REQ_Sw_STEP_SELECTION`, :need:`REQ_Sw_GRAPH_INSPECTION` and
+   :need:`REQ_Sw_REPORT_GRAPHS`.
 
 .. ddec:: Target closure or explicit single-step execution
    :id: DD_PARTIAL_STEPS
@@ -350,8 +396,12 @@ not imply that every related future capability has been implemented.
 Open boundaries
 ---------------
 
-Enforced filesystem sandboxing, arbitrary runtime step output values, automatic
-reuse of previous-run outputs and GitHub workflow generation are not implemented
-by the dependency graph change. New proposals need their own decisions and
-verification. Known planned product gaps remain in
+The current execution boundary is recorded in :need:`DD_EXECUTION_BOUNDARIES`.
+General input/output contracts, inferred file dependencies, artifact freshness or
+correctness checks, content-addressed caching, enforced sandboxing, arbitrary
+runtime step output values and automatic restoration of previous-run outputs are
+not implemented by the dependency graph change. Nor is GitHub workflow generation.
+These are explicit limits, not guarantees inferred from a diagram or separate
+step folders. Future proposals need their own decisions and verification.
+Known planned product gaps remain in
 :doc:`/requirements/decisions-and-gaps`.

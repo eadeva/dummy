@@ -134,8 +134,8 @@ Failure, preflight and isolation
 Loading rejects unknown dependencies, repeated dependencies, self-dependencies and
 cycles; cycle errors show the dependency path. PTK prepares every job before
 starting the first. Unknown repositories/jobs,
-invalid parameters/variants, missing prerequisites and maintainer restrictions
-fail the preflight. Credentials are resolved serially before parallel execution,
+invalid parameters/variants, unsatisfied declared tool/credential requirements
+and maintainer restrictions fail the preflight. Credentials are resolved serially before parallel execution,
 so there are no concurrent credential prompts. Each call gets its own application
 and prepared run. Versions are discovered during this preflight and retained for
 that call; a previous job changing Git state does not refresh later snapshots.
@@ -171,9 +171,18 @@ also protect against a separate PTK invocation using the same output folders.
 PTK cannot infer arbitrary paths or external resources used by scripts: authors
 must add dependencies between jobs that write the same files, hardware device or service.
 
+These checks do not sandbox jobs or establish a general input/output contract.
+A workflow edge orders job calls; it does not copy artifacts, verify required
+files or guarantee that a successful producer created valid outputs. Commands
+run with the user's permissions and can access paths outside their configured
+folders. Authors must validate artifacts and coordinate other shared resources;
+worker limits and known-conflict checks do not provide general mutual exclusion.
+See :ref:`execution-boundaries` for the full responsibility table and the limits
+of retries, cancellation, cleanup and partial runs.
+
 Tool selection remains per job. Toolbase-only definitions are ignored outside
 Windows; Docker installation policy still applies. Workflow preflight expects
-prerequisites already available unless a job handles its own checks through
+declared tools already available unless a job handles its own checks through
 ``tools.ensure``. There is no workflow-wide installer. Install under the target
 repository/job before the run.
 

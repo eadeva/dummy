@@ -53,14 +53,22 @@ Local workflow execution
 
 The workflow planner resolves calls to concrete jobs and variants in their
 owning repositories. A workflow's named ``jobs`` and ``needs`` form a dependency
-graph. Loading rejects invalid edges and cycles. Preflight rejects output and
-environment conflicts between unordered calls. Ready jobs share ``max_workers``;
+graph. Loading rejects invalid edges and cycles. Preflight rejects known overlaps
+in job/variant storage and uv project environments between unordered calls;
+it does not discover arbitrary file or external-resource conflicts. Ready jobs
+share ``max_workers``;
 each completion releases its dependents without waiting for unrelated branches.
 Failed or skipped prerequisites block dependent jobs with a reason, while
 independent branches continue. A tolerated failure releases dependents but remains
 visible in reports. Cancellation stops pending calls and reaches active runners.
 The workflow report retains child results and logs so later runs do not replace its evidence. Local workflows are
 rejected in CX mode; CX pipelines invoke jobs through their own orchestration.
+
+These graphs schedule declared operations rather than tracking artifact inputs
+and outputs. Commands are not sandboxed, and successful execution does not prove
+that a consumer's files exist or are current. The guarantees and author-owned
+checks are defined in :ref:`execution-boundaries` and
+:need:`DD_EXECUTION_BOUNDARIES`.
 
 Historical report export
 ------------------------
