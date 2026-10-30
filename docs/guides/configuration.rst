@@ -54,12 +54,12 @@ Documents contain their section body; filenames supply entity names::
      - compile: {run: make}
 
 PTK assembles this as ``jobs.build``. There are no includes, file precedence or
-implicit CI/local overlays. An entity cannot be split across files. Unsupported
+implicit CX/local overlays. An entity cannot be split across files. Unsupported
 ``.ptk.yml`` or ``.ptk.yaml`` filenames at the configuration root or in the owned
 entity directories are errors. Entity directories contain files directly, without
 nested configuration folders. Other repository files are not scanned.
 Explicit CLI ``--set`` overrides, shared job defaults and variant inheritance
-retain their model behavior. CI conditions and ``only_cx`` control execution.
+retain their model behavior. CX conditions and ``only_cx`` control execution.
 
 Components own their feature definitions next to their code. Register their
 repository-relative directories in ``project.ptk.yml``::
@@ -127,7 +127,7 @@ Available fields:
 * ``git.short_commit``: the first 12 hexadecimal characters of ``git.commit``.
 * ``git.checkout_commit`` and ``git.short_checkout_commit``: the actual local
   ``HEAD``, full and 12-character forms. This identifies the merged code being
-  tested when CI checks out a synthetic merge.
+  tested when CX checks out a synthetic merge.
 * ``git.branch``: the PR head branch for pull request events, otherwise the local
   branch or matching GitHub branch-event name. An unlabelled detached HEAD has
   an empty branch name. Use this field instead of ``project.current_branch``,
@@ -189,7 +189,7 @@ The captured local and UTC values are recorded under ``context.date`` in run
 reports. A new invocation captures a new instant; a dry run previews its own
 instant. Minute-level timestamps are not unique run identifiers: include a run
 ID when distinct runs need distinct destinations. Local time depends on the
-machine; use ``date.utc`` for a common timezone across developer and CI machines.
+machine; use ``date.utc`` for a common timezone across developer and CX machines.
 
 Jobs and parameters
 ----------------------
@@ -291,7 +291,7 @@ Credentials
 
 Declare credential fields and provider order under ``credentials``. The default
 chain is env, keyring, gopass, vault, prompt. Keyring is optional; prompting is
-unavailable in CI. Supply secrets to individual steps using::
+unavailable in CX. Supply secrets to individual steps using::
 
    secrets: {TOKEN: service.token}
 
@@ -311,7 +311,7 @@ with ``ptk self-service tools --dry-run``. System package managers require ``--a
 Chocolatey bootstrap is explicit. Prefer checksummed downloads.
 
 Only entries under ``configs`` are managed. Preview ``ptk maintainer sync configs --diff``;
-commit generated files and enforce ``ptk validate --generated`` in CI. Ruff uses a generated
+commit generated files and enforce ``ptk validate --generated`` in CX. Ruff uses a generated
 ``ruff-base.toml`` and a project-owned ``ruff.toml`` extending it.
 
 Local Git hooks
@@ -334,7 +334,7 @@ them when necessary. This is available to every developer, including
 non-maintainers. A local workflow checks each participating repository once,
 before starting any sequential or parallel jobs. Unrelated VMR repositories are
 not inspected. Missing/disabled ``configs.pre-commit`` entries, help, dry runs and
-CX/CI job execution do not install hooks. ``self-service hooks install`` uses the same installer;
+CX job execution do not install hooks. ``self-service hooks install`` uses the same installer;
 ``self-service doctor`` reports hook status without installing anything.
 
 Detection uses Git's repository/common-directory queries, supporting ordinary
@@ -383,7 +383,7 @@ If a previous hook removed PTK, pull the fixed checkout and rerun
 Then check ``ptk --version`` and refresh the Project Toolkit extension.
 
 Automatic installation prevents forgotten setup. It cannot prevent deliberate
-local bypass such as ``git commit --no-verify``. Run ``ptk pre-commit run --all-files`` in CI
+local bypass such as ``git commit --no-verify``. Run ``ptk pre-commit run --all-files`` in CX
 and require that check through GitHub branch protection/rulesets.
 ``ptk validate --generated`` verifies generated configuration freshness without
 maintenance permissions; it does not execute hooks. Generating shared files
@@ -444,7 +444,7 @@ When enabled locally, HTML is added to the configured report formats, even when
 ``report_formats`` is empty. A missing browser prints a hint and keeps the
 report available on disk. Failed report generation never opens an old report.
 
-Automatic opening is disabled in CX/CI mode (including ``--ci``), and dry runs
+Automatic opening is disabled in CX mode (including ``--ci``), and dry runs
 neither generate nor open reports. Multi-variant runs apply the policy separately
 to each variant. VMR jobs use the owning repository's configuration. Manual
 ``ptk report open`` remains available regardless of the job policy.
@@ -465,7 +465,7 @@ a list of login IDs, without name/email/user objects::
 
 Locally PTK compares the OS login name with this list, case-insensitively. On
 GitHub Actions it uses ``GITHUB_TRIGGERING_ACTOR`` (the user starting a rerun),
-falling back to ``GITHUB_ACTOR``. Other CI systems use the OS login name. Git
+falling back to ``GITHUB_ACTOR``. Other CX systems use the OS login name. Git
 author names and email addresses do not grant maintainer status. Add both login
 IDs when someone's local and GitHub usernames differ. ``ptk self-service doctor`` shows
 the detected user ID, role and identity-file path.
@@ -481,13 +481,13 @@ artifact destinations, and all jobs/workflows declared ``audience: maintainer``.
 These commands require a listed maintainer, including their ``--check``,
 ``--diff`` and ``--dry-run`` modes. ``command_audience: all`` cannot relax this
 restriction. Invalid project configuration does not expose maintenance commands.
-The global ``--ci`` / ``--no-ci`` option is also maintainer-only. Automatic CI
+The global ``--ci`` / ``--no-ci`` option is also maintainer-only. Automatic CX
 detection remains available without either switch.
 
 Ordinary users retain tool installation, personal credential management,
 diagnostics, validation, reports and everyday jobs/workflows. ``ptk validate``
 is always available, even when configured policies restrict other commands.
-Use ``ptk validate --generated`` in CI to check shared configuration freshness
+Use ``ptk validate --generated`` in CX to check shared configuration freshness
 without granting maintenance privileges. ``command_audience`` can restrict
 additional commands using their canonical paths, such as ``self-service.creds``.
 Developers select variants
@@ -506,7 +506,7 @@ membership grants no privileges in member repositories, or vice versa. Workspace
 
 These checks protect ordinary CLI use, not against someone editing their own
 checkout or process environment. Repository configuration and plugins remain
-trusted code; enforce release permissions and credentials in CI separately.
+trusted code; enforce release permissions and credentials in CX separately.
 
 Variant inspection, matrix runs and the command structure are described in :doc:`/reference/cli`.
 The installed plugin interfaces, generators and built-in command visibility are
@@ -805,7 +805,7 @@ Execution filters
 -----------------
 
 Jobs and job steps accept ``only_cx: true``, ``only_variants: [debug, release]`` and
-``omit_variants: [debug]``. ``only_cx`` hides a job outside CX/CI, including the
+``omit_variants: [debug]``. ``only_cx`` hides a job outside CX, including the
 extension inventory, and explicit execution is rejected. Job variant restrictions
 return an error. At step level, these filters skip the step (and nested children).
 They never select a variant. Variant filters match resolved concrete names;

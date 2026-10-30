@@ -1,0 +1,37 @@
+@startuml
+skinparam backgroundColor transparent
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 13
+skinparam ArrowColor #465E70
+skinparam ArrowFontSize 12
+skinparam ParticipantBackgroundColor #F0F6FB
+skinparam ParticipantBorderColor #2478AD
+skinparam BoxPadding 5
+skinparam sequenceMessageAlign center
+skinparam sequenceGroupBackgroundColor #F6F9FB
+skinparam sequenceGroupBorderColor #9BB1C0
+hide footbox
+
+participant "Caller" as Caller
+participant "PTK orchestration" as PTK
+participant "Step execution" as Steps #EFF8F5
+participant "Results / history" as Reports #FFF6E6
+
+Caller -> PTK : job + variants + parameters
+PTK -> PTK : load, validate, prepare
+alt configuration / preparation failed
+  PTK --> Caller : error; no job starts
+else dry run
+  PTK --> Caller : preview only
+else run
+  group Per selected variant
+    PTK -> PTK : acquire job / variant lock
+    PTK -> Steps : execute configured steps and groups
+    Steps --> PTK : status + logs + tool results
+    PTK -> Reports : retain evidence; import and export
+    Reports --> PTK : report paths and report problems
+  end
+  PTK --> Caller : exit status
+end
+@enduml

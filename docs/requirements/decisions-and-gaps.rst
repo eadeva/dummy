@@ -2,7 +2,7 @@ Open work and superseded decisions
 ==================================
 
 The accepted package-downgrade guard is not implemented:
-:need:`REQ_Sw_KEEP_NEWER_PACKAGE`. Native CI generation remains a draft proposal:
+:need:`REQ_Sw_KEEP_NEWER_PACKAGE`. Native CX generation remains a draft proposal:
 :need:`REQ_Sw_CI_GENERATION`. Neither is covered by a claimed passing result.
 
 Most implementation-derived requirements remain under review. This is a review

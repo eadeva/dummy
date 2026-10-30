@@ -109,7 +109,7 @@ The job checks Node.js 22+ and npm, installs the build dependencies, runs the
 checks and writes ``extensions/project-toolkit/project-toolkit-0.12.0.vsix``.
 Use ``ptk extension --dry-run`` to preview it. Node.js and npm must be on PATH.
 Set ``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
-integration tests. CI builds downloadable VSIX artifacts on Linux and Windows;
+integration tests. CX builds downloadable VSIX artifacts on Linux and Windows;
 Marketplace publication is separate. See the extension README for installation,
 settings and manual smoke-test instructions.
 

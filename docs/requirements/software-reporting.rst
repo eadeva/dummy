@@ -210,7 +210,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :security: false
    :legal: false
    :status: under review
-   :verification_criteria: Report-opening tests cover always/on-errors/disabled policies, CI behavior and active versus suppressed diagnostics.
+   :verification_criteria: Report-opening tests cover always/on-errors/disabled policies, CX behavior and active versus suppressed diagnostics.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_REPORTS
    :tags: implemented

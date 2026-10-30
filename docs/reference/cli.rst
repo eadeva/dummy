@@ -69,7 +69,7 @@ unrequested integrations. Config names may follow ``sync configs``;
 loads local configuration. ``--variants --strict`` treats variant warnings as
 errors; ``--versions`` opts into version discovery and accepts ``--job`` for
 explicit version dependencies. ``--generated`` checks shared configuration
-without writing and is available to CI users without maintenance permissions.
+without writing and is available to CX users without maintenance permissions.
 
 Global options precede commands and repository aliases::
 
@@ -233,7 +233,7 @@ other repositories through its ``repo_variants`` mappings.
 The option is no longer accepted after a job or subcommand.
 
 ``--ci`` / ``--no-ci`` is maintainer-only: hidden from user help and completion,
-and rejected on direct invocation. With neither flag, CI detection works for all
+and rejected on direct invocation. With neither flag, CX detection works for all
 users. In a VMR, a repository-qualified command checks that member's maintainer
 list; workspace commands check the root list. Member operations also enforce
 their own permissions. The default mode remains automatically detected.
@@ -289,7 +289,7 @@ files; ``run --all-files`` is not a dry run.
 Explicit commands honor ``configs.pre-commit.output`` even when automatic
 installation is disabled. Without an entry, they use ``.pre-commit-config.yaml``.
 Checks and validation may prepare the managed pre-commit runtime, but do not
-install Git hook scripts. Checks work on CI and with a custom ``core.hooksPath``;
+install Git hook scripts. Checks work on CX and with a custom ``core.hooksPath``;
 install/uninstall refuse that setting to preserve existing hook management.
 Uninstall leaves the runtime and caches available for future checks. Linked
 worktrees share Git hook scripts, so installation/removal affects those worktrees.

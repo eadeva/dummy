@@ -10,7 +10,7 @@ Use this skill only in PTK's own source checkout. Confirm the checkout, project 
 
 1. Read `docs/index.rst`, `docs/guides/configuration.rst` and the implementation for the feature.
 
-2. Use reStructuredText for Sphinx pages and add new pages to the toctree.
+2. Use reStructuredText for Sphinx pages and add new pages to the toctree. Keep architecture diagrams few and focused; edit their PlantUML sources in `docs/diagrams` and regenerate with `python docs/_ext/diagram_assets.py --jar PATH`. Follow `docs/guides/development.rst` for the pinned renderer. Use CX pipeline terminology in prose while retaining actual CLI flags and configuration keys.
 
 3. Generate configuration field tables through the ptk-schema directive; use YAML paths, allowed values, defaults and constraints. Keep source-module maps, Python API signatures and autodoc/pydoc output out of the published docs. Do not copy field lists that can drift. Keep plugin implementation contracts in the plugin-development skill references.
 

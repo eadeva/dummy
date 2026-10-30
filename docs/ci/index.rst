@@ -1,9 +1,13 @@
-CI/CD and release preparation
-=============================
+CX pipelines and release preparation
+====================================
 
-The checked-in ``.github/workflows/ci.yml`` is the authoritative CI definition.
-It runs PTK's configured jobs; PTK's local workflow executor is not a CI service.
-Local workflows reject CI execution. CI orchestration remains in the host's
+CX is the umbrella term used here for automated project pipelines, including
+integration, verification, delivery and deployment. PTK provides jobs that those
+pipelines can invoke; the pipeline host controls orchestration.
+
+The checked-in ``.github/workflows/ci.yml`` defines PTK's verification and package-preparation pipeline.
+It runs PTK's configured jobs; PTK's local workflow executor is not a CX service.
+Local workflows reject CX execution. CX orchestration remains in the host's
 pipeline definition.
 
 Verification pipeline
@@ -24,7 +28,7 @@ Verification pipeline
      - Validate generated configuration, run hooks, Ruff and documentation, then inspect HTML reports and editor pages with Chromium.
    * - ``vscode-extension``
      - Ubuntu / Windows; Python 3.12; Node.js 22
-     - Run the extension build/test job and upload its VSIX as a CI artifact.
+     - Run the extension build/test job and upload its VSIX as a CX artifact.
    * - ``package``
      - Ubuntu / Windows; Python 3.12; Node.js 22
      - Test package builds and run ``ptk package`` with release and documentation dependencies.

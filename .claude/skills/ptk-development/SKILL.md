@@ -19,15 +19,15 @@ Use this skill only in PTK's own source checkout. Confirm the checkout, project 
 
 6. Run `uv run pytest`, `uv run ruff check`, `uv run ruff format --check` and the Sphinx warning-as-error build.
 
-7. Exercise Windows-specific paths in Windows CI; do not claim cross-platform success from Linux alone.
+7. Exercise Windows-specific paths in Windows CX; do not claim cross-platform success from Linux alone.
 
 8. Update docs, examples and relevant authoring skills with behavior changes. Keep secrets and generated workspace outputs out of git.
 
-9. Review CI results before marking a milestone complete; record explicit remaining limitations in PLAN.md.
+9. Review CX results before marking a milestone complete; record explicit remaining limitations in PLAN.md.
 
 10. Read [plugin authoring contracts](../ptk-plugin-development/references/contracts.md) for Python interfaces and `docs/reference/plugins.rst` for configuration; test third-party entry points without importing unselected distributions.
 
 11. For startup changes, profile before editing and run `scripts/benchmark_cli.py`
     before/after sequentially in the same Python environment. Preserve all command
     visibility and live configuration semantics. Bound repeated work with tests;
-    do not add timing thresholds on shared CI runners. See `docs/guides/performance.rst`.
+    do not add timing thresholds on shared CX runners. See `docs/guides/performance.rst`.

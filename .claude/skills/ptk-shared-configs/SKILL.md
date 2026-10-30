@@ -29,13 +29,13 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 10. With `configs.pre-commit.enabled: true`, commit the generated configuration
     before developers run jobs. Local jobs automatically install/repair the hooks;
     workflows check each participating repository before starting jobs. This works
-    for normal users and does not synchronize configuration. Help, previews, CI,
+    for normal users and does not synchronize configuration. Help, previews, CX,
     and disabled entries do not install hooks. Diagnose with `ptk self-service doctor`.
 
 11. Preserve existing hooks and custom Git settings. Resolve `core.hooksPath`,
     hook-file symlink or `.legacy` backup conflicts with the maintainer; do not
     blindly remove them. Use the same relative config path across linked worktrees.
-    Enforce checks in CI because local hook installation cannot prevent bypass.
+    Enforce checks in CX because local hook installation cannot prevent bypass.
 
 `maintainer sync configs` (including `--diff`) requires a login ID
 listed in the configuration folder's `maintainers.ptk.yml`. `validate --generated`

@@ -76,13 +76,6 @@ PTK exposes to people, shells, repositories and tools. Software requirements
 refine those contracts into behavior that can be checked. Follow a requirement's
 **Satisfies** links upward or **Satisfied by** links downward.
 
-.. figure:: ../_static/diagrams/requirements-traceability.svg
-   :alt: Stakeholder requirements are clustered by features. System requirements satisfy stakeholder requirements, and software requirements satisfy system requirements. Each software requirement records verification criteria and candidate source or test evidence. Evidence is not an acceptance result.
-   :class: ptk-diagram
-   :target: ../_static/diagrams/requirements-traceability.svg
-
-   A log-analysis example from the authored records. The convention also permits direct software-to-stakeholder links and same-level refinement.
-
 For example, follow :need:`REQ_Stkh_LOG_ANALYSIS` through
 :need:`REQ_Sys_LOGS` to :need:`REQ_Sw_LOG_POLICY` and
 :need:`REQ_Sw_LOG_FAILURES`.
@@ -166,10 +159,10 @@ Open work worth knowing about
 
       Generating native GitHub pipeline files needs an agreed mapping and
       ownership policy. Local workflow execution is not a substitute for
-      a native CI pipeline.
+      a native CX pipeline.
 
       +++
-      :need:`Native CI generation <REQ_Sw_CI_GENERATION>`
+      :need:`Native CX generation <REQ_Sw_CI_GENERATION>`
 
 Browse the specification
 ------------------------
@@ -238,7 +231,7 @@ the older CLI's requirements are not copied into this baseline.
 
 The system layer is intentionally small. There is no software-component
 requirement layer yet; detailed design belongs in :doc:`/architecture/index`.
-Current CI coverage and its limits are documented in :doc:`/ci/index`.
+Current CX coverage and its limits are documented in :doc:`/ci/index`.
 
 Authoring convention
 --------------------
@@ -289,7 +282,7 @@ Implementation coverage is a separate tag: ``implemented``, ``partial``,
 coverage. Source/test paths are candidate evidence; they are not a statement
 that those tests passed on every operating system or that stakeholder acceptance
 has occurred. Verification criteria describe what must be demonstrated. Current
-CI coverage and its limits are in :doc:`/ci/index`.
+CX coverage and its limits are in :doc:`/ci/index`.
 
 The generated ``needs.json`` exports these authored records and relations for
 inspection. No generated data is loaded back as the authoring source.

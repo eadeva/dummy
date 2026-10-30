@@ -2,14 +2,39 @@ Local job workflows
 ======================
 
 Workflows orchestrate existing PTK jobs **on the developer's machine**. They
-require neither GitHub nor a CI runner. Run one from the terminal or a generated
+require neither GitHub nor a CX runner. Run one from the terminal or a generated
 VS Code task. Each job keeps its repository, variant, tool requirements,
 credentials, environment, maintainers and ordinary logs/reports.
 
-``ptk workflow run`` refuses CX/CI mode, whether detected or forced with ``--ci``.
+Workflow, job and step
+----------------------
+
+The names deliberately follow GitHub Actions terminology. PTK uses three
+levels: a **workflow** coordinates reusable jobs; a **job** defines a runnable
+task; a **step** invokes a command, script or built-in/plugin action inside
+that job. A job can run directly, without belonging to a workflow.
+
+A workflow's ``steps`` list contains job calls or nested groups of calls.
+A job's ``steps`` list contains executable steps or nested step groups.
+The shared field name describes ordered entries at each level, but the allowed
+contents differ: workflow entries use ``job``; executable job steps use
+``run`` or ``uses``. Each level can group work sequentially or in parallel.
+
+For example, ``verify`` can call ``build`` and then ``test``. The ``build`` job
+can contain ``configure`` and ``compile`` steps that call the chosen build tool.
+Keep tool commands in the job and reuse that job from workflows or CX pipelines.
+See :doc:`configuration` for job and step fields and
+:doc:`/architecture/06-runtime-view` for execution behavior.
+
+Local orchestration and CX pipelines
+------------------------------------
+
+``ptk workflow run`` refuses CX mode, whether detected or forced with ``--ci``.
 ``list``, ``show`` and ``dry-run`` are inspection operations and remain available.
 GitHub template generation and a generic PTK GitHub Action for those workflows
-are a separate future phase; neither is implemented by this feature.
+are draft proposals; neither is implemented by this feature. The familiar
+terminology does not imply that PTK YAML is interchangeable with GitHub Actions
+YAML or that local workflows are executed by a CX runner.
 
 Files and commands
 ------------------
@@ -190,7 +215,7 @@ not change the workflow exit status. Warnings, skips and cancellation alone do
 not count as errors. ``always`` also opens a successfully written cancellation
 report. Set ``open_report: null`` to disable workflow report opening.
 
-Opening is disabled in CX/CI and dry runs; workflow execution itself remains
+Opening is disabled in CX and dry runs; workflow execution itself remains
 local-only. Preflight failures have no report to open. A failed summary write
 does not open an older file, and a missing browser does not affect the exit code.
 Child report opening is deferred until the workflow finishes. When the workflow

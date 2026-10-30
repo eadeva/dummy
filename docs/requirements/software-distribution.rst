@@ -164,7 +164,7 @@ items are explicitly marked and must not be presented as supported commands.
 
    **Evidence:** ``src/ptk/authoring_bundle.py``; ``tests/test_authoring_skills.py``.
 
-.. req-sw:: Generate native CI workflow files
+.. req-sw:: Generate native CX workflow files
    :id: REQ_Sw_CI_GENERATION
    :req_type: functional
    :safety: QM
@@ -176,7 +176,7 @@ items are explicitly marked and must not be presented as supported commands.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: planned
 
-   PTK should provide a reviewed generation mechanism for native GitHub workflows without executing local workflows inside CI.
+   PTK should provide a reviewed generation mechanism for native GitHub workflows without executing local workflows inside CX pipelines.
 
    **Origin:** Historical roadmap proposal for pipeline generation; not an agreed current command or implementation.
 

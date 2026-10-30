@@ -3,7 +3,7 @@ Architecture constraints
 
 PTK is a Python package requiring Python 3.12 or newer. Click supplies the CLI,
 Pydantic supplies configuration validation and JSON Schema, and YAML is the
-human-authored configuration format. Linux and Windows are exercised by CI;
+human-authored configuration format. Linux and Windows are exercised by CX;
 PowerShell and Bash/Git Bash have explicit installation and completion paths.
 A terminal emulator is not a completion provider: the active shell must load
 its own profile hook.

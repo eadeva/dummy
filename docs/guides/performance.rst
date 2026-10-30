@@ -108,7 +108,7 @@ For a longer run or selected cases::
 
 Run before/after measurements sequentially on the same machine and interpreter,
 without concurrent tests or builds. Keep the fixture sizes and terminal settings
-the same. Linux and Windows CI print benchmark results after the Python 3.12 tests;
+the same. Linux and Windows CX print benchmark results after the Python 3.12 tests;
 there are no wall-time assertions on shared runners.
 
 Profile an installed environment

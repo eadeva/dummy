@@ -69,14 +69,15 @@
 .ptk-capabilities .sd-octicon, .ptk-benefits .sd-octicon { margin-right: .25rem; }
 
 .rst-content .ptk-diagram {
-    padding: 1rem;
-    margin: 1.5rem 0;
+    padding: .65rem;
+    max-width: 720px;
+    margin: 1.25rem auto;
     border: 1px solid var(--ptk-border);
     border-radius: 12px;
     background: #f8fafc;
     text-align: center;
 }
-.rst-content .ptk-diagram img { width: 100%; max-width: 900px; height: auto; }
+.rst-content .ptk-diagram img { width: auto; max-width: 100%; height: auto; max-height: 480px; }
 .rst-content .ptk-diagram .caption { color: var(--ptk-muted); font-size: .9rem; }
 .rst-content .ptk-diagram .caption-text { font-style: normal; }
 .rst-content .ptk-metric .sd-card-body { padding: 1rem 1.2rem; }

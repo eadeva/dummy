@@ -19,13 +19,13 @@ PTK — project tool kit
 
    .. container:: ptk-lead
 
-      Turn the way your team builds, tests and delivers software into a shared,
-      discoverable command-line interface.
+      A familiar command-line interface across projects, with shared conventions
+      and the freedom to choose how each project works.
 
-   PTK is a configuration-driven automation toolkit. Describe your jobs,
-   parameters, tools and product variants in YAML; PTK prepares their execution,
-   runs your commands and collects the results. The knowledge of how to work
-   with a project stays with the project.
+   PTK is a toolkit for standardizing how teams work with their projects:
+   command discovery, variant handling, environment setup, credentials, logging
+   and reporting. Projects define their own jobs in configuration and provide
+   the actual functionality through tools, scripts and selected plugins.
 
    .. container:: ptk-actions
 
@@ -49,15 +49,54 @@ PTK — project tool kit
 The idea
 --------
 
-A project needs more than a build command. Developers also need to know which
-options to use, which tools to prepare, how to select a product variant and where
-to look when something fails. PTK brings those decisions together in a common
-execution model, described by reviewable files in your repository.
+A developer moving between projects should recognize how to discover commands,
+select a variant, prepare tools, supply credentials and inspect a failed run.
+PTK provides those shared conventions through a configuration-driven CLI.
+Job names and options remain project-defined, with consistent help and completion.
 
-Start with one useful job around an existing command or script. Add typed
-parameters, variants, tool setup or reports as the project needs them. Your
-build system, test runner and project-specific code continue to do their work;
-PTK gives the team a consistent way to invoke and understand that work.
+The project owns what a command actually does. A build job can call CMake today
+and a different tool tomorrow; a test job can delegate to a script or an installed
+plugin. Those implementations can evolve while the team retains a familiar way
+to invoke them and inspect their results.
+
+PTK centralizes the repeated operational work and keeps project-specific
+complexity with the project. That separation gives teams flexibility in their
+tools, simpler daily usage and less duplicated setup, credential and reporting
+logic. Start with one useful job around an existing command and add conventions
+as the project needs them.
+
+Workflows, jobs and steps
+-------------------------
+
+The names follow **GitHub Actions terminology** to make the structure familiar:
+a workflow coordinates jobs, and each job contains steps.
+
+.. list-table:: Three levels of project automation
+   :header-rows: 1
+   :widths: 15 50 35
+   :class: tight-table
+
+   * - Level
+     - Responsibility
+     - Example
+   * - Workflow
+     - Coordinate existing jobs sequentially or in parallel, including across repositories.
+     - ``verify`` runs ``build``, then ``test`` and ``lint``.
+   * - Job
+     - Define a runnable task with parameters, a variant context, tool requirements and its own logs/reports.
+     - ``build`` prepares and compiles a selected variant.
+   * - Step
+     - Run a command, script or built-in/plugin action; group steps when ordering or parallel execution is needed.
+     - A ``compile`` step invokes the project's build tool.
+
+Jobs also run directly, without a workflow. In PTK YAML, both workflows and jobs
+use a ``steps`` list: a workflow entry calls a **job**, while a job entry defines
+an executable **step** or a step group. The naming is familiar; PTK configuration
+has its own schema.
+
+PTK workflows currently orchestrate work locally. CX pipelines use their own
+orchestration and invoke PTK jobs. See :doc:`guides/workflows` for the structure
+in configuration and :doc:`architecture/06-runtime-view` for execution behavior.
 
 Why teams use PTK
 -----------------
@@ -118,7 +157,7 @@ What you can do
 
       Connect jobs into sequential or parallel workflows, including calls
       across independently configured repositories in a virtual monorepo.
-      CI invokes jobs from its own pipeline.
+      CX pipelines invoke jobs through their own orchestration.
 
       +++
       :doc:`Workflow guide </guides/workflows>` ·
@@ -179,26 +218,6 @@ What you can do
       :doc:`Editor and authoring tools </guides/editor>` ·
       :need:`Related requirement <REQ_Sw_AGENT_SYNC>`
 
-How a run fits together
------------------------
-
-The repository defines the available jobs and variants. A developer or a CI
-pipeline selects a job; PTK validates the inputs, prepares each selected
-variant's context and runs the configured steps. Logs and supported tool outputs
-then feed a common report model.
-
-.. figure:: _static/diagrams/project-run.svg
-   :alt: Repository configuration and a developer or CI invocation feed PTK preparation. A selected job branches into independent debug and release variant runs. Captured logs and tool results feed a canonical report model, exported as reports.
-   :class: ptk-diagram
-   :target: _static/diagrams/project-run.svg
-
-   One job definition can serve several variants. Open the diagram to view it at full size.
-
-A local workflow coordinates several such job runs. Build tools still compile;
-test runners still execute tests; CI still schedules its pipeline. See the
-:doc:`runtime view <architecture/06-runtime-view>` for preparation, cancellation
-and report history.
-
 Who is PTK for?
 ---------------
 
@@ -225,11 +244,11 @@ Who is PTK for?
       configuration close to its code and provide consistent defaults and
       authoring guidance for the team.
 
-   .. grid-item-card:: CI and release engineers
+   .. grid-item-card:: CX and release engineers
       :class-card: ptk-card
       :link: ci/index
       :link-type: doc
-      :link-alt: Understand CI and release preparation
+      :link-alt: Understand CX and release preparation
 
       Invoke the same configured jobs from native pipelines. Select versions
       and environments explicitly, collect outputs and prepare artifacts
@@ -281,7 +300,7 @@ Find your next step
       :link-type: doc
 
       Command syntax, generated configuration fields, execution controls
-      and plugin contracts.
+      and plugin configuration.
 
    .. grid-item-card:: Understand the design
       :class-card: ptk-card
@@ -291,7 +310,7 @@ Find your next step
       System boundaries, building blocks, runtime behavior and tradeoffs,
       organized into twelve architecture chapters.
 
-   .. grid-item-card:: Integrate with CI
+   .. grid-item-card:: Integrate with CX
       :class-card: ptk-card
       :link: ci/index
       :link-type: doc

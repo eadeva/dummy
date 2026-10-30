@@ -20,7 +20,7 @@ stakeholder decision.
      - Git call-count tests; :need:`REQ_Sw_GIT_LAZY`. No universal wall-clock guarantee.
    * - Portability
      - A supported job runs in a path containing spaces on Linux or Windows with correct arguments and cancellation.
-     - Native process and quickstart tests in the CI matrix; host-specific tools remain prerequisites.
+     - Native process and quickstart tests in the CX matrix; host-specific tools remain prerequisites.
    * - Reproducibility
      - A historical report is exported after another run; its inputs and diagnostic policy remain those of the selected run.
      - Reporting/history tests; :need:`REQ_Sw_REPORT_HISTORY`.

@@ -4,10 +4,10 @@ Introduction and goals
 PTK provides a repository-defined CLI for recurring engineering work: building,
 testing, generating files, preparing packages and collecting results. Teams
 write jobs once and expose typed parameters and variant choices through the
-terminal. CI invokes the same jobs while retaining its own orchestration.
+terminal. CX pipelines invoke the same jobs while retaining their own orchestration.
 
 The main stakeholders are developers executing jobs, maintainers authoring
-configuration and plugins, and CI/release engineers preparing reproducible
+configuration and plugins, and CX/release engineers preparing reproducible
 artifacts. Assistant and editor integrations consume CLI-owned configuration
 metadata; they do not define a separate loading model.
 

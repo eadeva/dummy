@@ -32,5 +32,5 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 Temporary feature overrides on jobs do not change files. Workflows retain their
 per-job variant selections; global `-V` does not override them. Maintainers alone
-can force `--ci`/`--no-ci`; all users retain automatic CI detection. See
+can force `--ci`/`--no-ci`; all users retain automatic CX detection. See
 [configuration](../../../docs/guides/configuration.rst).

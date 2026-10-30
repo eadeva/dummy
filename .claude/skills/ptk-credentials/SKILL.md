@@ -24,7 +24,7 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 8. Review masking using synthetic values. Do not print or retrieve real secrets to test masking; short secrets have masking limitations.
 
-9. In CI, provide the declared env variables and avoid interactive prompt providers. Store only through a provider that supports writes.
+9. In CX, provide the declared env variables and avoid interactive prompt providers. Store only through a provider that supports writes.
 
 10. Use `ptk self-service creds test NAME` only after inspecting the configured test command and its external effects.
 

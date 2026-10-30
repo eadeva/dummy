@@ -190,12 +190,12 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :security: false
    :legal: false
    :status: under review
-   :verification_criteria: Workflow CLI and scheduler tests cover member ownership, nesting, concurrency limits and CI rejection.
+   :verification_criteria: Workflow CLI and scheduler tests cover member ownership, nesting, concurrency limits and CX rejection.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall resolve workflow calls to jobs and variants in their owning repositories, enforce one concurrency limit across nested parallel groups, and reject local workflow execution in CI.
+   PTK shall resolve workflow calls to jobs and variants in their owning repositories, enforce one concurrency limit across nested parallel groups, and reject local workflow execution in CX mode.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 

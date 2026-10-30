@@ -54,7 +54,7 @@ This repository enables pre-commit through ``config/ptk/configs.ptk.yml``.
 Local jobs/workflows automatically install or repair the hooks. The committed
 ``.pre-commit-config.yaml`` combines PTK's base with its repository overlay;
 Ruff uses the existing ``pyproject.toml`` settings. Run
-``uv run ptk pre-commit run --all-files`` to check the whole checkout. The CI quality
+``uv run ptk pre-commit run --all-files`` to check the whole checkout. The CX quality
 job runs those hooks and checks that the generated configuration is current.
 PTK-run hooks clear caller Python environment selectors such as ``VIRTUAL_ENV``
 and ``UV_PROJECT_ENVIRONMENT`` and remove PTK's own virtualenv bin directory
@@ -78,13 +78,13 @@ The documentation build treats warnings as errors. The quickstart configuration
 and script are included from their original files; the tests run that same example
 for both variants in a directory containing spaces.
 
-Continuous integration
-----------------------
+CX pipelines
+------------
 
 GitHub Actions runs the test suite on Ubuntu and Windows with Python 3.12, 3.13
-and 3.14. CI checks the project's CMake with ``uv run cmake --version``. The
+and 3.14. CX checks the project's CMake with ``uv run cmake --version``. The
 generated CMake integration test requires that dependency and cannot silently
-skip. CI calls ``ptk test``, ``ptk check`` and ``ptk docs`` for the same workflows used locally. Existing
+skip. CX calls ``ptk test``, ``ptk check`` and ``ptk docs`` for the same workflows used locally. Existing
 POSIX-only tests remain skipped on Windows; the quickstart integration tests
 exercise actual Python processes and report generation on both platforms.
 A green Linux run alone does not establish that Windows works.
@@ -116,8 +116,9 @@ Documentation and skills
 
 The documentation environment pins Sphinx 9.1.0, Sphinx-Needs 8.5.0, the
 Read the Docs theme 3.1.0 and Sphinx-Design 0.7.0. Sphinx-Design supplies
-RST grids and cards; repository-owned SVGs provide diagrams without a network
-renderer. Requirement overview counts come from Sphinx-Needs filters. Keep
+RST grids and cards. Three PlantUML sources provide the architecture diagrams;
+their generated SVGs are committed so normal documentation builds need no Java
+or network renderer. Requirement overview counts come from Sphinx-Needs filters. Keep
 documentation authoring conventions separate from PTK product requirements.
 
 The configuration reference is generated from the validation schema and uses
@@ -141,7 +142,7 @@ resources and protected upgrades.
 
 Native Windows tests cover batch files, PowerShell, timeouts and cancellation.
 Chocolatey command construction and administrator checks use a fake runner on
-both platforms; CI does not perform real machine-wide Chocolatey installations.
+both platforms; CX does not perform real machine-wide Chocolatey installations.
 
 ``tests/hooks`` uses real temporary Git repositories and the dev group's
 pre-commit hook installation. A local hook demonstrates that a failing check blocks
@@ -156,7 +157,7 @@ Acceptance boundaries
 The VS Code extension's ``npm run package`` runs JavaScript syntax checks and
 Node tests, then packages a VSIX. ``PTK_TEST_PYTHON`` enables integration tests
 which invoke the real CLI from Node for repository and VMR discovery, previews,
-parameter passing and execution. The extension CI job runs ``uv run ptk extension``
+parameter passing and execution. The extension CX job runs ``uv run ptk extension``
 on Linux and Windows and uploads the VSIX. Controller tests use an injected VS Code API; graphical
 extension-host acceptance remains a manual check. See :doc:`/guides/editor`.
 
@@ -171,7 +172,7 @@ Startup performance
 Run ``uv run python scripts/benchmark_cli.py --output .ptk/benchmark-cli.json``
 for repeated process-start measurements on this checkout and temporary VMR
 fixtures. See :doc:`/guides/performance` for methodology, measured results and profiling.
-The Python 3.12 Linux/Windows CI jobs also run this benchmark and print their
+The Python 3.12 Linux/Windows CX jobs also run this benchmark and print their
 results; timings are evidence, not pass/fail thresholds on shared runners.
 
 Keep application services lazy: ``App`` constructs execution, tools, credentials,
@@ -179,3 +180,27 @@ editor resources and reports only on first use. Explicitly selected plugins stil
 load for validation. CLI state caches both successful loads and expected errors
 for one invocation; do not turn these into process-global or disk caches. Tests
 bound load/identity/diagnostic-path work and check fresh subprocess imports.
+
+Architecture diagrams
+---------------------
+
+Edit the files in ``docs/diagrams``. Use the matching source download below each
+architecture diagram to open it in a PlantUML editor. The SVGs are generated
+outputs; keep the source and rendering together in the same change.
+
+To regenerate all three diagrams, use Java and the official
+`PlantUML 1.2026.9 JAR <https://github.com/plantuml/plantuml/releases/tag/v1.2026.9>`_::
+
+   uv run python docs/_ext/diagram_assets.py --jar /path/to/plantuml.jar
+
+The helper checks the pinned renderer checksum and renders locally. Component
+diagrams use PlantUML's bundled Smetana layout, so Graphviz is not required.
+It records source and output checksums in each SVG. The Sphinx build rejects
+missing, stale or manually edited renderings; the check itself needs only Python::
+
+   uv run python docs/_ext/diagram_assets.py
+
+Source downloads and rendered diagrams are included in the documentation
+archive and source distribution. Rendered diagrams are limited in size on the
+page; open one for the full vector view. The diagrams explain architecture and
+behavior, without publishing a Python API reference.

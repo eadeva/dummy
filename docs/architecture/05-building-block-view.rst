@@ -3,6 +3,21 @@ Building block view
 
 The code is organized by responsibility rather than by command alone.
 
+.. figure:: ../_static/diagrams/clean-architecture.svg
+   :alt: CLI drivers depend on application use cases. Use cases depend on ports and domain rules. Adapters implement the ports and use domain data. A dashed dependency shows that driver helpers also access concrete adapters.
+   :figclass: ptk-diagram
+   :target: ../_static/diagrams/clean-architecture.svg
+
+   Software dependencies: arrows point to the depended-on responsibility;
+   the open triangle denotes implementation of a port.
+   :download:`Edit the PlantUML source <../diagrams/clean-architecture.puml>`.
+
+The core clean-architecture idea is dependency inversion: application use cases
+express the I/O contracts they need, and adapters implement those contracts.
+Domain rules describe configuration, variants, execution plans and canonical
+results. The composition root connects use cases to concrete adapters when
+the CLI starts or a service is first needed.
+
 .. list-table:: Principal building blocks
    :header-rows: 1
    :widths: 20 45 35
@@ -26,10 +41,11 @@ The code is organized by responsibility rather than by command alone.
      - Select and construct concrete implementations and built-ins
      - Application and adapters
 
-The intended dependency direction keeps policy separate from effects. This is a
-code organization rule, not a claim that an architectural dependency checker is
-currently enforcing every import. Some CLI modules coordinate concrete adapters
-for interface-specific operations.
+The separation is not complete dependency isolation. Driver helpers also access
+concrete adapters, shown by the dashed arrow, and some application services
+perform filesystem preparation directly. There is no automated checker enforcing
+every layer boundary. The diagram shows the main dependency structure rather
+than a Python API catalog or a complete import graph.
 
 Configuration and execution
 ---------------------------

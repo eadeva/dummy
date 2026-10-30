@@ -1,0 +1,33 @@
+@startuml
+!pragma layout smetana
+skinparam backgroundColor transparent
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 13
+skinparam ArrowColor #465E70
+skinparam ArrowFontSize 11
+skinparam componentStyle rectangle
+skinparam componentBackgroundColor #F0F6FB
+skinparam componentBorderColor #2478AD
+skinparam packageBackgroundColor #FFFFFF
+skinparam packageBorderColor #9BB1C0
+skinparam nodesep 30
+skinparam ranksep 35
+hide stereotype
+
+top to bottom direction
+component "Drivers\nCLI parsing and presentation" as Drivers
+component "Adapters\nFiles, processes, Git, secrets, reports" as Adapters
+package "Application boundary" {
+  component "Use cases\nLoad, prepare, run, report, setup" as UseCases #EFF8F5
+  component "Ports\nI/O contracts" as Ports
+  UseCases -right-> Ports : depend on
+}
+component "Domain\nConfiguration, variants, plans, results" as Domain #FFF6E6
+Drivers -down-> UseCases : invoke
+Adapters .down.|> Ports : implement
+UseCases -down-> Domain : apply rules
+Ports -down-> Domain : exchange data
+Adapters -down-> Domain : use data models
+Drivers -right[#A66513,dashed]-> Adapters : boundary helpers
+@enduml

@@ -1,0 +1,36 @@
+@startuml
+!pragma layout smetana
+skinparam backgroundColor transparent
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam defaultFontSize 13
+skinparam ArrowColor #465E70
+skinparam ArrowFontSize 11
+skinparam componentStyle rectangle
+skinparam componentBackgroundColor #F0F6FB
+skinparam componentBorderColor #2478AD
+skinparam packageBackgroundColor #FFFFFF
+skinparam packageBorderColor #9BB1C0
+skinparam nodesep 25
+skinparam ranksep 30
+hide stereotype
+
+top to bottom direction
+actor "Developer / CX\nEditor / assistant" as Client
+artifact "Project configuration\nJobs, variants, tools, policies" as Config #FFF6E6
+package "PTK CLI" {
+  component "Command interface\nHelp, options, completion, JSON" as CLI
+  component "Project preparation\nConfig, variants, tools, credentials" as Prepare
+  component "Execution\nWorkflows, jobs, steps" as Execute
+  component "Results\nLogs, imports, report exports" as Results
+  CLI -right-> Prepare
+  Prepare -down-> Execute : prepared context
+  Execute -left-> Results : run evidence
+}
+component "Project functionality\nTools, scripts, selected plugins" as Work #EFF8F5
+artifact "Run outputs\nLogs, reports, history" as Outputs #EFF8F5
+Client -down-> CLI : invoke / inspect
+Config -down-> Prepare : definitions
+Execute -down-> Work : delegate work
+Results -down-> Outputs : retain / export
+@enduml

@@ -346,7 +346,7 @@ def normalize_step_entry(raw: Any) -> Any:
 
 class StepSpec(_Strict):
     only_cx: bool = Field(
-        default=False, description="Skip this step outside CX/CI execution."
+        default=False, description="Skip this step outside CX execution."
     )
     only_variants: list[str] = Field(
         description="Run this step only for these variants. Other variants skip it; this does not select a variant.",
@@ -489,7 +489,7 @@ def _unique(names: list[str], where: str) -> None:
 class JobSpec(_Strict):
     only_cx: bool = Field(
         default=False,
-        description="Expose this job only during CX/CI execution. It is hidden from local command and extension listings.",
+        description="Expose this job only during CX execution. It is hidden from local command and extension listings.",
     )
     only_variants: list[str] = Field(
         description="Allow this job only for these variants. Running it with another variant is a configuration error; this does not select a variant.",
