@@ -20,10 +20,8 @@ FILES = {
 
 
 class FileReportStore:
-    def __init__(self, environ: Mapping[str, str], reporters=None, contributors=None):
+    def __init__(self, environ: Mapping[str, str]):
         self._environ = environ
-        self._reporters = reporters or {}
-        self._contributors = contributors or {}
 
     def read_summary(self, log_dir: Path, run_id: str | None = None) -> dict:
         folder = log_dir / "_history" / run_id if run_id else log_dir
@@ -42,8 +40,6 @@ class FileReportStore:
 
     def contributions(self, reports_dir: Path, labels: list[str]) -> list[Contribution]:
         results = importers.scan(reports_dir, importers.step_folders(labels))
-        for handler in self._contributors.values():
-            results.extend(handler(reports_dir, labels))
         return [r for r in results if r.step in labels]
 
     def analyze_logs(self, summary):
@@ -52,15 +48,12 @@ class FileReportStore:
         return analyze(summary)
 
     def write(self, report: Report, formats: list[str], target: Path) -> list[Path]:
-        unknown = set(formats) - (set(FILES) | {"github"} | set(self._reporters))
+        unknown = set(formats) - (set(FILES) | {"github"})
         if unknown:
             raise PtkError(f"unknown report format(s): {sorted(unknown)}")
         target.mkdir(parents=True, exist_ok=True)
         written: list[Path] = []
         for fmt in formats:
-            if fmt in self._reporters:
-                written.append(Path(self._reporters[fmt](report, target)))
-                continue
             if fmt == "github":
                 path = self._environ.get("GITHUB_STEP_SUMMARY")
                 if path:

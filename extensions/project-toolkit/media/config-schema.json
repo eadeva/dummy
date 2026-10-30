@@ -328,6 +328,13 @@
         "providers": {
           "description": "Credential providers to try, in order: env, keyring, gopass, vault or prompt.",
           "items": {
+            "enum": [
+              "env",
+              "keyring",
+              "gopass",
+              "vault",
+              "prompt"
+            ],
             "type": "string"
           },
           "title": "Providers",
@@ -1431,8 +1438,18 @@
       "additionalProperties": false,
       "properties": {
         "generators": {
-          "description": "Variant generators run in order before each command or plugin attempt. Outputs are written into this step's build directory. A step may contain only generators. Built-ins: header, make, cmake, bazel, gn, yocto, robot, sphinx; installed generator plugins may add names.",
+          "description": "Variant generators run in order before each command or built-in operation attempt. Outputs are written into this step's build directory. A step may contain only generators. Built-ins: header, make, cmake, bazel, gn, yocto, robot, sphinx.",
           "items": {
+            "enum": [
+              "header",
+              "make",
+              "cmake",
+              "bazel",
+              "gn",
+              "yocto",
+              "robot",
+              "sphinx"
+            ],
             "type": "string"
           },
           "title": "Generators",
@@ -1513,6 +1530,16 @@
         "uses": {
           "anyOf": [
             {
+              "enum": [
+                "echo",
+                "wait",
+                "report.import",
+                "configs.sync",
+                "tools.ensure",
+                "files.copy",
+                "files.clean",
+                "version.generate"
+              ],
               "type": "string"
             },
             {
@@ -1520,12 +1547,12 @@
             }
           ],
           "default": null,
-          "description": "Registered plugin that executes this step. Supply its inputs in with.",
+          "description": "Built-in operation that executes this step. Supply its inputs in with.",
           "title": "Uses"
         },
         "with": {
           "additionalProperties": true,
-          "description": "Inputs passed to the plugin named in uses.",
+          "description": "Inputs passed to the built-in operation named in uses.",
           "title": "With",
           "type": "object",
           "x-ptk-template-context": "step"
@@ -1667,15 +1694,6 @@
           "description": "Allow installation inside Docker. When false, installation is skipped in containers but version checks still run.",
           "title": "Docker",
           "type": "boolean"
-        },
-        "installers": {
-          "additionalProperties": {
-            "additionalProperties": true,
-            "type": "object"
-          },
-          "description": "Custom installer definitions keyed by installer or platform.",
-          "title": "Installers",
-          "type": "object"
         },
         "version": {
           "anyOf": [
@@ -1832,7 +1850,6 @@
       "x-ptk-field-order": [
         "description",
         "docker",
-        "installers",
         "version",
         "check",
         "version_regex",
@@ -2633,8 +2650,15 @@
       "type": "integer"
     },
     "report_formats": {
-      "description": "Report exporters: html, json, junit, markdown, github, or installed plugin exporters. An empty list disables automatic export unless open_report requires HTML.",
+      "description": "Report exporters: html, json, junit, markdown or github. An empty list disables automatic export unless open_report requires HTML.",
       "items": {
+        "enum": [
+          "html",
+          "json",
+          "junit",
+          "markdown",
+          "github"
+        ],
         "type": "string"
       },
       "title": "Report Formats",
@@ -2643,14 +2667,6 @@
     "log_analysis": {
       "$ref": "#/$defs/LogAnalysisSpec",
       "description": "Analyze step diagnostics and retain ignored or justified findings with their reasons."
-    },
-    "plugins": {
-      "description": "Installed distribution names selected for PTK plugin loading.",
-      "items": {
-        "type": "string"
-      },
-      "title": "Plugins",
-      "type": "array"
     },
     "command_audience": {
       "additionalProperties": {
@@ -2729,7 +2745,6 @@
     "logging_history_backups",
     "report_formats",
     "log_analysis",
-    "plugins",
     "command_audience"
   ],
   "allOf": [
@@ -2766,7 +2781,6 @@
           "logging_history_backups": false,
           "report_formats": false,
           "log_analysis": false,
-          "plugins": false,
           "command_audience": false
         }
       },

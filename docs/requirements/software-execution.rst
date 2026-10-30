@@ -78,7 +78,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    PTK shall compose command environments from a filtered base plus declared variables, permitted caller values, selected tools and runtime paths.
 
    **Scope:** Environment composition does not provide filesystem, process,
-   network or device sandboxing. Commands and plugins retain the user's
+   network or device sandboxing. Commands and Python tools retain the user's
    permissions; per-step directories do not enforce an access boundary.
    Projects choose and implement any required isolation. This responsibility
    remains with the project implementation to preserve flexibility in its tools
@@ -311,7 +311,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :security: false
    :legal: false
    :status: accepted
-   :verification_criteria: Command, Python, plugin and generation-only steps receive files before execution; overrides and retries retain the prepared snapshot; dry-run, skipped and blocked steps generate nothing; failures prevent the command; concurrent variants/steps use distinct folders.
+   :verification_criteria: Command, Python, built-in operation and generation-only steps receive files before execution; overrides and retries retain the prepared snapshot; dry-run, skipped and blocked steps generate nothing; failures prevent the command; concurrent variants/steps use distinct folders.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
@@ -328,7 +328,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
 
    **Implementation:** Implemented. Per-file replacement is atomic; multi-file
    transactions, script sandboxing, artifact correctness and repeat-run isolation
-   are not promised. Generator plugin cancellation is cooperative. CLI concurrent
+   are not promised. In-process generator cancellation is cooperative. CLI concurrent
    variant scheduling remains separate under :need:`REQ_Sw_MULTI_VARIANT`.
 
    **Evidence:** ``src/ptk/application/use_cases/run.py``;

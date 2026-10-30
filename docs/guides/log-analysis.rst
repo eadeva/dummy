@@ -21,12 +21,12 @@ unsupported; there is no legacy fallback.
 HTML is the only default exported format. PTK still writes internal ``run.json``
 and captured logs for history and later exports. Available exporters are
 ``html``, ``json``, ``junit``, ``markdown`` and ``github`` (appends Markdown to
-``GITHUB_STEP_SUMMARY`` when available), plus installed reporter plugins.
+``GITHUB_STEP_SUMMARY`` when available).
 An empty ``report_formats`` disables automatic export unless a local
 ``open_report`` policy requests HTML. Existing job/workflow opening policies
 remain unchanged. Dry runs do not analyze logs or write reports.
 
-JUnit XML, Cobertura XML (aggregate line coverage), SARIF and contributor plugins
+JUnit XML, Cobertura XML (aggregate line coverage), SARIF
 supply tool results. Log analysis imports captured step diagnostics. These inputs
 feed PTK's canonical report model. HTML integrates log analysis with **What failed**; JSON
 retains its structured data, and Markdown/GitHub include its findings. JUnit

@@ -7,7 +7,7 @@ description: Choose and diagnose Python runtimes for ptk scripts and Python tool
 
 First follow the [project discovery and execution guide](../../../docs/guides/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
 
-1. Read [docs/guides/configuration.rst](../../../docs/guides/configuration.rst) and the PythonSpec definition from `ptk maintainer config schema`.
+1. Read [configuration](../../../docs/guides/configuration.rst), [reusable Python tools](../../../docs/guides/python-tools.rst), and the PythonSpec definition from `ptk maintainer config schema`. Packages expose ordinary commands through `project.scripts`; PTK does not load third-party callbacks or promise a public internal Python API.
 
 2. Choose exactly one runtime: `uvx` for a tool, `venv` for requirement files/packages, `project` for a uv project, or `interpreter: cli` for ptk's environment.
 

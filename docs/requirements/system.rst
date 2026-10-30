@@ -192,12 +192,12 @@ level or repeat every software rule. Derived formulations remain under review.
    :security: false
    :legal: false
    :status: under review
-   :verification_criteria: Tool/provider/plugin tests demonstrate selection, missing-prerequisite errors and scoped configuration without hard-coded consuming-project names.
+   :verification_criteria: Tool/provider/Python execution tests demonstrate selection, missing-prerequisite errors and scoped configuration without hard-coded consuming-project names.
    :verification_level: system-verification
    :req_satisfies: REQ_Stkh_INTEGRATION
    :tags: implemented
 
-   PTK shall select declared tools, credentials and explicitly allowed installed plugins, report unmet prerequisites, and keep project-specific behavior in configuration.
+   PTK shall select declared tools, built-in credential providers and ordinary Python commands, report unmet prerequisites, and keep project-specific behavior in configuration.
 
    **Origin:** Refinement of the linked stakeholder requirement; review this system-level formulation.
 

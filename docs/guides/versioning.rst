@@ -156,7 +156,7 @@ Structured substitutions are available in job environments, parameters and
 steps, for example ``${version.projects.engine.value}``,
 ``${version.projects.engine.major}``, and
 ``${version.projects.engine.components.sdk.value}``.
-The built-in/plugin context exposes the same mapping as ``ctx.versions``.
+Built-in version generation uses the same prepared snapshot.
 Treat it as read-only.
 
 ``${version.current.*}`` is a template shortcut for the current repository's

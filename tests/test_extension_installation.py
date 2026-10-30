@@ -48,7 +48,6 @@ def runner(tmp_path, monkeypatch, vsix):
     monkeypatch.setattr(
         "ptk.application.use_cases.project.LoadProject.execute", forbidden
     )
-    monkeypatch.setattr("ptk.bootstrap.App.configure_project", forbidden)
     return CliRunner()
 
 

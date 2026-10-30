@@ -88,7 +88,6 @@ def build_commands(root, entries):
                     overrides=parent.overrides,
                     ci=parent.ci,
                     verbose=parent.verbose,
-                    completion=parent.completion,
                 ),
             )
 

@@ -213,7 +213,7 @@ Browse the specification
      - Which values identify a run, its source and its versions?
    * - :doc:`Tools and integrations <software-integration>`
      - :need_count:`type in ['req-stkh', 'req-sys', 'req-sw'] and not is_part and 'superseded' not in tags and docname == 'requirements/software-integration'`
-     - How are tools, credentials, plugins, generators and hooks connected?
+     - How are tools, credentials, Python tools, generators and Git hooks connected?
    * - :doc:`Logging and reporting <software-reporting>`
      - :need_count:`type in ['req-stkh', 'req-sys', 'req-sw'] and not is_part and 'superseded' not in tags and docname == 'requirements/software-reporting'`
      - How are results imported, retained, classified and exported?

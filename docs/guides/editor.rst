@@ -141,7 +141,7 @@ schema fallback or legacy configuration conversion.
 Multiple folders, VMR members and workspace workflows are supported. Discovery
 uses PTK's role-filtered inventory; commands still enforce permissions in the CLI.
 Configuration changes trigger a refresh. Errors appear on project nodes and in
-the Project Toolkit output channel. Discovery can load project plugins, so the
+the Project Toolkit output channel. Tasks can execute project commands, so the
 extension requires workspace trust.
 
 Set ``projectToolkit.executable`` to a program or absolute path and

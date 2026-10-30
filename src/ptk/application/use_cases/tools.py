@@ -96,9 +96,6 @@ class ToolService:
         self._runner = runner
         self._installer = installer
 
-    def set_installer(self, installer: ToolInstaller) -> None:
-        self._installer = installer
-
     def paths(self, project: Project | None = None) -> list[str]:
         if project is None:
             return []

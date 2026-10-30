@@ -19,7 +19,7 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 6. Set job `max_workers` to bound concurrency. Use `python` and `passthrough` only on run steps and `with` only on handlers. Do not author lists, shorthand bodies, nested groups, `parallel` or `background`.
 
-7. Read the built-in contracts in [docs/reference/plugins.rst](../../../docs/reference/plugins.rst); for available built-ins and selected plugins. Do not invent a `uses` name from a tool binary name.
+7. Read the built-in contracts in [docs/reference/builtins.rst](../../../docs/reference/builtins.rst) for available built-ins. Do not invent a `uses` name from a tool binary name.
 
 8. Use the discovered execution/help paths, including any maintainer prefix. Preview the affected job; add `-V VARIANT` only for an actual variant. Check parameter choices/help and `--to` prerequisite closure and explicit `--only-step` omission notices.
 

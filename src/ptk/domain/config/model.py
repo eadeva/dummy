@@ -4,7 +4,7 @@ Entry point is ``.main.ptk.yml``. Conventional documents own each section or
 named entity; registered components own their local feature definitions.
 Unknown keys are errors everywhere.
 
-Steps are a mapping of IDs to commands or plugins with explicit needs dependencies.
+Steps are a mapping of IDs to commands or built-in operations with explicit needs dependencies.
 """
 
 from __future__ import annotations
@@ -325,16 +325,16 @@ class PythonSpec(_Strict):
 
 
 class StepSpec(_Strict):
-    generators: list[str] = Field(
+    generators: list[
+        Literal["header", "make", "cmake", "bazel", "gn", "yocto", "robot", "sphinx"]
+    ] = Field(
         default_factory=list,
-        description="Variant generators run in order before each command or plugin attempt. Outputs are written into this step's build directory. A step may contain only generators. Built-ins: header, make, cmake, bazel, gn, yocto, robot, sphinx; installed generator plugins may add names.",
+        description="Variant generators run in order before each command or built-in operation attempt. Outputs are written into this step's build directory. A step may contain only generators. Built-ins: header, make, cmake, bazel, gn, yocto, robot, sphinx.",
     )
 
     @field_validator("generators")
     @classmethod
     def _generators(cls, names):
-        if any(not re.fullmatch(r"[A-Za-z][A-Za-z0-9_.-]*", name) for name in names):
-            raise ValueError("invalid generator name")
         if len(set(names)) != len(names):
             raise ValueError("generators must be unique within a step")
         return names
@@ -369,12 +369,24 @@ class StepSpec(_Strict):
         default=None,
         description="Command string or argument list to execute. A list preserves spaces within arguments. Use run or uses, or omit both for a generation-only step.",
     )
-    uses: str | None = Field(
+    uses: (
+        Literal[
+            "echo",
+            "wait",
+            "report.import",
+            "configs.sync",
+            "tools.ensure",
+            "files.copy",
+            "files.clean",
+            "version.generate",
+        ]
+        | None
+    ) = Field(
         default=None,
-        description="Registered plugin that executes this step. Supply its inputs in with.",
+        description="Built-in operation that executes this step. Supply its inputs in with.",
     )
     with_: dict[str, Any] = Field(
-        description="Inputs passed to the plugin named in uses.",
+        description="Inputs passed to the built-in operation named in uses.",
         default_factory=dict,
         alias="with",
     )
@@ -428,10 +440,6 @@ class StepSpec(_Strict):
 
     @model_validator(mode="after")
     def _check(self) -> StepSpec:
-        if self.uses == "variant.generate":
-            raise ValueError(
-                "variant.generate was removed; put generators directly on the step"
-            )
         if self.run is not None and self.uses is not None:
             raise ValueError("step needs at most one of: run, uses")
         if self.run is None and self.uses is None and not self.generators:
@@ -660,10 +668,6 @@ class ToolSpec(_Strict):
         default=False,
         description="Allow installation inside Docker. When false, installation is skipped in containers but version checks still run.",
     )  # false: disable installation inside Docker, keep checks
-    installers: dict[str, dict[str, Any]] = Field(
-        description="Custom installer definitions keyed by installer or platform.",
-        default_factory=dict,
-    )
     version: str | None = Field(
         default=None, description="Accepted tool version range, for example >=3.28,<4."
     )  # PEP 440 style range: ">=3.28,<4"
@@ -725,7 +729,7 @@ class CredentialSpec(_Strict):
         description="Named values belonging to this credential, for example token, username or password.",
         default_factory=lambda: ["token"],
     )
-    providers: list[str] = Field(
+    providers: list[Literal["env", "keyring", "gopass", "vault", "prompt"]] = Field(
         description="Credential providers to try, in order: env, keyring, gopass, vault or prompt.",
         default_factory=lambda: ["env", "keyring", "gopass", "vault", "prompt"],
     )
@@ -894,7 +898,6 @@ class PtkConfig(_Strict):
                 "logging_history_backups",
                 "report_formats",
                 "log_analysis",
-                "plugins",
                 "command_audience",
             ]
         },
@@ -980,17 +983,15 @@ class PtkConfig(_Strict):
         ge=0,
         description="Previous run logs retained per variant and job, in addition to the current run. Zero disables backups.",
     )
-    report_formats: list[str] = Field(
-        default_factory=lambda: ["html"],
-        description="Report exporters: html, json, junit, markdown, github, or installed plugin exporters. An empty list disables automatic export unless open_report requires HTML.",
+    report_formats: list[Literal["html", "json", "junit", "markdown", "github"]] = (
+        Field(
+            default_factory=lambda: ["html"],
+            description="Report exporters: html, json, junit, markdown or github. An empty list disables automatic export unless open_report requires HTML.",
+        )
     )
     log_analysis: LogAnalysisSpec = Field(
         default_factory=LogAnalysisSpec,
         description="Analyze step diagnostics and retain ignored or justified findings with their reasons.",
-    )
-    plugins: list[str] = Field(
-        description="Installed distribution names selected for PTK plugin loading.",
-        default_factory=list,
     )
     command_audience: dict[
         Literal[

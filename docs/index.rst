@@ -25,7 +25,7 @@ PTK — project tool kit
    PTK is a toolkit for standardizing how teams work with their projects:
    command discovery, variant handling, environment setup, credentials, logging
    and reporting. Projects define their own jobs in configuration and provide
-   the actual functionality through tools, scripts and selected plugins.
+   the actual functionality through tools, scripts and Python packages.
 
    .. container:: ptk-actions
 
@@ -56,7 +56,7 @@ Job names and options remain project-defined, with consistent help and completio
 
 The project owns what a command actually does. A build job can call CMake today
 and a different tool tomorrow; a test job can delegate to a script or an installed
-plugin. Those implementations can evolve while the team retains a familiar way
+Python package. Those implementations can evolve while the team retains a familiar way
 to invoke them and inspect their results.
 
 PTK centralizes the repeated operational work and keeps project-specific
@@ -86,13 +86,13 @@ a workflow coordinates jobs, and each job contains steps.
      - Define a runnable task with parameters, a variant context, tool requirements and its own logs/reports.
      - ``build`` prepares and compiles a selected variant.
    * - Step
-     - Run a command, script or built-in/plugin action; group steps when ordering or parallel execution is needed.
+     - Run a command, script or built-in operation; declare needs edges to order steps.
      - A ``compile`` step invokes the project's build tool.
 
 Jobs also run directly, without a workflow. A workflow's ``jobs`` mapping names
 job invocations; ``needs`` connects their dependencies and determines which can
 run concurrently. Each job's ``steps`` list defines its executable work through
-commands or plugin actions. The same job can be reused by different workflows.
+commands or built-in operations. The same job can be reused by different workflows.
 
 PTK workflows currently orchestrate work locally. CX pipelines use their own
 orchestration and invoke PTK jobs. See :doc:`guides/workflows` for the structure
@@ -197,16 +197,16 @@ What you can do
       :doc:`Versioning guide </guides/versioning>` ·
       :need:`Related requirement <REQ_Sw_PR_SOURCE>`
 
-   .. grid-item-card:: :octicon:`plug` Extend the shared toolkit
+   .. grid-item-card:: :octicon:`package` Reuse project tools
       :class-card: ptk-card ptk-teal
 
-      Add trusted, explicitly selected Python plugins for steps, report
-      formats, contributors, secret providers, installers and generators.
-      Keep project-specific behavior in your project.
+      Publish ordinary Python tools, pin their versions and run them through uv.
+      Keep project-specific functionality independently reusable and preserve
+      PTK’s built-in orchestration, logging and reporting.
 
       +++
-      :doc:`Plugin configuration </reference/plugins>` ·
-      :need:`Related requirement <REQ_Sw_PLUGINS>`
+      :doc:`Reusable Python tools </guides/python-tools>` ·
+      :need:`Related requirement <REQ_Sw_EXTERNAL_TOOLS>`
 
    .. grid-item-card:: :octicon:`code` Bring the project into your editor
       :class-card: ptk-card ptk-blue
@@ -301,7 +301,7 @@ Find your next step
       :link-type: doc
 
       Command syntax, generated configuration fields, execution controls
-      and plugin configuration.
+      and built-in operation configuration.
 
    .. grid-item-card:: Understand the design
       :class-card: ptk-card

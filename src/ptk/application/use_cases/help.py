@@ -53,7 +53,7 @@ class HelpStep:
     name: str
     kind: str  # run | uses
     title: str
-    detail: str  # command or plugin
+    detail: str  # command or built-in operation
     when: str | None
     flags: list[str]
 

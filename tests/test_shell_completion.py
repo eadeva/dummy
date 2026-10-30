@@ -12,7 +12,6 @@ from click.testing import CliRunner
 
 from ptk.adapters.git_metadata import GitMetadata
 from ptk.application.use_cases.project import LoadProject
-from ptk.bootstrap import App
 from ptk.drivers.cli.main import cli
 from tests.conftest import grant_maintainer
 from tests.project_files import read_project, write_project, write_workflows
@@ -148,11 +147,8 @@ def test_generic_parameters_never_complete_secrets(project, monkeypatch):
 
 def test_completion_is_read_only_and_loads_once(project, monkeypatch):
     def forbidden(*args, **kwargs):
-        pytest.fail(
-            "completion must not initialize plugins, discover Git, run or prompt"
-        )
+        pytest.fail("completion must not discover Git, run or prompt")
 
-    monkeypatch.setattr(App, "configure_project", forbidden)
     monkeypatch.setattr(GitMetadata, "discover", forbidden)
     monkeypatch.setattr(subprocess, "Popen", forbidden)
     monkeypatch.setattr("ptk.drivers.cli.jobs.click.prompt", forbidden)
@@ -238,10 +234,6 @@ def test_vmr_repositories_jobs_workflows_and_variants(tmp_path, monkeypatch):
     )
     monkeypatch.chdir(tmp_path)
 
-    def forbidden(*args, **kwargs):
-        pytest.fail("completion must not configure repository plugins")
-
-    monkeypatch.setattr(App, "configure_project", forbidden)
     assert {"firmware", "bootloader", "everything"} <= complete()
     assert "build" in complete(["firmware"])
     assert "--only-step" in complete(["firmware", "build"], "--")

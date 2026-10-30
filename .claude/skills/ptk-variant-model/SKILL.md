@@ -28,7 +28,7 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 10. Edit the owning variant document; inspection commands are `list`, `show` and `explain`. Use `ptk validate --variants` for validation. Validate before running. Select a variant globally with `ptk -V NAME JOB` or `ptk -V a,b JOB`; use `ptk JOB --all-variants` for every concrete variant. Place `-V` before the repository alias in VMR mode.
 
-11. Put `generators: [cmake]` (or other selected formats) directly on the consuming command, Python or plugin step. A generation-only step is also valid. Files belong to that step’s `${run.build_dir}`; use explicit dependencies when another step consumes them. See [variant generation](../../../docs/guides/variant-generation.rst) for Make/CMake/Bazel/GN integration and the project-owned Bazel helper. Do not introduce plain Ninja generation or the removed `variant.generate` form.
+11. Put `generators: [cmake]` (or other selected formats) directly on the consuming command, Python or built-in step. A generation-only step is also valid. Files belong to that step’s `${run.build_dir}`; use explicit dependencies when another step consumes them. See [variant generation](../../../docs/guides/variant-generation.rst) for Make/CMake/Bazel/GN integration and the project-owned Bazel helper. Do not introduce plain Ninja generation or the removed `variant.generate` form.
 
 Temporary feature overrides on jobs do not change files. Workflows retain their
 per-job variant selections; global `-V` does not override them. Maintainers alone

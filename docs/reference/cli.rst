@@ -206,7 +206,7 @@ as the extension's run-options form. ``--only-step``/``--to`` apply to jobs; wor
 select one owner variant and use their configured job mappings.
 
 Each completion request starts a short-lived PTK process and reads the required
-configuration. It does not execute jobs, initialize plugins, resolve Git/version
+configuration. It does not execute jobs, load Python tools, resolve Git/version
 variables, read credential values or install tools. Configuration is read again
 on the next request, so edits appear without a separate refresh. With missing or
 invalid project configuration, built-in commands still complete.
@@ -368,7 +368,7 @@ Commands are grouped under the configured repository alias::
 For git-repo members, the same grouping applies from a member's subdirectory.
 Manual VMR commands are invoked from the marked workspace; inside an ordinary
 member repository, ptk remains standalone. Each repository has
-isolated configuration, tools, plugins, permissions and output directories.
+isolated configuration, tools, permissions and output directories.
 ``ptk firmware`` runs that repository's default job; bare ``ptk`` lists the
 repositories. There is no implicit run across all repositories. Global options
 precede the alias. Project selection uses the working directory and the repository

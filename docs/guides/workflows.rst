@@ -11,7 +11,7 @@ Workflow, job and step
 
 The names deliberately follow GitHub Actions terminology. PTK uses three
 levels: a **workflow** coordinates reusable jobs; a **job** defines a runnable
-task; a **step** invokes a command, script or built-in/plugin action inside
+task; a **step** invokes a command, script or built-in operation inside
 that job. A job can run directly, without belonging to a workflow.
 
 A workflow's ``jobs`` mapping contains named job invocations and their ``needs``

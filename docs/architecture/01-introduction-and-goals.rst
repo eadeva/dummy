@@ -7,7 +7,7 @@ write jobs once and expose typed parameters and variant choices through the
 terminal. CX pipelines invoke the same jobs while retaining their own orchestration.
 
 The main stakeholders are developers executing jobs, maintainers authoring
-configuration and plugins, and CX/release engineers preparing reproducible
+configuration and reusable tools, and CX/release engineers preparing reproducible
 artifacts. Assistant and editor integrations consume CLI-owned configuration
 metadata; they do not define a separate loading model.
 

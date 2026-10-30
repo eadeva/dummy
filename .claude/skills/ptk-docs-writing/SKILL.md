@@ -12,13 +12,13 @@ Use this skill only in PTK's own source checkout. Confirm the checkout, project 
 
 2. Use reStructuredText for Sphinx pages and add new pages to the toctree. Keep architecture diagrams few and focused; edit their PlantUML sources in `docs/diagrams` and regenerate with `python docs/_ext/diagram_assets.py --jar PATH`. Follow `docs/guides/development.rst` for the pinned renderer. Use CX pipeline terminology in prose while retaining actual CLI flags and configuration keys.
 
-3. Generate configuration field tables through the ptk-schema directive; use YAML paths, allowed values, defaults and constraints. Keep source-module maps, Python API signatures and autodoc/pydoc output out of the published docs. Do not copy field lists that can drift. Keep plugin implementation contracts in the plugin-development skill references.
+3. Generate configuration field tables through the ptk-schema directive; use YAML paths, allowed values, defaults and constraints. Keep source-module maps, Python API signatures and autodoc/pydoc output out of the published docs. Do not copy field lists that can drift. Keep PTK Python implementation interfaces internal; document external tools through their command and file contracts.
 
 4. Use literalinclude for runnable configuration and scripts; add tests that execute the same source examples.
 
 5. Verify command names and options against `ptk COMMAND --help` before publishing instructions.
 
-6. Clearly separate supported behavior from planned commands and plugin integrations.
+6. Clearly separate supported behavior from planned commands and external integrations.
 
 7. For CLI requirements, follow `docs/requirements/index.rst`: retain IDs and traceability, distinguish lifecycle status from implementation evidence, and use QM/false/false classifications. Keep the meta-model and old CLI archive out of build inputs. Update the relevant arc42 chapter when behavior or boundaries change.
 

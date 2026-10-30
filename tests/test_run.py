@@ -341,8 +341,10 @@ jobs:
         uses: echo
         with:
           message: ${params.msg} there
-      nope:
-        uses: files.cpoy
+      pause:
+        uses: wait
+        with:
+          seconds: 0
         needs:
         - say
 """
@@ -350,7 +352,7 @@ jobs:
     )
     result, lines, _ = run(root)
     assert ("say", "hi there") in lines
-    assert "not available" in by_label(result)["nope"].message
+    assert result.status is Status.PASSED
 
 
 @pytest.mark.skipif(UV is None, reason="uv not installed")

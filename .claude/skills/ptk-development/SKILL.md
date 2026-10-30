@@ -25,7 +25,7 @@ Use this skill only in PTK's own source checkout. Confirm the checkout, project 
 
 9. Review CX results before marking a milestone complete; record explicit remaining limitations in PLAN.md.
 
-10. Read [plugin authoring contracts](../ptk-plugin-development/references/contracts.md) for Python interfaces and `docs/reference/plugins.rst` for configuration; test third-party entry points without importing unselected distributions.
+10. Keep PTK Python interfaces internal. Use `docs/reference/builtins.rst` for built-in operations and [reusable Python tools](../../../docs/guides/python-tools.rst) for external commands. Do not introduce plugin discovery or callback registration.
 
 11. For startup changes, profile before editing and run `scripts/benchmark_cli.py`
     before/after sequentially in the same Python environment. Preserve all command

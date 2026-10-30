@@ -116,7 +116,6 @@ class PrepareRun:
         versions=None,
         ptk_version: str = "",
         git: GitMetadata | None = None,
-        generators=None,
     ):
         self._host = host
         self._secrets = secrets
@@ -125,9 +124,6 @@ class PrepareRun:
         self._versions = versions
         self._ptk_version = ptk_version
         self._git = git
-        from ...domain.variants.generators import GENERATORS
-
-        self._generators = set(GENERATORS if generators is None else generators)
 
     def execute(self, project: Project, request: RunRequest) -> PreparedRun:
         config = project.config
@@ -436,11 +432,6 @@ class PrepareRun:
             if resolved is None:
                 raise PtkError(
                     f"step '{step.label}': generators require a selected variant"
-                )
-            unknown = set(step.spec.generators) - self._generators
-            if unknown:
-                raise PtkError(
-                    f"step '{step.label}': unknown generator(s): {', '.join(sorted(unknown))}"
                 )
         plan = JobPlan(
             project=config.project.name,

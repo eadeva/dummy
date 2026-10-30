@@ -7,7 +7,7 @@ description: Add ptk report formats, import tool results or troubleshoot report 
 
 First follow the [project discovery and execution guide](../../../docs/guides/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
 
-1. Read the report commands in [docs/reference/cli.rst](../../../docs/reference/cli.rst) and extension contracts in [plugin authoring contracts](../ptk-plugin-development/references/contracts.md).
+1. Read the report commands in [docs/reference/cli.rst](../../../docs/reference/cli.rst) and supported result formats in [log analysis](../../../docs/guides/log-analysis.rst).
 
 2. Write tool results to PTK_STEP_REPORTS_DIR or `${run.reports_dir}` for the producing step.
 
@@ -21,7 +21,7 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 7. Test malformed files, escaping, totals and relative log links when changing exporters/importers.
 
-8. Register external exporters/contributors with `ptk.reporters` / `ptk.report_contributors` and select the installed distribution in `plugins`. Follow [plugin authoring contracts](../ptk-plugin-development/references/contracts.md).
+8. Convert custom tool results into supported input formats, or process exported report JSON with an ordinary command. See [reusable Python tools](../../../docs/guides/python-tools.rst). PTK does not load third-party report importers or exporters.
 
 9. `report: false` excludes a step subtree from reports and imports, but does not hide audit logs or change failure status.
 

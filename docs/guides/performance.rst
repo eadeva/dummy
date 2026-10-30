@@ -87,8 +87,7 @@ What changed
   Cache expected failures too, so broken or absent configuration is not repeatedly
   searched and parsed while rendering help. A new invocation rereads everything.
 * Defer execution, installer, Python runtime, vault and reporting services and
-  their imports until used. Ordinary help avoids those modules. Explicitly
-  configured plugins still load and validate, and can contribute their own cost.
+  their imports until used. Ordinary help avoids those modules. Installed packages are not scanned for PTK entry points.
 
 Run the benchmark
 -----------------
@@ -124,4 +123,4 @@ Profiling adds overhead: use it to identify expensive work, not to claim wall-ti
 speedups. Compare workspace-root help with ``ptk ALIAS --help`` and ``ptk --help``
 from a directory outside any project to separate workspace configuration cost
 from base startup. Record PTK/Python versions, OS, repository count, config size
-and selected plugins. Keep profiles local; they contain source and project paths.
+and selected Python tools. Keep profiles local; they contain source and project paths.

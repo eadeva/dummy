@@ -32,7 +32,6 @@ class RepositoryGroup(ProjectGroup):
             variant=parent_state.variant,
             clean=parent_state.clean,
             re_run=parent_state.re_run,
-            completion=parent_state.completion,
         )
         if parent_state.ci is not None and extra["obj"].role() != "maintainer":
             raise click.ClickException("--ci/--no-ci is a maintainer-only option")
@@ -48,7 +47,6 @@ class WorkspaceGroup(ProjectGroup):
         ):
             ctx.meta["vmr_repositories"] = None
             ctx.meta["host_setup"] = True
-            state_of(ctx).completion = True
         # Init resolves its scope itself, including members without PTK config.
         if args[:1] == ["init"]:
             ctx.meta["vmr_repositories"] = None

@@ -19,7 +19,6 @@ PROJECT_FIELDS = (
     "logging_history_backups",
     "report_formats",
     "log_analysis",
-    "plugins",
     "command_audience",
 )
 SECTION_FILES = {

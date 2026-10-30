@@ -17,12 +17,12 @@ Open requirements and verification gaps
 Operational limits
 ------------------
 
-* Job commands and installed plugins are trusted code; neither environment
-  filtering nor the plugin allowlist is a sandbox.
+* Job commands and Python tools are trusted code; environment filtering is
+  not a filesystem, network or device sandbox.
 * Shallow Git history and missing local PR head objects limit tag/version
   discovery. PTK does not fetch metadata to conceal this condition.
-* Cooperative Python plugins can delay cancellation if they ignore the token.
-  Subprocess termination has different capabilities.
+* In-process built-in operations cooperate with cancellation. External tools
+  run as child processes with the platform’s termination capabilities.
 * Cleanup is preflighted but not transactional. A later filesystem error can
   leave some output folders removed and others present.
 * Per-user completion depends on profile loading and PATH. A shell selecting an
@@ -43,7 +43,7 @@ Variant integration boundaries
 * Generator files are replaced individually. Interruption may leave a mixture of
   old/new files; failed steps do not launch their command, but external consumers
   must not read the folder concurrently. Removed generators do not clean stale
-  files. Trusted generator plugins can have their own side effects.
+  files. Project commands can have their own side effects.
 * The Bazel helper is a project-owned Bzlmod resource. Native GN/Bazel tests are
   opt-in; absent tools mean unverified compatibility, not a passing native build.
   Exact format limits and integration examples are in

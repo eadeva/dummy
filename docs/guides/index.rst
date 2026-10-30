@@ -10,6 +10,7 @@ and defaults, use :doc:`/reference/configuration-schema`.
 
    getting-started
    configuration
+   python-tools
    variant-generation
    workflows
    versioning

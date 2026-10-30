@@ -66,6 +66,8 @@ test("PTK validation failures remain editable inventory and recover without an i
     { check: { run: "check", generators: ["cmake", "cmake"] } },
     { check: { generators: "cmake" } },
     { check: { uses: "variant.generate" } },
+    { check: { uses: "company.check" } },
+    { check: { run: "check", generators: ["company.generator"] } },
   ]) {
     fs.writeFileSync(file, JSON.stringify({ steps }));
     const inventory = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));
@@ -80,6 +82,18 @@ test("PTK validation failures remain editable inventory and recover without an i
   const repaired = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"])).projects[0];
   assert.equal(repaired.error, undefined);
   assert.equal(repaired.configuration.graphs[0].nodes.length, 2);
+
+  const projectFile = path.join(root, "project.ptk.yml");
+  const original = fs.readFileSync(projectFile, "utf8");
+  fs.writeFileSync(projectFile, JSON.stringify({ ...JSON.parse(original), plugins: ["company-extension"] }));
+  const obsolete = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"])).projects[0];
+  assert.match(obsolete.error, /plugins/);
+  assert.ok(obsolete.config_files.includes(projectFile));
+  assert.ok(obsolete.diagnostics.some(item => item.file === projectFile && /plugins/.test(item.path)));
+  assert.deepEqual(JSON.parse(fs.readFileSync(projectFile, "utf8")).plugins, ["company-extension"]);
+  assert.ok(obsolete.configuration.bindings.length);
+  fs.writeFileSync(projectFile, original);
+  assert.equal(core.parseInventory(invoke(root, ["describe", "--json", "--configuration"])).projects[0].error, undefined);
 });
 
 test("separate variant tasks execute real PTK processes concurrently with isolated outputs", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, async t => {

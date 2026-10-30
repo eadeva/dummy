@@ -27,7 +27,7 @@ package "PTK CLI" {
   Prepare -down-> Execute : prepared context
   Execute -left-> Results : run evidence
 }
-component "Project functionality\nTools, scripts, selected plugins" as Work #EFF8F5
+component "Project functionality\nTools, scripts, Python packages" as Work #EFF8F5
 artifact "Run outputs\nLogs, reports, history" as Outputs #EFF8F5
 Client -down-> CLI : invoke / inspect
 Config -down-> Prepare : definitions

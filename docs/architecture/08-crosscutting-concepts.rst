@@ -26,8 +26,8 @@ Isolation and trust
 A job environment starts from a filtered base and adds declared variables, PATH
 entries, tool locations and selected Python runtime. Secret providers resolve
 only needed values; PTK masks known secrets in its logging path. This cannot
-prevent a trusted command or plugin from writing a secret directly to a file or
-external service. Plugins and job commands execute with the user's permissions.
+prevent a project command from writing a secret directly to a file or
+external service. Python tools and job commands execute with the user's permissions.
 
 Concurrency and lifetime
 ------------------------

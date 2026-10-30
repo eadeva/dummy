@@ -16,8 +16,8 @@ configuration is input; child processes and external tools perform project work.
 The four blocks describe responsibilities within one CLI process, not separate
 services. Preparation brings together configuration, variants, environments,
 tools and credential requirements. Execution applies common scheduling and
-failure rules while project tools, scripts and plugins perform the actual work.
-Selected Python plugins execute inside PTK's process; the project-functionality
+failure rules while project tools, scripts and Python packages perform the actual work.
+Python tools execute as child processes; the project-functionality
 boundary describes ownership, not process isolation.
 
 .. list-table:: External interfaces

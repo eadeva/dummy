@@ -55,7 +55,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_REPORTS
    :tags: implemented
 
-   PTK shall export HTML, JSON, JUnit and Markdown, support GitHub step-summary output when available, and dispatch selected installed reporter plugins.
+   PTK shall export HTML, JSON, JUnit and Markdown, support GitHub step-summary output when available.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 

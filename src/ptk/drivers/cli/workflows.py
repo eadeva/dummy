@@ -57,7 +57,6 @@ def catalog(ctx):
                 overrides=parent.overrides,
                 ci=parent.ci,
                 verbose=parent.verbose,
-                completion=parent.completion,
             )
             owners[alias] = owner
             for name, spec in owner.project().config.workflows.items():

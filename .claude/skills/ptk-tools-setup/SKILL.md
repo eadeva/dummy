@@ -30,7 +30,7 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 11. Global and job `requires_tools` merge per tool: unmentioned tools stay inherited, `name: false` disables one, and settings mappings override only that job. Tool files load automatically; see [docs/guides/configuration.rst](../../../docs/guides/configuration.rst).
 
-Managed installations coexist by version/source identity. Verify the job-selected PATH; never append the entire cache. System and plugin installers remain host-shared. Use `environment.keep` for required host variables; PATH inheritance is a separate opt-in.
+Managed installations coexist by version/source identity. Verify the job-selected PATH; never append the entire cache. System installers remain host-shared. Use `environment.keep` for required host variables; PATH inheritance is a separate opt-in.
 
 
 Only when the project uses Toolbase, declare an exact package/version and relative executable directories; it is Windows-only. Toolbase-only entries are ignored on Linux. Do not add global PATH or shared `.env` mutations, and leave live Toolbase validation to the user's Windows environment.

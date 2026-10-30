@@ -9,7 +9,6 @@ SKILLS = (
     "ptk-job-authoring",
     "ptk-config-authoring",
     "ptk-credentials",
-    "ptk-plugin-development",
     "ptk-python-steps",
     "ptk-reporting",
     "ptk-log-analyzer",
@@ -26,10 +25,11 @@ DOCS = (
     "guides/agent-guide",
     "reference/cli",
     "guides/configuration",
+    "guides/python-tools",
     "guides/variant-generation",
     "guides/editor",
     "reference/execution",
-    "reference/plugins",
+    "reference/builtins",
     "guides/getting-started",
     "reference/configuration-schema",
     "guides/versioning",
@@ -40,7 +40,7 @@ DOCS = (
     "guides/log-analysis",
 )
 
-EXAMPLES = ("authoring", "plugin", "quickstart", "workflows", "artifacts")
+EXAMPLES = ("authoring", "python-tool", "quickstart", "workflows", "artifacts")
 
 
 def source_files(root: Path) -> dict[str, Path]:
@@ -52,8 +52,6 @@ def source_files(root: Path) -> dict[str, Path]:
         metadata = root / ".claude/skills" / name / "agents/openai.yaml"
         if metadata.is_file():
             files[f"skills/{name}/agents/openai.yaml"] = metadata
-    contract = "skills/ptk-plugin-development/references/contracts.md"
-    files[contract] = root / ".claude" / contract
     files["agents/ptk-expert.agent.md"] = root / ".claude/agents/ptk-expert.md"
     for example in EXAMPLES:
         directory = root / "examples" / example

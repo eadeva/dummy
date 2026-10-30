@@ -52,8 +52,8 @@ Working directories, outputs and responsibility
 
 The default ``cwd`` remains the repository root. Set ``cwd`` explicitly when a
 command needs another directory. Each step receives separate build, report and
-log paths. These are storage conventions, **not a filesystem sandbox**: scripts,
-commands and plugins can write outside those paths.
+log paths. These are storage conventions, **not a filesystem sandbox**: project
+scripts and commands can write outside those paths.
 
 Inside a step, ``${run.build_dir}``, ``${run.reports_dir}`` and
 ``${run.log_file}`` refer to that step's directories/file. To consume another
@@ -82,7 +82,7 @@ existing scripts and integrate hardware or external services without adapting
 their internals to one PTK-specific build model.
 
 PTK provides common orchestration and records the outcomes reported by those
-implementations. Project scripts, plugins and selected tools own the correctness
+implementations. Project scripts, Python packages and selected tools own the correctness
 of their operations. PTK does not inspect or control their arbitrary internal
 file and resource operations. Projects decide which validation and isolation
 guarantees their work requires, implement them, and report failure when their
@@ -113,7 +113,7 @@ inside a job and job invocations inside a workflow.
    * - Isolation
      - Per-step storage conventions and composed command environments.
      - Any required filesystem, process, network or device isolation. Commands
-       and plugins execute with the user's permissions; PTK does not sandbox
+       and Python tools execute with the user's permissions; PTK does not sandbox
        them or restrict them to their step directories.
    * - Concurrent resources
      - Worker limits, job/variant run locks, and preflight checks for known

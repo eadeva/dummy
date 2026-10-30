@@ -2,7 +2,7 @@
   "name": "project-toolkit",
   "displayName": "Project Toolkit",
   "description": "Run PTK jobs, workflows and built-in commands, browse help, select variants and open reports.",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "publisher": "eadeva",
   "license": "UNLICENSED",
   "private": true,
@@ -28,7 +28,7 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": false,
-      "description": "PTK loads project configuration and may load configured Python plugins."
+      "description": "PTK tasks execute project commands and Python tools."
     },
     "virtualWorkspaces": {
       "supported": false,

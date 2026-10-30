@@ -236,7 +236,7 @@ parameters. String commands use platform shell syntax.
 The registered built-ins are ``echo``, ``wait``, ``report.import``,
 ``configs.sync``, ``tools.ensure``, ``files.copy``, ``files.clean`` and
 ``version.generate``. Any step may also declare ``generators``; see
-:doc:`variant-generation`. Their configuration is in :doc:`/reference/plugins`.
+:doc:`variant-generation`. Their configuration is in :doc:`/reference/builtins`.
 ``--to STEP`` selects a target and its transitive prerequisites; ``--only-step STEP``
 explicitly bypasses prerequisite execution. Dry-runs show the graph by default.
 See :doc:`/reference/execution` for storage responsibility and failure semantics.
@@ -263,7 +263,7 @@ The configuration editor offers **Insert variable…** and completion after
 come from the installed PTK via ``describe --json --configuration``. That
 catalogue contains names, descriptions, context restrictions and availability
 notes, never resolved environment or credential values. Literal fields such as
-project names, plugin names and file discovery paths do not offer interpolation.
+project names, built-in operation names and file discovery paths do not offer interpolation.
 Job parameter defaults exclude ``params.*`` and ``run.*``. Credential and secret
 parameter references are offered only in step environment values; ``github.*``
 is restricted to Artifactory destination templates.
@@ -492,12 +492,12 @@ workflows, place a separate ``maintainers.ptk.yml`` at the VMR root. Workspace
 membership grants no privileges in member repositories, or vice versa. Workspace synchronization preflights permissions for every member before writing anything.
 
 These checks protect ordinary CLI use, not against someone editing their own
-checkout or process environment. Repository configuration and plugins remain
+checkout or process environment. Repository configuration and project commands remain
 trusted code; enforce release permissions and credentials in CX separately.
 
 Variant inspection, matrix runs and the command structure are described in :doc:`/reference/cli`.
-The installed plugin interfaces, generators and built-in command visibility are
-covered in :doc:`/reference/plugins`. Background process limitations are in :doc:`/reference/execution`.
+Built-in operations, generators and command visibility are
+covered in :doc:`/reference/builtins`. Background process limitations are in :doc:`/reference/execution`.
 
 
 Additional execution controls
@@ -509,11 +509,11 @@ They have no literal defaults, are masked in run metadata, are not exported as
 ``PTK_PARAM_*``, and may be substituted only in step ``env``. Prefer credential
 providers for reusable credentials. Never pass secret values as CLI arguments.
 
-``report: false`` excludes a step and its descendants from exported reports and
-tool-result imports; audit logs and the overall failure status remain complete.
-Groups and built-ins support retries and deadlines. A group deadline cancels its
-children, without cancelling unrelated groups. Repeating a group repeats all of
-its children, so enable retries only for repeatable work. Built-in/plugin Python
+``report: false`` excludes a step's details and tool results from exported reports;
+its graph topology, audit logs and overall failure status remain available.
+Retries and deadlines apply to one step, including built-in operations. Retrying
+a step does not rerun its prerequisites, so enable retries only for repeatable
+work. Built-in Python
 handlers must cooperate with ``ctx.cancel.is_set()``; Python threads cannot safely
 be forcibly terminated. ``wait`` cooperates with deadlines and Ctrl+C.
 
@@ -616,7 +616,7 @@ version/source identity. Only installations selected by the job's effective
 requirements (or its explicit ``tools.ensure`` selections) enter its PATH.
 A later ``tool: true`` keeps earlier settings; ``tool: false`` disables that
 requirement. System binaries on the OS path are version-checked. Chocolatey,
-apt/dnf and custom plugin installers are shared host operations and cannot
+apt/dnf installers are shared host operations and cannot
 provide the same side-by-side isolation. Prefer managed downloads or Python
 tools for incompatible repository versions. Host PATH entries pointing into
 PTK's managed cache are removed before the selected installations are added.

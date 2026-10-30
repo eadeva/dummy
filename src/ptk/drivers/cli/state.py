@@ -30,7 +30,6 @@ class CliState:
     variant: str | None = None
     clean: bool = False
     re_run: bool = False
-    completion: bool = False
     _project: Project | None = field(default=None, repr=False)
     _project_error: PtkError | None = field(default=None, repr=False)
     _loaded: bool = field(default=False, repr=False)
@@ -47,8 +46,6 @@ class CliState:
                     and resolve_role(project, self.app.host) != "maintainer"
                 ):
                     raise PtkError("--ci/--no-ci is a maintainer-only option")
-                if not self.completion:
-                    self.app.configure_project(project)
                 self._project = project
             except PtkError as exc:
                 self._project_error = exc
@@ -91,7 +88,6 @@ def state_of(ctx: click.Context) -> CliState:
             variant=params.get("variant"),
             clean=params.get("clean", False),
             re_run=params.get("re_run", False),
-            completion=root.resilient_parsing,
         )
     return root.obj
 

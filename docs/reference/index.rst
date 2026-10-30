@@ -11,4 +11,4 @@ schema used by PTK validation.
    cli
    configuration-schema
    execution
-   plugins
+   builtins

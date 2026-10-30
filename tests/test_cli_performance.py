@@ -12,7 +12,6 @@ import pytest
 from ptk.adapters.config import yaml_loader
 from ptk.adapters.host import SystemHost
 from ptk.application.use_cases.project import LoadProject
-from ptk.bootstrap import App
 from ptk.drivers.cli.main import cli
 from tests.cli_runner import CliRunner
 from tests.project_files import write_project
@@ -48,39 +47,31 @@ credentials:
     return file
 
 
-def test_help_loads_project_plugins_and_identity_once_per_invocation(
-    tmp_path, monkeypatch
-):
+def test_help_loads_project_and_identity_once_per_invocation(tmp_path, monkeypatch):
     file = make_project(tmp_path)
     calls = Counter()
     original_load = LoadProject.execute
-    original_configure = App.configure_project
 
     def load(self, *args, **kwargs):
         calls["load"] += 1
         return original_load(self, *args, **kwargs)
-
-    def configure(self, project):
-        calls["configure"] += 1
-        return original_configure(self, project)
 
     def user_id(self):
         calls["identity"] += 1
         return "alice"
 
     monkeypatch.setattr(LoadProject, "execute", load)
-    monkeypatch.setattr(App, "configure_project", configure)
     monkeypatch.setattr(SystemHost, "user_id", user_id)
     runner = CliRunner(env={"PTK_ROLE": ""})
     args = ["--help"]
     result = runner.invoke(cli, args, cwd=Path(file).parent)
     assert result.exit_code == 0 and "maintainer" in result.output, result.output
-    assert calls == {"load": 1, "configure": 1, "identity": 1}
+    assert calls == {"load": 1, "identity": 1}
     # Permissions and configuration must be reread on the next invocation.
     (tmp_path / "maintainers.ptk.yml").write_text("maintainers: []\n")
     result = runner.invoke(cli, args, cwd=Path(file).parent)
     assert result.exit_code == 0 and "maintainer" not in result.output, result.output
-    assert calls == {"load": 2, "configure": 2, "identity": 2}
+    assert calls == {"load": 2, "identity": 2}
 
 
 def test_failed_configuration_is_loaded_once_but_retry_next_invocation(

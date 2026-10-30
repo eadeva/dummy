@@ -49,3 +49,23 @@ profile changes. Per-user completion is the accepted scope.
    **Implementation:** Superseded; retained only to explain the changed decision.
 
    **Evidence:** ``tests/test_global_options.py``.
+
+.. req-sw:: Load only explicitly selected plugins
+   :id: REQ_Sw_PLUGINS
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: obsolete
+   :verification_criteria: Historical only; current tests verify retired settings are rejected and installed PTK entry points are inert.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_TOOLS
+   :tags: superseded
+
+   PTK would discover installed distributions named in project configuration and reject missing, duplicate, reserved or non-callable registrations without implicitly installing plugins.
+
+   **Origin:** Earlier plugin implementation superseded by the accepted removal
+   decision :need:`DD_NO_PLUGIN_API` and :need:`REQ_Sw_EXTERNAL_TOOLS`.
+
+   **Implementation:** Removed. PTK rejects the old plugins field and does not
+   discover any third-party PTK entry points. Historical source/tests were deleted.

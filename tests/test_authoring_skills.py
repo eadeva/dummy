@@ -5,8 +5,6 @@ from pathlib import Path
 
 import yaml
 
-from tests.project_files import write_project
-
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -57,43 +55,3 @@ def test_authoring_starter_runs_from_its_configuration_directory(tmp_path, monke
             destination / "_builds" / variant / "build" / "generate" / "variant.h"
         ).read_text(encoding="utf-8")
         assert f"#define VARIANT_DEVICE_SIZE {size}" in text
-
-
-def test_plugin_starter_installed_entry_point_runs(tmp_path, monkeypatch):
-    import configparser
-    import tomllib
-
-    from ptk.drivers.cli.main import cli
-    from tests.cli_runner import CliRunner
-
-    source = ROOT / "examples/plugin"
-    project = tomllib.loads((source / "pyproject.toml").read_text(encoding="utf-8"))[
-        "project"
-    ]
-    dist = tmp_path / "ptk_example_extension-0.1.0.dist-info"
-    dist.mkdir()
-    (dist / "METADATA").write_text(
-        f"Metadata-Version: 2.1\nName: {project['name']}\nVersion: {project['version']}\n"
-    )
-    entrypoints = configparser.ConfigParser()
-    entrypoints.read_dict(project["entry-points"])
-    with (dist / "entry_points.txt").open("w") as handle:
-        entrypoints.write(handle)
-    monkeypatch.syspath_prepend(str(tmp_path))
-    monkeypatch.syspath_prepend(str(source))
-    config = tmp_path / ".main.ptk.yml"
-    write_project(
-        config,
-        yaml.safe_dump(
-            {
-                "repository": {"alias": "plugin", "config_path": "."},
-                "project": {"name": "plugin"},
-                "plugins": [project["name"]],
-                "jobs": {"check": {"steps": {"example": {"uses": "example.check"}}}},
-            }
-        ),
-    )
-    result = CliRunner().invoke(cli, ["check"], cwd=Path(config).parent)
-    assert result.exit_code == 0 and "Example check passed" in result.output, (
-        result.output
-    )

@@ -51,8 +51,6 @@ class InstallMethod:
     identity: str = ""
 
     def describe(self) -> str:
-        if self.kind.startswith("plugin:"):
-            return f"{self.kind} ({self.package})"
         if self.kind in {"toolbase", "artifactory"}:
             return f"{self.kind} {self.package}"
         if self.kind == "choco":
@@ -97,10 +95,7 @@ def satisfies(version: str, required: str) -> bool:
 def install_methods(
     spec: ToolSpec, os_name: str, *, allow_system: bool
 ) -> list[InstallMethod]:
-    methods: list[InstallMethod] = [
-        InstallMethod(f"plugin:{name}", name, options=options)
-        for name, options in spec.installers.items()
-    ]
+    methods: list[InstallMethod] = []
     if spec.toolbase is not None and os_name == "windows":
         source = spec.toolbase
         methods.append(

@@ -123,12 +123,12 @@ documentation authoring conventions separate from PTK product requirements.
 
 The configuration reference is generated from the validation schema and uses
 YAML paths and values. Published docs do not include a source-module catalog or
-Python API reference. Plugin-authoring contracts live with the plugin-development
-skill and are available to installed assistants outside the published docs.
+Python API reference. Internal Python interfaces are implementation details.
+Reusable packages expose commands as described in :doc:`python-tools`.
 
-Seventeen repository-local authoring skills are shipped under ``.claude/skills`` and
+Sixteen repository-local authoring skills are shipped under ``.claude/skills`` and
 included in the documentation. Tests check catalog completeness and source links.
-The wheel bundles fifteen project-facing skills, reference docs and examples
+The wheel bundles fourteen project-facing skills, reference docs and examples
 through the allowlist in ``src/ptk/authoring_bundle.py``. Keep the canonical skill
 files in ``.claude/skills``; do not maintain another copy for installed users.
 Consumer skill instructions must not depend on PTK's ``src`` or ``tests`` folders.
@@ -161,7 +161,7 @@ parameter passing and execution. The extension CX job runs ``uv run ptk extensio
 on Linux and Windows and uploads the VSIX. Controller tests use an injected VS Code API; graphical
 extension-host acceptance remains a manual check. See :doc:`/guides/editor`.
 
-Plugin selection and generators are documented in :doc:`/reference/plugins`; variant inspection
+Built-in operations and generators are documented in :doc:`/reference/builtins`; variant inspection
 and matrix commands in :doc:`/reference/cli`; step dependency behavior in :doc:`/reference/execution`.
 Real machine-wide tool/credential setup still needs acceptance on target machines.
 Publishing and merging are separate decisions.
@@ -176,8 +176,8 @@ The Python 3.12 Linux/Windows CX jobs also run this benchmark and print their
 results; timings are evidence, not pass/fail thresholds on shared runners.
 
 Keep application services lazy: ``App`` constructs execution, tools, credentials,
-editor resources and reports only on first use. Explicitly selected plugins still
-load for validation. CLI state caches both successful loads and expected errors
+editor resources and reports only on first use. External Python tools run only
+through their execution paths. CLI state caches both successful loads and expected errors
 for one invocation; do not turn these into process-global or disk caches. Tests
 bound load/identity/diagnostic-path work and check fresh subprocess imports.
 

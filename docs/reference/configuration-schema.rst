@@ -13,8 +13,9 @@ Use ``ptk maintainer config show`` to inspect effective defaults for your projec
 
 These tables describe the assembled model. Each conventional document contains
 its section body; see :doc:`/guides/configuration` for file ownership and validation rules.
-``plugins`` selects installed distributions for entry-point loading; see
-:doc:`/reference/plugins` for plugin selection and configuration examples.
+Built-in operation, generator, report and credential-provider choices are
+validated by the schema. See :doc:`/reference/builtins` and
+:doc:`/guides/python-tools` for project integration.
 
 Export a machine-readable schema for editor integration::
 

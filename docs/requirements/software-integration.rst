@@ -1,7 +1,7 @@
 Tools and integrations
 ======================
 
-Configured external dependencies, trusted plugin contracts and maintenance.
+Configured external dependencies, ordinary Python tools and maintenance.
 
 .. req-sw:: Check and provision declared tools
    :id: REQ_Sw_TOOLS
@@ -62,26 +62,6 @@ Configured external dependencies, trusted plugin contracts and maintenance.
    **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
 
    **Evidence:** ``src/ptk/domain/credentials.py``; ``tests/test_workspace.py``.
-
-.. req-sw:: Load only explicitly selected plugins
-   :id: REQ_Sw_PLUGINS
-   :req_type: functional
-   :safety: QM
-   :security: false
-   :legal: false
-   :status: under review
-   :verification_criteria: Plugin tests cover all supported entry-point groups, disabled distributions and invalid registrations.
-   :verification_level: sw-integration-test
-   :req_satisfies: REQ_Sys_TOOLS
-   :tags: implemented
-
-   PTK shall discover installed distributions named in project configuration and reject missing, duplicate, reserved or non-callable registrations without implicitly installing plugins.
-
-   **Origin:** Derived from the current CLI implementation and regression tests; requires review.
-
-   **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
-
-   **Evidence:** ``src/ptk/adapters/plugins.py``; ``tests/test_plugins.py``.
 
 .. req-sw:: Generate build-system variant files
    :id: REQ_Sw_GENERATORS
@@ -165,3 +145,35 @@ Configured external dependencies, trusted plugin contracts and maintenance.
    **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
 
    **Evidence:** ``src/ptk/application/use_cases/hooks.py``; ``tests/hooks/test_installation.py``.
+
+.. req-sw:: Run reusable Python tools without a third-party PTK plugin API
+   :id: REQ_Sw_EXTERNAL_TOOLS
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: accepted
+   :verification_criteria: A built ordinary wheel executes through PTK and uv with correct success/failure status; retired plugin settings and custom hook names produce editable configuration errors; installed PTK entry points are never discovered or imported; supported built-ins remain available.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_TOOLS
+   :tags: implemented
+
+   PTK shall execute reusable Python tools through its normal command/Python modes
+   and shall not discover or load third-party PTK entry points. It shall reject
+   removed plugins/custom installers fields and unsupported operation, generator,
+   provider and report-format names through normal configuration validation.
+   It shall retain its shipped integrations and editable invalid configuration.
+
+   **Origin:** Explicit user decision to remove plugin complexity and Python API
+   version coupling in favor of ordinary packages distributed through Artifactory
+   and executed with uv. PTK has not been rolled out; no migration code, legacy
+   implementation or fallback behavior shall be retained.
+
+   **Implementation:** Implemented; compatibility is defined by CLI/configuration
+   and documented data contracts, not public PTK Python callbacks. Project tools
+   remain responsible for their own dependencies, side effects and versioning.
+
+   **Evidence:** ``tests/test_no_plugins.py``;
+   ``tests/test_python_tool_package.py``; ``tests/test_step_generators.py``;
+   ``extensions/project-toolkit/test/integration.test.js``;
+   ``src/ptk/domain/config/model.py``; :need:`DD_NO_PLUGIN_API`.

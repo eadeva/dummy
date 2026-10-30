@@ -1,57 +1,24 @@
-Plugin and generator configuration
+Built-in operations and generators
 ==================================
 
-Loading installed plugins
--------------------------
+PTK ships a fixed set of operations selected through ``uses``. Use ``run`` with
+an external command or Python package for project-specific behavior; see
+:doc:`/guides/python-tools`. The schema lists the supported operation and generator
+names. Unknown names are configuration errors, including in skipped steps.
 
-Install your extension in the same Python environment as PTK and list its
-**distribution name** in the project. Discovery does not install anything::
+Basic operations
+----------------
 
-   # config/ptk/project.ptk.yml
-   plugins:
-   - company-ptk-extension
-
-Only selected distributions are imported. Missing packages/entry points,
-non-callable handlers and duplicate or reserved names are errors. Plugins run
-as trusted Python code with the user's permissions; the allow-list is not a
-sandbox. Ordinary projects with no ``plugins`` do not load these extensions.
-
-Use the installed plugin's documented names in configuration:
-
-.. list-table:: Plugin configuration
-   :header-rows: 1
-   :widths: 30 70
-
-   * - Capability
-     - Configuration
-   * - Step
-     - Set a job step's ``uses`` to the registered name and pass options in ``with``.
-   * - Report exporter
-     - Add the registered format name to ``report_formats`` or select it with ``ptk report export JOB -f NAME``.
-   * - Result importer
-     - Select the plugin distribution in ``plugins``; its importer reads results from visible steps.
-   * - Credential provider
-     - Add the provider name to ``credentials.NAME.providers`` and select it with ``--store`` when saving a value.
-   * - Tool installer
-     - Set ``tools.NAME.installers.PLUGIN: {options...}``. Configure the environment/PATH so PTK can find the installed executable.
-   * - Variant generator
-     - Add the registered name to the ``generators`` list of any job step.
-
-The plugin supplies its accepted option names and supported PTK versions.
-For example, after installing a distribution that provides ``company.check``::
-
-   steps:
-     checks:
-       uses: company.check
-       with:
-         mode: strict
-
-Here ``mode`` is an example plugin option, not a built-in PTK field.
+* ``echo`` writes ``with.message`` to the step log.
+* ``wait`` waits for ``with.seconds`` while observing cancellation.
+* ``report.import`` copies supported tool result files into the step report
+  folder. Its options and supported formats are in :doc:`/guides/log-analysis`.
+* ``version.generate`` writes version files; see :doc:`/guides/versioning`.
 
 Variant generators
 ------------------
 
-Select built-in or enabled plugin generators directly on a step::
+Select built-in generators directly on a step::
 
    steps:
      configure:
@@ -59,20 +26,17 @@ Select built-in or enabled plugin generators directly on a step::
        run: [cmake, -S, ., -B, "${run.build_dir}/cmake", "-DPTK_VARIANT_FILE=${run.build_dir}/variant.cmake"]
 
 A step may instead contain only ``generators``. Generation requires a valid
-concrete variant and precedes every command/plugin attempt. The eight built-ins
+concrete variant and precedes every command or built-in operation attempt. The eight built-ins
 are ``header``, ``cmake``, ``bazel``, ``gn``, ``make``, ``yocto``, ``robot`` and
 ``sphinx``. Outputs always belong to the step's build directory. The former
 ``uses: variant.generate`` interface and its output override are removed.
 
 See :doc:`/guides/variant-generation` for the data contract, escaping restrictions,
 project responsibilities, native build integration and downloadable Bazel helper.
-A generator plugin receives its own copy of the prepared ``ResolvedVariant`` and
-returns a dictionary of relative filenames to UTF-8 strings. Feature keys in
-``variant.values`` are component-qualified. Do not mutate external state in a
-generator. PTK validates all returned names/content before writing, rejects
-colliding names and directory/file conflicts, and replaces each file atomically.
-Plugins execute as trusted Python; they are responsible for their own side effects
-and bounded runtime. There is no transaction across files or plugin functions.
+PTK validates generated paths/content before writing, rejects colliding names
+and directory/file conflicts, and replaces each file atomically. There is no
+transaction across multiple files. Additional generation logic belongs in an
+ordinary command with explicit inputs and outputs.
 
 Additional built-ins
 --------------------

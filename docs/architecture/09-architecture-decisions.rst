@@ -18,7 +18,7 @@ not imply that every related future capability has been implemented.
 
    **Context:** Projects need a familiar interface without centralizing every build tool.
 
-   **Decision:** PTK standardizes variants, parameters, setup, credentials, execution, logging and reporting. Projects and plugins own the commands and domain-specific behavior. Workflow/job/step names follow GitHub terminology; PTK supports CX work beyond CI.
+   **Decision:** PTK standardizes variants, parameters, setup, credentials, execution, logging and reporting. Projects own the commands and domain-specific behavior. Workflow/job/step names follow GitHub terminology; PTK supports CX work beyond CI.
 
    **Alternatives considered:** A monolithic CLI containing each project tool would couple their release cycles.
 
@@ -156,7 +156,7 @@ not imply that every related future capability has been implemented.
    declared dependency graphs, schedules their nodes, composes environments,
    provides storage conventions, guards managed cleanup and records outcomes.
    It detects specific known storage/uv environment conflicts and applies
-   job/variant run locks. Project implementations own their commands, plugins and
+   job/variant run locks. Project implementations own their commands, Python packages and
    selected build tools, including input/output validation, shared-resource
    coordination, retry safety, recovery and any required isolation. They report
    success or failure according to their own contracts; PTK uses those outcomes
@@ -522,10 +522,10 @@ not imply that every related future capability has been implemented.
 
    **Decision:** Add an ordered unique generators list to every step kind,
    including generation-only steps. Resolve once during preparation and pass a
-   separate snapshot copy to each generator. Generate before every command/plugin
+   separate snapshot copy to each generator. Generate before every command or built-in operation
    attempt into the owning step's build directory; keep the default repository
    cwd. Validate returned paths/content/collisions before writes and atomically
-   replace individual files. Unknown enabled generators and missing variants fail
+   replace individual files. Unknown generators fail configuration validation; missing variants fail
    preparation. A generator failure stops that step before its command.
 
    **Alternatives considered:** The dedicated variant.generate builtin and
@@ -571,6 +571,44 @@ not imply that every related future capability has been implemented.
    versions and remote-build input staging. Tests verify actual consumers on the
    versions recorded in :doc:`/guides/variant-generation`; this is not universal
    tool/platform certification. See :need:`REQ_Sw_GENERATORS`.
+
+.. ddec:: Use ordinary project tools instead of a third-party plugin API
+   :id: DD_NO_PLUGIN_API
+   :status: accepted
+
+   **Context:** Python packages can expose commands and be distributed through
+   Artifactory and executed with uv. PTK's six plugin hooks duplicate much of that
+   integration while adding discovery, validation, dynamic service wiring and
+   coupling to internal Python models and callback signatures. PTK has not been
+   rolled out and has no external plugin consumers requiring compatibility.
+
+   **Decision:** Remove all third-party step, generator, report-contributor,
+   report-exporter, credential-provider and installer hooks. Remove the plugins
+   and custom installers configuration fields, loader, registration machinery,
+   plugin starter and authoring contract. Use a fixed schema-enumerated set of
+   built-in operations/providers/formats. Project behavior runs as ordinary
+   commands, including independently versioned Python CLI packages through uv.
+
+   **Alternatives considered:** Retaining only selected plugin hooks would still
+   require a public Python compatibility surface without a demonstrated need.
+   Keeping migration code, a disabled/legacy loader, compatibility aliases or
+   fallback behavior would preserve complexity with no installed user base to serve. Requiring every reusable tool to live in PTK's interpreter would
+   retain dependency conflicts and unnecessary release coupling.
+
+   **Consequences:** Built-in generators, supported result import/export, tool
+   setup and credential providers remain. The editor consumes the updated schema
+   and retains invalid documents for repair. Obsolete configuration fails rather
+   than silently converting; installed old PTK entry points are inert. Internal
+   dependency injection and built-in callbacks remain implementation details,
+   not a third-party API. No automatic external generator or converter protocol
+   is introduced. External tools own CLI/file contracts and their versions;
+   PTK still versions its CLI, configuration, report and editor contracts. Project
+   responsibility for side effects and outputs remains intentional for flexibility.
+
+   **Related requirements:** :need:`REQ_Sw_EXTERNAL_TOOLS` supersedes
+   :need:`REQ_Sw_PLUGINS`; :need:`REQ_Sw_NO_LEGACY` and
+   :need:`REQ_Sw_SCHEMA_AUTHORITY` govern removal and editor recovery.
+   See :doc:`/guides/python-tools`.
 
 Open boundaries
 ---------------

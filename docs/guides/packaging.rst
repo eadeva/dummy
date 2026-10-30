@@ -67,7 +67,7 @@ validation failures leave the previous successful artifacts intact. Additional
 or modified files in the output directory are preserved by refusing replacement.
 
 The wheel includes lightweight reference documentation, runnable example sources
-and fifteen project authoring skills. It does not include rendered HTML or require
+and fourteen project authoring skills. It does not include rendered HTML or require
 Sphinx at runtime. The full HTML documentation is the separate docs ZIP, suitable
 for a documentation site or an Artifactory generic repository. Only the wheel and
 source archive in ``dist`` belong in an Artifactory Python package repository.

@@ -157,6 +157,7 @@ def test_vmr_editor_setup_uses_selected_repository(tmp_path, monkeypatch):
 def test_bundle_ignores_local_config_and_generated_examples(tmp_path):
     root = Path(__file__).resolve().parents[1]
     assets = source_files(root)
+    assert not any("plugin" in name for name in assets)
     assert len(
         [
             name

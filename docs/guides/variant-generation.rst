@@ -108,7 +108,7 @@ reported rather than quietly accepted.
 Environment values are strings: booleans become 0/1 and null becomes empty.
 ``VARIANT_COMPONENTS`` is an environment-only space-separated list. Exports carry
 component flags, feature values and the product name. Arbitrary variant ``data``
-is available to substitutions and custom generators, but is not copied into the
+is available to substitutions and external commands, but is not copied into the
 built-in formats. Enumeration values remain strings; PTK does not assign ordinal
 C preprocessor numbers based on the order of an enum's choices.
 
@@ -144,24 +144,24 @@ The same field works on Python and ``uses`` steps::
          PTK_VARIANT_FILE: ${run.build_dir}/variant.cmake
 
 A generation-only step is valid. The list is ordered, contains unique literal
-names, and may include generators from enabled plugins. ``run`` and ``uses``
+names chosen from the built-in formats below. ``run`` and ``uses``
 remain mutually exclusive. No generators run unless listed.
 
 The resolved variant, including job feature overrides, is captured during
 preparation. All generators in that run receive that same resolved configuration,
-with a separate copy per plugin invocation. Changes to configuration files during
+with a separate copy per generator invocation. Changes to configuration files during
 the run do not alter that snapshot.
 
 Generation happens before each execution attempt, inside the step's timeout and
 cancellation scope. Command retries regenerate files. A generator exception fails
-the step before its command/script/plugin runs and is not itself retried. Normal
+the step before its command/script/built-in operation runs and is not itself retried. Normal
 ``continue_on_error`` and dependency handling still apply. Cancellation is checked
-between generator calls and file writes; trusted synchronous Python plugins must
+between generator calls and file writes; synchronous built-in generators must
 return before PTK can observe cancellation or a timeout.
 
 Dry runs and graph previews list generators without invoking them. Skipped,
-blocked and unselected steps do not generate. Preparation rejects unknown enabled
-step generators and generation without a selected valid variant before any step
+blocked and unselected steps do not generate. Configuration validation rejects unknown generator names, even on skipped steps.
+Preparation rejects generation without a selected valid variant before any step
 starts. Configuration discovery and the editor do not execute generators.
 
 Outputs always go to the owning step's ``${run.build_dir}``, normally
@@ -390,6 +390,11 @@ Compatibility and verification
 This replaces unqualified product feature keys, ``${vh.features.FEATURE}``,
 custom export prefixes, ``VH_*``/``BO_*`` exports and ``uses: variant.generate``.
 Update configurations explicitly; PTK does not silently translate old forms.
+Third-party generator registration is removed under :need:`DD_NO_PLUGIN_API`.
+Built-in generation and the project-owned Bazel helper remain supported.
+External generation tools use explicit input/output paths; see
+:doc:`python-tools`.
+
 The extension consumes PTK's canonical schema and keeps invalid documents editable;
 validation errors must not prevent opening the editor or correcting YAML.
 

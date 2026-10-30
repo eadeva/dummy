@@ -63,7 +63,7 @@ Make and verify the requested change
 * Validate with the installed document schema and ``ptk validate``; inspect the
   smallest affected job/workflow/variant. Select only checks relevant to the
   change. Do not run a full build or every variant for an explanation request.
-* Inspect configured command/version sources and plugins before a preview or
+* Inspect configured command/version sources and Python tools before a preview or
   diagnostic: ``--dry-run`` skips job steps but some preparation can execute
   version commands; doctor/tool checks and credential tests can execute commands.
   Treat previews as planning aids, not a universal side-effect sandbox.

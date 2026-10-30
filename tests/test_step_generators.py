@@ -105,7 +105,7 @@ def test_skipped_and_blocked_steps_do_not_generate(tmp_path):
 
 @pytest.mark.parametrize(
     "variants,names,message",
-    [(False, ["cmake"], "selected variant"), (True, ["missing"], "unknown generator")],
+    [(False, ["cmake"], "selected variant"), (True, ["missing"], "Input should be")],
 )
 def test_generator_preflight_prevents_all_execution(tmp_path, variants, names, message):
     with pytest.raises(PtkError, match=message):
@@ -207,7 +207,7 @@ def test_writer_validates_all_outputs_before_replacing_files(tmp_path, files):
     assert (tmp_path / "valid.txt").read_text() == "original"
 
 
-def test_writer_rejects_symlinks_and_plugin_snapshot_mutation(tmp_path):
+def test_writer_rejects_symlinks_and_snapshot_mutation(tmp_path):
     folder = tmp_path / "step"
     folder.mkdir()
     try:

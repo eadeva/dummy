@@ -54,8 +54,6 @@ if TYPE_CHECKING:
     from .application.use_cases.variants import VariantService
     from .application.use_cases.vscode import VSCodeTasks
 
-DEFAULT_SECRET_PROVIDERS = frozenset({"env", "keyring", "gopass", "vault", "prompt"})
-
 
 @dataclass
 class App:
@@ -66,9 +64,6 @@ class App:
     workspace: WorkspaceDiscovery = field(
         default_factory=WorkspaceDiscovery, repr=False
     )
-    _plugin_cache: dict = field(default_factory=dict, repr=False)
-    _active_plugins: tuple | None = field(default=None, repr=False)
-    _base_providers: dict | None = field(default=None, repr=False)
     _credentials: dict[int, CredentialService] = field(default_factory=dict, repr=False)
     _workspace_roles: dict[Path, Role] = field(default_factory=dict, repr=False)
 
@@ -188,70 +183,6 @@ class App:
     def secret_providers(self) -> dict[str, SecretProvider]:
         return default_secret_providers(self.host.variables, self.prompter)
 
-    def configure_project(self, project: Project):
-        from .adapters.plugins import load_plugins
-
-        key = tuple(project.config.plugins)
-        if key not in self._plugin_cache:
-            self._plugin_cache[key] = load_plugins(list(key))
-        plugins = self._plugin_cache[key]
-        if self._active_plugins != key and (key or self._active_plugins):
-            from .adapters.plugins import PluginInstaller
-            from .adapters.reporting.store import FileReportStore
-            from .application.use_cases.report import ReportService
-
-            if self._base_providers is None:
-                self._base_providers = dict(self.secret_providers)
-            providers = dict(self._base_providers)
-            for name, factory in plugins["secret_providers"].items():
-                provider = factory()
-                if not all(
-                    hasattr(provider, attr)
-                    for attr in (
-                        "name",
-                        "can_store",
-                        "available",
-                        "get",
-                        "store",
-                        "remove",
-                    )
-                ):
-                    raise PtkError(
-                        f"secret provider '{name}' does not implement SecretProvider"
-                    )
-                providers[name] = provider
-            self.secret_providers = providers
-            self._credentials.clear()
-            self.tools.set_installer(
-                PluginInstaller(self.installer, plugins["installers"])
-            )
-            self.reports = ReportService(
-                FileReportStore(
-                    self.host.variables,
-                    plugins["reporters"],
-                    plugins["report_contributors"],
-                ),
-                self.reports.version,
-            )
-        self._active_plugins = key
-        formats = {"json", "junit", "html", "markdown", "github"} | plugins[
-            "reporters"
-        ].keys()
-        for name in project.config.report_formats:
-            if name not in formats:
-                raise PtkError(f"reporter '{name}' is not enabled")
-        for credential in project.config.credentials.values():
-            for name in credential.providers:
-                if name not in self.__dict__.get(
-                    "secret_providers", DEFAULT_SECRET_PROVIDERS
-                ):
-                    raise PtkError(f"secret provider '{name}' is not enabled")
-        for tool in project.config.tools.values():
-            for name in tool.installers:
-                if name not in plugins["installers"]:
-                    raise PtkError(f"installer '{name}' is not enabled")
-        return plugins
-
     def variants(self, project: Project) -> VariantService:
         from .application.use_cases.variants import VariantService
 
@@ -261,7 +192,6 @@ class App:
         """One service per project and ptk process (caches values, vault unlocked once)."""
         from .application.use_cases.credentials import CredentialService
 
-        self.configure_project(project)
         key = id(project)
         if key not in self._credentials:
             definitions = project.config.credentials
@@ -313,9 +243,6 @@ class App:
 
     def prepare_run(self, project: Project) -> PrepareRun:
         from .application.use_cases.run import PrepareRun
-        from .domain.variants.generators import GENERATORS
-
-        plugins = self.configure_project(project)
 
         return PrepareRun(
             self.host,
@@ -325,7 +252,6 @@ class App:
             versions=self.versions(),
             ptk_version=__version__,
             git=self.git_metadata,
-            generators={**GENERATORS, **plugins["generators"]},
         )
 
     @cached_property
@@ -357,7 +283,6 @@ class App:
         from .application.use_cases.run import BUILTINS, RunJob, layout_of
         from .domain.variants.generators import GENERATORS
 
-        plugins = self.configure_project(project)
         layout = layout_of(project)
 
         def sync(step, out, ctx):
@@ -397,7 +322,6 @@ class App:
                 ]
             ),
             "version.generate": version_generator,
-            **plugins["steps"],
         }
 
         def verify_tools(job, env, cwd):
@@ -420,7 +344,7 @@ class App:
             path_provider=lambda: self.tools.paths(project),
             environment_check=verify_tools,
             version_writer=self.versions().write,
-            variant_writer=variant_writer({**GENERATORS, **plugins["generators"]}),
+            variant_writer=variant_writer(GENERATORS),
         )
 
     def role(self, project: Project | None) -> Role:

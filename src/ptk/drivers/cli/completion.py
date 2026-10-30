@@ -61,7 +61,6 @@ def _variant_projects(ctx):
         CliState(
             create_app(host=state.app.host, workspace=state.app.workspace),
             config=entry,
-            completion=True,
         ).try_project()
         for entry in entries.values()
     ]

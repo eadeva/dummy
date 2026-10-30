@@ -60,8 +60,10 @@ Results and integrations
 ------------------------
 
 The report service joins stored execution data with importer contributions.
-Report exporters do not execute jobs. Plugin entry points extend steps,
-reporters, report contributors, secret providers, installers and generators;
-only explicitly selected installed distributions are loaded.
+Report exporters do not execute jobs. PTK selects its shipped importers,
+exporters, generators, credential providers and installers directly. It does
+not discover or load third-party entry points. Project behavior runs through
+commands and independently packaged Python tools; those packages can use uv's
+separate dependency environments.
 
-See :doc:`/reference/plugins` for plugin selection and generator configuration.
+See :doc:`/reference/builtins` and :doc:`/guides/python-tools`.

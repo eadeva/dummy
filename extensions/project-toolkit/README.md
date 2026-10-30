@@ -10,8 +10,8 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
    support `ptk describe --json --configuration` (inventory version 4 and configuration interface version 5).
 2. If PTK was installed directly with uv, run `ptk self-service extension` afterwards.
    Alternatively, in VS Code run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.17.0.vsix`. You can also use
-   `code --install-extension project-toolkit-0.17.0.vsix`.
+   `project-toolkit-0.18.0.vsix`. You can also use
+   `code --install-extension project-toolkit-0.18.0.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -75,7 +75,7 @@ Some action paths and flags are known by the extension, including validation,
 reports, initialization, variants, dry runs and cleanup; the schema alone is
 not the full contract.
 
-Extension 0.17.0 requires inventory `schema_version: 4` and
+Extension 0.18.0 requires inventory `schema_version: 4` and
 `configuration.version: 5`. These are independent of package/release numbers
 and the project marker's schema version. Unsupported interfaces are rejected;
 there is no legacy parser or runtime schema fallback. Breaking changes must
@@ -287,7 +287,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.17.0.vsix`. Use `ptk self-service extension --dry-run`
+`extensions/project-toolkit/project-toolkit-0.18.0.vsix`. Use `ptk self-service extension --dry-run`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:
@@ -323,7 +323,7 @@ a different job variant and with a workspace workflow.
 The VSIX bundles its YAML document editor dependency; no npm installation is
 needed by extension users. PTK owns configuration resolution, semantic validation,
 role filtering and execution. Discovery does not run jobs or install tools, but
-PTK may import configured project plugins, so workspace trust is required.
+PTK tasks execute project commands and Python tools, so workspace trust is required.
 
 ### Cleanup and workflow variants (0.3.0)
 

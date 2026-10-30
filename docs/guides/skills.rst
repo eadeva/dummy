@@ -1,7 +1,7 @@
 Authoring skills
 ================
 
-Canonical assistant instructions live in ``.claude/skills``. Fifteen project-facing
+Canonical assistant instructions live in ``.claude/skills``. Fourteen project-facing
 skills use links relative to their SKILL.md files and are bundled with the wheel.
 Two maintainer skills operate on PTK's own source checkout.
 
@@ -87,18 +87,12 @@ The development and docs-writing skills remain checkout-only. Point an assistant
 working on PTK itself to those source skills explicitly.
 
 Tests validate the catalog and references, execute the authoring starter and
-load the plugin example through its declared distribution entry point.
+build the ordinary Python tool example and run its CLI through uv.
 
 ptk-vmr
 -------
 
 .. literalinclude:: ../../.claude/skills/ptk-vmr/SKILL.md
-   :language: markdown
-
-ptk-plugin-development
-----------------------
-
-.. literalinclude:: ../../.claude/skills/ptk-plugin-development/SKILL.md
    :language: markdown
 
 ptk-workflow-authoring

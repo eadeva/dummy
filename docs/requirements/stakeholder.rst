@@ -222,7 +222,7 @@ organizational, not requirements or implementation statuses.
    :clustered_by: FEAT_INTEGRATION
    :tags: implemented
 
-   PTK shall support project tools, credentials, build generators, artifact destinations and explicitly selected plugins through declared configuration.
+   PTK shall support project tools, credentials, build generators, artifact destinations and ordinary Python tools through declared configuration.
 
    **Origin:** Derived from the present public CLI and configuration model; stakeholder review remains required.
 

@@ -15,7 +15,7 @@ Component feature declarations remain beside their component's source/build
 files. See :doc:`/guides/configuration` for exact filenames.
 
 Jobs execute local commands and trusted Python code with the user's permissions.
-Environment filtering and plugin allowlists do not make them a sandbox.
+Environment filtering and Python dependency isolation do not make them a sandbox.
 Platform installers, external executables, network repositories and credentials
 remain external dependencies. A configured tool can have platform-specific
 requirements even when PTK itself runs on both platforms.

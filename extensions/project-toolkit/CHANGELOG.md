@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.18.0
+
+- Match PTK's removal of third-party plugins and custom installer configuration.
+- Offer only shipped operations, generators, report formats and credential providers.
+- Preserve editable YAML and configuration diagnostics for obsolete plugin settings.
+
 ## 0.17.0
 
 - Match PTK's component-qualified feature selections and per-step generators schema.
