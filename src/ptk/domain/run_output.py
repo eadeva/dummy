@@ -21,7 +21,7 @@ def boundary(kind, identity, state, width=80):
 
 
 def prefix(job, variant, step=None):
-    return f"[{job}][{variant or NO_VARIANT}]" + (f"[{step}]" if step else "")
+    return f"[{variant or NO_VARIANT}][{job}]" + (f"[{step}]" if step else "")
 
 
 def project_version(plan):

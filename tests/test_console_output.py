@@ -50,7 +50,7 @@ def test_step_lifecycle_and_messages_share_the_full_context(variant, shown):
         ),
     )
     lines = stream.getvalue().splitlines()
-    prefix = f"[docs][{shown}][sphinx] "
+    prefix = f"[{shown}][docs][sphinx] "
     assert all(line.startswith(prefix) for line in lines)
     assert [line[len(prefix) :] for line in lines] == [
         "--- STEP | START ---",
@@ -70,7 +70,7 @@ def test_multiline_output_expands_tabs_before_prefix_and_cannot_move_the_cursor(
         out.output(step(name), "\tindented\r\n  next\n\n\x1b[2K\r\x1b[31mERROR\x1b[0m")
     lines = stream.getvalue().splitlines()
     for name in ["short", "much-longer-step"]:
-        prefix = f"[docs][default][{name}] "
+        prefix = f"[default][docs][{name}] "
         assert [line[len(prefix) :] for line in lines if line.startswith(prefix)] == [
             "        indented",
             "  next",
@@ -95,10 +95,10 @@ def test_quiet_output_keeps_context_for_warnings_and_skipped_steps():
         ),
     )
     assert stream.getvalue().splitlines() == [
-        "[docs][default][sphinx] warning: step warning",
-        "[docs][default] warning: job warning",
-        "[docs][default][sphinx] --- STEP | SKIPPED | 0.0s ---",
-        "[docs][default][sphinx] condition false",
+        "[default][docs][sphinx] warning: step warning",
+        "[default][docs] warning: job warning",
+        "[default][docs][sphinx] --- STEP | SKIPPED | 0.0s ---",
+        "[default][docs][sphinx] condition false",
     ]
 
 
@@ -120,7 +120,7 @@ def test_parallel_observers_keep_their_job_and_variant_on_every_line():
     with ThreadPoolExecutor(max_workers=2) as pool:
         list(pool.map(emit, observers))
     for job, variant in [("docs", "debug"), ("check", "release")]:
-        prefix = f"[{job}][{variant}][sphinx] "
+        prefix = f"[{variant}][{job}][sphinx] "
         assert [
             line[len(prefix) :]
             for line in stream.getvalue().splitlines()
@@ -158,11 +158,11 @@ def test_real_command_output_is_normalized_only_for_the_console(tmp_path):
     result = CliRunner().invoke(cli, ["docs"], cwd=tmp_path, catch_exceptions=False)
     assert result.exit_code == 0, result.output
     for text in ["        indented", "progress 1", "progress 2", "[red] :smile:"]:
-        assert f"[docs][debug][sphinx] {text}\n" in result.output
+        assert f"[debug][docs][sphinx] {text}\n" in result.output
     captured = (tmp_path / "_logs/debug/docs/steps/sphinx.log").read_bytes()
     assert b"progress 1\r\x1b[2Kprogress 2" in captured
     assert b"\tindented" in captured
-    assert b"[docs][debug][sphinx]" not in captured
+    assert b"[debug][docs][sphinx]" not in captured
 
 
 @pytest.mark.parametrize("verbose", [False, True])

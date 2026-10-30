@@ -251,7 +251,7 @@ The console uses purple workflow headers, cyan job headers and blue step
 headers. It lists participating repositories' already prepared versions and
 variants; it does not perform another version lookup just for display. Workspace
 and cross-repository workflows qualify step prefixes as
-``[repository:job][variant][step]``. Header blocks stay together while output
+``[variant][repository:job][step]``. Header blocks stay together while output
 from parallel jobs can alternate between them. Individual raw step logs remain
 available through the child reports. See :doc:`log-analysis` for metadata,
 verbosity and formatting details.

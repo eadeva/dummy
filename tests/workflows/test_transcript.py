@@ -41,7 +41,7 @@ def test_workspace_transcript_identifies_equal_jobs_and_resolved_versions(tmp_pa
                 in output
             )
             assert f"JOB {alias}:build | START" in output
-            assert f"[{alias}:build][default][run] tool output" in output
+            assert f"[default][{alias}:build][run] tool output" in output
             assert f"JOB {alias}:build | PASSED" in output
         assert "\x1b" not in output
     assert "tool output" in text
@@ -66,7 +66,7 @@ def test_failed_and_blocked_jobs_close_with_clear_workflow_counts(tmp_path):
     assert "JOB bad | FAILED" in text
     assert "WORKFLOW verify | FAILED" in text
     assert "Jobs: 0 passed | 1 failed | 1 skipped" in text
-    assert "blocked: [app:blocked][default] SKIPPED" in text
+    assert "blocked: [default][app:blocked] SKIPPED" in text
     assert "JOB blocked | START" not in text
 
 

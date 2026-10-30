@@ -62,12 +62,12 @@ workflow footers also list individual invocations, including jobs blocked before
 they could start. An allowed failure is explicitly labelled.
 
 PTK prefixes step output, start/finish records and step messages with
-``[job][variant][step]``. For example, the documentation job prints
-``[docs][default][sphinx]``. These are the job and step IDs, not display titles or
+``[variant][job][step]``, matching the output folder order. For example, the
+documentation job prints ``[default][docs][sphinx]``. These are the job and step IDs, not display titles or
 workflow invocation aliases. ``default`` is the existing no-variant convention;
-a selected variant uses its own name. Job-level messages use ``[job][variant]``.
+a selected variant uses its own name. Job-level messages use ``[variant][job]``.
 Each concurrent job retains its own context. Workspace and cross-repository
-workflows qualify the first field as ``[repository:job][variant][step]`` to
+workflows qualify the job field as ``[variant][repository:job][step]`` to
 distinguish equal job IDs while preserving three fields. Invocation aliases
 appear in job metadata and the workflow summary.
 

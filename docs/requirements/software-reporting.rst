@@ -15,7 +15,8 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_LOGS
    :tags: implemented
 
-   PTK shall prefix each logical console step line with [job][variant][step],
+   PTK shall prefix each logical console step line with [variant][job][step],
+   matching the output folder order,
    including output, start/finish records and step messages. It shall use the
    selected variant or the established default name when no variant is selected.
    Workspace and cross-repository workflows shall qualify the job field with

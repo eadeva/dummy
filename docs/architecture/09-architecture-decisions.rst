@@ -618,8 +618,9 @@ not imply that every related future capability has been implemented.
    concurrently. Prefixing only the first line of a multiline message loses
    context, and expanding tabs after adding the prefix shifts tool indentation.
 
-   **Decision:** Use [job][variant][step] for console step records, and
-   [job][variant] for job-level messages. Reuse the established default label
+   **Decision:** Use [variant][job][step] for console step records, and
+   [variant][job] for job-level messages, matching the output folder order.
+   Reuse the established default label
    for an absent variant. Prefix every logical line, expand tabs in tool text
    before adding the prefix, interpret ANSI styling and present carriage-return
    updates as separate lines without terminal cursor/erase operations.
@@ -627,7 +628,7 @@ not imply that every related future capability has been implemented.
    **Consequences:** Identifiers remain literal and unpadded. The terminal owns
    visual wrapping; very long lines can wrap to its left margin. Raw captured
    step logs and structured report identities remain unchanged. Workspace and
-   cross-repository workflows qualify the first field as repository:job to
+   cross-repository workflows qualify the job field as repository:job to
    distinguish equal IDs while retaining three fields. The workflow invocation
    alias belongs in header metadata and the summary.
    See :need:`REQ_Sw_CONSOLE_PREFIX` and :doc:`/guides/log-analysis`.
