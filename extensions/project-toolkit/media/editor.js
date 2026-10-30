@@ -61,6 +61,7 @@
         catch (error) { deferred.length = 0; showIssue(error.message); }
         if (!inflight && !queue.size && deferred.length) flush(false);
       }
+      status();
       return;
     }
     if (commitRequested) {

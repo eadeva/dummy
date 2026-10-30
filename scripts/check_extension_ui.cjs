@@ -30,7 +30,7 @@ const theme = `:root{--vscode-foreground:#d4d7df;--vscode-editor-background:#181
       await page.goto("http://ptk.test/index.html");
       return page;
     }
-    const original = "# User comment\nproject:\n  name: example\njobs:\n  build:\n    help: Build the project\n    params:\n      verbose: {type: bool, default: false}\n    steps:\n      - compile: {run: echo hello}\n";
+    const original = "# User comment\nproject:\n  name: example\njobs:\n  build:\n    help: Build the project\n    params:\n      verbose: {type: bool, default: false}\n    steps:\n      compile: {run: echo hello}\n";
     const h = harness(original);
     const panel = await h.resolve();
     const page = await connect(panel);
@@ -39,9 +39,8 @@ const theme = `:root{--vscode-foreground:#d4d7df;--vscode-editor-background:#181
     await page.getByRole("textbox", { name: "New job name", exact: true }).fill("verify");
     await page.getByRole("button", { name: "Add job", exact: true }).click();
     await page.locator("section.field").filter({ has: page.getByText("verify", { exact: true }) }).waitFor();
-    assert.ok(YAML.parse(h.document.getText()).jobs.verify.steps[0].step.run);
-    const build = page.locator("section.field").filter({ has: page.getByText("build", { exact: true }) });
-    await build.getByRole("button", { name: "Edit fields" }).click();
+    assert.ok(YAML.parse(h.document.getText()).jobs.verify.steps.step.run);
+    await page.getByRole("button", { name: "build", exact: true }).click();
     await page.getByRole("combobox", { name: "Optional field", exact: true }).selectOption("open_report");
     await page.getByRole("button", { name: "Add field", exact: true }).click();
     await page.getByLabel("open_report", { exact: true }).selectOption("on_errors");
@@ -73,7 +72,7 @@ const theme = `:root{--vscode-foreground:#d4d7df;--vscode-editor-background:#181
       { name: "count", type: "int", default: 4, help: "Number of workers" },
       { name: "dynamic", type: "str", default: "${env:OUTPUT}", default_is_template: true, env: "OUTPUT" },
     ];
-    const result = h.editors.parameters({ name: "build", project: { alias: "example" }, spec: { params, help: "Build the selected project" } }, { preview: false, variant: "debug" });
+    const result = h.editors.parameters({ kind: "job", name: "build", project: { alias: "example", variants: [{ name: "debug" }, { name: "release" }], default_variant: "debug" }, spec: { params, help: "Build the selected project" } }, { preview: false, variants: ["debug"] });
     const parameterPanel = h.panels.at(-1);
     const p = await connect(parameterPanel);
     await p.getByRole("heading", { name: "build", exact: true }).waitFor();
@@ -89,7 +88,7 @@ const theme = `:root{--vscode-foreground:#d4d7df;--vscode-editor-background:#181
     await p.getByText("Default: ${env:OUTPUT} (resolved when the job runs)", { exact: true }).waitFor();
     if (process.env.PTK_UI_SCREENSHOTS) await p.screenshot({ path: path.join(process.env.PTK_UI_SCREENSHOTS, "parameters.png"), fullPage: true });
     await p.getByRole("button", { name: "Dry run", exact: true }).click();
-    assert.deepEqual(await result, { preview: true, params: { output: "folder with spaces;$(literal)", verbose: "false", mode: "release" } });
+    assert.deepEqual(await result, { preview: true, params: { output: "folder with spaces;$(literal)", verbose: "false", mode: "release" }, runOptions: {}, variants: ["debug"] });
     assert.deepEqual(errors, []);
     console.log("Extension webviews: add job/model fields, preserve comments, edit/save/raw/undo, narrow layout, parameter defaults/choices/checkboxes/literal values and dry run passed.");
   } finally { await browser.close(); }
