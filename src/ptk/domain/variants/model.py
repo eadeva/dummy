@@ -20,7 +20,7 @@ A product line has components (each declaring features) and variants
           extends: base
           aliases: [b_us, "3"]
           components: [display, navigation]
-          features: {MAP_REGION: US}
+          features: {navigation.MAP_REGION: US}
           data: {toolchain: arm-gcc, flash: {address: "0x08000000"}}
 """
 
@@ -40,6 +40,7 @@ VARIANT_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 ALIAS_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 ENUM_VALUE_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.+-]*$")
 COMPONENT_PREFIX = "COMPONENT_"
+RESERVED_COMPONENTS = {"params", "vars", "env", "vh", "variant", "os", "ci"}
 RESERVED = {"VARIANT", "PROJECT", "OS", "CI"}
 
 FeatureValue = bool | int | str | None
@@ -47,6 +48,19 @@ FeatureValue = bool | int | str | None
 
 def component_symbol(name: str) -> str:
     return COMPONENT_PREFIX + name.upper()
+
+
+def feature_symbol(name: str) -> str:
+    """Canonical component.FEATURE identity exported to build tools."""
+    return "VARIANT_" + name.replace(".", "_").upper()
+
+
+def nested_values(values: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    result: dict[str, dict[str, Any]] = {}
+    for name, value in values.items():
+        component, feature = name.split(".", 1)
+        result.setdefault(component, {})[feature] = value
+    return result
 
 
 class _Strict(BaseModel):
@@ -250,7 +264,7 @@ class VariantSpec(_Strict):
         description="Components included in this variant. Omission inherits the parent selection; a root variant defaults to all components.",
     )  # None = inherit (root: all components)
     features: dict[str, bool | int | str] = Field(
-        description="Feature values overriding defaults or inherited selections.",
+        description="Feature values overriding defaults or inherited selections, keyed by component.FEATURE (for example power.DEBUG_LEVEL).",
         default_factory=dict,
     )
     data: dict[str, Any] = Field(
@@ -273,16 +287,20 @@ class VariantSpec(_Strict):
     def _none(cls, v: Any) -> Any:
         return {} if v is None else v
 
-
-class VariantEnvSpec(_Strict):
-    prefix: str = Field(
-        default="VH_",
-        description="Prefix for exported variant and feature environment variables.",
-    )
-    legacy_bo: bool = Field(
-        default=False,
-        description="Also export BO_ feature variables for tools that require that naming convention.",
-    )  # also export BO_<FEATURE> like the previous tool
+    @field_validator("features")
+    @classmethod
+    def _feature_ids(cls, values):
+        for name in values:
+            component, separator, feature = name.partition(".")
+            if (
+                not separator
+                or not COMPONENT_RE.fullmatch(component)
+                or not FEATURE_RE.fullmatch(feature)
+            ):
+                raise ValueError(
+                    f"feature selection {name!r} must use component.FEATURE"
+                )
+        return values
 
 
 class ProductLineSpec(_Strict):
@@ -302,15 +320,15 @@ class ProductLineSpec(_Strict):
         description="Validation expressions applied to all variants.",
         default_factory=list,
     )
-    env: VariantEnvSpec = Field(
-        description="Naming rules for exported variant environment variables.",
-        default_factory=VariantEnvSpec,
-    )
 
     @field_validator("components")
     @classmethod
     def _component_names(cls, v: dict[str, ComponentSpec]) -> dict[str, ComponentSpec]:
         for name in v:
+            if name in RESERVED_COMPONENTS:
+                raise ValueError(
+                    f"component name {name!r} is a reserved expression namespace"
+                )
             if not COMPONENT_RE.match(name):
                 raise ValueError(f"component name {name!r} must be lower_snake_case")
         return v
@@ -335,14 +353,14 @@ class ProductLineSpec(_Strict):
     def iter_features(self):
         for comp_name, comp in self.components.items():
             for name, spec in comp.features.items():
-                yield comp_name, name, spec
+                yield comp_name, f"{comp_name}.{name}", spec
 
     @property
     def feature_index(self) -> dict[str, str]:
         return {name: comp for comp, name, _ in self.iter_features()}
 
     def feature(self, name: str) -> FeatureSpec:
-        return self.components[self.feature_index[name]].features[name]
+        return self.components[self.feature_index[name]].features[name.split(".", 1)[1]]
 
     @property
     def symbols(self) -> set[str]:

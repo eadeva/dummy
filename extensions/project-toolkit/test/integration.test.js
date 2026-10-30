@@ -63,6 +63,9 @@ test("PTK validation failures remain editable inventory and recover without an i
     { check: { run: "check", needs: ["test"] }, test: { run: "test", needs: ["check"] } },
     { check: { run: "check", needs: 17 } },
     { check: { run: "check", title: { invalid: true } } },
+    { check: { run: "check", generators: ["cmake", "cmake"] } },
+    { check: { generators: "cmake" } },
+    { check: { uses: "variant.generate" } },
   ]) {
     fs.writeFileSync(file, JSON.stringify({ steps }));
     const inventory = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));

@@ -219,8 +219,8 @@ def test_scaffold_discovered_fragments_variants_and_ci(tmp_path):
         assert project.config.versioning.project.version == "0.1.0"
         assert project.ci is ci
         variants = VariantService(project)
-        assert variants.resolve("debug").values["DEBUG"] is True
-        assert variants.resolve("release").values["DEBUG"] is False
+        assert variants.resolve("debug").values["core.DEBUG"] is True
+        assert variants.resolve("release").values["core.DEBUG"] is False
         assert project.config.tools == {}
         assert project.config.credentials == {}
     # New jobs are discovered without editing any existing configuration file.

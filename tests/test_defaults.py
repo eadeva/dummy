@@ -40,7 +40,7 @@ variants:
       components:
       - core
       features:
-        SPEED: 9
+        core.SPEED: 9
       data:
         mode: quick
 jobs:
@@ -58,7 +58,7 @@ jobs:
         default: ${vars.flavour}-${env:TASTE:-plain}
       speed:
         type: int
-        default: ${vh.features.SPEED}
+        default: ${vh.features.core.SPEED}
     steps:
       say:
         run: echo hello ${params.who} ${params.mode} ${params.taste} ${params.speed}

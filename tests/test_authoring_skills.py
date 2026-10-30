@@ -53,10 +53,10 @@ def test_authoring_starter_runs_from_its_configuration_directory(tmp_path, monke
         result = runner.invoke(cli, args)
         assert result.exit_code == 0, result.output
     for variant, size in [("debug", 4), ("release", 8)]:
-        text = (destination / "_bin" / variant / "variant.h").read_text(
-            encoding="utf-8"
-        )
-        assert f"#define VH_SIZE {size}" in text
+        text = (
+            destination / "_builds" / variant / "build" / "generate" / "variant.h"
+        ).read_text(encoding="utf-8")
+        assert f"#define VARIANT_DEVICE_SIZE {size}" in text
 
 
 def test_plugin_starter_installed_entry_point_runs(tmp_path, monkeypatch):

@@ -42,6 +42,6 @@ steps:
     - compile
   camera-selftest:
     run: tools/camera_selftest.sh
-    when: COMPONENT_CAMERA and DISPLAY_SIZE >= 10
+    when: COMPONENT_CAMERA and display.DISPLAY_SIZE >= 10
     needs:
     - compile

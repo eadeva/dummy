@@ -17,6 +17,8 @@ from .model import (
     Severity,
     VariantSpec,
     component_symbol,
+    feature_symbol,
+    nested_values,
 )
 
 # --------------------------------------------------------------------------- model checks
@@ -26,16 +28,20 @@ def validate(line: ProductLineSpec) -> list[tuple[str, str]]:
     """Structural problems as (path, message). Variant-internal problems are
     resolution issues instead, so a broken variant still loads."""
     problems: list[tuple[str, str]] = []
-    seen: dict[str, str] = {}
+    seen = {"VARIANT_NAME": "product variant", "VARIANT_COMPONENTS": "component list"}
+    seen.update(
+        {"VARIANT_" + component_symbol(c): f"component {c}" for c in line.components}
+    )
     for comp, name, _ in line.iter_features():
-        if name in seen:
+        symbol = feature_symbol(name)
+        if symbol in seen:
             problems.append(
                 (
-                    f"variants.components.{comp}.features.{name}",
-                    f"feature '{name}' is also declared by component '{seen[name]}'",
+                    f"variants.components.{comp}.features.{name.split('.', 1)[1]}",
+                    f"exported name '{symbol}' collides between '{name}' and '{seen[symbol]}'",
                 )
             )
-        seen[name] = comp
+        seen[symbol] = name
     symbols = line.symbols
 
     def check(expr: str, path: str) -> None:
@@ -247,11 +253,14 @@ def resolve(line: ProductLineSpec, name: str) -> ResolvedVariant:
             )
 
     # values to a fixpoint (depends_on may chain)
-    symbols: dict[str, FeatureValue] = {
+    symbols: dict[str, Any] = {
         component_symbol(c): (c in active_set) for c in line.components
     }
-    for _, feature, spec in line.iter_features():
-        symbols[feature] = spec.disabled_value
+    symbols.update(
+        nested_values(
+            {feature: spec.disabled_value for _, feature, spec in line.iter_features()}
+        )
+    )
     active_features = [(c, f, s) for c, f, s in line.iter_features() if c in active_set]
     state: dict[str, tuple[FeatureValue, str, str | None]] = {}
     for _ in range(len(active_features) + 2):
@@ -265,7 +274,8 @@ def resolve(line: ProductLineSpec, name: str) -> ResolvedVariant:
                 new = (spec.default, "default", None)
             if state.get(feature) != new:
                 state[feature] = new
-                symbols[feature] = new[0]
+                component, local_name = feature.split(".", 1)
+                symbols[component][local_name] = new[0]
                 changed = True
         if not changed:
             break
@@ -334,7 +344,7 @@ def symbols_of(line: ProductLineSpec, resolved: ResolvedVariant) -> dict[str, An
     symbols: dict[str, Any] = {
         component_symbol(c): resolved.component_active(c) for c in line.components
     }
-    symbols.update(resolved.values)
+    symbols.update(nested_values(resolved.values))
     return symbols
 
 

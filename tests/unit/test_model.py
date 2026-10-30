@@ -64,7 +64,7 @@ def test_only_current_step_format_is_accepted(raw):
 @pytest.mark.parametrize(
     "raw, message",
     [
-        ({"run": "a", "uses": "b"}, "exactly one of"),
+        ({"run": "a", "uses": "b"}, "at most one of"),
         ({"uses": "a", "python": {"uvx": "ruff"}}, "only allowed together with run"),
         ({"run": "a", "with": {"k": 1}}, "only allowed together with uses"),
     ],

@@ -2,7 +2,7 @@
   "name": "project-toolkit",
   "displayName": "Project Toolkit",
   "description": "Run PTK jobs, workflows and built-in commands, browse help, select variants and open reports.",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "publisher": "eadeva",
   "license": "UNLICENSED",
   "private": true,

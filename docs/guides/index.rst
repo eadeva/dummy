@@ -10,6 +10,7 @@ and defaults, use :doc:`/reference/configuration-schema`.
 
    getting-started
    configuration
+   variant-generation
    workflows
    versioning
    artifacts

@@ -24,11 +24,19 @@ RESERVED = {
         "tools.ensure",
         "files.copy",
         "files.clean",
-        "variant.generate",
     },
     "reporters": {"json", "junit", "html", "markdown", "github"},
     "secret_providers": {"env", "keyring", "gopass", "vault", "prompt"},
-    "generators": {"header", "cmake", "bazel", "make", "yocto", "robot", "sphinx"},
+    "generators": {
+        "header",
+        "cmake",
+        "bazel",
+        "make",
+        "gn",
+        "yocto",
+        "robot",
+        "sphinx",
+    },
 }
 
 

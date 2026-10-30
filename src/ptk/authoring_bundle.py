@@ -26,6 +26,7 @@ DOCS = (
     "guides/agent-guide",
     "reference/cli",
     "guides/configuration",
+    "guides/variant-generation",
     "guides/editor",
     "reference/execution",
     "reference/plugins",
@@ -44,6 +45,8 @@ EXAMPLES = ("authoring", "plugin", "quickstart", "workflows", "artifacts")
 
 def source_files(root: Path) -> dict[str, Path]:
     files = {f"docs/{name}.rst": root / "docs" / f"{name}.rst" for name in DOCS}
+    resource = "docs/resources/bazel/ptk_variants.bzl"
+    files[resource] = root / resource
     for name in SKILLS:
         files[f"skills/{name}/SKILL.md"] = root / ".claude/skills" / name / "SKILL.md"
         metadata = root / ".claude/skills" / name / "agents/openai.yaml"

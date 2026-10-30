@@ -5,7 +5,7 @@ Syntax::
     ${env:NAME}  ${env:NAME:-default}       environment of the run
     ${vars.build_dir}                       configuration vars (may reference others)
     ${params.jobs}                          job parameters
-    ${vh.variant} ${vh.features.X} ${vh.components.camera} ${vh.data.toolchain}
+    ${vh.variant} ${vh.features.core.X} ${vh.components.camera} ${vh.data.toolchain}
     ${project.root} ${project.name}
     ${date.timestamp} ${date.utc.timestamp} ${date.year}-${date.month}-${date.day}
     ${run.build_dir} ${run.bin_dir} ${run.log_dir} ${run.reports_dir} ${run.id} ${run.job} ${run.step}

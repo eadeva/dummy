@@ -182,6 +182,8 @@ def _check_condition(
     problems: list[PathProblem] = []
     flat_known = _variant_symbols(config.variants) | WHEN_FLAT_NAMES
     for name in sorted(used):
+        if name in flat_known:
+            continue
         head, _, rest = name.partition(".")
         if not rest:
             if name not in flat_known:
@@ -271,8 +273,12 @@ def _check_dotted(
         if first not in VH_KEYS:
             return f"unknown name '{ref}'{did_you_mean(first, VH_KEYS)}"
         name = deeper.split(".")[0] if deeper else ""
-        if first == "features" and name and name not in config.variants.feature_index:
-            return f"unknown feature '{ref}'{did_you_mean(name, config.variants.feature_index)}"
+        if (
+            first == "features"
+            and deeper
+            and deeper not in config.variants.feature_index
+        ):
+            return f"unknown feature '{ref}'{did_you_mean(deeper, config.variants.feature_index)}"
         if first == "components" and name and name not in config.variants.components:
             return f"unknown component '{ref}'{did_you_mean(name, config.variants.components)}"
     elif ns == "env":

@@ -26,7 +26,7 @@ custom = "company_extension:generate"
 | `ptk.report_contributors` | `(reports_dir: Path, labels: list[str]) -> list[Contribution]`. Read results only for the supplied visible step labels; disabled steps are filtered out. |
 | `ptk.secret_providers` | `() -> SecretProvider`. Implement the secret-provider port. Use the entry-point name in `credentials.NAME.providers` and `--store`. |
 | `ptk.installers` | `(tool_name: str, options: dict, out) -> None`. Raise `PtkError` on failure. Configure `tools.NAME.installers.PLUGIN: {options...}`. Plugin methods precede platform methods; PTK rechecks the configured version afterward. |
-| `ptk.generators` | `(variant: ResolvedVariant) -> dict[str, str]`. Return relative filenames and text; PTK validates destinations and writes below the output folder. |
+| `ptk.generators` | `(variant: ResolvedVariant) -> dict[str, str]`. Receives its own prepared snapshot copy with `component.FEATURE` keys in `variant.values`. Return relative filenames and UTF-8 text; PTK validates paths/collisions and writes inside the owning step’s build folder before its command/plugin attempt. |
 
 ## Execution and failure handling
 

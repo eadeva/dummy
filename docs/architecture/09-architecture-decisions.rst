@@ -485,6 +485,93 @@ not imply that every related future capability has been implemented.
 
    **Consequences:** Requirements describe CLI product behavior, not extension UI or documentation authoring requests. Decision records explain tradeoffs and may discuss those supporting concerns.
 
+.. ddec:: Component YAML declares choices; product variants select them
+   :id: DD_COMPONENT_VARIANTS
+   :status: accepted
+
+   **Context:** The external reusable-component proposal declares features and
+   selects values in CMake. Projects also use Make, Bazel and GN, and independent
+   components may legitimately use the same local feature name.
+
+   **Decision:** Keep the declaration in each registered component's PTK YAML.
+   Identify a feature as component.FEATURE, with an uppercase local name. Product
+   variants select those values using PTK's inheritance/default/constraint model.
+   Export VARIANT_<COMPONENT>_<FEATURE>, VARIANT_COMPONENT_<COMPONENT> and
+   VARIANT_NAME. Reject export collisions. Preserve typed enum strings instead of
+   inventing numeric IDs from option order. Qualified substitutions are
+   ${vh.features.component.FEATURE}; the environment adds VARIANT_COMPONENTS.
+
+   **Alternatives considered:** Maintaining duplicate CMake and PTK declarations
+   would create competing authorities. Globally unique feature names would couple
+   reusable components unnecessarily. Implicit feature qualification and legacy
+   export aliases would hide incomplete migrations.
+
+   **Consequences:** Product selections, expressions, CLI overrides, completion
+   and examples use qualified identities. The removed env export-prefix model,
+   ``VH_*``/``BO_*`` names and unqualified feature selections have no compatibility path.
+   Projects retain target/source/compiler mapping, including explicit numeric
+   mappings where required. See :doc:`/guides/variant-generation` and
+   :need:`REQ_Sw_COMPONENT_SELECTIONS`.
+
+.. ddec:: Generators belong to the consuming step
+   :id: DD_STEP_GENERATORS
+   :status: accepted
+
+   **Context:** A command or Python script needs variant inputs immediately
+   before it runs. A shared mutable export folder can mix concurrent products.
+
+   **Decision:** Add an ordered unique generators list to every step kind,
+   including generation-only steps. Resolve once during preparation and pass a
+   separate snapshot copy to each generator. Generate before every command/plugin
+   attempt into the owning step's build directory; keep the default repository
+   cwd. Validate returned paths/content/collisions before writes and atomically
+   replace individual files. Unknown enabled generators and missing variants fail
+   preparation. A generator failure stops that step before its command.
+
+   **Alternatives considered:** The dedicated variant.generate builtin and
+   arbitrary output override are removed. Generating at project load/editor
+   discovery would create side effects during inspection. A single global file
+   would allow concurrent variants to overwrite each other's configuration.
+
+   **Consequences:** Dry-run/graph/skip/blocked paths do not generate. Retried
+   commands regenerate inputs; generator exceptions themselves are not retried.
+   No automatic cache or stale-output cleanup is introduced. Timeout/cancellation
+   includes generation but cannot preempt synchronous trusted Python. Other steps
+   use explicit paths and needs edges. Distinct variant/job/step identities have
+   separate folders; overlapping runs of the same identity still share paths.
+   CLI parallel variant scheduling remains a separate open requirement.
+   See :need:`REQ_Sw_STEP_GENERATORS` and :need:`DD_EXECUTION_BOUNDARIES`.
+
+.. ddec:: Use native build inputs and a project-owned Bazel adapter
+   :id: DD_BUILD_ADAPTERS
+   :status: accepted
+
+   **Context:** Make/CMake/GN can include generated assignments. Bazel loads
+   Starlark through labels and needs repository integration for a snapshot located
+   in a PTK step folder. The user explicitly requested GN, not plain Ninja, and
+   required any Bazel helper to live with the consuming project.
+
+   **Decision:** Generate variant.mk, variant.cmake, variant.gni and versioned
+   variant.bazel.json. CMake needs only include(); a project adapter may map values
+   onto targets without redefining the feature model. Publish a downloadable
+   Bzlmod repository-rule resource that reads Bazel JSON and exposes a constant
+   dictionary plus typed settings for config_setting/select(). PTK runtime does
+   not import or execute this resource. GN itself generates Ninja files.
+
+   **Alternatives considered:** Loading an absolute external .bzl path as a Bazel
+   label is not a valid integration. Mutating MODULE.bazel/BUILD files for each run
+   or retaining CMake-owned selection would duplicate state. Bundling the helper
+   as a PTK runtime builtin would violate project ownership.
+
+   **Consequences:** Bazel gets one PTK configuration per invocation; projects use
+   separate output bases and manage workspace symlinks/lockfiles/shared caches.
+   The helper tracks snapshot content and repo_env, rejects unsupported schema
+   versions, and does not expose command-line variant flags. Inactive non-boolean
+   features have no typed setting. Projects own helper adaptation, supported Bazel
+   versions and remote-build input staging. Tests verify actual consumers on the
+   versions recorded in :doc:`/guides/variant-generation`; this is not universal
+   tool/platform certification. See :need:`REQ_Sw_GENERATORS`.
+
 Open boundaries
 ---------------
 

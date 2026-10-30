@@ -31,6 +31,24 @@ Operational limits
   multiline tool conventions and excluded/oversized files can limit findings.
   Original logs and report problems remain necessary evidence.
 
+Variant integration boundaries
+------------------------------
+
+* Generated inputs do not prove that project scripts consumed them or produced
+  correct artifacts. Projects own build mappings, validation and side effects to
+  preserve implementation flexibility; see :need:`DD_EXECUTION_BOUNDARIES`.
+* Distinct variant/job/step folders prevent cross-selection exports from sharing
+  a path. Concurrent runs of the same identity and project-owned caches/output
+  trees still require isolation or serialization by the project.
+* Generator files are replaced individually. Interruption may leave a mixture of
+  old/new files; failed steps do not launch their command, but external consumers
+  must not read the folder concurrently. Removed generators do not clean stale
+  files. Trusted generator plugins can have their own side effects.
+* The Bazel helper is a project-owned Bzlmod resource. Native GN/Bazel tests are
+  opt-in; absent tools mean unverified compatibility, not a passing native build.
+  Exact format limits and integration examples are in
+  :doc:`/guides/variant-generation`.
+
 Documentation maintenance
 --------------------------
 

@@ -187,6 +187,9 @@ def dry_run(
             else "ready"
         )
         details = []
+        if step.spec.generators:
+            folder = prepared.layout.build_dir(plan.variant, plan.job, step.path)
+            details.append(f"generators: {', '.join(step.spec.generators)} → {folder}")
         if step.cwd not in (".", ""):
             details.append(f"cwd {step.cwd}")
         if python and step.python is not None:
@@ -209,7 +212,7 @@ def dry_run(
     if show_env:
         console.print("[bold]generated environment[/]")
         for key in sorted(
-            k for k in plan.base_env if k.startswith(("PTK_", "VH_", "BO_"))
+            k for k in plan.base_env if k.startswith(("PTK_", "VARIANT_"))
         ):
             console.print(
                 f"  {escape(key)}={escape(prepared.mask(plan.base_env[key]))}",

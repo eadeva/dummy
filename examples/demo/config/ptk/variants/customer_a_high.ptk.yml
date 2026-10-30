@@ -9,7 +9,7 @@ components:
 - navigation
 - camera
 features:
-  DISPLAY_SIZE: 12
-  TOUCH: true
-  NAV_3D: true
-  NIGHT_VISION: true
+  display.DISPLAY_SIZE: 12
+  display.TOUCH: true
+  navigation.NAV_3D: true
+  camera.NIGHT_VISION: true

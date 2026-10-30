@@ -295,7 +295,7 @@ steps:
 * `.bat/.cmd` → `cmd /c`, `.ps1` → `pwsh -File`, `.sh` → `bash`, `.py` → Python via uv
 * `python:` `uvx` (tool from PyPI), `venv` (cached in `.ptk/venvs/<hash>`), `project`
   (`uv run --project`), `interpreter: cli` (ptk's own) - nothing is ever activated
-* every command gets its own environment: `PTK_*`, `PTK_PARAM_*`, `VH_*`, job/step
+* every command gets its own environment: `PTK_*`, `PTK_PARAM_*`, `VARIANT_*`, job/step
   `env`, then secrets; secrets are masked in console, logs and `ptk JOB --dry-run`
 * working directory: project root; per-step folders `${run.build_dir}`, `${run.reports_dir}`
 * `ptk JOB --dry-run` shows the expanded steps, conditions, final commands and where every

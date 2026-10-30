@@ -92,8 +92,7 @@ def test_installed_plugin_distribution_end_to_end(tmp_path, monkeypatch):
                                 "env": {"TOKEN": "${secret:remote.token}"},
                             },
                             "gen": {
-                                "uses": "variant.generate",
-                                "with": {"generators": ["custom"]},
+                                "generators": ["custom"],
                                 "needs": ["custom"],
                             },
                         }

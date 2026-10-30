@@ -91,6 +91,7 @@ class PreparedRun:
 
     versions: dict = field(default_factory=dict)
     version_file: str | None = None
+    resolved_variant: ResolvedVariant | None = None
 
     def mask(self, text: str) -> str:
         for value in sorted(self.secret_values, key=len, reverse=True):
@@ -115,6 +116,7 @@ class PrepareRun:
         versions=None,
         ptk_version: str = "",
         git: GitMetadata | None = None,
+        generators=None,
     ):
         self._host = host
         self._secrets = secrets
@@ -123,6 +125,9 @@ class PrepareRun:
         self._versions = versions
         self._ptk_version = ptk_version
         self._git = git
+        from ...domain.variants.generators import GENERATORS
+
+        self._generators = set(GENERATORS if generators is None else generators)
 
     def execute(self, project: Project, request: RunRequest) -> PreparedRun:
         config = project.config
@@ -425,6 +430,18 @@ class PrepareRun:
             args_for=dict(request.args_for),
         )
         steps = plan_job(job.steps, ctx, only_step=request.only_step, end=request.end)
+        for step in steps:
+            if step.skip_reason or not step.spec.generators:
+                continue
+            if resolved is None:
+                raise PtkError(
+                    f"step '{step.label}': generators require a selected variant"
+                )
+            unknown = set(step.spec.generators) - self._generators
+            if unknown:
+                raise PtkError(
+                    f"step '{step.label}': unknown generator(s): {', '.join(sorted(unknown))}"
+                )
         plan = JobPlan(
             project=config.project.name,
             job=request.job,
@@ -491,6 +508,7 @@ class PrepareRun:
             step_secrets,
             version_snapshot,
             version_file,
+            resolved,
         )
 
     @staticmethod
@@ -580,6 +598,7 @@ class RunJob:
         path_provider: Callable[[], list[str]] | None = None,
         environment_check=None,
         version_writer=None,
+        variant_writer=None,
     ):
         self._host = host
         self._runner = runner
@@ -589,6 +608,7 @@ class RunJob:
         self._path_provider = path_provider
         self._environment_check = environment_check
         self._version_writer = version_writer
+        self._variant_writer = variant_writer
         self._powershell: str | None = None
         self._python_lock = threading.Lock()
 
@@ -654,6 +674,8 @@ class RunJob:
         self, prepared: PreparedRun, step: PlannedStep
     ) -> tuple[str, str | None]:
         """(command line, python runtime description) without side effects - for ptk JOB --dry-run."""
+        if step.kind == "generate":
+            return "generate " + ", ".join(step.spec.generators), None
         if step.kind == "uses":
             return f"uses {step.spec.uses} {step.with_ or ''}".rstrip(), None
         runtime = (
@@ -706,13 +728,22 @@ class RunJob:
         start = time.monotonic()
         result.start = start - self._run_start
         try:
-            if step.kind == "uses":
-                result.command = f"uses {step.spec.uses}"
+            if step.kind in ("uses", "generate"):
+                result.command = (
+                    f"uses {step.spec.uses}"
+                    if step.kind == "uses"
+                    else "generate " + ", ".join(step.spec.generators)
+                )
                 self._emit("step_started", step, result.command)
                 for attempt in range(1, step.spec.retries + 2):
-                    scope = CancellationScope(cancel, step.spec.timeout)
-                    exit_code, message = self._run_builtin(step, out, scope)
                     result.attempts = attempt
+                    scope = CancellationScope(cancel, step.spec.timeout)
+                    self._generate(step, out, scope)
+                    exit_code, message = (
+                        self._run_builtin(step, out, scope)
+                        if step.kind == "uses" and not scope.is_set()
+                        else (int(scope.is_set()), "")
+                    )
                     if scope.expired:
                         exit_code, message = (
                             1,
@@ -751,10 +782,26 @@ class RunJob:
                             f"exit code {exit_code} - retry {attempt - 1}/{step.spec.retries}",
                             step,
                         )
+                    scope = CancellationScope(cancel, step.spec.timeout)
+                    self._generate(step, out, scope)
+                    if scope.is_set():
+                        exit_code, message = (
+                            1,
+                            "cancelled"
+                            if cancel.is_set()
+                            else f"timed out after {step.spec.timeout:g}s",
+                        )
+                        break
+                    command.timeout = (
+                        max(0.001, scope.deadline - time.monotonic())
+                        if scope.deadline
+                        else None
+                    )
                     outcome = self._runner.run(command, out, cancel)
                     exit_code = outcome.exit_code
                     message = outcome.error or ""
-                    if outcome.timed_out:
+                    if outcome.timed_out or scope.expired:
+                        exit_code = exit_code or 1
                         message = f"timed out after {step.spec.timeout:g}s"
                     if outcome.cancelled or exit_code == 0:
                         break
@@ -781,6 +828,24 @@ class RunJob:
         self._emit("step_finished", step, result)
         return result
 
+    def _generate(self, step, out, cancel):
+        if not step.spec.generators or cancel.is_set():
+            return
+        if self._variant_writer is None:
+            raise PtkError("variant generation is not available")
+        prepared = self._prepared
+        self._variant_writer(
+            step.spec.generators,
+            prepared.resolved_variant,
+            Path(
+                prepared.layout.build_dir(
+                    prepared.plan.variant, prepared.plan.job, step.path
+                )
+            ),
+            out,
+            cancel,
+        )
+
     def _run_builtin(
         self, step: PlannedStep, out: Callable[[str], None], cancel
     ) -> tuple[int, str]:
@@ -796,9 +861,11 @@ class RunJob:
         ctx = BuiltinContext(
             cancel=cancel,
             versions=prepared.versions,
-            variant=VariantService(prepared.project).resolve(plan.variant)
-            if prepared.project.config.variants
-            else None,
+            variant=(
+                prepared.resolved_variant.model_copy(deep=True)
+                if prepared.resolved_variant is not None
+                else None
+            ),
             root=prepared.project.root,
             build_dir=Path(
                 prepared.layout.build_dir(plan.variant, plan.job, step.path)

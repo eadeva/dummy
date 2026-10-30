@@ -78,7 +78,7 @@ PTK reads ``src/networking/component.variants.ptk.yml`` next to that component's
      TLS: {type: bool}
    requires_components: [diagnostics]
    constraints:
-     - {expr: TLS, message: Enable TLS when networking is selected}
+     - {expr: networking.TLS, message: Enable TLS when networking is selected}
 
 Component files own features, dependencies and local constraints. Project variants
 select components and feature values. Local constraints apply when their component
@@ -235,7 +235,8 @@ parameters. String commands use platform shell syntax.
 
 The registered built-ins are ``echo``, ``wait``, ``report.import``,
 ``configs.sync``, ``tools.ensure``, ``files.copy``, ``files.clean`` and
-``variant.generate`` and ``version.generate``. Their configuration is in :doc:`/reference/plugins`.
+``version.generate``. Any step may also declare ``generators``; see
+:doc:`variant-generation`. Their configuration is in :doc:`/reference/plugins`.
 ``--to STEP`` selects a target and its transitive prerequisites; ``--only-step STEP``
 explicitly bypasses prerequisite execution. Dry-runs show the graph by default.
 See :doc:`/reference/execution` for storage responsibility and failure semantics.
@@ -253,7 +254,7 @@ Substitution and conditions
 
 Use ``${vars.name}``, ``${params.name}``, ``${env:NAME}``,
 ``${env:NAME:-fallback}``, ``${project.root}``, ``${vh.variant}``,
-``${vh.features.FEATURE}``, ``${vh.data.name}``, and run paths such as
+``${vh.features.component.FEATURE}``, ``${vh.data.name}``, and run paths such as
 ``${run.build_dir}``. Escape literal substitutions with ``$${...}``.
 Unknown references are errors. The run paths are per step where applicable.
 

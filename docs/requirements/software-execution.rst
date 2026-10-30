@@ -303,3 +303,33 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
 
    **Evidence:** ``src/ptk/adapters/cleanup.py``; ``tests/test_cleanup.py``.
+
+.. req-sw:: Generate variant inputs within the consuming step lifecycle
+   :id: REQ_Sw_STEP_GENERATORS
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: accepted
+   :verification_criteria: Command, Python, plugin and generation-only steps receive files before execution; overrides and retries retain the prepared snapshot; dry-run, skipped and blocked steps generate nothing; failures prevent the command; concurrent variants/steps use distinct folders.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_EXECUTION
+   :tags: implemented
+
+   PTK shall accept an ordered, unique generators list on any job step and run it
+   before each execution attempt from the prepared resolved variant. It shall
+   write outputs only inside that step's build directory without changing cwd.
+   It shall reject unknown enabled generators and missing variant selections
+   during preparation, validate all generated names/content before writing, and
+   stop before the command if generation fails or cancellation is observed.
+
+   **Origin:** Explicit user request for per-step generators before commands and
+   Python scripts, with generated files in the step folder.
+
+   **Implementation:** Implemented. Per-file replacement is atomic; multi-file
+   transactions, script sandboxing, artifact correctness and repeat-run isolation
+   are not promised. Generator plugin cancellation is cooperative. CLI concurrent
+   variant scheduling remains separate under :need:`REQ_Sw_MULTI_VARIANT`.
+
+   **Evidence:** ``src/ptk/application/use_cases/run.py``;
+   ``src/ptk/adapters/variant_files.py``; ``tests/test_step_generators.py``.

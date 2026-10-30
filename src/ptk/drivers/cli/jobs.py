@@ -168,7 +168,7 @@ def common_options() -> list[click.Parameter]:
             click.Option(
                 ["--env", "show_env"],
                 is_flag=True,
-                help="Include generated PTK_/VH_ variables in a dry run.",
+                help="Include generated PTK_/VARIANT_ variables in a dry run.",
             ),
             click.Option(
                 ["-q", "--quiet"],

@@ -27,6 +27,6 @@ steps:
     - extra
     python:
       interpreter: cli
-    when: CHECKS
+    when: core.CHECKS
     needs:
     - prepare

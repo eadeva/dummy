@@ -165,11 +165,7 @@ def features(ctx, param, incomplete):
         return []
     from ...domain.variants.model import component_symbol
 
-    specs = {
-        name: spec
-        for component in line.components.values()
-        for name, spec in component.features.items()
-    }
+    specs = {name: spec for _component, name, spec in line.iter_features()}
     components = {
         component_symbol(name): f"Select component {name}" for name in line.components
     }

@@ -35,7 +35,7 @@ Use the installed plugin's documented names in configuration:
    * - Tool installer
      - Set ``tools.NAME.installers.PLUGIN: {options...}``. Configure the environment/PATH so PTK can find the installed executable.
    * - Variant generator
-     - Add the registered name to the ``generators`` list of a ``variant.generate`` step.
+     - Add the registered name to the ``generators`` list of any job step.
 
 The plugin supplies its accepted option names and supported PTK versions.
 For example, after installing a distribution that provides ``company.check``::
@@ -51,28 +51,28 @@ Here ``mode`` is an example plugin option, not a built-in PTK field.
 Variant generators
 ------------------
 
-Select one or more of the seven built-in variant generators::
+Select built-in or enabled plugin generators directly on a step::
 
-   - generate:
-       uses: variant.generate
-       with:
-         generators: [header, cmake, bazel, make, yocto, robot, sphinx]
-         output: _bin/generated
+   steps:
+     configure:
+       generators: [cmake, header]
+       run: [cmake, -S, ., -B, "${run.build_dir}/cmake", "-DPTK_VARIANT_FILE=${run.build_dir}/variant.cmake"]
 
-Omit ``output`` to use the step's build folder. A concrete valid variant is
-required. Outputs are ``variant.h``, ``variant.cmake``, ``variant.bzl``,
-``variant.mk``, ``variant.inc``, ``variant.robot`` and ``variant.rst``.
-Regeneration replaces these generated files; do not edit them manually.
-Names use ``VH_FEATURE``, ``VH_COMPONENT_NAME`` and ``VH_VARIANT``. Booleans become
-0/1 except in Bazel's native dictionary. Inactive values are empty (or omitted
-macros in C). These exports contain feature/component values, not arbitrary
-variant ``data``; custom generators may consume that data.
+A step may instead contain only ``generators``. Generation requires a valid
+concrete variant and precedes every command/plugin attempt. The eight built-ins
+are ``header``, ``cmake``, ``bazel``, ``gn``, ``make``, ``yocto``, ``robot`` and
+``sphinx``. Outputs always belong to the step's build directory. The former
+``uses: variant.generate`` interface and its output override are removed.
 
-Generators escape their language's strings. Make rejects newlines, backslashes
-and surrounding whitespace; Yocto rejects newlines and variable expansions.
-These values fail explicitly rather than generating ambiguous build syntax.
-Filenames must stay beneath the selected project-local output directory, and
-collisions between generators are rejected before writing.
+See :doc:`/guides/variant-generation` for the data contract, escaping restrictions,
+project responsibilities, native build integration and downloadable Bazel helper.
+A generator plugin receives its own copy of the prepared ``ResolvedVariant`` and
+returns a dictionary of relative filenames to UTF-8 strings. Feature keys in
+``variant.values`` are component-qualified. Do not mutate external state in a
+generator. PTK validates all returned names/content before writing, rejects
+colliding names and directory/file conflicts, and replaces each file atomically.
+Plugins execute as trusted Python; they are responsible for their own side effects
+and bounded runtime. There is no transaction across files or plugin functions.
 
 Additional built-ins
 --------------------

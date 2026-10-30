@@ -313,6 +313,9 @@ class App:
 
     def prepare_run(self, project: Project) -> PrepareRun:
         from .application.use_cases.run import PrepareRun
+        from .domain.variants.generators import GENERATORS
+
+        plugins = self.configure_project(project)
 
         return PrepareRun(
             self.host,
@@ -322,6 +325,7 @@ class App:
             versions=self.versions(),
             ptk_version=__version__,
             git=self.git_metadata,
+            generators={**GENERATORS, **plugins["generators"]},
         )
 
     @cached_property
@@ -347,8 +351,8 @@ class App:
             file_cleaner,
             files_copy,
             report_import,
-            variant_generator,
         )
+        from .adapters.variant_files import variant_writer
         from .adapters.versioning import version_generator
         from .application.use_cases.run import BUILTINS, RunJob, layout_of
         from .domain.variants.generators import GENERATORS
@@ -393,9 +397,6 @@ class App:
                 ]
             ),
             "version.generate": version_generator,
-            "variant.generate": variant_generator(
-                {**GENERATORS, **plugins["generators"]}
-            ),
             **plugins["steps"],
         }
 
@@ -419,6 +420,7 @@ class App:
             path_provider=lambda: self.tools.paths(project),
             environment_check=verify_tools,
             version_writer=self.versions().write,
+            variant_writer=variant_writer({**GENERATORS, **plugins["generators"]}),
         )
 
     def role(self, project: Project | None) -> Role:

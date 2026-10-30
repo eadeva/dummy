@@ -18,7 +18,7 @@ def make_scope(**kw):
         },
         namespaces={
             "project": {"root": "/p"},
-            "vh": {"variant": "b_us", "features": {"N": 8}},
+            "vh": {"variant": "b_us", "features": {"core": {"N": 8}}},
             "params": {"jobs": 4, "fast": True},
         },
         **kw,
@@ -30,7 +30,7 @@ def test_typed_single_reference_and_text_interpolation():
     assert s("${params.jobs}") == 4
     assert s("-j${params.jobs}") == "-j4"
     assert s("--fast=${params.fast}") == "--fast=true"
-    assert s(["${vh.features.N}", "x"]) == [8, "x"]
+    assert s(["${vh.features.core.N}", "x"]) == [8, "x"]
 
 
 def test_vars_resolve_recursively_and_detect_cycles():

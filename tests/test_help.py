@@ -59,7 +59,10 @@ def test_rendered_page_shows_pipeline_and_escapes():
     html = render(doc)
     assert "<script>alert(1)" not in html and "&lt;script&gt;" in html
     assert "needs: compile" in html and "--only-step" in html
-    assert "only if <code>COMPONENT_CAMERA and DISPLAY_SIZE &gt;= 10</code>" in html
+    assert (
+        "only if <code>COMPONENT_CAMERA and display.DISPLAY_SIZE &gt;= 10</code>"
+        in html
+    )
     assert "https://" not in html  # self-contained, works offline
 
 

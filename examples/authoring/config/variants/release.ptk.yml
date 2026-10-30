@@ -1,3 +1,3 @@
 # PTK configuration: this file owns its section or named entity.
 features:
-  SIZE: 8
+  device.SIZE: 8

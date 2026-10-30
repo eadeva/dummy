@@ -2,4 +2,4 @@
 components:
 - core
 features:
-  CHECKS: false
+  core.CHECKS: false

@@ -3,8 +3,8 @@
 Used by: variant rules (``depends_on``, ``requires``, ``conflicts``,
 constraints) and step conditions (``when:``). A subset of Python syntax::
 
-    COMPONENT_CAMERA and DISPLAY_SIZE >= 10
-    MAP_REGION in ["US", "CA"] and not TOUCH
+    COMPONENT_CAMERA and display.DISPLAY_SIZE >= 10
+    navigation.MAP_REGION in ["US", "CA"] and not display.TOUCH
     variant == "customer_b_us" or os == "windows"
     params.dry_run and vars.channel != "release"
 

@@ -325,6 +325,20 @@ class PythonSpec(_Strict):
 
 
 class StepSpec(_Strict):
+    generators: list[str] = Field(
+        default_factory=list,
+        description="Variant generators run in order before each command or plugin attempt. Outputs are written into this step's build directory. A step may contain only generators. Built-ins: header, make, cmake, bazel, gn, yocto, robot, sphinx; installed generator plugins may add names.",
+    )
+
+    @field_validator("generators")
+    @classmethod
+    def _generators(cls, names):
+        if any(not re.fullmatch(r"[A-Za-z][A-Za-z0-9_.-]*", name) for name in names):
+            raise ValueError("invalid generator name")
+        if len(set(names)) != len(names):
+            raise ValueError("generators must be unique within a step")
+        return names
+
     only_cx: bool = Field(
         default=False, description="Skip this step outside CX execution."
     )
@@ -353,7 +367,7 @@ class StepSpec(_Strict):
     )
     run: str | list[str] | None = Field(
         default=None,
-        description="Command string or argument list to execute. A list preserves spaces within arguments. Choose exactly one of run or uses.",
+        description="Command string or argument list to execute. A list preserves spaces within arguments. Use run or uses, or omit both for a generation-only step.",
     )
     uses: str | None = Field(
         default=None,
@@ -414,8 +428,14 @@ class StepSpec(_Strict):
 
     @model_validator(mode="after")
     def _check(self) -> StepSpec:
-        if (self.run is None) == (self.uses is None):
-            raise ValueError("step needs exactly one of: run, uses")
+        if self.uses == "variant.generate":
+            raise ValueError(
+                "variant.generate was removed; put generators directly on the step"
+            )
+        if self.run is not None and self.uses is not None:
+            raise ValueError("step needs at most one of: run, uses")
+        if self.run is None and self.uses is None and not self.generators:
+            raise ValueError("step needs run, uses or non-empty generators")
         if self.python is not None and self.run is None:
             raise ValueError("'python' is only allowed together with run")
         if self.with_ and self.uses is None:
@@ -426,7 +446,7 @@ class StepSpec(_Strict):
 
     @property
     def kind(self) -> str:
-        return "uses" if self.uses else "run"
+        return "uses" if self.uses else "run" if self.run is not None else "generate"
 
 
 # --------------------------------------------------------------------------- jobs

@@ -58,7 +58,7 @@ ProjectDocument = create_model(
 VariantSettingsDocument = create_model(
     "VariantSettingsDocument",
     __config__=ConfigDict(extra="forbid"),
-    **_fields(ProductLineSpec, ("default", "constraints", "env")),
+    **_fields(ProductLineSpec, ("default", "constraints")),
 )
 
 
@@ -101,9 +101,7 @@ def documents(main, config_path, components):
         ),
         Document(
             root / "project.variants.ptk.yml",
-            fields={
-                key: ("variants", key) for key in ("default", "constraints", "env")
-            },
+            fields={key: ("variants", key) for key in ("default", "constraints")},
         ),
     ]
     result.extend(

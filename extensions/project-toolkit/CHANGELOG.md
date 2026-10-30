@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.17.0
+
+- Match PTK's component-qualified feature selections and per-step generators schema.
+- Keep malformed generator configuration editable and recover after correction.
+- Feature completion now uses `component.FEATURE`; variant outputs use `VARIANT_*`.
+
 ## 0.12.0
 
 - Read PTK’s simplified report_formats and logging_history_backups fields and log-analysis rule schema.

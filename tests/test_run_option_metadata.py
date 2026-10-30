@@ -109,8 +109,14 @@ def test_help_inventory_and_completion_share_read_only_suggestions(
         i.value for i in complete.get_completions(args, partial)
     }
     assert values(["--variant"], "") == {"debug", "dev", "release"}
-    assert values(["build", "--feature"], "MODE=") == {"MODE=fast", "MODE=safe"}
-    assert values(["build", "--feature"], "TRACE=") == {"TRACE=true", "TRACE=false"}
+    assert values(["build", "--feature"], "core.MODE=") == {
+        "core.MODE=fast",
+        "core.MODE=safe",
+    }
+    assert values(["build", "--feature"], "core.TRACE=") == {
+        "core.TRACE=true",
+        "core.TRACE=false",
+    }
     assert values(["build", "--feature"], "COMPONENT_CORE=") == {
         "COMPONENT_CORE=true",
         "COMPONENT_CORE=false",

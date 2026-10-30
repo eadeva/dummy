@@ -9,4 +9,4 @@ features:
     - US
   NAV_3D:
     type: bool
-    depends_on: DISPLAY_SIZE >= 10
+    depends_on: display.DISPLAY_SIZE >= 10

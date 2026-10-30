@@ -69,7 +69,7 @@ def test_variant_commands():
     assert listing.output.split() == ["customer_a_high", "customer_b_us"]
     show = run("variant", "show", "b_us")
     assert show.exit_code == 0 and "MAP_REGION" in show.output
-    explain = run("variant", "explain", "2", "NAV_3D")
+    explain = run("variant", "explain", "2", "navigation.NAV_3D")
     assert "NOT satisfied" in explain.output
     assert run("validate", "--variants").exit_code == 0
 
@@ -119,7 +119,7 @@ def test_dry_run_of_demo_shows_plan_without_executing(tmp_path, existing_logs):
     assert result.exit_code == 0, result.output
     assert "dry run" in result.output and "-j 3" in result.output
     assert "camera-selftest: skipped (condition is false" in result.output
-    assert "VH_VARIANT=customer_b_us" in result.output
+    assert "VARIANT_NAME=customer_b_us" in result.output
     assert {
         path: data for path, data in snapshot().items() if path.parts[0] != ".ptk"
     } == {path: data for path, data in before.items() if path.parts[0] != ".ptk"}

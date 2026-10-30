@@ -213,3 +213,21 @@ Source downloads and rendered diagrams are included in the documentation
 archive and source distribution. Rendered diagrams are limited in size on the
 page; open one for the full vector view. The diagrams explain architecture and
 behavior, without publishing a Python API reference.
+
+Native variant consumer checks
+------------------------------
+
+``uv run pytest tests/test_generators.py tests/test_step_generators.py`` covers
+CMake consumption and execution behavior. GNU Make is used when installed.
+To exercise GN and the project-owned Bazel documentation resource, provide the
+actual executables and run::
+
+   PTK_TEST_GN=/path/to/gn PTK_TEST_BAZEL=/path/to/bazel \
+     uv run pytest tests/test_native_variant_builds.py
+
+These tests create isolated temporary build trees. Bazel's first run may fetch
+its normal module dependencies. In an environment with a managed Java truststore,
+``PTK_TEST_BAZEL_TRUSTSTORE=/path/to/cacerts`` passes that truststore to the test
+Bazel process; TLS verification remains enabled. GN/Bazel tests skip explicitly
+when their executable variables are absent. The supported contract and recorded
+verification versions are in :doc:`variant-generation`.

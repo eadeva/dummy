@@ -147,11 +147,11 @@ class InitProject:
             "project.variants.ptk.yml": {"default": "debug"},
             "variants/debug.ptk.yml": {
                 "description": "Development build",
-                "features": {"DEBUG": True},
+                "features": {"core.DEBUG": True},
             },
             "variants/release.ptk.yml": {
                 "description": "Release build",
-                "features": {"DEBUG": False},
+                "features": {"core.DEBUG": False},
             },
             "tools.ptk.yml": {},
             "versioning.ptk.yml": {
@@ -173,7 +173,7 @@ class InitProject:
             "jobs/hello.ptk.yml": 'Try: ptk hello --message "Hello" -V debug. The filename supplies the job name.',
             "jobs/build.ptk.yml": "Portable starter: ptk build -V release. Replace these steps with your build.",
             "project.variants.ptk.yml": "Project default variant and optional constraints/env settings.",
-            "variants/debug.ptk.yml": "Feature values are exported as VH_* variables.",
+            "variants/debug.ptk.yml": "Feature values are exported as VARIANT_* variables.",
             "variants/release.ptk.yml": "Release feature selection; select with -V release.",
             "tools.ptk.yml": "Tool declarations. Require tools in project.ptk.yml or an individual job.",
             "versioning.ptk.yml": "Literal version works before Git tags exist. Source paths are repository-relative.",

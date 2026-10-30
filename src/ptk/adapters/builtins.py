@@ -118,32 +118,3 @@ def file_cleaner(roots):
         return 0
 
     return clean
-
-
-def variant_generator(generators):
-    def generate(step, out, ctx):
-        if ctx.variant is None or not ctx.variant.ok:
-            raise PtkError("variant.generate requires a valid selected variant")
-        names = _list(step.with_.get("generators", ["header"]), "generators")
-        folder = _inside(ctx.root, step.with_.get("output", str(ctx.build_dir)))
-        files = {}
-        for name in names:
-            if name not in generators:
-                raise PtkError(f"generator '{name}' is not enabled")
-            generated = generators[name](ctx.variant)
-            if not isinstance(generated, dict):
-                raise PtkError(f"generator {name} must return filename -> text")
-            for filename, content in generated.items():
-                target = _inside(folder, filename)
-                if target in files or not isinstance(content, str):
-                    raise PtkError(f"invalid or duplicate generator output: {filename}")
-                files[target] = content
-        for target, content in files.items():
-            if ctx.cancel is not None and ctx.cancel.is_set():
-                return 1
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(content, encoding="utf-8")
-            out(f"generated {target}")
-        return 0
-
-    return generate

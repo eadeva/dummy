@@ -6,7 +6,7 @@ never modified. Layers, later ones win:
 1. host environment - or, with ``environment.isolate``, only the OS essentials
    plus ``environment.keep``
 2. ``environment.set`` / ``unset`` / ``path_prepend`` / ``path_append``
-3. generated variables: ``PTK_*`` (run), ``PTK_PARAM_*``, ``VH_*`` (variant)
+3. generated variables: ``PTK_*`` (run), ``PTK_PARAM_*``, ``VARIANT_*`` (variant)
 4. job ``env``
 5. step ``env`` (and, later, the step's secrets)
 """

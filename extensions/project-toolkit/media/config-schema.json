@@ -242,7 +242,7 @@
           "type": "array"
         },
         "constraints": {
-          "description": "Validation expressions applied to this component\u2019s feature selection.",
+          "description": "Validation expressions applied to this component’s feature selection.",
           "items": {
             "$ref": "#/$defs/Constraint"
           },
@@ -437,13 +437,13 @@
       "properties": {
         "isolate": {
           "default": true,
-          "description": "Start from a minimal operating-system environment instead of copying the caller\u2019s full environment.",
+          "description": "Start from a minimal operating-system environment instead of copying the caller’s full environment.",
           "title": "Isolate",
           "type": "boolean"
         },
         "inherit_path": {
           "default": false,
-          "description": "Include the caller\u2019s PATH when creating an isolated environment.",
+          "description": "Include the caller’s PATH when creating an isolated environment.",
           "title": "Inherit Path",
           "type": "boolean"
         },
@@ -848,7 +848,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Environment variables supplied to this job\u2019s steps. Step settings can override them.",
+          "description": "Environment variables supplied to this job’s steps. Step settings can override them.",
           "title": "Env",
           "type": "object",
           "x-ptk-template-context": "job"
@@ -1205,10 +1205,6 @@
           },
           "title": "Constraints",
           "type": "array"
-        },
-        "env": {
-          "$ref": "#/$defs/VariantEnvSpec",
-          "description": "Naming rules for exported variant environment variables."
         }
       },
       "title": "ProductLineSpec",
@@ -1217,8 +1213,7 @@
         "default",
         "components",
         "variants",
-        "constraints",
-        "env"
+        "constraints"
       ]
     },
     "ProjectSpec": {
@@ -1321,7 +1316,7 @@
             }
           ],
           "default": null,
-          "description": "Python project directory passed to uv run --project. Uses that project\u2019s dependencies.",
+          "description": "Python project directory passed to uv run --project. Uses that project’s dependencies.",
           "title": "Project"
         },
         "groups": {
@@ -1343,7 +1338,7 @@
             }
           ],
           "default": null,
-          "description": "Use cli to run with PTK\u2019s own Python environment. Choose exactly one Python execution mode.",
+          "description": "Use cli to run with PTK’s own Python environment. Choose exactly one Python execution mode.",
           "title": "Interpreter"
         }
       },
@@ -1435,6 +1430,14 @@
     "StepSpec": {
       "additionalProperties": false,
       "properties": {
+        "generators": {
+          "description": "Variant generators run in order before each command or plugin attempt. Outputs are written into this step's build directory. A step may contain only generators. Built-ins: header, make, cmake, bazel, gn, yocto, robot, sphinx; installed generator plugins may add names.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Generators",
+          "type": "array"
+        },
         "only_cx": {
           "default": false,
           "description": "Skip this step outside CX execution.",
@@ -1450,7 +1453,7 @@
           "type": "array"
         },
         "omit_variants": {
-          "description": "Skip this step for these variants. This does not change the job\u2019s selected variant.",
+          "description": "Skip this step for these variants. This does not change the job’s selected variant.",
           "items": {
             "type": "string"
           },
@@ -1503,7 +1506,7 @@
             }
           ],
           "default": null,
-          "description": "Command string or argument list to execute. A list preserves spaces within arguments. Choose exactly one of run or uses.",
+          "description": "Command string or argument list to execute. A list preserves spaces within arguments. Use run or uses, or omit both for a generation-only step.",
           "title": "Run",
           "x-ptk-template-context": "step"
         },
@@ -1629,6 +1632,7 @@
         "run": "echo Hello"
       },
       "x-ptk-field-order": [
+        "generators",
         "only_cx",
         "only_variants",
         "omit_variants",
@@ -1890,29 +1894,6 @@
         "bin"
       ]
     },
-    "VariantEnvSpec": {
-      "additionalProperties": false,
-      "properties": {
-        "prefix": {
-          "default": "VH_",
-          "description": "Prefix for exported variant and feature environment variables.",
-          "title": "Prefix",
-          "type": "string"
-        },
-        "legacy_bo": {
-          "default": false,
-          "description": "Also export BO_ feature variables for tools that require that naming convention.",
-          "title": "Legacy Bo",
-          "type": "boolean"
-        }
-      },
-      "title": "VariantEnvSpec",
-      "type": "object",
-      "x-ptk-field-order": [
-        "prefix",
-        "legacy_bo"
-      ]
-    },
     "VariantSpec": {
       "additionalProperties": false,
       "properties": {
@@ -1982,7 +1963,7 @@
               }
             ]
           },
-          "description": "Feature values overriding defaults or inherited selections.",
+          "description": "Feature values overriding defaults or inherited selections, keyed by component.FEATURE (for example power.DEBUG_LEVEL).",
           "title": "Features",
           "type": "object"
         },
@@ -2010,7 +1991,7 @@
       "additionalProperties": false,
       "properties": {
         "requirements": {
-          "description": "Requirement files to install in this step\u2019s isolated Python environment.",
+          "description": "Requirement files to install in this step’s isolated Python environment.",
           "items": {
             "type": "string"
           },
@@ -2060,7 +2041,7 @@
             }
           ],
           "default": null,
-          "description": "Variant used when resolving the dependency repository\u2019s version.",
+          "description": "Variant used when resolving the dependency repository’s version.",
           "title": "Variant"
         }
       },

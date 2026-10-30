@@ -26,7 +26,7 @@ def setup(tmp_path):
                     "variants": {
                         "base": {"abstract": True},
                         "small": {"extends": "base"},
-                        "large": {"extends": "base", "features": {"SIZE": 8}},
+                        "large": {"extends": "base", "features": {"core.SIZE": 8}},
                     },
                 },
                 "jobs": {
@@ -36,7 +36,7 @@ def setup(tmp_path):
                             "show": {
                                 "uses": "echo",
                                 "with": {
-                                    "message": "${vh.features.SIZE} ${params.who}"
+                                    "message": "${vh.features.core.SIZE} ${params.who}"
                                 },
                             }
                         },
@@ -56,7 +56,7 @@ def test_all_variants_and_typed_overrides(tmp_path):
             "go",
             "--all-variants",
             "--feature",
-            "SIZE=3",
+            "core.SIZE=3",
             "--who",
             "team",
         ],
@@ -110,7 +110,7 @@ def test_matrix_failure_preserves_later_runs(tmp_path):
 def test_global_feature_override(tmp_path):
     file = setup(tmp_path)
     result = CliRunner().invoke(
-        cli, ["--set", "vh.SIZE=6", "go"], cwd=Path(file).parent
+        cli, ["--set", "vh.core.SIZE=6", "go"], cwd=Path(file).parent
     )
     assert result.exit_code == 0, result.output
     assert "6 world" in result.output

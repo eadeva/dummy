@@ -29,7 +29,7 @@ steps:
   compile:
     run: make
 """,
-                "config/variants/debug.ptk.yml": "features: {TLS: true}",
+                "config/variants/debug.ptk.yml": "features: {networking.TLS: true}",
                 "config/project.variants.ptk.yml": "default: debug",
                 "src/networking/component.variants.ptk.yml": "features: {TLS: {type: bool}}",
                 "src/networking/CMakeLists.txt": "# component build",
@@ -41,7 +41,7 @@ steps:
     )
     project = load(root)
     assert list(project.config.jobs["build"].steps) == ["compile"]
-    assert VariantService(project).resolve().values["TLS"] is True
+    assert VariantService(project).resolve().values["networking.TLS"] is True
     assert (
         project.location(
             ("variants", "components", "networking", "features", "TLS")
@@ -157,7 +157,7 @@ def test_component_constraints_apply_only_to_selected_components(write, load):
         files(
             **{
                 "config/project.ptk.yml": "name: demo\ncomponents: {networking: {path: src/networking}}",
-                "src/networking/component.variants.ptk.yml": "features: {TLS: {type: bool}}\nconstraints: [{expr: TLS, message: Enable TLS}]",
+                "src/networking/component.variants.ptk.yml": "features: {TLS: {type: bool}}\nconstraints: [{expr: networking.TLS, message: Enable TLS}]",
                 "config/variants/off.ptk.yml": "components: []",
                 "config/variants/on.ptk.yml": "components: [networking]",
             }

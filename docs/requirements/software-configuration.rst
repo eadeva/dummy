@@ -242,3 +242,31 @@ Discovery, file ownership, schema authority and workspace routing.
    **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
 
    **Evidence:** ``src/ptk/application/use_cases/init.py``; ``tests/test_workspace_init.py``.
+
+.. req-sw:: Select component-owned features by qualified identity
+   :id: REQ_Sw_COMPONENT_SELECTIONS
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: accepted
+   :verification_criteria: Two components may declare the same local feature name; product selections, inheritance, expressions and CLI overrides resolve independently; invalid types, unknown references and exported-name collisions fail.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_CONFIG
+   :tags: implemented
+
+   PTK shall load reusable component feature declarations from PTK YAML and use
+   component.FEATURE as their identity in product variant selections, conditions
+   and overrides. It shall validate and resolve defaults, types, ranges, enum
+   choices, dependencies and constraints before executing a generator. It shall
+   reject ambiguous uppercase export names and removed unqualified selection forms.
+
+   **Origin:** Accepted user counterproposal to the other team's CMake-owned
+   feature declarations, motivated by reuse across build tools.
+
+   **Implementation:** Implemented. Components declare possibilities; products
+   select values; project code owns target/compiler behavior.
+
+   **Evidence:** ``src/ptk/domain/variants/model.py``;
+   ``src/ptk/domain/variants/rules.py``; ``tests/unit/test_variants.py``;
+   ``tests/test_variant_commands.py``; ``tests/test_step_generators.py``.

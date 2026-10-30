@@ -87,7 +87,7 @@ class JobPlan:
     steps: list[PlannedStep]
     base_env: dict[
         str, str
-    ]  # host/isolated env + config env + generated PTK_/VH_ vars + job env
+    ]  # host/isolated env + config env + generated PTK_/VARIANT_ vars + job env
     dirs: dict[str, str]  # bin_dir, log_dir, reports_dir (job level)
 
     max_workers: int = 4

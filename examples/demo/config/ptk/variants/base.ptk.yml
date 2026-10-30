@@ -4,6 +4,6 @@ components:
 - core
 - display
 features:
-  LOG_LEVEL: WARN
+  core.LOG_LEVEL: WARN
 data:
   toolchain: arm-gcc

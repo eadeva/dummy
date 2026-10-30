@@ -1,11 +1,11 @@
 """Naming conventions for consumers of a resolved variant (pure).
 
-* environment variables: ``<prefix><FEATURE>``, ``<prefix>COMPONENT_<NAME>``,
-  ``<prefix>VARIANT`` (prefix default ``VH_``; optional legacy ``BO_<FEATURE>``)
-* tags for test/doc selection: ``variant_<v>``, ``component_<c>``,
-  ``feature_<f>`` and ``feature_<f>_<value>`` (enum)
-* substitution namespace ``vh``: ``${vh.variant}``, ``${vh.features.X}``,
-  ``${vh.components.x}``, ``${vh.data.<path>}``
+* environment variables: ``VARIANT_<COMPONENT>_<FEATURE>``,
+  ``VARIANT_COMPONENT_<NAME>``, ``VARIANT_NAME`` and ``VARIANT_COMPONENTS``.
+* tags: ``variant_<v>``, ``component_<c>``, ``feature_<c>_<f>`` and
+  ``feature_<c>_<f>_<value>`` (enum).
+* substitutions: ``${vh.variant}``, ``${vh.features.core.FEATURE}``,
+  ``${vh.components.core}``, ``${vh.data.<path>}``.
 """
 
 from __future__ import annotations
@@ -14,7 +14,13 @@ import re
 from typing import Any
 
 from ..expressions import is_truthy
-from .model import FeatureType, ProductLineSpec, ResolvedVariant
+from .model import (
+    FeatureType,
+    ProductLineSpec,
+    ResolvedVariant,
+    feature_symbol,
+    nested_values,
+)
 
 
 def identifier(text: str) -> str:
@@ -30,19 +36,16 @@ def env_value(value: Any) -> str:
 
 
 def environment(line: ProductLineSpec, resolved: ResolvedVariant) -> dict[str, str]:
-    prefix = line.env.prefix
     env = {
-        f"{prefix}VARIANT": resolved.name,
-        f"{prefix}COMPONENTS": " ".join(resolved.components),
+        "VARIANT_NAME": resolved.name,
+        "VARIANT_COMPONENTS": " ".join(resolved.components),
     }
     for comp in line.components:
-        env[f"{prefix}COMPONENT_{comp.upper()}"] = env_value(
+        env[f"VARIANT_COMPONENT_{comp.upper()}"] = env_value(
             resolved.component_active(comp)
         )
     for name, feature in resolved.features.items():
-        env[f"{prefix}{name}"] = env_value(feature.value)
-        if line.env.legacy_bo:
-            env[f"BO_{name}"] = env_value(feature.value)
+        env[feature_symbol(name)] = env_value(feature.value)
     return env
 
 
@@ -55,7 +58,7 @@ def namespace(resolved: ResolvedVariant) -> dict[str, Any]:
             c: resolved.component_active(c) for c in resolved.all_components
         },
         "component_list": list(resolved.components),
-        "features": dict(resolved.values),
+        "features": nested_values(resolved.values),
         "data": resolved.data,
     }
 

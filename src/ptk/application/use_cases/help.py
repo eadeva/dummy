@@ -244,6 +244,8 @@ def _step(name: str, step: StepSpec) -> HelpStep:
     else:
         detail = step.run if isinstance(step.run, str) else " ".join(step.run or [])
     flags = ["needs: " + ", ".join(step.needs)] if step.needs else ["ready"]
+    if step.generators:
+        flags.append("generators: " + ", ".join(step.generators))
     if step.python is not None:
         p = step.python
         flags.append(

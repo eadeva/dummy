@@ -216,7 +216,7 @@ def catalogue(value, environment_names=()):
             )
             for feature in mapping(mapping(component).get("features")):
                 add(
-                    f"vh.features.{feature}",
+                    f"vh.features.{name}.{feature}",
                     "Variants",
                     "Resolved feature value.",
                     contexts,

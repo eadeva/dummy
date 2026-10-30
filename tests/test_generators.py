@@ -1,4 +1,4 @@
-import ast
+import json
 import shutil
 import subprocess
 from pathlib import Path
@@ -34,19 +34,20 @@ def variant():
     )
 
 
-def test_seven_generators_and_language_values(tmp_path):
+def test_eight_generators_and_language_values(tmp_path):
     resolved = variant()
     results = {k: fn(resolved) for k, fn in GENERATORS.items()}
-    assert len(results) == 7
+    assert len(results) == 8
     for files in results.values():
         for filename, content in files.items():
             (tmp_path / filename).write_text(content)
-    assert "#define VH_ENABLED 1" in (tmp_path / "variant.h").read_text()
-    bazel = (tmp_path / "variant.bzl").read_text().split("VARIANT = ", 1)[1]
-    assert ast.literal_eval(bazel)["VH_SIZE"] == 4
-    assert "VH_COMPONENT_CORE := 1" in (tmp_path / "variant.mk").read_text()
-    assert 'VH_SIZE = "4"' in (tmp_path / "variant.inc").read_text()
-    assert "${VH_ENABLED}\t1" in (tmp_path / "variant.robot").read_text()
+    assert "#define VARIANT_CORE_ENABLED 1" in (tmp_path / "variant.h").read_text()
+    bazel = json.loads((tmp_path / "variant.bazel.json").read_text())
+    assert bazel["schema_version"] == 1 and bazel["values"]["VARIANT_CORE_SIZE"] == 4
+    assert "VARIANT_COMPONENT_CORE := 1" in (tmp_path / "variant.mk").read_text()
+    assert 'VARIANT_CORE_SIZE = "4"' in (tmp_path / "variant.inc").read_text()
+    assert "${VARIANT_CORE_ENABLED}\t1" in (tmp_path / "variant.robot").read_text()
+    assert "VARIANT_CORE_ENABLED = true" in (tmp_path / "variant.gni").read_text()
     assert ".. code-block:: json" in (tmp_path / "variant.rst").read_text()
 
 
@@ -69,7 +70,7 @@ def test_cmake_consumes_generated_values(tmp_path):
     path = tmp_path / "variant.cmake"
     path.write_text(
         GENERATORS["cmake"](variant())["variant.cmake"]
-        + '\nif(NOT VH_SIZE EQUAL 4 OR NOT VH_TEXT STREQUAL "hello world")\nmessage(FATAL_ERROR "wrong values")\nendif()\n'
+        + '\nif(NOT VARIANT_CORE_SIZE EQUAL 4 OR NOT VARIANT_CORE_TEXT STREQUAL "hello world")\nmessage(FATAL_ERROR "wrong values")\nendif()\n'
     )
     result = subprocess.run(
         [cmake, "-P", str(path)],
@@ -106,8 +107,7 @@ def test_builtin_generation_copy_clean_and_configs(tmp_path):
                                 "needs": ["sync"],
                             },
                             "gen": {
-                                "uses": "variant.generate",
-                                "with": {"generators": list(GENERATORS)},
+                                "generators": list(GENERATORS),
                                 "needs": ["ensure"],
                             },
                             "copy": {
@@ -139,7 +139,8 @@ def test_builtin_generation_copy_clean_and_configs(tmp_path):
 def test_file_cleanup_and_generation_reject_path_escape(tmp_path):
     from types import SimpleNamespace
 
-    from ptk.adapters.builtins import file_cleaner, variant_generator
+    from ptk.adapters.builtins import file_cleaner
+    from ptk.adapters.variant_files import variant_writer
     from ptk.domain.errors import PtkError
 
     protected = tmp_path / ".main.ptk.yml"
@@ -153,7 +154,7 @@ def test_file_cleanup_and_generation_reject_path_escape(tmp_path):
     clean = file_cleaner([tmp_path / "_builds"])
     with pytest.raises(PtkError, match="only permits descendants"):
         clean(SimpleNamespace(with_={"paths": [".main.ptk.yml"]}), lambda _: None, ctx)
-    generate = variant_generator({"escape": lambda _: {"../../.main.ptk.yml": "bad"}})
+    generate = variant_writer({"escape": lambda _: {"../../.main.ptk.yml": "bad"}})
     with pytest.raises(PtkError, match="must be inside"):
-        generate(SimpleNamespace(with_={"generators": ["escape"]}), lambda _: None, ctx)
+        generate(["escape"], variant(), ctx.build_dir, lambda _: None, None)
     assert protected.read_text() == "keep"

@@ -89,19 +89,22 @@ Configured external dependencies, trusted plugin contracts and maintenance.
    :safety: QM
    :security: false
    :legal: false
-   :status: under review
-   :verification_criteria: Generator tests validate escaping, filename confinement, duplicate outputs and native CMake consumption where available.
+   :status: accepted
+   :verification_criteria: Generator tests validate escaping, output confinement and collisions; native Make/CMake/GN consumers and Bazel settings/changed-snapshot tests pass on the recorded tool versions.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_TOOLS
    :tags: implemented
 
-   PTK shall provide header, CMake, Bazel, Make, Yocto, Robot and Sphinx variant generators with validated project-local destinations and collision checks.
+   PTK shall provide header, CMake, Bazel, Make, GN, Yocto, Robot and Sphinx variant generators using uppercase VARIANT_<COMPONENT>_<FEATURE> symbols and step-local output files. Bazel shall receive schema-versioned JSON; its optional repository helper shall be a project-owned documentation resource outside PTK runtime. GN shall receive a .gni file, not plain Ninja rules.
 
-   **Origin:** Derived from the current CLI implementation and regression tests; requires review.
+   **Origin:** Accepted reusable-component counterproposal and explicit Make/CMake/Bazel/GN integration request.
 
    **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
 
-   **Evidence:** ``src/ptk/domain/variants/generators.py``; ``tests/test_generators.py``.
+   **Evidence:** ``src/ptk/domain/variants/generators.py``; ``tests/test_generators.py``; ``tests/test_native_variant_builds.py``; ``docs/resources/bazel/ptk_variants.bzl``.
+
+   Native GN/Bazel tests require their documented executable variables. Skipped
+   native tests are not evidence of compatibility on that environment.
 
 .. req-sw:: Resolve configured artifact destinations
    :id: REQ_Sw_ARTIFACT_PATHS

@@ -8,10 +8,6 @@ steps:
     with:
       message: Building ${vh.variant} with ${params.jobs} jobs
   generate:
-    uses: variant.generate
-    with:
-      generators:
-      - header
-      output: _bin/${vh.variant}
+    generators: [header]
     needs:
     - describe

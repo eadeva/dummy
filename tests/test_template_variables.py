@@ -67,7 +67,7 @@ def test_catalogue_accepts_partial_configuration_and_only_publishes_names():
     names = {entry["reference"] for entry in data["entries"]}
     assert {
         "vars.nested.path",
-        "vh.features.FAST",
+        "vh.features.core.FAST",
         "vh.components.core",
         "vh.data.compiler",
         "version.current.git.commit",

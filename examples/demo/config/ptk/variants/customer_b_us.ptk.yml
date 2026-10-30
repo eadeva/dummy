@@ -8,6 +8,6 @@ components:
 - display
 - navigation
 features:
-  MAP_REGION: US
+  navigation.MAP_REGION: US
 data:
   toolchain: arm-clang
