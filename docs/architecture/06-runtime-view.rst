@@ -48,10 +48,14 @@ Local workflow execution
 ------------------------
 
 The workflow planner resolves calls to concrete jobs and variants in their
-owning repositories. Sequential groups wait for previous calls; parallel groups
-share the configured concurrency limit, including nested groups. Failure and
-cancellation policies govern queued calls. The workflow report retains child
-results and logs so later runs do not replace its evidence. Local workflows are
+owning repositories. A workflow's named ``jobs`` and ``needs`` form a dependency
+graph. Loading rejects invalid edges and cycles. Preflight rejects output and
+environment conflicts between unordered calls. Ready jobs share ``max_workers``;
+each completion releases its dependents without waiting for unrelated branches.
+Failed or skipped prerequisites block dependent jobs with a reason, while
+independent branches continue. A tolerated failure releases dependents but remains
+visible in reports. Cancellation stops pending calls and reaches active runners.
+The workflow report retains child results and logs so later runs do not replace its evidence. Local workflows are
 rejected in CX mode; CX pipelines invoke jobs through their own orchestration.
 
 Historical report export

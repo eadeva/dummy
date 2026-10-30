@@ -49,7 +49,7 @@ function project(root, alias) {
       },
       steps: [{ say: { uses: "echo", with: { message: "${params.message} ${params.verbose} ${params.tags}" } } }],
     } },
-    workflows: { verify: { steps: [{ build: "build" }] } },
+    workflows: { verify: { jobs: { build: { job: "build" } } } },
   });
 }
 
@@ -150,7 +150,7 @@ test("actual VMR discovery supports member jobs and workspace workflow previews"
   for (const name of ["small", "large"]) fs.unlinkSync(path.join(root, `a/variants/${name}.ptk.yml`));
   fs.writeFileSync(path.join(root, ".main.ptk.yml"), "virtual_monorepo: true\nmembers: [a, b]\n");
   fs.mkdirSync(path.join(root, "workflows"));
-  fs.writeFileSync(path.join(root, "workflows/verify.ptk.yml"), "steps:\n- build: {repo: alpha, job: build}\n");
+  fs.writeFileSync(path.join(root, "workflows/verify.ptk.yml"), "jobs:\n  build: {job: alpha:build}\n");
   for (const folder of [root, path.join(root, "a"), path.join(root, "b")]) fs.writeFileSync(path.join(folder, "maintainers.ptk.yml"), JSON.stringify({ maintainers: [os.userInfo().username] }));
   const doc = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"], { PTK_ROLE: "" }));
   assert.equal(doc.mode, "workspace");
@@ -392,7 +392,7 @@ test("new configuration items from the installed schema validate with their requ
   assert.deepEqual(config.value.jobs["new-job"].steps.map(item => Object.keys(item)[0]), ["step", "step_2"]);
   add(["jobs", "new-job", "steps", 0, "step", "python"], "PythonSpec");
   add(["workflows", "new-workflow"], "WorkflowSpec");
-  assert.equal(config.value.workflows["new-workflow"].steps[0].job.job, "build");
+  assert.equal(config.value.workflows["new-workflow"].jobs.job.job, "build");
 });
 
 test("real maintainer jobs and workflows execute through the discovered namespace", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
@@ -402,7 +402,7 @@ test("real maintainer jobs and workflows execute through the discovered namespac
   fs.writeFileSync(path.join(root, "maintainers.ptk.yml"), JSON.stringify({ maintainers: [os.userInfo().username] }));
   const job = JSON.parse(fs.readFileSync(path.join(root, "jobs/build.ptk.yml"), "utf8"));
   fs.writeFileSync(path.join(root, "jobs/publish.ptk.yml"), JSON.stringify({ ...job, audience: "maintainer" }));
-  fs.writeFileSync(path.join(root, "workflows/release.ptk.yml"), JSON.stringify({ audience: "maintainer", open_report: null, steps: [{ publish: "publish" }] }));
+  fs.writeFileSync(path.join(root, "workflows/release.ptk.yml"), JSON.stringify({ audience: "maintainer", open_report: null, jobs: { publish: { job: "publish" } } }));
   const user = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));
   assert.equal(core.availableTargets([{ inventory: user }]).some(target => ["publish", "release"].includes(target.name)), false);
   const doc = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"], { PTK_ROLE: "" }));

@@ -45,11 +45,11 @@ def project(root):
                 "publish": job("private-result", "maintainer"),
             },
             "workflows": {
-                "verify": {"open_report": None, "steps": [{"build": "build"}]},
+                "verify": {"open_report": None, "jobs": {"build": {"job": "build"}}},
                 "release": {
                     "audience": "maintainer",
                     "open_report": None,
-                    "steps": [{"publish": "publish"}],
+                    "jobs": {"publish": {"job": "publish"}},
                 },
             },
             "variants": {"default": "small", "variants": {"small": {}, "large": {}}},
@@ -218,7 +218,7 @@ def test_workspace_and_member_workflows_keep_their_namespace(tmp_path, monkeypat
             "ship": {
                 "audience": "maintainer",
                 "open_report": None,
-                "steps": [{"release": {"repo": "demo", "job": "publish"}}],
+                "jobs": {"release": {"job": "demo:publish"}},
             }
         },
     )

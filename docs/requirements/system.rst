@@ -72,7 +72,7 @@ level or repeat every software rule. Derived formulations remain under review.
    :security: false
    :legal: false
    :status: under review
-   :verification_criteria: Execution tests cover multiple variants, nested workflow scheduling, failure propagation, timeout and cancellation.
+   :verification_criteria: Execution tests cover multiple variants, workflow dependency scheduling, failure propagation, timeout and cancellation.
    :verification_level: system-verification
    :req_satisfies: REQ_Stkh_EXECUTION, REQ_Stkh_VARIANTS
    :tags: implemented

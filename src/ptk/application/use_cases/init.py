@@ -98,7 +98,10 @@ class InitProject:
             "workflows/verify.ptk.yml": {
                 "help": "Run the starter jobs locally",
                 "open_report": "always",
-                "steps": [{"hello": {"job": "hello"}}, {"build": {"job": "build"}}],
+                "jobs": {
+                    "hello": {"job": "hello"},
+                    "build": {"job": "build", "needs": "hello"},
+                },
             },
             "jobs/hello.ptk.yml": {
                 "help": "Print a message and the selected project version",

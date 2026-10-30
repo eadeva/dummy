@@ -80,7 +80,7 @@ a workflow coordinates jobs, and each job contains steps.
      - Responsibility
      - Example
    * - Workflow
-     - Coordinate existing jobs sequentially or in parallel, including across repositories.
+     - Coordinate existing jobs through dependencies, including across repositories.
      - ``verify`` runs ``build``, then ``test`` and ``lint``.
    * - Job
      - Define a runnable task with parameters, a variant context, tool requirements and its own logs/reports.
@@ -89,10 +89,10 @@ a workflow coordinates jobs, and each job contains steps.
      - Run a command, script or built-in/plugin action; group steps when ordering or parallel execution is needed.
      - A ``compile`` step invokes the project's build tool.
 
-Jobs also run directly, without a workflow. In PTK YAML, both workflows and jobs
-use a ``steps`` list: a workflow entry calls a **job**, while a job entry defines
-an executable **step** or a step group. The naming is familiar; PTK configuration
-has its own schema.
+Jobs also run directly, without a workflow. A workflow's ``jobs`` mapping names
+job invocations; ``needs`` connects their dependencies and determines which can
+run concurrently. Each job's ``steps`` list defines its executable work through
+commands or plugin actions. The same job can be reused by different workflows.
 
 PTK workflows currently orchestrate work locally. CX pipelines use their own
 orchestration and invoke PTK jobs. See :doc:`guides/workflows` for the structure
@@ -155,7 +155,8 @@ What you can do
    .. grid-item-card:: :octicon:`workflow` Compose local workflows
       :class-card: ptk-card ptk-blue
 
-      Connect jobs into sequential or parallel workflows, including calls
+      Connect jobs through explicit dependencies, allowing independent work to
+      run concurrently, including calls
       across independently configured repositories in a virtual monorepo.
       CX pipelines invoke jobs through their own orchestration.
 

@@ -424,7 +424,7 @@ function createController(vscode, context, editorFactory = createEditors) {
     const target = await chooseTarget(element);
     if (!target) return;
     if (!target.project) {
-      await vscode.window.showInformationMessage("Workspace workflows use the variants configured on their repository steps.");
+      await vscode.window.showInformationMessage("Workspace workflows have no variant selection. Use a repository-owned workflow for variant-enabled jobs.");
       return;
     }
     const choices = target.project.variants.filter(v => !v.abstract);

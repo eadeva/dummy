@@ -427,7 +427,7 @@
     row.append(button(isJobs ? "Add job" : isList ? "Add item" : "Add field", () => {
       const key = isList ? undefined : name.value.trim();
       if (!isList && (!key || ["__proto__", "constructor", "prototype"].includes(key))) { showIssue("Enter a valid field name."); return; }
-      if (isJobs && !/^[a-z][a-z0-9-]*$/.test(key)) { showIssue("Job names must start with a lowercase letter and contain only lowercase letters, digits or hyphens."); return; }
+      if (isJobs && !/^[a-z][a-z0-9_-]*$/.test(key)) { showIssue("Job names must start with a lowercase letter and contain only lowercase letters, digits, underscores or hyphens."); return; }
       afterEdits(() => {
         const current = valueAt(containerPath);
         if (current === null || typeof current !== "object") throw new Error("The parent field no longer exists.");

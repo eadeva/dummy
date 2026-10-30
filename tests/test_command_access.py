@@ -255,7 +255,7 @@ def test_vmr_workspace_workflow_needs_its_own_list_and_member_roles(
     write_workflows(
         (tmp_path / "workflow.ptk.yml").parent / "workflows",
         yaml.safe_load(
-            "workflows:\n  restricted:\n    audience: maintainer\n    steps:\n      - build: {repo: firmware, job: build}\n"
+            "workflows:\n  restricted:\n    audience: maintainer\n    jobs:\n      build:\n        job: firmware:build\n"
         )["workflows"],
     )
     monkeypatch.chdir(tmp_path)

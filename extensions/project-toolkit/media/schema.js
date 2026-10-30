@@ -80,8 +80,8 @@
       if (reference && context.configuration) {
         const targets = reference.path.reduce((value, key) => value?.[key], context.configuration);
         const names = Object.keys(targets || {});
-        if (!names.length) throw new Error(`Create a ${reference.label} before adding this field.`);
-        return names.includes(value) ? value : names[0];
+        if (!names.length && !reference["allow-custom"]) throw new Error(`Create a ${reference.label} before adding this field.`);
+        return names.includes(value) || reference["allow-custom"] && typeof value === "string" && value.includes(":") ? value : names[0] || "";
       }
       if (spec.enum) return spec.enum.includes(value) ? value : structuredClone(spec.enum[0]);
       if (spec.type === "object" || object(value)) {

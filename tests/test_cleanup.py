@@ -128,7 +128,10 @@ def workspace(tmp_path, mapping):
         extra=variants,
         workflows={
             "verify": {
-                "steps": [{"own": "build"}, {"other": {"repo": "b", "job": "build"}}]
+                "jobs": {
+                    "own": {"job": "build"},
+                    "other": {"job": "b:build", "needs": ["own"]},
+                }
             }
         },
     )
@@ -153,7 +156,7 @@ def test_mapping_and_invalid_mapping_cleanup_preflight(tmp_path, monkeypatch):
     kept = seed(tmp_path / "b")
     result = runner.invoke(cli, args)
     assert result.exit_code == 0, result.output
-    assert "b/build [release]" in result.output
+    assert "b:build [release]" in result.output
     assert not any(p.exists() for p in paths)
     assert all(p.exists() for p in kept)
     result = runner.invoke(cli, ["vmr-clean-all", "--yes"])
@@ -196,9 +199,7 @@ def test_job_filters_error_steps_skip_and_only_cx_hidden(tmp_path):
 def test_old_workflow_variant_rejected(tmp_path):
     repository(
         tmp_path,
-        workflows={
-            "verify": {"steps": [{"bad": {"job": "build", "variant": "debug"}}]}
-        },
+        workflows={"verify": {"jobs": {"bad": {"job": "build", "variant": "debug"}}}},
     )
     result = invoke(tmp_path, "workflow", "run", "verify", "--dry-run")
     assert result.exit_code == 2 and "variant" in result.output

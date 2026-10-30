@@ -113,7 +113,7 @@ labels and icon shapes also identify each category.
   Task** stops a running task. Help displays the job's `--help` without running it
   or asking for parameters.
   **Dry Run** calls `ptk JOB --dry-run` or `ptk workflow run --dry-run NAME`: it shows what
-  would run without executing the job or workflow steps.
+  would run without executing the job steps or workflow jobs.
 - Click **Open Latest Job or Workflow Report** (preview icon) on a job or
   workflow. Jobs open the report for the selected variant; workflows open the
   latest saved aggregate report. If no report is available, the task terminal
@@ -218,8 +218,9 @@ creates its conventional file. Components are registered in project settings;
 their features and dependencies live in `component.variants.ptk.yml` beside their
 code. Renaming an entity moves its file, and deleting it removes its file.
 New items recursively include their required fields, minimum list/map entries
-and creation hints supplied by PTK. Workflow steps choose an existing job; create
-a job first if none exists. Empty text fields have a red border and a fill-in
+and creation hints supplied by PTK. Workflow invocations choose an existing local job when available. Enter a
+qualified `REPO:JOB` target for cross-repository calls. Configure dependencies
+with `needs`, referencing invocation IDs in the workflow’s `jobs` mapping. Empty text fields have a red border and a fill-in
 message that clears as you type. Zero and false are treated as filled values.
 Starter URLs use example.invalid; replace them with your own settings before use.
 Source fingerprints reject stale edits, and unsaved YAML documents must be saved
@@ -251,8 +252,8 @@ Tasks have variant-qualified names and preserve their explicit variant when reru
 The task picker lists each selected variant separately. A hand-written task without
 an explicit variant uses the project default rather than the tree's multi-selection.
 Repository workflows use PTK's existing repository variant mappings; workspace
-workflows retain the variants configured on their steps. There is no separate
-Variants group. Variant definitions remain editable under Configuration.
+workflows have no owner variant model. Use a repository-owned workflow for
+variant-enabled jobs. There is no separate Variants group. Variant definitions remain editable under Configuration.
 
 ## Build and verify
 

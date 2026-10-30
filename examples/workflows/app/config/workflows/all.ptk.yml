@@ -1,9 +1,6 @@
-# PTK configuration: this file owns its section or named entity.
 help: Run both repositories using the selected owner variant
-parallel: true
-steps:
-- frontend:
+jobs:
+  frontend:
     job: test
-- backend:
-    repo: backend
-    job: test
+  backend:
+    job: backend:test

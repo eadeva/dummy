@@ -52,13 +52,13 @@ def write_workflow_report(result, target: Path) -> Path:
     rows = []
     counts = {"Passed": 0, "Failed": 0, "Skipped": 0, "Cancelled": 0}
 
-    def visit(step):
-        if step.job:
-            label = step.status.value.capitalize()
+    for job in result.jobs:
+        if job.job:
+            label = job.status.value.capitalize()
             if label in counts:
                 counts[label] += 1
         links = []
-        for report in step.reports:
+        for report in job.reports:
             if Path(report).suffix.lower() != ".html":
                 continue
             relative = os.path.relpath(report, target).replace(os.sep, "/")
@@ -66,16 +66,17 @@ def write_workflow_report(result, target: Path) -> Path:
                 f'<a href="{escape(relative, quote=True)}">{escape(Path(report).name)}</a>'
             )
         cells = [
-            step.path,
-            step.repo,
-            step.job,
-            step.variant or "default",
-            step.status.value + (" (allowed)" if step.allowed_failure else ""),
-            f"{step.duration:.2f}s",
-            step.message
+            job.id,
+            ", ".join(job.needs) or "—",
+            job.repo,
+            job.job,
+            job.variant or "default",
+            job.status.value + (" (allowed)" if job.allowed_failure else ""),
+            f"{job.duration:.2f}s",
+            job.message
             or (
                 "Child report contains errors or could not be written"
-                if step.report_errors
+                if job.report_errors
                 else ""
             ),
         ]
@@ -84,13 +85,10 @@ def write_workflow_report(result, target: Path) -> Path:
             + "".join(f"<td>{escape(str(c))}</td>" for c in cells)
             + f"<td>{' · '.join(links)}</td></tr>"
         )
-        for child in step.children:
-            visit(child)
 
-    for step in result.steps:
-        visit(step)
     titles = (
-        "Step",
+        "Invocation",
+        "Needs",
         "Repository",
         "Job",
         "Variant",

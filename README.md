@@ -338,21 +338,21 @@ Put `workflows/verify.ptk.yml` in the configuration folder to compose existing j
 ```yaml
 # config/ptk/workflows/verify.ptk.yml
 max_workers: 2
-steps:
-- build:
+jobs:
+  build:
     job: build
-- checks:
-    parallel: true
-    steps:
-    - tests:
-        job: test
-    - lint:
-        job: lint
+  tests:
+    job: test
+    needs: build
+  lint:
+    job: lint
+    needs: build
 ```
 
 Run `ptk workflow run --dry-run verify`, then `ptk verify` (or `ptk workflow run verify`). Each call keeps
-its repository's tools, environment, credentials and reports. Calls can select a
-`repo`, `variant` and job `params`. PTK preflights every call before execution
+its repository's tools, environment, credentials and reports. Use `job: REPO:JOB` for VMR calls, `params` for job parameters and owner
+`repo_variants` mappings for variant selection. `needs` names invocation IDs;
+independent jobs can run concurrently, regardless of YAML order. PTK preflights every call before execution
 and rejects conflicting parallel outputs or shared uv project environments.
 Generated VS Code tasks include workflows. These workflows run locally;
 execution on CX/CI is refused.
@@ -370,9 +370,8 @@ a job report explicitly, or `ptk report open --workflow NAME` for the latest agg
 workflow report. Add `--if-exists` to get an informational message when there
 is no saved run/report. No local browser-link server is started.
 
-See [workflows](docs/guides/workflows.rst) and `examples/workflows` for nested groups,
-VMR ownership, failure handling and reports. The later `ptk init --workflows`
-generator will map job calls to GitHub jobs and their structure to `needs`;
+See [workflows](docs/guides/workflows.rst) and `examples/workflows` for dependency graphs,
+VMR ownership, failure handling and reports. A future generator could map invocation IDs and `needs` directly to GitHub jobs;
 GitHub template generation and the generic PTK GitHub Action are not implemented yet.
 
 ## VMR workspaces and isolated environments

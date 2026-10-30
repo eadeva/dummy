@@ -1,16 +1,13 @@
-# PTK configuration: this file owns its section or named entity.
 help: Build the frontend, then run independent checks locally
 max_workers: 2
-steps:
-- build:
+jobs:
+  build:
     job: build
-- checks:
-    parallel: true
-    steps:
-    - unit:
-        job: test
-    - backend:
-        repo: backend
-        job: test
-        params:
-          suite: smoke
+  unit:
+    job: test
+    needs: build
+  backend:
+    job: backend:test
+    needs: build
+    params:
+      suite: smoke

@@ -92,8 +92,8 @@ def _walk(
             return
         allowed = _allowed_keys(annotation)
         if (
-            annotation.__name__ in {_STEP_MODEL, "WorkflowNode"}
-            and (annotation.__name__ == "WorkflowNode" or "name" not in node.value)
+            annotation.__name__ == _STEP_MODEL
+            and "name" not in node.value
             and len(node.value) == 1
         ):
             ((step_name, body),) = node.value.items()

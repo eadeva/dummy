@@ -370,3 +370,20 @@ test("workflow run form provides a single owner variant and workflow help", opti
   assert.deepEqual(message.runOptions, {});
   assert.equal(message.preview, false);
 });
+
+test("workflow invocation editor exposes qualified jobs and needs without step groups", options, async t => {
+  const value = { workflows: { verify: { jobs: { compile: { job: "my_repo:build" }, test: { job: "my_repo:test", needs: "compile" } } } } };
+  const h = await form(t, value, ["workflows", "verify", "jobs", "test"]);
+  assert.equal(await h.field("job").inputValue(), "my_repo:test");
+  assert.equal(await h.field("needs").inputValue(), "compile");
+  await h.page.getByRole("button", { name: "Help for needs", exact: true }).click();
+  assert.match(await h.page.locator(".field-help:not([hidden])").innerText(), /Invocation IDs/);
+  const optional = await h.page.getByRole("combobox", { name: "Optional field", exact: true }).locator("option").allTextContents();
+  assert.ok(optional.includes("params") && optional.includes("continue_on_error"));
+  assert.ok(!optional.some(name => ["repo", "parallel", "steps"].includes(name)));
+  await h.field("job").fill("backend_repo:run_tests");
+  await h.field("job").blur();
+  const edits = await h.edits();
+  assert.deepEqual(edits.at(-1).operations[0].path, ["workflows", "verify", "jobs", "test", "job"]);
+  assert.equal(edits.at(-1).operations[0].value, "backend_repo:run_tests");
+});

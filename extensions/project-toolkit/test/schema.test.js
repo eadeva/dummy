@@ -71,9 +71,10 @@ test("new named steps avoid collisions with all existing names", () => {
 
 test("new workflows reference an existing job and do not invent an unavailable one", () => {
   assert.deepEqual(S.initial(schema.$defs.WorkflowSpec, schema, { configuration: { jobs: { build: {} } } }), {
-    steps: [{ job: { job: "build" } }],
+    jobs: { job: { job: "build" } },
   });
-  assert.throws(() => S.initial(schema.$defs.WorkflowSpec, schema, { configuration: { jobs: {} } }), /Create a job/);
+  assert.deepEqual(S.initial(schema.$defs.WorkflowSpec, schema, { configuration: { jobs: {} } }), { jobs: { job: { job: "" } } });
+  assert.deepEqual(S.initial({ ...schema.$defs.WorkflowJob, "x-ptk-initial": { job: "my_repo:build" } }, schema, { configuration: { jobs: {} } }), { job: "my_repo:build" });
 });
 
 test("impossible required recursion fails clearly instead of inserting invalid null", () => {

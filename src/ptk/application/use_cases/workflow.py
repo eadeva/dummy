@@ -2,35 +2,27 @@
 
 from __future__ import annotations
 
-import threading
 import time
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from ...domain.errors import PtkError
 from ...domain.execution.model import Status
-from ...domain.workflows import WorkflowNode, WorkflowSpec
+from ...domain.workflows import WorkflowJob, WorkflowSpec
 from .run import Cancelled, PreparedRun
 
 
 @dataclass
 class PlannedCall:
-    path: tuple[str, ...]
-    spec: WorkflowNode
-    repo: str = ""
-    prepared: PreparedRun | None = None
-    children: list[PlannedCall] = field(default_factory=list)
-
-    def walk(self):
-        yield self
-        for child in self.children:
-            yield from child.walk()
+    id: str
+    spec: WorkflowJob
+    repo: str
+    prepared: PreparedRun
 
     @property
     def resources(self):
-        assert self.prepared is not None
         p = self.prepared
         resources = {
             (
@@ -63,52 +55,35 @@ class PlannedCall:
 class WorkflowPlan:
     name: str
     spec: WorkflowSpec
-    steps: list[PlannedCall]
-
-    def walk(self):
-        for step in self.steps:
-            yield from step.walk()
+    jobs: list[PlannedCall]
 
 
 class PrepareWorkflow:
     def execute(self, name: str, spec: WorkflowSpec, prepare: Callable) -> WorkflowPlan:
-        def visit(node, parent=()):
-            path = (*parent, node.name)
-            planned = PlannedCall(path, node)
-            if node.steps is not None:
-                planned.children = [visit(child, path) for child in node.steps]
-                validate_parallel(planned.children, node.parallel)
-            else:
-                try:
-                    planned.repo, planned.prepared = prepare(node, path)
-                except PtkError as exc:
-                    raise PtkError(
-                        f"workflow {name}, {'/'.join(path)}: {exc}"
-                    ) from None
-            return planned
-
-        steps = [visit(node) for node in spec.steps]
-        validate_parallel(steps, spec.parallel)
-        return WorkflowPlan(name, spec, steps)
+        jobs = []
+        for invocation, job in spec.jobs.items():
+            try:
+                repo, prepared = prepare(job, invocation)
+            except PtkError as exc:
+                raise PtkError(f"workflow {name}, {invocation}: {exc}") from None
+            jobs.append(PlannedCall(invocation, job, repo, prepared))
+        validate_resources(jobs, spec.ancestors())
+        return WorkflowPlan(name, spec, jobs)
 
 
-def validate_parallel(nodes: list[PlannedCall], parallel: bool) -> None:
-    if not parallel:
-        return
-    seen = set()
-    for node in nodes:
-        keys = set().union(
-            *(call.resources for call in node.walk() if call.prepared is not None)
-        )
-        overlap = seen & keys
-        if overlap:
-            resource = next(iter(overlap))
-            raise PtkError(
-                "parallel workflow branches share "
-                + "/".join(resource)
-                + "; sequence these calls to protect their outputs and environments"
-            )
-        seen.update(keys)
+def validate_resources(jobs: list[PlannedCall], ancestors: dict[str, set[str]]) -> None:
+    resources = {job.id: job.resources for job in jobs}
+    for index, job in enumerate(jobs):
+        for other in jobs[:index]:
+            if other.id in ancestors[job.id] or job.id in ancestors[other.id]:
+                continue
+            overlap = resources[job.id] & resources[other.id]
+            if overlap:
+                raise PtkError(
+                    f"workflow jobs {other.id!r} and {job.id!r} can run concurrently and share "
+                    + "/".join(min(overlap))
+                    + "; add a needs dependency or isolate their outputs and environments"
+                )
 
 
 @dataclass
@@ -120,8 +95,8 @@ class CallOutcome:
 
 
 @dataclass
-class WorkflowStepResult:
-    path: str
+class WorkflowJobResult:
+    id: str
     status: Status
     repo: str = ""
     job: str = ""
@@ -133,15 +108,11 @@ class WorkflowStepResult:
     reports: list[str] = field(default_factory=list)
     run_id: str = ""
     report_errors: bool = False
-    children: list[WorkflowStepResult] = field(default_factory=list)
+    needs: list[str] = field(default_factory=list)
 
     @property
     def has_errors(self) -> bool:
-        return (
-            self.status == Status.FAILED
-            or self.report_errors
-            or any(child.has_errors for child in self.children)
-        )
+        return self.status == Status.FAILED or self.report_errors
 
     @property
     def failed(self):
@@ -156,13 +127,11 @@ class WorkflowResult:
     name: str
     status: Status
     duration: float
-    steps: list[WorkflowStepResult]
+    jobs: list[WorkflowJobResult]
 
     @property
     def has_errors(self) -> bool:
-        return self.status == Status.FAILED or any(
-            step.has_errors for step in self.steps
-        )
+        return self.status == Status.FAILED or any(job.has_errors for job in self.jobs)
 
 
 def combine(results):
@@ -180,79 +149,79 @@ class RunWorkflow:
         self, plan: WorkflowPlan, run: Callable, cancel: Cancelled
     ) -> WorkflowResult:
         started = time.monotonic()
-        slots = threading.Semaphore(plan.spec.max_workers)
 
         def record(node, status, message=""):
             prepared = node.prepared
-            return WorkflowStepResult(
-                path="/".join(node.path),
+            return WorkflowJobResult(
+                id=node.id,
                 status=status,
                 repo=node.repo,
-                job=prepared.plan.job if prepared else "",
-                variant=prepared.plan.variant if prepared else None,
+                job=prepared.plan.job,
+                variant=prepared.plan.variant,
                 start=time.monotonic() - started,
                 message=message,
+                needs=list(node.spec.needs),
             )
-
-        def skip(node, status, message):
-            result = record(node, status, message)
-            result.children = [skip(child, status, message) for child in node.children]
-            return result
-
-        def sequence(nodes, parallel):
-            if parallel:
-                with ThreadPoolExecutor(
-                    max_workers=min(len(nodes), plan.spec.max_workers)
-                ) as pool:
-                    futures = [pool.submit(visit, node) for node in nodes]
-                    return [future.result() for future in futures]
-            results = []
-            blocked = False
-            for node in nodes:
-                if cancel.is_set():
-                    results.append(skip(node, Status.CANCELLED, "workflow cancelled"))
-                elif blocked:
-                    results.append(
-                        skip(node, Status.SKIPPED, "previous workflow step failed")
-                    )
-                else:
-                    result = visit(node)
-                    results.append(result)
-                    blocked = result.failed
-            return results
 
         def visit(node):
             if cancel.is_set():
-                return skip(node, Status.CANCELLED, "workflow cancelled")
+                return record(node, Status.CANCELLED, "workflow cancelled")
             result = record(node, Status.PENDING)
-            if node.children:
-                result.children = sequence(node.children, node.spec.parallel)
-                result.status = combine(result.children)
-            else:
-                while not slots.acquire(timeout=0.1):
-                    if cancel.is_set():
-                        return skip(node, Status.CANCELLED, "workflow cancelled")
-                try:
-                    if cancel.is_set():
-                        return skip(node, Status.CANCELLED, "workflow cancelled")
-                    result.start = time.monotonic() - started
-                    outcome = run(node, cancel)
-                    result.status, result.reports, result.run_id = (
-                        outcome.status,
-                        outcome.reports,
-                        outcome.run_id,
-                    )
-                    result.report_errors = outcome.report_errors
-                except (PtkError, OSError, ValueError) as exc:
-                    result.status, result.message = Status.FAILED, str(exc)
-                finally:
-                    slots.release()
+            try:
+                outcome = run(node, cancel)
+                result.status, result.reports, result.run_id = (
+                    outcome.status,
+                    outcome.reports,
+                    outcome.run_id,
+                )
+                result.report_errors = outcome.report_errors
+            except (PtkError, OSError, ValueError) as exc:
+                result.status, result.message = Status.FAILED, str(exc)
             result.duration = time.monotonic() - started - result.start
             result.allowed_failure = (
                 node.spec.continue_on_error and result.status == Status.FAILED
             )
             return result
 
-        results = sequence(plan.steps, plan.spec.parallel)
+        pending = {job.id: job for job in plan.jobs}
+        completed: dict[str, WorkflowJobResult] = {}
+        running = {}
+        with ThreadPoolExecutor(max_workers=plan.spec.max_workers) as pool:
+            while pending or running:
+                # Harvest before scheduling so prerequisites release their dependents
+                # immediately, without waiting for unrelated branches in a wave.
+                for future in list(running):
+                    if future.done():
+                        completed[running.pop(future)] = future.result()
+                for name, node in list(pending.items()):
+                    if cancel.is_set():
+                        completed[name] = record(
+                            node, Status.CANCELLED, "workflow cancelled"
+                        )
+                    elif not all(
+                        dependency in completed for dependency in node.spec.needs
+                    ):
+                        continue
+                    else:
+                        blocked = [
+                            f"{dependency} ({completed[dependency].status.value})"
+                            for dependency in node.spec.needs
+                            if completed[dependency].status != Status.PASSED
+                            and not completed[dependency].allowed_failure
+                        ]
+                        if blocked:
+                            completed[name] = record(
+                                node,
+                                Status.SKIPPED,
+                                "blocked by needs: " + ", ".join(blocked),
+                            )
+                        elif len(running) < plan.spec.max_workers:
+                            running[pool.submit(visit, node)] = name
+                        else:
+                            continue
+                    del pending[name]
+                if running:
+                    wait(running, timeout=0.1, return_when=FIRST_COMPLETED)
+        results = [completed[job.id] for job in plan.jobs]
         status = Status.CANCELLED if cancel.is_set() else combine(results)
         return WorkflowResult(plan.name, status, time.monotonic() - started, results)

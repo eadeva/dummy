@@ -1,16 +1,14 @@
-# PTK configuration: this file owns its section or named entity.
 help: Run check, test and package in order, alongside documentation
 open_report: always
-parallel: true
 max_workers: 2
-steps:
-- quality:
-    steps:
-    - check:
-        job: check
-    - test:
-        job: test
-    - package:
-        job: package
-- docs:
+jobs:
+  check:
+    job: check
+  test:
+    job: test
+    needs: check
+  package:
+    job: package
+    needs: test
+  docs:
     job: docs

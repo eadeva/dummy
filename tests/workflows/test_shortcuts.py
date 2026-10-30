@@ -24,7 +24,7 @@ def setup_project(root, *, collide=False):
             "other": command("from pathlib import Path; Path('workflow-ran').touch()"),
         },
         workflows={
-            "verify": {"help": "Verify everything", "steps": [{"run": "other"}]}
+            "verify": {"help": "Verify everything", "jobs": {"run": {"job": "other"}}}
         },
     )
 
@@ -100,7 +100,7 @@ def test_vmr_workspace_and_member_shortcuts(tmp_path, monkeypatch):
     write_workflows(
         (tmp_path / "workflow.ptk.yml").parent / "workflows",
         yaml.safe_load(
-            "workflows:\n  all:\n    steps:\n      - check: {repo: app, job: other}\n"
+            "workflows:\n  all:\n    jobs:\n      check:\n        job: app:other\n"
         )["workflows"],
     )
     monkeypatch.chdir(tmp_path)
@@ -113,7 +113,7 @@ def test_vmr_workspace_and_member_shortcuts(tmp_path, monkeypatch):
 def test_shortcut_respects_workflow_command_policy(tmp_path):
     root = repository(
         tmp_path,
-        workflows={"verify": {"steps": [{"build": "build"}]}},
+        workflows={"verify": {"jobs": {"build": {"job": "build"}}}},
         extra={"command_audience": {"workflow": "maintainer"}},
     )
     assert "verify" not in invoke(root, "--help").output

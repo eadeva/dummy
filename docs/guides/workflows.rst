@@ -14,11 +14,10 @@ levels: a **workflow** coordinates reusable jobs; a **job** defines a runnable
 task; a **step** invokes a command, script or built-in/plugin action inside
 that job. A job can run directly, without belonging to a workflow.
 
-A workflow's ``steps`` list contains job calls or nested groups of calls.
-A job's ``steps`` list contains executable steps or nested step groups.
-The shared field name describes ordered entries at each level, but the allowed
-contents differ: workflow entries use ``job``; executable job steps use
-``run`` or ``uses``. Each level can group work sequentially or in parallel.
+A workflow's ``jobs`` mapping contains named job invocations and their ``needs``
+dependencies. A job's ``steps`` list contains ordered executable steps or nested
+step groups. Job steps retain their existing ordering, parallel groups, background
+processes and ``--from`` / ``--to`` behavior; ``needs`` belongs to workflow jobs.
 
 For example, ``verify`` can call ``build`` and then ``test``. The ``build`` job
 can contain ``configure`` and ``compile`` steps that call the chosen build tool.
@@ -41,7 +40,7 @@ Files and commands
 
 Put each workflow in ``workflows/<name>.ptk.yml`` under ``repository.config_path``.
 The file contains the workflow body, without a ``workflows`` wrapper. Names use
-lowercase letters, digits and hyphens, starting with a letter.
+lowercase letters, digits, underscores and hyphens, starting with a letter.
 Workflows and jobs have separate namespaces::
 
    ptk workflow list
@@ -75,38 +74,67 @@ Copy the example to a temporary folder before trying it if you want to preserve
 the documentation tree. Its jobs use portable built-ins, without compilers,
 network access or credentials.
 
-Job calls and groups
------------------------
+Job invocations and dependencies
+--------------------------------
 
-``steps`` is an ordered list of named entries. A leaf has:
+``jobs`` is a nonempty mapping from unique invocation IDs to job calls. Each ID
+starts with a letter or digit and can contain letters, digits, underscores,
+hyphens and dots. It identifies one invocation within this workflow, independently
+of the target job name. For example::
 
-* ``job``: an existing job name; ``- build: build`` is shorthand.
-* ``repo``: a VMR repository alias. Omission means the workflow's owner.
+   jobs:
+     compile:
+       job: my_repo:build
+     unit:
+       job: my_repo:test
+       needs: compile
+       params:
+         suite: unit
+     integration:
+       job: backend:test
+       needs: compile
+     package:
+       job: my_repo:package
+       needs: [unit, integration]
+
+``compile`` runs first; ``unit`` and ``integration`` can run concurrently;
+``package`` starts after both succeed. ``needs`` references invocation IDs, never
+repository aliases or target job names. Multiple invocations may call the same
+job with different parameters; order them with dependencies when they share outputs.
+
+Each invocation accepts:
+
+* ``job``: an existing job name in the owner's repository, or ``REPO:JOB``.
+  Workspace-owned workflows require the qualified form.
+* ``needs``: one invocation ID or a list of IDs. Omission or ``[]`` makes the job
+  immediately eligible. All listed prerequisites must complete successfully.
 * ``params``: values for parameters already declared by the target job.
   Values use that job's types, choices and validation. Secret parameters are
   not configurable in a workflow; keep secrets in the target job's credential
-  declarations rather than workflow YAML or parameters.
-* ``continue_on_error``: default false; tolerate this call's failure for workflow
-  sequencing and exit status. The child report still records the failure.
+  declarations.
+* ``continue_on_error``: default false. Tolerate this invocation's failure for
+  dependency scheduling and exit status; its report still records the failure.
 
-A group replaces ``job`` with nested ``steps`` and optionally ``parallel: true``.
-It can also set ``continue_on_error``. Groups cannot set ``repo`` or
-``params``; make each call's repository context explicit. Sibling entry names must
-be unique. Workflow entries call jobs, never other workflows or arbitrary shell
-commands. Put shell commands, retries, step timeouts, skip filters and cleanup
-inside the target job, using the existing job/step model.
+YAML order controls presentation, not execution. Ready jobs run as workers become
+available. A completed job releases its dependents without waiting for unrelated
+branches. There are no workflow ``steps``, nested groups, ``parallel`` or ``repo``
+fields.
 
-The workflow itself accepts ``help``, ``audience: all|maintainer``, ``open_report``, ``steps``,
-``parallel`` (false by default), and ``max_workers`` (default 4, range 1–32).
-The worker limit applies to active **job calls** across nested groups, not to
-parallel steps inside those jobs. No new global environment is merged across
-repositories. Ordinary job parameter defaults, version discovery and
-``requires_tools`` overrides continue to apply.
+Workflow invocations call jobs, never other workflows or arbitrary shell commands.
+Put commands, retries, step timeouts, skip filters and cleanup inside the target job.
+
+The workflow accepts ``help``, ``audience: all|maintainer``, ``open_report``, ``jobs``
+and ``max_workers`` (default 4, range 1–32). This limit applies to active **job
+calls**, not to parallel steps inside those jobs. Each repository retains its own
+environment, tool configuration and credentials. Job parameter defaults, version
+discovery and ``requires_tools`` overrides continue to apply.
 
 Failure, preflight and isolation
 --------------------------------
 
-PTK prepares every job before starting the first. Unknown repositories/jobs,
+Loading rejects unknown dependencies, repeated dependencies, self-dependencies and
+cycles; cycle errors show the dependency path. PTK prepares every job before
+starting the first. Unknown repositories/jobs,
 invalid parameters/variants, missing prerequisites and maintainer restrictions
 fail the preflight. Credentials are resolved serially before parallel execution,
 so there are no concurrent credential prompts. Each call gets its own application
@@ -116,30 +144,33 @@ that call; a previous job changing Git state does not refresh later snapshots.
 A dry run resolves configuration and plans the calls, but creates no run outputs,
 installs no tools and does not resolve credentials. As with job previews,
 custom version-discovery commands can execute and must be read-only. Workflow
-previews list job calls and grouping; use the target job's ``dry-run`` to
+previews list invocation IDs, resolved targets and prerequisites (or ``ready``); use the target job's ``dry-run`` to
 inspect its individual commands.
 
-Sequential execution stops after an untolerated failure; remaining entries are
-recorded as skipped. Parallel branches finish independently even if a sibling
-fails. Subsequent sequential entries wait for the whole parallel group.
-``continue_on_error`` tolerates failure, not cancellation. Ctrl+C propagates
-cancellation to active job runners and prevents queued calls from starting.
+A failed or skipped prerequisite blocks dependent jobs, which are recorded as
+skipped with the prerequisite IDs and statuses. Independent branches continue.
+``continue_on_error`` allows dependents to run after a failed invocation, and
+preserves that failure in reports. It does not tolerate skipped or cancelled jobs.
+Ctrl+C propagates cancellation to active job runners and prevents pending calls
+from starting.
 The workflow returns exit code 0 for success/tolerated failures, 1 for job
 failure and 130 for cancellation. Preflight/configuration errors use exit code 2.
 
-Parallel branches may not share the same repository/job/variant output folders.
+Jobs with no direct or transitive dependency ordering may not share the same repository/job/variant output folders.
 They also may not share a ``python.project`` environment, since uv can synchronize
 that project's shared virtual environment while another job is using it.
 For parallel jobs in one project, set a distinct absolute
 ``env.UV_PROJECT_ENVIRONMENT`` on each job, for example
 ``${project.root}/.ptk/venvs/package``. PTK checks the resolved environment paths,
-including step-level overrides. Use absolute paths for uv workspace members so
+including step-level overrides. This check applies even with ``max_workers: 1``;
+express resource ordering with ``needs`` rather than relying on worker limits.
+Use absolute paths for uv workspace members so
 the environment location does not depend on uv's workspace-root discovery.
 PTK's own ``verify`` workflow runs ``check``, ``test`` and ``package`` sequentially,
 alongside ``docs``; these jobs have separate environments. Existing job locks
 also protect against a separate PTK invocation using the same output folders.
 PTK cannot infer arbitrary paths or external resources used by scripts: authors
-must sequence jobs that write the same files, hardware device or service.
+must add dependencies between jobs that write the same files, hardware device or service.
 
 Tool selection remains per job. Toolbase-only definitions are ignored outside
 Windows; Docker installation policy still applies. Workflow preflight expects
@@ -151,8 +182,8 @@ VMR ownership
 -------------
 
 At the VMR root, ``workflows/<name>.ptk.yml`` holds each workspace workflow.
-Each document contains one workflow body. Every workspace-owned leaf must specify
-``repo``. Only configured VMR members can be referenced; filesystem paths are not
+Each document contains one workflow body. Every workspace-owned invocation must use
+``job: REPO:JOB``. Only configured VMR members can be referenced; filesystem paths are not
 repository selectors.
 
 Workspace-owned workflows have no variant configuration. They can call repositories
@@ -183,12 +214,14 @@ The workflow also writes an immutable summary and child HTML/JSON reports under:
 
    _reports/workflows/NAME/RUN-ID/workflow.json
    _reports/workflows/NAME/RUN-ID/workflow.html
-   _reports/workflows/NAME/RUN-ID/jobs/STEP-PATH/report.html
+   _reports/workflows/NAME/RUN-ID/jobs/INVOCATION-ID/report.html
 
 Repository-owned workflows honor the owner's layout/report directory; workspace
 workflows use the workspace's ``_reports``. Child report snapshots include their
 own log copies so repeated sequential calls do not redirect earlier report links
 to newer logs. Workflow reports use colored status cards and per-column filters.
+Their table shows invocation IDs, ``needs``, targets, status and skip reasons.
+The JSON summary exposes the same information in its ``jobs`` list.
 Open a child report for its project versions, tool dependencies and test details.
 Workflow history is retained until explicitly removed; it has no automatic rotation.
 
@@ -196,20 +229,21 @@ Use ``ptk report open --workflow NAME`` to reopen the latest saved aggregate HTM
 At a VMR root, use a workspace workflow name or qualify a member workflow as
 ``ALIAS/NAME``. The extension's report icon uses this operation. Add
 ``--if-exists`` to print an informational message instead of failing when no
-report is available. Opening a saved report does not execute workflow steps.
+report is available. Opening a saved report does not execute workflow jobs.
 
 The workflow opens its summary HTML report automatically after a local run.
 Set the policy on the workflow, independently of each job's report policy::
 
    # config/ptk/workflows/verify.ptk.yml
    open_report: always
-   steps:
-   - check:
+   jobs:
+     check:
        job: check
-   - test:
+     test:
        job: test
+       needs: check
 
-``on-errors`` includes failed job calls, tolerated failures in nested groups,
+``on-errors`` includes failed job calls, tolerated failures,
 failed steps or tests, error findings and child report/import problems. It does
 not change the workflow exit status. Warnings, skips and cancellation alone do
 not count as errors. ``always`` also opens a successfully written cancellation
@@ -242,25 +276,11 @@ with the normal authoring bundle; see :doc:`/guides/editor`.
 Planned GitHub template generation (not implemented)
 ----------------------------------------------------
 
-The next phase will add ``ptk init --workflows``. Each job call becomes
-one GitHub job using a generic PTK run-job GitHub Action; a local workflow
-is not executed wholesale on a CX runner. The job records that call's repository,
-job, variant and parameters.
-
-Dependency translation is structural:
-
-* A job job needs the terminal jobs of the preceding sequential group.
-* Parallel siblings receive the same incoming dependencies and have no dependency
-  edges between one another.
-* A step after a parallel group needs all terminal jobs of that group.
-* Apply these rules recursively to nested groups; groups themselves are not jobs.
-
-For ``build -> [tests, lint] -> package``, tests and lint each need build, and
-package needs both tests and lint. Preserve failure/continuation semantics when
-adding generation, including group-level continuation; do not blindly flatten
-those policies into a different execution order. Job identifiers must be stable
-and unique even when the same job is called more than once. Checkout, artifact
-handoff, GitHub permissions and the reusable job are also future work.
+Native GitHub workflow generation remains a draft proposal. A future generator
+could map invocation IDs and ``needs`` directly to GitHub jobs and dependencies.
+Checkout, artifact handoff, permissions, variant mapping and exact failure
+semantics would still need a separate design. No generation command or generic
+PTK run-job GitHub Action is currently available.
 
 Owner variant mappings
 ----------------------
@@ -290,6 +310,6 @@ A missing mapping for a referenced variant-enabled repository, an unknown target
 variant or an invalid owner variant fails before jobs execute or outputs are
 deleted. Repositories without variants need no mapping; mapping a variant to
 such a repository is an error. Names are VMR repository aliases, not directory
-paths. Workflow calls no longer accept ``variant``: migrate those fields into
-``repo_variants``. Dry runs print the resolved repository/job/variant for each
+paths. Workflow calls do not accept ``variant``; configure cross-repository selections
+with ``repo_variants``. Dry runs print the resolved repository/job/variant for each
 call; clean and re-run use those same selections.

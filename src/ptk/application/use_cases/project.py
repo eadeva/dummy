@@ -503,28 +503,6 @@ class ExportSchema:
             )
             schema = json.loads(text)
             schema["$defs"].pop("StepSpec", None)
-        node = schema.get("$defs", {}).get("WorkflowNode")
-        if node:
-            body = json.loads(json.dumps(node))
-            body["properties"].pop("name", None)
-            body["required"] = [r for r in body.get("required", []) if r != "name"]
-            schema["$defs"]["WorkflowBody"] = body
-            schema["$defs"]["WorkflowEntry"] = {
-                "default": {"job": {"job": "hello"}},
-                "x-ptk-entry-name": "job",
-                "type": "object",
-                "minProperties": 1,
-                "maxProperties": 1,
-                "additionalProperties": {
-                    "anyOf": [{"$ref": "#/$defs/WorkflowBody"}, {"type": "string"}]
-                },
-            }
-            schema = json.loads(
-                json.dumps(schema).replace(
-                    '"#/$defs/WorkflowNode"', '"#/$defs/WorkflowEntry"'
-                )
-            )
-            schema["$defs"].pop("WorkflowNode", None)
         # Form creation hints belong to the installed PTK schema. They describe
         # a valid starting shape without changing runtime configuration defaults.
         definitions = schema.get("$defs", {})
@@ -541,7 +519,7 @@ class ExportSchema:
             "ToolbaseSource": {"package": "tool", "version": "1.0.0"},
             "PythonSpec": {"interpreter": "cli"},
             "StepBody": {"run": "echo Hello"},
-            "WorkflowBody": {"job": "hello"},
+            "WorkflowJob": {"job": "hello"},
             "VersionSource": {"source": "literal", "version": "0.1.0"},
             "VersioningSpec": {"project": {}},
             "Constraint": {"expr": "true"},
@@ -552,9 +530,11 @@ class ExportSchema:
         definitions["ArtifactoryStructure"]["properties"]["events"][
             "x-ptk-entry-name"
         ] = "push"
-        definitions["WorkflowBody"]["properties"]["job"]["x-ptk-reference"] = {
+        definitions["WorkflowSpec"]["properties"]["jobs"]["x-ptk-entry-name"] = "job"
+        definitions["WorkflowJob"]["properties"]["job"]["x-ptk-reference"] = {
             "path": ["jobs"],
             "label": "job",
+            "allow-custom": True,
         }
         definitions["ProjectSpec"]["properties"]["default_job"]["x-ptk-reference"] = {
             "path": ["jobs"],

@@ -55,8 +55,11 @@ def project(tmp_path, monkeypatch):
                 "ci-only": {"only_cx": True, "steps": [{"push": "echo push"}]},
             },
             "workflows": {
-                "all": {"help": "Build everything", "steps": [{"make": "build"}]},
-                "private": {"audience": "maintainer", "steps": [{"make": "build"}]},
+                "all": {"help": "Build everything", "jobs": {"make": {"job": "build"}}},
+                "private": {
+                    "audience": "maintainer",
+                    "jobs": {"make": {"job": "build"}},
+                },
             },
         },
     )
@@ -164,7 +167,7 @@ def test_completion_is_read_only_and_loads_once(project, monkeypatch):
 
 def test_job_workflow_collision_never_prompts(project, monkeypatch):
     model = read_project(project)
-    model["workflows"]["build"] = {"steps": [{"make": "build"}]}
+    model["workflows"]["build"] = {"jobs": {"make": {"job": "build"}}}
     write_project(project, model)
 
     def forbidden(*args, **kwargs):
@@ -219,11 +222,11 @@ def test_vmr_repositories_jobs_workflows_and_variants(tmp_path, monkeypatch):
     a, _ = workspace(tmp_path)
     model = read_project(a)
     model["variants"] = {"variants": {"debug": {"aliases": ["dev"]}}}
-    model["workflows"] = {"all": {"steps": [{"make": "build"}]}}
+    model["workflows"] = {"all": {"jobs": {"make": {"job": "build"}}}}
     write_project(a, model)
     write_workflows(
         tmp_path / "workflows",
-        {"everything": {"steps": [{"make": {"repo": "firmware", "job": "build"}}]}},
+        {"everything": {"jobs": {"make": {"job": "firmware:build"}}}},
     )
     monkeypatch.chdir(tmp_path)
 

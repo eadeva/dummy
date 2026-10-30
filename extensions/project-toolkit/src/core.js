@@ -37,7 +37,7 @@ function parseInventory(text) {
   if (!validCommands(doc.commands)) throw new Error("Invalid PTK built-in command inventory.");
   for (const project of doc.projects) {
     if (!object(project) || typeof project.alias !== "string" || !absolute(project.root) || !absolute(project.entry_file) || !object(project.invocation) || !absolute(project.invocation.cwd) ||
-        !Array.isArray(project.invocation.prefix) || project.invocation.prefix.length > 1 || project.invocation.prefix.some(word => typeof word !== "string" || !/^[a-z][a-z0-9-]*$/.test(word))) {
+        !Array.isArray(project.invocation.prefix) || project.invocation.prefix.length > 1 || project.invocation.prefix.some(word => typeof word !== "string" || !/^[a-z][a-z0-9_-]*$/.test(word))) {
       throw new Error("Invalid repository paths in PTK inventory.");
     }
     const config = project.configuration;

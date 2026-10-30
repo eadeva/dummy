@@ -30,13 +30,7 @@ def test_help_preview_and_ci_do_not_install(tmp_path, monkeypatch, args):
         (root / "config/workflow.ptk.yml").parent / "workflows",
         yaml.safe_load(
             yaml.safe_dump(
-                {
-                    "workflows": {
-                        "verify": {
-                            "steps": [{"first": {"job": "build"}}],
-                        }
-                    }
-                }
+                {"workflows": {"verify": {"jobs": {"first": {"job": "build"}}}}}
             )
         )["workflows"],
     )
@@ -109,18 +103,11 @@ def test_vmr_workflow_checks_each_participant_before_any_job(
                     "workflows": {
                         "verify": {
                             "open_report": None,
-                            "steps": [
-                                {
-                                    "parallel": {
-                                        "parallel": True,
-                                        "steps": [
-                                            {"one": {"repo": "a", "job": "build"}},
-                                            {"two": {"repo": "b", "job": "build"}},
-                                        ],
-                                    }
-                                },
-                                {"again": {"repo": "a", "job": "build"}},
-                            ],
+                            "jobs": {
+                                "one": {"job": "a:build"},
+                                "two": {"job": "b:build"},
+                                "again": {"job": "a:build", "needs": ["one", "two"]},
+                            },
                         }
                     }
                 }

@@ -70,7 +70,10 @@ def project(tmp_path, monkeypatch):
                 }
             },
             "workflows": {
-                "verify": {"help": "Build and verify", "steps": [{"make": "build"}]}
+                "verify": {
+                    "help": "Build and verify",
+                    "jobs": {"make": {"job": "build"}},
+                }
             },
         },
     )

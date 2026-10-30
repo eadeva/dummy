@@ -217,7 +217,7 @@ For example::
 Job declarations
 ~~~~~~~~~~~~~~~~
 
-Job names use lowercase letters, digits and hyphens, starting with a letter.
+Job names use lowercase letters, digits, underscores and hyphens, starting with a letter.
 Parameters use lowercase letters, digits and underscores. Built-in command and
 option names are reserved. A job needs at least one step. The default job
 must exist and be available to ordinary users.
@@ -358,7 +358,7 @@ Existing ordinary hooks are preserved by pre-commit's migration mode as
 hook-file symlinks, and a configured ``core.hooksPath``; it does not overwrite or
 unset these configurations. Resolve such conflicts with the repository's
 maintainer. Installation, validation or verification failures stop the job or
-workflow before its first step. Linked worktrees share hooks and should use the
+workflow before its first job. Linked worktrees share hooks and should use the
 same relative pre-commit configuration path and installed hook types.
 
 Use ``ptk self-service hooks install|uninstall|status`` for explicit hook management,
@@ -772,8 +772,9 @@ host does not count as running inside Docker.
 Local orchestration
 ===================
 
-Use ``workflows/<name>.ptk.yml`` to compose existing jobs into local sequential and
-parallel groups, including jobs from configured VMR members. Workflows load
+Use ``workflows/<name>.ptk.yml`` to compose existing jobs through a named ``jobs``
+mapping and explicit ``needs`` dependencies. Independent invocations can run
+concurrently; VMR targets use ``REPO:JOB``. Workflows load
 from the repository configuration directory; VMR roots can also own a workflow
 file. See :doc:`/guides/workflows` for complete syntax, command examples, preflight,
 reports, VS Code tasks and the explicit local-only execution boundary.

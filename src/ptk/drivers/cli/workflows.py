@@ -116,7 +116,7 @@ def select(ctx, name, *, report=False):
 @click.pass_context
 @guarded
 def workflow_group(ctx):
-    """List, inspect and run sequential/parallel groups of repository jobs."""
+    """List, inspect and run dependency graphs of repository jobs."""
     from .cleanup import mode
 
     if mode(state_of(ctx)) and ctx.invoked_subcommand != "run":
@@ -138,22 +138,7 @@ def list_workflows(ctx):
 
 
 def authored(spec):
-    data = spec.model_dump(exclude_defaults=True)
-
-    def steps(nodes):
-        return [
-            {
-                node.name: {
-                    k: (steps(node.steps) if k == "steps" else v)
-                    for k, v in node.model_dump(exclude_defaults=True).items()
-                    if k != "name"
-                }
-            }
-            for node in nodes
-        ]
-
-    data["steps"] = steps(spec.steps)
-    return data
+    return spec.model_dump(exclude_defaults=True)
 
 
 @workflow_group.command("show")
@@ -232,10 +217,11 @@ def execute_workflow(ctx, name, *, dry_run=False):
     variants = WorkflowVariants(owner_project, parent.variant)
     bindings = {}
 
-    def prepare(node, path):
-        alias = node.repo or owner
+    def prepare(node, invocation):
+        prefix, separator, job_name = node.job.rpartition(":")
+        alias = prefix if separator else owner
         if alias is None:
-            raise PtkError("workspace workflow calls require repo: ALIAS")
+            raise PtkError("workspace workflow calls require a qualified job: REPO:JOB")
         if alias not in entries:
             raise PtkError(
                 f"repository {alias!r} is not a configured member of this workspace"
@@ -252,7 +238,7 @@ def execute_workflow(ctx, name, *, dry_run=False):
             verbose=parent.verbose,
         )
         project = state.project()
-        job = project.config.jobs.get(node.job)
+        job = project.config.jobs.get(job_name)
         if job is not None and any(
             name in job.params and job.params[name].type == "secret"
             for name in node.params
@@ -261,7 +247,7 @@ def execute_workflow(ctx, name, *, dry_run=False):
                 "secret parameters must not be stored in workflow configuration; use job credentials"
             )
         request = RunRequest(
-            job=node.job,
+            job=job_name,
             variant=variants.for_project(alias, project),
             params=node.params,
             dry_run=dry_run,
@@ -275,24 +261,21 @@ def execute_workflow(ctx, name, *, dry_run=False):
             )
         else:
             prepared = state.app.prepare_run(project).execute(project, request)
-        bindings[path] = state
+        bindings[invocation] = state
         return alias, prepared
 
     plan = PrepareWorkflow().execute(name, spec, prepare)
-    for node in plan.walk():
-        indent = "  " * (len(node.path) - 1)
-        if node.prepared is None:
-            click.echo(
-                f"{indent}{node.spec.name}: {'parallel' if node.spec.parallel else 'sequential'}"
-            )
-        else:
-            p = node.prepared.plan
-            click.echo(
-                f"{indent}{node.spec.name}: {node.repo}/{p.job} [{p.variant or 'default'}]"
-            )
+    for node in plan.jobs:
+        p = node.prepared.plan
+        readiness = (
+            "needs: " + ", ".join(node.spec.needs) if node.spec.needs else "ready"
+        )
+        click.echo(
+            f"{node.id}: {node.repo}:{p.job} [{p.variant or 'default'}] — {readiness}"
+        )
     if cleaning:
         clean_selected(
-            [node.prepared for node in plan.walk() if node.prepared is not None],
+            [node.prepared for node in plan.jobs],
             dry_run=dry_run,
         )
         if parent.clean:
@@ -302,22 +285,21 @@ def execute_workflow(ctx, name, *, dry_run=False):
         return
     # Install once per participating repository, before any parallel job starts.
     checked_repositories = set()
-    for node in plan.walk():
-        if node.prepared is not None:
-            project = node.prepared.project
-            if project.root not in checked_repositories:
-                bindings[node.path].app.hooks.execute(project, click.echo)
-                checked_repositories.add(project.root)
+    for node in plan.jobs:
+        project = node.prepared.project
+        if project.root not in checked_repositories:
+            bindings[node.id].app.hooks.execute(project, click.echo)
+            checked_repositories.add(project.root)
     run_id = datetime.now(UTC).strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8]
     target = report_directory(root, name, owner_project) / run_id
     child_openings = {}
 
     def run(node, cancel):
-        state, prepared = bindings[node.path], node.prepared
+        state, prepared = bindings[node.id], node.prepared
         p = prepared.plan
         with job_lock(prepared.project.root, p.variant, p.job):
             console.print(
-                f"[bold]{escape('/'.join(node.path))}: {escape(node.repo)}/{escape(p.job)}[/]"
+                f"[bold]{escape(node.id)}: {escape(node.repo)}:{escape(p.job)}[/]"
             )
             runner = state.app.run_job(prepared.project)
             result = runner.execute(
@@ -331,7 +313,7 @@ def execute_workflow(ctx, name, *, dry_run=False):
             files = []
             report_errors = False
             try:
-                child_target = target / "jobs" / Path(*node.path)
+                child_target = target / "jobs" / node.id
                 summary = snapshot_logs(run_summary(p, result), child_target)
                 report, files = state.app.reports.write(
                     prepared.project, summary, ["json", "html"], child_target
@@ -347,7 +329,7 @@ def execute_workflow(ctx, name, *, dry_run=False):
                     f"[yellow]workflow child report not written: {escape(str(exc))}[/]"
                 )
             if opening is not None:
-                child_openings[node.path] = (state.app, opening)
+                child_openings[node.id] = (state.app, opening)
             return CallOutcome(
                 result.status, [str(f) for f in files], p.run_id, report_errors
             )
@@ -397,9 +379,9 @@ def execute_workflow(ctx, name, *, dry_run=False):
                     "[dim]no browser available here - open the workflow report file above[/]"
                 )
     if not is_ci and not open_summary:
-        for node in plan.walk():
-            if node.path in child_openings:
-                app, child_report = child_openings[node.path]
+        for node in plan.jobs:
+            if node.id in child_openings:
+                app, child_report = child_openings[node.id]
                 try:
                     opened = app.open_in_browser(child_report)
                 except (OSError, ValueError):

@@ -35,7 +35,7 @@ from ..variants.model import ProductLineSpec
 from ..versioning import VersionDependency, VersioningSpec
 from ..workflows import WorkflowFile, WorkflowSpec
 
-JOB_RE = re.compile(r"^[a-z][a-z0-9-]*$")
+JOB_RE = re.compile(r"^[a-z][a-z0-9_-]*$")
 PARAM_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 STEP_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
@@ -95,8 +95,8 @@ def _listify(value: Any) -> Any:
 
 class RepositorySpec(_Strict):
     alias: str = Field(
-        description="Short repository name used in VMR commands and workflow repository references. Use lowercase letters, digits and hyphens.",
-        pattern=r"^[a-z][a-z0-9-]*$",
+        description="Short repository name used in VMR commands and workflow repository references. Use lowercase letters, digits, underscores and hyphens.",
+        pattern=r"^[a-z][a-z0-9_-]*$",
     )
     config_path: str = Field(
         description="Configuration directory relative to .main.ptk.yml. PTK loads the conventional configuration files from this directory.",
@@ -935,7 +935,7 @@ class PtkConfig(_Strict):
         description="Artifact destination rules by event, branch/tag and job. Configure downloads for tools in tools instead.",
     )
     workflows: dict[str, WorkflowSpec] = Field(
-        description="Named sequences or parallel groups of job calls, including calls into other repositories.",
+        description="Named dependency graphs of job calls, including calls into other repositories.",
         default_factory=dict,
     )
 
@@ -1074,7 +1074,7 @@ class PtkConfig(_Strict):
         for name in v:
             if not JOB_RE.match(name):
                 raise ValueError(
-                    f"job name {name!r} must be lower-case (letters, digits, '-')"
+                    f"job name {name!r} must start with a lowercase letter (letters, digits, '_', '-')"
                 )
             if name in RESERVED_JOBS:
                 raise ValueError(f"job name {name!r} is reserved by ptk")

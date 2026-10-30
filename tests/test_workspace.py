@@ -139,7 +139,7 @@ def test_metadata_is_required_and_contained(tmp_path):
     main = tmp_path / ".main.ptk.yml"
     for text, message in [
         ("project: {name: missing}", "requires repository"),
-        ("repository: {alias: bad_name, config_path: .}", "alias"),
+        ("repository: {alias: bad.name, config_path: .}", "alias"),
         ("repository: {alias: ok, config_path: ..}", "within the repository"),
         ("repository: {alias: ok, config_path: absent}", "does not exist"),
     ]:

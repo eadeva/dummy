@@ -737,7 +737,7 @@
       "properties": {
         "only_cx": {
           "default": false,
-          "description": "Expose this job only during CX/CI execution. It is hidden from local command and extension listings.",
+          "description": "Expose this job only during CX execution. It is hidden from local command and extension listings.",
           "title": "Only Cx",
           "type": "boolean"
         },
@@ -1351,8 +1351,8 @@
       "additionalProperties": false,
       "properties": {
         "alias": {
-          "description": "Short repository name used in VMR commands and workflow repository references. Use lowercase letters, digits and hyphens.",
-          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "Short repository name used in VMR commands and workflow repository references. Use lowercase letters, digits, underscores and hyphens.",
+          "pattern": "^[a-z][a-z0-9_-]*$",
           "title": "Alias",
           "type": "string"
         },
@@ -2111,6 +2111,67 @@
         "dependencies"
       ]
     },
+    "WorkflowJob": {
+      "additionalProperties": false,
+      "properties": {
+        "job": {
+          "description": "Job to invoke: JOB in the owner's repository or REPO:JOB. Workspace-owned workflows require REPO:JOB.",
+          "pattern": "^(?:[a-z][a-z0-9_-]*:)?[a-z][a-z0-9_-]*$",
+          "title": "Job",
+          "type": "string",
+          "x-ptk-reference": {
+            "path": [
+              "jobs"
+            ],
+            "label": "job",
+            "allow-custom": true
+          }
+        },
+        "needs": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+              "type": "string"
+            },
+            {
+              "items": {
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "Invocation IDs that must succeed before this job starts. Accepts one ID or a list. Omit for an immediately eligible job.",
+          "title": "Needs"
+        },
+        "params": {
+          "additionalProperties": true,
+          "description": "Parameter values supplied to the called job.",
+          "title": "Params",
+          "type": "object"
+        },
+        "continue_on_error": {
+          "default": false,
+          "description": "Allow dependents to run after this job fails and tolerate its failure in the workflow exit status. Reports retain the failure. Cancellation is never tolerated.",
+          "title": "Continue On Error",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "job"
+      ],
+      "title": "WorkflowJob",
+      "type": "object",
+      "x-ptk-initial": {
+        "job": "hello"
+      },
+      "x-ptk-field-order": [
+        "job",
+        "needs",
+        "params",
+        "continue_on_error"
+      ]
+    },
     "WorkflowSpec": {
       "additionalProperties": false,
       "properties": {
@@ -2147,32 +2208,30 @@
           "description": "Open the aggregate report after every run (always), only on failures (on-errors), or disable automatic opening (null).",
           "title": "Open Report"
         },
-        "parallel": {
-          "default": false,
-          "description": "Run top-level workflow entries concurrently.",
-          "title": "Parallel",
-          "type": "boolean"
-        },
         "max_workers": {
           "default": 4,
-          "description": "Maximum number of concurrent workflow workers.",
+          "description": "Maximum number of concurrent workflow jobs. Dependencies, not YAML order, determine when jobs become eligible.",
           "maximum": 32,
           "minimum": 1,
           "title": "Max Workers",
           "type": "integer"
         },
-        "steps": {
-          "description": "Ordered job calls or nested groups. At least one entry is required.",
-          "items": {
-            "$ref": "#/$defs/WorkflowEntry"
+        "jobs": {
+          "additionalProperties": {
+            "$ref": "#/$defs/WorkflowJob"
           },
-          "minItems": 1,
-          "title": "Steps",
-          "type": "array"
+          "description": "Named job invocations. IDs are local to this workflow and are referenced by needs. YAML order controls presentation only.",
+          "minProperties": 1,
+          "propertyNames": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$"
+          },
+          "title": "Jobs",
+          "type": "object",
+          "x-ptk-entry-name": "job"
         }
       },
       "required": [
-        "steps"
+        "jobs"
       ],
       "title": "WorkflowSpec",
       "type": "object",
@@ -2180,9 +2239,8 @@
         "help",
         "audience",
         "open_report",
-        "parallel",
         "max_workers",
-        "steps"
+        "jobs"
       ]
     },
     "StepBody": {
@@ -2190,7 +2248,7 @@
       "properties": {
         "only_cx": {
           "default": false,
-          "description": "Skip this step outside CX/CI execution.",
+          "description": "Skip this step outside CX execution.",
           "title": "Only Cx",
           "type": "boolean"
         },
@@ -2445,115 +2503,6 @@
           }
         ]
       }
-    },
-    "WorkflowBody": {
-      "additionalProperties": false,
-      "properties": {
-        "job": {
-          "anyOf": [
-            {
-              "pattern": "^[a-z][a-z0-9-]*$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Job to call. Choose either a job call or a group of child steps.",
-          "title": "Job",
-          "x-ptk-reference": {
-            "path": [
-              "jobs"
-            ],
-            "label": "job"
-          }
-        },
-        "repo": {
-          "anyOf": [
-            {
-              "pattern": "^[a-z][a-z0-9-]*$",
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Repository alias owning the job. Omit for the workflow\u2019s own repository.",
-          "title": "Repo"
-        },
-        "params": {
-          "additionalProperties": true,
-          "description": "Parameter values supplied to the called job.",
-          "title": "Params",
-          "type": "object"
-        },
-        "steps": {
-          "anyOf": [
-            {
-              "items": {
-                "$ref": "#/$defs/WorkflowEntry"
-              },
-              "minItems": 1,
-              "type": "array"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Nested workflow entries in this group.",
-          "title": "Steps"
-        },
-        "parallel": {
-          "default": false,
-          "description": "Run the child entries concurrently. Only valid for groups.",
-          "title": "Parallel",
-          "type": "boolean"
-        },
-        "continue_on_error": {
-          "default": false,
-          "description": "Continue the workflow after this entry fails.",
-          "title": "Continue On Error",
-          "type": "boolean"
-        }
-      },
-      "required": [],
-      "title": "WorkflowNode",
-      "type": "object",
-      "x-ptk-initial": {
-        "job": "hello"
-      },
-      "x-ptk-field-order": [
-        "job",
-        "repo",
-        "params",
-        "steps",
-        "parallel",
-        "continue_on_error"
-      ]
-    },
-    "WorkflowEntry": {
-      "default": {
-        "job": {
-          "job": "hello"
-        }
-      },
-      "x-ptk-entry-name": "job",
-      "type": "object",
-      "minProperties": 1,
-      "maxProperties": 1,
-      "additionalProperties": {
-        "anyOf": [
-          {
-            "$ref": "#/$defs/WorkflowBody"
-          },
-          {
-            "type": "string"
-          }
-        ]
-      }
     }
   },
   "additionalProperties": false,
@@ -2575,7 +2524,7 @@
       "additionalProperties": {
         "$ref": "#/$defs/WorkflowSpec"
       },
-      "description": "Named sequences or parallel groups of job calls, including calls into other repositories.",
+      "description": "Named dependency graphs of job calls, including calls into other repositories.",
       "title": "Workflows",
       "type": "object"
     },
@@ -2744,7 +2693,7 @@
       "description": "Analyze step diagnostics and retain ignored or justified findings with their reasons."
     },
     "plugins": {
-      "description": "Python modules loaded to register additional PTK plugins.",
+      "description": "Installed distribution names selected for PTK plugin loading.",
       "items": {
         "type": "string"
       },

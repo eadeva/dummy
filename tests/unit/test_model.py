@@ -25,7 +25,7 @@ def test_old_job_configuration_names_are_not_accepted(fields):
 
 def test_workflow_requires_job_and_schema_uses_job_names():
     with pytest.raises(ValidationError, match="Extra inputs are not permitted"):
-        WorkflowSpec.model_validate({"steps": [{"check": {"action": "build"}}]})
+        WorkflowSpec.model_validate({"jobs": {"check": {"action": "build"}}})
     schema = PtkConfig.model_json_schema()
     assert "jobs" in schema["properties"] and "actions" not in schema["properties"]
     assert "JobSpec" in schema["$defs"] and "ActionSpec" not in schema["$defs"]
