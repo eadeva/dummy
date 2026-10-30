@@ -53,12 +53,12 @@ def test_step_lifecycle_and_messages_share_the_full_context(variant, shown):
     prefix = f"[{shown}][docs][sphinx] "
     assert all(line.startswith(prefix) for line in lines)
     assert [line[len(prefix) :] for line in lines] == [
-        "--- STEP | START ---",
+        "STEP | START",
         "Command: sphinx-build docs output",
         "building [html] :smile:",
         "warning: first",
         "  second",
-        "--- STEP | FAILED | 1.2s | allowed failure ---",
+        "STEP | FAILED | 1.2s | allowed failure",
         "exit code 2",
     ]
 
@@ -97,7 +97,7 @@ def test_quiet_output_keeps_context_for_warnings_and_skipped_steps():
     assert stream.getvalue().splitlines() == [
         "[default][docs][sphinx] warning: step warning",
         "[default][docs] warning: job warning",
-        "[default][docs][sphinx] --- STEP | SKIPPED | 0.0s ---",
+        "[default][docs][sphinx] STEP | SKIPPED | —",
         "[default][docs][sphinx] condition false",
     ]
 
@@ -196,7 +196,7 @@ def test_headers_use_prepared_metadata_and_only_verbose_shows_features(verbose):
     )
     out.run_started(plan)
     text = stream.getvalue()
-    assert "JOB docs | START" in text
+    assert "JOB [debug][docs] | START" in text
     assert "Project: Firmware | Project version: 2.4.1" in text
     assert "Repository: fw | PTK: 9.0.0" in text
     assert "Variant: debug — Development" in text
@@ -207,19 +207,20 @@ def test_headers_use_prepared_metadata_and_only_verbose_shows_features(verbose):
 
 
 def test_header_entity_colors_are_distinct_from_result_colors():
-    from ptk.drivers.cli.console import header
+    from ptk.domain import run_output as display
+    from ptk.drivers.cli.console import print_block
 
     stream = io.StringIO()
     console = Console(
         file=stream, force_terminal=True, no_color=False, color_system="standard"
     )
-    header(console, "WORKFLOW", "verify", "START")
+    print_block(console, display.start_block("WORKFLOW", "[debug][verify]", []))
     out = ConsoleObserver(console)
     out.run_started(JobPlan("demo", "docs", None, "run", {}, {}, [], {}, {}))
     out.step_started(step(), "echo hello")
     out.step_finished(step(), StepResult(("sphinx",), "sphinx", "uses", Status.FAILED))
     text = stream.getvalue()
-    assert "\x1b[1;35m======== WORKFLOW" in text
-    assert "\x1b[1;36m-------- JOB" in text
-    assert "\x1b[1;34m--- STEP" in text
+    assert "\x1b[1;35m==== WORKFLOW [debug][verify]" in text
+    assert "\x1b[1;36m---- JOB [default][docs]" in text
+    assert "\x1b[1;34m[default][docs][sphinx] STEP" in text
     assert "\x1b[1;31mFAILED" in text

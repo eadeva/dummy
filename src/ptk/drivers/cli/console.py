@@ -28,27 +28,28 @@ MESSAGE_STYLE = {
     Level.ERROR: "bold red",
 }
 STYLE = {
-    Status.PASSED: "green",
-    Status.FAILED: "red",
-    Status.SKIPPED: "dim",
-    Status.CANCELLED: "yellow",
-    Status.PENDING: "white",
+    Status.PASSED: "bold green",
+    Status.FAILED: "bold red",
+    Status.SKIPPED: "bright_black",
+    Status.CANCELLED: "bold yellow",
+    Status.PENDING: "default",
 }
 
 
 ENTITY_STYLE = {"WORKFLOW": "bold magenta", "JOB": "bold cyan", "STEP": "bold blue"}
 
 
-def header(console, kind, identity, state, rows=(), *, status=None):
-    text = Text(display.boundary(kind, identity, state, console.width))
-    text.stylize(ENTITY_STYLE[kind])
-    if status is not None:
-        start = text.plain.find(str(status).upper(), text.plain.find(" | "))
-        if start >= 0:
-            text.stylize(STYLE[status], start, start + len(str(status)))
-    for row in rows:
-        text.append("\n" + row, style="default")
-    console.print(text, highlight=False, soft_wrap=True)
+def render_block(block: display.Block) -> Text:
+    styles = {**ENTITY_STYLE, **STYLE, "muted": "dim", "warning": "yellow"}
+    return Text("\n").join(
+        Text.assemble(*((text, styles.get(role, "default")) for text, role in row))
+        for row in block
+    )
+
+
+def print_block(console, block: display.Block):
+    # One print keeps the entire header/summary together across observers.
+    console.print(render_block(block), highlight=False, soft_wrap=True)
 
 
 class ConsoleObserver:
@@ -72,37 +73,26 @@ class ConsoleObserver:
     def run_started(self, plan: JobPlan) -> None:
         self._job_label = self._job_label or plan.job
         self._run_prefix = display.prefix(self._job_label, plan.variant)
-        header(
+        print_block(
             self._console,
-            "JOB",
-            self._job_label,
-            "START",
-            display.job_rows(plan, verbose=self._level <= Level.DEBUG),
+            display.start_block(
+                "JOB",
+                self._run_prefix,
+                display.job_rows(plan, verbose=self._level <= Level.DEBUG),
+                width=self._console.width,
+            ),
         )
 
     def step_started(self, step: PlannedStep, command: str | None) -> None:
-        self._record(
-            Text("\n").join(
-                [
-                    self._step_boundary(step, "START"),
-                    *(
-                        Text(row, style="dim")
-                        for row in display.step_rows(step, command)
-                    ),
-                ]
-            ),
-            step,
+        self._print(
+            render_block(
+                display.step_block(
+                    self._run_prefix + f"[{step.name}]",
+                    step=step,
+                    command=command,
+                )
+            )
         )
-
-    def _step_boundary(self, step, state, status=None):
-        width = self._console.width - len(self._run_prefix) - len(step.name) - 3
-        text = Text(display.boundary("STEP", "", state, width))
-        text.stylize(ENTITY_STYLE["STEP"])
-        if status is not None:
-            start = text.plain.find(str(status).upper(), text.plain.find(" | "))
-            if start >= 0:
-                text.stylize(STYLE[status], start, start + len(str(status)))
-        return text
 
     def output(self, step: PlannedStep, line: str) -> None:
         if self._quiet:
@@ -119,19 +109,19 @@ class ConsoleObserver:
         self._record(Text(f"{level.label}: {text}", style=style), step)
 
     def step_finished(self, step: PlannedStep, result: StepResult) -> None:
-        text = self._step_boundary(step, display.outcome(result), result.status)
-        if result.message and result.message != result.status.value:
-            text.append("\n" + result.message, style="dim")
-        self._record(text, step)
+        self._print(
+            render_block(
+                display.step_block(
+                    self._run_prefix + f"[{step.name}]",
+                    result=result,
+                )
+            )
+        )
 
     def run_finished(self, result: RunResult) -> None:
-        header(
+        print_block(
             self._console,
-            "JOB",
-            self._job_label,
-            f"{str(result.status).upper()} | {result.duration:.1f}s",
-            display.result_rows(result),
-            status=result.status,
+            display.job_summary(result, self._job_label, width=self._console.width),
         )
 
     def _record(self, text: Text, step: PlannedStep | None = None) -> None:

@@ -129,7 +129,9 @@ class FileLogObserver:
         )
         self._transcript.run_started(plan)
         for name, value in plan.params.items():
-            self._line(f"param {name} = {value!r} ({plan.param_sources[name]})")
+            self._transcript.record(
+                f"param {name} = {value!r} ({plan.param_sources[name]})"
+            )
         self._event("run_started", params=plan.params, param_sources=plan.param_sources)
 
     def step_started(self, step: PlannedStep, command: str | None) -> None:

@@ -36,13 +36,25 @@ failed tests. Report findings never overwrite a process exit code.
 Console hierarchy, identity and spacing
 ----------------------------------------
 
-Real runs print start and finish boundaries for each execution level:
-``======== WORKFLOW``, ``-------- JOB`` and ``--- STEP``. Workflow headings
-are purple, job headings cyan and step headings blue. Outcome words retain
-their status colors (green passed, red failed, yellow cancelled); labels also
-identify the level and outcome when color is unavailable. Terminal and VS Code
-themes choose the exact shades. The extension uses the same entity colors and
-neutral gray for built-in commands.
+Real runs use named workflow/job boundaries and compact step records. Start
+and summary titles repeat their complete context, for example
+``---- JOB [debug][build] | START ----`` and
+``---- JOB SUMMARY [debug][build] | FAILED | 2.5s ----``. Workflow titles use
+equals signs and ``WORKFLOW``/``WORKFLOW SUMMARY``. Their context is
+``[owner-variant][workflow]`` for a repository workflow, or
+``[workspace][workflow]`` for a workspace workflow, which has no single variant.
+Each metadata line repeats its owner's prefix. Step records use
+``[debug][build][compile] STEP | START`` and a matching result line without
+another long separator.
+
+Entity labels, separators and metadata prefixes are purple for workflows,
+cyan for jobs and blue for steps. A failed job's title stays cyan while its
+``FAILED`` outcome is red. ``PASSED`` is green, ``SKIPPED`` gray and
+``CANCELLED`` amber. Nonzero status counts use the corresponding color;
+zero counts are neutral. An allowed failure remains ``FAILED`` with an amber
+``allowed failure`` annotation. Labels and reasons remain visible without
+color. Terminal and VS Code themes choose the exact shades. The extension
+uses the same entity colors and neutral gray for built-in commands.
 
 The workflow header shows its owner or workspace, PTK version, run ID, job count
 and concurrency limit. It lists the participating repositories' project names,
@@ -57,32 +69,47 @@ inheritance, selected components and resolved feature values on the console.
 
 Step starts include the command, optional display title and requested generators.
 Step finishes show outcome, duration and an available failure/skip reason.
-Job/workflow footers give outcome, duration, status counts and log location;
-workflow footers also list individual invocations, including jobs blocked before
-they could start. An allowed failure is explicitly labelled.
+A skipped step's duration is a dash because it did not execute. Job/workflow
+summary titles retain their measured duration even when all children skipped.
+Job summaries list each step's ID, result, duration and reason. Workflow
+summaries list jobs with their actual variants, repository qualification where
+needed and invocation aliases, including jobs blocked before they could start.
+Both include colored status counts and the log location.
+
+``What failed`` recap lines identify failed execution steps using their complete
+``[variant][job][step]`` identity. A failure before step execution identifies the
+job instead. Allowed failures remain visible, including when the enclosing job
+or workflow passes. A workflow summary annotates failures permitted by its
+invocation policy. Cancellation and skips retain their reasons without being
+relabeled as failures. This recap uses execution results; detailed imported
+test/log diagnostics remain in the HTML report. A passed job with report errors
+is marked ``report findings (see report)`` in the workflow summary.
 
 PTK prefixes step output, start/finish records and step messages with
 ``[variant][job][step]``, matching the output folder order. For example, the
-documentation job prints ``[default][docs][sphinx]``. These are the job and step IDs, not display titles or
-workflow invocation aliases. ``default`` is the existing no-variant convention;
-a selected variant uses its own name. Job-level messages use ``[variant][job]``.
+documentation job prints ``[default][docs][sphinx]``. These are the job and step
+IDs, not display titles or workflow invocation aliases. ``default`` is the
+existing no-variant convention; a selected variant uses its own name.
+Job-level messages use ``[variant][job]``.
 Each concurrent job retains its own context. Workspace and cross-repository
 workflows qualify the job field as ``[variant][repository:job][step]`` to
 distinguish equal job IDs while preserving three fields. Invocation aliases
 appear in job metadata and the workflow summary.
 
-Each header and its metadata are written as one block. Parallel jobs continue
-streaming between blocks; they are not buffered until completion. PTK does not
+Each header with its metadata, and each complete summary, is written as one
+block. Parallel jobs continue streaming between blocks; they are not buffered
+until completion. PTK does not
 increase indentation with nesting. The prefix identifies the emitting step
 even when several jobs have started since its header.
 
-Every logical line receives a prefix, including multiline messages. Tabs expand
-to eight-column stops within the tool text before PTK adds the prefix, preserving
+Every streamed logical line receives a prefix, including multiline messages.
+Tabs expand to eight-column stops within the tool text before PTK adds the prefix, preserving
 the tool's indentation independently of identifier lengths. Tool ANSI colors
 are interpreted; cursor movement and erase controls do not redraw the shared
 console. Carriage-return progress updates become separate lines.
 
-PTK does not pad identifiers into fixed-width columns or reflow captured output.
+Streaming prefixes are unpadded; summary columns align within their own block.
+PTK does not reflow captured output.
 Long lines may wrap at the terminal's current width, with wrapped continuations
 starting at the terminal margin. Captured step logs retain their original text
 without these console prefixes or presentation changes. The aggregate job

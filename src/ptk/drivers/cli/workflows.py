@@ -329,6 +329,7 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False):
                 ],
                 cancel,
             )
+            output.job_finished(node, result)
             opening = write_reports(
                 state, prepared.project, p, result, open_browser=False
             )

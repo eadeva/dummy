@@ -15,7 +15,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_LOGS
    :tags: implemented
 
-   PTK shall prefix each logical console step line with [variant][job][step],
+   PTK shall prefix each streamed logical console step line with [variant][job][step],
    matching the output folder order,
    including output, start/finish records and step messages. It shall use the
    selected variant or the established default name when no variant is selected.
@@ -41,7 +41,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :security: false
    :legal: false
    :status: accepted
-   :verification_criteria: Observer and real workflow tests verify level boundaries, prepared metadata, verbose variant details, entity/status colors, masked values, concurrent repository identity, plain transcripts and failed/blocked outcomes.
+   :verification_criteria: Observer and real workflow tests verify explicit owner identity, atomic header/summary blocks under concurrency, prepared metadata, verbose variant details, status/count colors, masked values, plain transcripts, cancellation, blocked jobs and permitted failures with exact step identities.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_LOGS
    :tags: implemented
@@ -50,13 +50,22 @@ Canonical results, retained evidence and diagnostic interpretation.
    boundaries. Workflow/job headers shall expose prepared project versions,
    variants, run identity and execution limits without additional version
    discovery. Verbose console output shall include resolved variant details.
-   Header blocks shall remain intact during concurrent execution, while step
-   output continues streaming. Finish records shall include outcomes, durations
-   and relevant status counts or reasons.
+   Start and summary titles and metadata lines shall repeat their owner context.
+   Workspace workflows shall identify workspace scope and list each job's actual
+   variant. Header and summary blocks shall remain intact during concurrent
+   execution, while step output continues streaming. Job summaries shall list
+   steps and workflow summaries shall list job identities and invocation aliases,
+   including outcomes, durations, counts and reasons. Execution failure recaps
+   shall identify the failed step, or the job if no step result exists, and retain
+   permitted failures even when their parent passes.
 
    PTK shall use purple workflow, cyan job and blue step headings, retain
    independent status colors and provide readable output without color. It
-   shall write matching plain-text aggregate job logs and an immutable workflow
+   shall show passed results in green, failed in red, skipped in gray and
+   cancelled in amber. Zero counts shall be neutral; allowed failures shall
+   retain their failed status with an amber annotation. These presentation
+   choices shall not alter execution outcomes. PTK shall write matching
+   plain-text aggregate job logs and an immutable workflow
    transcript alongside workflow reports, without adding presentation prefixes
    to raw captured step output or exposing resolved secrets.
    Raw step logs shall use a separate directory so valid step IDs cannot
@@ -69,7 +78,8 @@ Canonical results, retained evidence and diagnostic interpretation.
    file transcript observers; workflow execution owns the combined transcript.
    The extension applies the same entity roles to tree and editor views.
 
-   **Evidence:** ``tests/test_console_output.py``; ``tests/test_logging.py``;
+   **Evidence:** ``tests/test_console_output.py``; ``tests/test_run_summaries.py``;
+   ``tests/test_logging.py``;
    ``tests/workflows/test_transcript.py``;
    ``extensions/project-toolkit/test/extension.test.js``;
    ``extensions/project-toolkit/test/graph-editor-ui.test.js``.

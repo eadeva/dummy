@@ -252,7 +252,13 @@ headers. It lists participating repositories' already prepared versions and
 variants; it does not perform another version lookup just for display. Workspace
 and cross-repository workflows qualify step prefixes as
 ``[variant][repository:job][step]``. Header blocks stay together while output
-from parallel jobs can alternate between them. Individual raw step logs remain
+from parallel jobs can alternate between them. Each summary is also one block:
+job summaries list steps, and the workflow summary lists job identities,
+variants, invocation aliases, outcomes, durations and skip reasons. The
+``What failed`` recap retains exact step identities and annotates allowed
+failures even when the workflow passes. Workspace headers identify their scope
+as ``[workspace][workflow]`` instead of inventing a shared variant; each job
+row shows its actual variant. Individual raw step logs remain
 available through the child reports. See :doc:`log-analysis` for metadata,
 verbosity and formatting details.
 

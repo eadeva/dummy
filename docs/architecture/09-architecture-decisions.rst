@@ -641,12 +641,24 @@ not imply that every related future capability has been implemented.
    useful run metadata and consistent identity under concurrency. Colors in the
    terminal and extension should refer to the same execution entities.
 
-   **Decision:** Print start/finish boundaries with equals signs for workflows,
-   long dash separators for jobs and compact dash separators for steps. Use
-   purple workflows, cyan jobs and blue steps in CLI headings and extension
+   **Decision:** Use named start and summary boundaries with equals signs for
+   workflows and dashes for jobs. Repeat [variant][job] or
+   [owner-variant][workflow] in both titles and every metadata line. Workspace
+   workflows use [workspace][workflow] because their jobs can have different
+   variants. Use compact [variant][job][step] start/result lines without long
+   step separators. These identities remain explicit under parallel output.
+   Use purple workflows, cyan jobs and blue steps in CLI headings and extension
    entity views; use neutral gray for built-in extension commands. Keep outcome,
    warning, selection and focus colors independent. Exact shades follow the
    terminal/editor theme and text labels remain available without color.
+
+   Keep entity titles in their own color, and color result labels separately:
+   green PASSED, red FAILED, gray SKIPPED and amber CANCELLED. Color nonzero
+   counts by status and leave zeros neutral. An allowed failure stays FAILED
+   with an amber annotation, without changing the enclosing execution outcome.
+   Named sections, per-item result/duration recaps and explicit outcome labels
+   are the selected patterns; nested terminal boxes are unsuitable for live
+   output that alternates between parallel jobs.
 
    Reuse prepared, masked project version and variant metadata; do not run extra
    discovery to decorate output. Workflow headers list actual participating
@@ -654,16 +666,24 @@ not imply that every related future capability has been implemented.
    project version. Job headers include project/repository identity, project/PTK
    versions, variant description and counts, run ID and execution limits.
    Verbose console output and debug file logs include resolved variant details.
-   Footer counts and reasons include skipped, blocked and allowed-failure cases.
+   Job summaries list steps; workflow summaries list qualified job identities,
+   actual variants and invocation aliases. Both include durations, counts and
+   reasons for skipped, blocked and allowed-failure cases. Execution failure
+   recaps repeat complete step identities, or job identity if execution did
+   not reach a step. Preserve failures permitted by step or invocation policy
+   in the recap even when the parent passes. Detailed imported diagnostics
+   remain in reports, with a report-findings marker for passed jobs when needed.
 
-   Share plain presentation helpers between the console and aggregate logs.
-   Write each header block atomically and retain live interleaving of contextual
+   Share presentation text with semantic roles between console and aggregate
+   logs; only the console translates roles into colors. Write each complete
+   header and summary block atomically and retain live interleaving of contextual
    records from concurrent jobs. Add an immutable workflow.log beside workflow
    reports; preserve per-job rotation and original raw per-step capture. Store
    raw logs under steps/STEP.log so a step named run cannot truncate run.log;
    do not reject valid IDs or add a special-name fallback. Declared log paths
-   and report links follow the layout. Avoid
-   nested indentation, fixed-width ID columns and terminal cursor rewriting.
+   and report links follow the layout. Avoid nested indentation, padding
+   streamed prefixes and terminal cursor rewriting.
+   Align summary columns within each block without truncating identities.
 
    **Consequences:** Long lines can still wrap at the terminal margin. Concurrent
    output is identified by prefixes rather than assumed containment below the

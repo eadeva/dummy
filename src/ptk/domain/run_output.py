@@ -1,7 +1,8 @@
-"""Plain run presentation shared by console and aggregate transcripts."""
+"""Run text and semantic roles shared by console and plain transcripts."""
 
 import json
 from collections import Counter
+from dataclasses import dataclass
 
 from .layout import NO_VARIANT
 
@@ -10,18 +11,52 @@ def one_line(value):
     return str(value).replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t")
 
 
-def boundary(kind, identity, state, width=80):
-    mark = "=" if kind == "WORKFLOW" else "-"
-    lead = (
-        f"{mark * (3 if kind == 'STEP' else 8)} {kind}"
-        + (f" {one_line(identity)}" if identity else "")
-        + f" | {state} "
-    )
-    return lead + mark * max(3, width - len(lead))
+# Each fragment carries a semantic role, never a terminal escape or markup.
+Line = list[tuple[str, str]]
+Block = list[Line]
+
+
+def plain(block: Block) -> str:
+    return "\n".join("".join(text for text, _role in row) for row in block)
 
 
 def prefix(job, variant, step=None):
     return f"[{variant or NO_VARIANT}][{job}]" + (f"[{step}]" if step else "")
+
+
+def contextual(identity, rows, role) -> Block:
+    return [
+        [(identity + " ", role), (line.expandtabs(8), "")]
+        for row in rows
+        for line in row.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    ]
+
+
+def heading(kind, identity, *, result=None, width=80) -> Line:
+    mark = "=" if kind == "WORKFLOW" else "-"
+    label = kind + (" SUMMARY" if result is not None else "")
+    row = [(f"{mark * 4} {label} {identity} | ", kind)]
+    row += (
+        outcome(result, duration=f"{result.duration:.1f}s")
+        if result is not None
+        else [("START", "")]
+    )
+    used = sum(len(text) for text, _role in row)
+    row.append((" " + mark * max(4, width - used - 1), kind))
+    return row
+
+
+def start_block(kind, identity, rows, *, width=80) -> Block:
+    return [heading(kind, identity, width=width), *contextual(identity, rows, kind)]
+
+
+def step_block(identity, *, step=None, command=None, result=None) -> Block:
+    row = [(identity + " STEP | ", "STEP")]
+    row += outcome(result) if result is not None else [("START", "")]
+    rows = step_rows(step, command) if step is not None else []
+    if result is not None and result.message and result.message != str(result.status):
+        rows.append(result.message)
+    return [row, *contextual(identity, rows, "STEP")]
 
 
 def project_version(plan):
@@ -71,19 +106,6 @@ def job_rows(plan, *, verbose=False):
     return rows
 
 
-def counts(label, results):
-    values = list(results)
-    statuses = Counter(str(item.status) for item in values)
-    parts = [
-        f"{statuses[name]} {name}"
-        for name in ("passed", "failed", "skipped", "cancelled")
-    ]
-    allowed = sum(item.allowed_failure for item in values)
-    if allowed:
-        parts.append(f"{allowed} allowed failure(s)")
-    return f"{label}: " + " | ".join(parts)
-
-
 def step_rows(step, command):
     rows = []
     if step.title != step.name:
@@ -95,15 +117,105 @@ def step_rows(step, command):
     return rows
 
 
-def outcome(result):
-    text = f"{str(result.status).upper()} | {result.duration:.1f}s"
-    if result.allowed_failure:
-        text += " | allowed failure"
-    return text
+def elapsed(result):
+    return "—" if result.status in ("skipped", "pending") else f"{result.duration:.1f}s"
 
 
-def result_rows(result):
-    rows = [counts("Steps", result.steps)]
-    if result.log_file:
-        rows.append(f"Log: {result.log_file}")
+def outcome(result, *, duration=None) -> Line:
+    row = [
+        (str(result.status).upper(), str(result.status)),
+        (f" | {duration if duration is not None else elapsed(result)}", ""),
+    ]
+    if getattr(result, "allowed_failure", False):
+        row.append((" | allowed failure", "warning"))
+    return row
+
+
+@dataclass(frozen=True)
+class SummaryEntry:
+    identity: str
+    status: str
+    duration: float
+    allowed_failure: bool
+    detail: str
+    kind: str = "STEP"
+
+
+def entry(identity, result, *, detail="", allowed=False, kind="STEP"):
+    reason = result.message if result.message != str(result.status) else ""
+    return SummaryEntry(
+        one_line(identity),
+        str(result.status),
+        result.duration,
+        allowed or result.allowed_failure,
+        one_line("; ".join(part for part in (detail, reason) if part)),
+        kind,
+    )
+
+
+def job_failures(result, label, *, allowed=False):
+    return [
+        entry(prefix(label, result.variant, step.name), step, allowed=allowed)
+        for step in result.steps
+        if step.status == "failed"
+    ]
+
+
+def summary_block(
+    kind, identity, result, entries, *, failures=(), log_file=None, width=80
+) -> Block:
+    child_kind, label = ("STEP", "Step") if kind == "JOB" else ("JOB", "Job")
+    rows = [heading(kind, identity, result=result, width=width)]
+    # Align only this summary's columns. Streaming prefixes are never padded.
+    name_width = max([len(label), *(len(item.identity) for item in entries)])
+    if entries:
+        rows.append([(f"{label:<{name_width}}  Result     Duration  Detail", "muted")])
+    for item in entries:
+        row = [
+            (f"{item.identity:<{name_width}}  ", child_kind),
+            (item.status.upper(), item.status),
+            (f"{' ' * (11 - len(item.status))}{elapsed(item):>8}", ""),
+        ]
+        if item.allowed_failure:
+            row.append(("  allowed failure", "warning"))
+        if item.detail:
+            row.append(("  " + item.detail, ""))
+        rows.append(row)
+    statuses = Counter(item.status for item in entries)
+    counts = [(f"{identity} ", kind), (label + "s: ", "")]
+    for index, status in enumerate(("passed", "failed", "skipped", "cancelled")):
+        if index:
+            counts.append((" | ", ""))
+        count = statuses[status]
+        counts.append((f"{count} {status}", status if count else "muted"))
+    allowed_count = sum(item.allowed_failure for item in entries)
+    if allowed_count:
+        counts.append((f" | {allowed_count} allowed failure(s)", "warning"))
+    rows.append(counts)
+    for failure in failures:
+        row = [
+            (f"{identity} ", kind),
+            ("What failed: ", "failed"),
+            (failure.identity, failure.kind),
+            (" | FAILED", "failed"),
+        ]
+        if failure.allowed_failure:
+            row.append((" | allowed failure", "warning"))
+        if failure.detail:
+            row.append((" | " + failure.detail, ""))
+        rows.append(row)
+    if log_file:
+        rows += contextual(identity, [f"Log: {log_file}"], kind)
     return rows
+
+
+def job_summary(result, label, *, width=80) -> Block:
+    return summary_block(
+        "JOB",
+        prefix(label, result.variant),
+        result,
+        [entry(step.name, step) for step in result.steps],
+        failures=job_failures(result, label),
+        log_file=result.log_file,
+        width=width,
+    )

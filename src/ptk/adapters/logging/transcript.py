@@ -40,28 +40,29 @@ class RunTranscript:
     def run_started(self, plan):
         self.plan = plan
         self.label = self.job_label or plan.job
-        self.write(
-            "\n".join(
-                [
-                    display.boundary("JOB", self.label, "START"),
-                    *display.job_rows(plan, verbose=self.level <= Level.DEBUG),
-                ]
+        self.identity = display.prefix(self.label, plan.variant)
+        self.block(
+            display.start_block(
+                "JOB",
+                self.identity,
+                display.job_rows(plan, verbose=self.level <= Level.DEBUG),
             )
         )
+
+    def block(self, block):
+        self.write(visible(display.plain(block)))
 
     def record(self, text, step=None):
         tag = display.prefix(self.label, self.plan.variant, step.name if step else None)
         self.write("\n".join(f"{tag} {line}" for line in visible(text).split("\n")))
 
     def step_started(self, step, command):
-        self.record(
-            "\n".join(
-                [
-                    display.boundary("STEP", "", "START"),
-                    *display.step_rows(step, command),
-                ]
-            ),
-            step,
+        self.block(
+            display.step_block(
+                self.identity + f"[{step.name}]",
+                step=step,
+                command=command,
+            )
         )
 
     def output(self, step, line):
@@ -72,21 +73,7 @@ class RunTranscript:
             self.record(f"{level.label}: {text}", step)
 
     def step_finished(self, step, result):
-        rows = [display.boundary("STEP", "", display.outcome(result))]
-        if result.message and result.message != str(result.status):
-            rows.append(result.message)
-        self.record("\n".join(rows), step)
+        self.block(display.step_block(self.identity + f"[{step.name}]", result=result))
 
     def run_finished(self, result):
-        self.write(
-            "\n".join(
-                [
-                    display.boundary(
-                        "JOB",
-                        self.label,
-                        f"{str(result.status).upper()} | {result.duration:.1f}s",
-                    ),
-                    *display.result_rows(result),
-                ]
-            )
-        )
+        self.block(display.job_summary(result, self.label))
