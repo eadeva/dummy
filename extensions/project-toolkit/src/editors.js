@@ -6,6 +6,7 @@ const model = require("./config-model");
 const core = require("./core");
 const { validateParameters } = require("./parameters");
 const projectEdits = require("./project-edits");
+const { canonicalPath } = require("./file-path");
 const fs = require("node:fs/promises");
 const viewType = "project-toolkit.configuration";
 
@@ -166,10 +167,11 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
             documents.set(file, doc); texts.set(file, doc.getText());
           }
           const changes = projectEdits.plan({ ...config, entry_file: owner.project.entry_file }, texts, message.operations);
+          const root = canonicalPath(owner.root);
           for (const [file, after] of changes) {
-            const relative = path.relative(owner.root, file);
-            if (relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) throw new Error("Configuration files must stay inside the repository.");
-            for (let current = file; current !== owner.root; current = path.dirname(current)) {
+            const relative = path.relative(root, file);
+            if (!relative || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) throw new Error("Configuration files must stay inside the repository.");
+            for (let current = file; path.relative(root, current); current = path.dirname(current)) {
               const stat = await fs.lstat(current).catch(error => { if (error.code !== "ENOENT") throw error; });
               if (stat?.isSymbolicLink()) throw new Error("Configuration paths cannot contain symbolic links.");
               if (current === file && stat && !documents.has(file)) throw new Error("The destination file already exists. Refresh PTK before editing it.");

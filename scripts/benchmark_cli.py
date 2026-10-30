@@ -34,12 +34,13 @@ def write_project(root: Path, alias: str, *, jobs: int = 12) -> None:
         (config / "jobs" / f"job-{i}.ptk.yml").write_text(
             f"help: Benchmark job {i}\n"
             "params: {mode: {default: debug}, count: {type: int, default: 2}}\n"
-            "steps:\n  - inspect: {uses: echo, with: {message: '${params.mode}'}}\n"
-            "  - finish: {uses: echo, with: {message: done}}\n",
+            "steps:\n  inspect: {uses: echo, with: {message: '${params.mode}'}}\n"
+            "  finish: {uses: echo, with: {message: done}, needs: [inspect]}\n",
             encoding="utf-8",
         )
     (config / "workflows/verify.ptk.yml").write_text(
-        "steps: [{check: {job: job-0}}, {test: {job: job-1}}]\n", encoding="utf-8"
+        "jobs:\n  check: {job: job-0}\n  test: {job: job-1, needs: [check]}\n",
+        encoding="utf-8",
     )
 
 

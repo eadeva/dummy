@@ -184,7 +184,9 @@ def test_history_and_workflow_snapshots_keep_logs_and_policy(tmp_path):
     rotate(folder, 3)
     archived = json.loads((folder / "_history/old-run/run.json").read_text())
     assert analyze(archived).log_findings[0].occurrences == 2
-    assert "_history/old-run" in analyze(archived).log_findings[0].source_log
+    assert Path(analyze(archived).log_findings[0].source_log).parent == (
+        folder / "_history/old-run"
+    )
     copied = snapshot_logs(archived, tmp_path / "workflow")
     assert not analyze(copied).problems
     assert analyze(copied).log_findings[0].reason == "Waiting for SDK <upgrade>"

@@ -27,7 +27,8 @@ def installation(tmp_path, monkeypatch):
     tool_bin.mkdir()
     launcher = tool_bin / ("ptk.exe" if sys.platform == "win32" else "ptk")
     launcher.write_text(
-        f'#!/bin/sh\nprintf "called\\n" >> {shlex.quote(str(tool_bin / "invocations.log"))}\nexec {shlex.quote(sys.executable)} -m ptk "$@"\n'
+        f'#!/bin/sh\nprintf "called\\n" >> {shlex.quote(str(tool_bin / "invocations.log"))}\nexec {shlex.quote(sys.executable)} -m ptk "$@"\n',
+        encoding="utf-8",
     )
     launcher.chmod(0o755)
     ps = [home / "WindowsPowerShell/profile.ps1", home / "PowerShell/profile.ps1"]
@@ -60,7 +61,7 @@ def test_cli_installs_all_profiles_and_is_idempotent(installation):
     )
     assert result.exit_code == 0, result.output
     assert all(path.is_file() for path in ps)
-    assert (home / ".profile").read_text().startswith(original)
+    assert (home / ".profile").read_text(encoding="utf-8-sig").startswith(original)
     assert not (home / ".bash_profile").exists()
     files = [
         home / ".profile",
@@ -76,7 +77,7 @@ def test_cli_installs_all_profiles_and_is_idempotent(installation):
     assert before == {
         path: (path.read_bytes(), path.stat().st_mtime_ns) for path in files
     }
-    assert all(path.read_text().count(START) == 1 for path in files)
+    assert all(path.read_text(encoding="utf-8-sig").count(START) == 1 for path in files)
 
 
 def test_malformed_profile_preflight_leaves_every_file_unchanged(installation):
@@ -326,7 +327,7 @@ def test_bash_installer_configures_real_completion_without_a_venv(tmp_path, mode
     if mode == "malformed":
         assert result.returncode != 0 and "completion setup failed" in result.stdout
         assert "done -" not in result.stdout
-        assert profile.read_text() == START
+        assert profile.read_text(encoding="utf-8-sig") == START
         assert not (tmp_path / "bash home").exists()
     else:
         assert result.returncode == 0, result.stdout + result.stderr

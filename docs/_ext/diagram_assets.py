@@ -69,9 +69,12 @@ def render(jar):
             check=True,
         )
         ElementTree.fromstring(result.stdout)
-        stamp = f"<!-- PTK PlantUML source={source_digest(source)} svg={digest(result.stdout)} -->\n"
+        svg = result.stdout.rstrip() + "\n"
+        stamp = (
+            f"<!-- PTK PlantUML source={source_digest(source)} svg={digest(svg)} -->\n"
+        )
         target = DOCS / "_static/diagrams" / source.with_suffix(".svg").name
-        target.write_text(stamp + result.stdout, encoding="utf-8", newline="\n")
+        target.write_text(stamp + svg, encoding="utf-8", newline="\n")
     verify()
 
 

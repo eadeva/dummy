@@ -279,7 +279,7 @@ class LoadProject:
                 assembled = doc.assemble(fragment)
             tree = t.merge_unique(tree, assembled)
             self.editor_tree = tree
-            layers.append(str(file.relative_to(root)))
+            layers.append(file.relative_to(root).as_posix())
         authored_tree = tree
         self.editor_tree = authored_tree
         for text in overrides:

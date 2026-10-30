@@ -278,13 +278,16 @@ test("runtime schema routes events to their fixed owning file", { skip: !python 
   apply([{ op: "set", path: ["artifactory", "events", "push", "path"], value: "new-branches" }]);
   assert.equal(config.value.artifactory.events.push.path, "new-branches");
   assert.deepEqual(config.value.artifactory.events.release, { path: "" });
-  assert.equal(config.sources.find(source => JSON.stringify(source.path) === JSON.stringify(["artifactory", "events", "push", "path"])).file, path.join(root, "artifactory_paths.ptk.yml"));
+  assert.equal(config.sources.find(source => JSON.stringify(source.path) === JSON.stringify(["artifactory", "events", "push", "path"])).file, fs.realpathSync.native(path.join(root, "artifactory_paths.ptk.yml")));
 });
 
-test("project form saves to the owning file then detects stale sources", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, async t => {
+test("project form saves through a directory alias then detects stale sources", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, async t => {
   const { createEditors } = require("../src/editors");
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk live form "));
-  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const container = fs.mkdtempSync(path.join(os.tmpdir(), "ptk live form "));
+  t.after(() => fs.rmSync(container, { recursive: true, force: true }));
+  const physical = path.join(container, "physical"), root = path.join(container, "alias");
+  fs.mkdirSync(physical);
+  fs.symlinkSync(physical, root, process.platform === "win32" ? "junction" : "dir");
   project(root, "live");
   const entry = path.join(root, ".main.ptk.yml");
   const describe = () => ({ root, project: core.parseInventory(invoke(root, ["describe", "--json", "--configuration"])).projects[0] });

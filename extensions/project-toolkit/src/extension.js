@@ -6,6 +6,7 @@ const presentation = require("../media/presentation");
 const schemaTools = require("../media/schema");
 const { createEditors } = require("./editors");
 const { validateParameters } = require("./parameters");
+const { canonicalPath } = require("./file-path");
 
 // Native theme colours keep the tree readable in light, dark and high contrast
 // themes. Labels and icon shapes carry the same meaning without relying on colour.
@@ -57,8 +58,9 @@ function createController(vscode, context, editorFactory = createEditors) {
     },
     configuration: async uri => {
       await settled();
+      const file = canonicalPath(uri.fsPath);
       return records.flatMap(record => record.inventory?.projects || [])
-        .find(project => project.config_files?.includes(uri.fsPath))?.configuration;
+        .find(project => project.config_files?.some(candidate => canonicalPath(candidate) === file))?.configuration;
     },
 
   });

@@ -4,6 +4,7 @@
 // those documents; it does not discover files or compose configuration.
 const YAML = require("yaml");
 const model = require("./config-model");
+const { canonicalPath } = require("./file-path");
 const prefix = (a, b) => a.length <= b.length && a.every((key, i) => key === b[i]);
 const at = (value, path) => path.reduce((value, key) => value?.[key], value);
 const equal = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -80,17 +81,21 @@ function plan(snapshot, documents, operations) {
 }
 
 function schemaForFile(snapshot, file) {
+  file = canonicalPath(file);
   const document = snapshot?.documents?.find(document => {
-    if (!document.file.includes("{name}")) return document.file === file;
-    const [start, end] = document.file.split("{name}");
+    const pattern = canonicalPath(document.file);
+    if (!pattern.includes("{name}")) return pattern === file;
+    const [start, end] = pattern.split("{name}");
     return file.startsWith(start) && file.endsWith(end) && /^[A-Za-z][A-Za-z0-9_-]*$/.test(file.slice(start.length, -end.length));
   });
   return document && { ...document.schema, $defs: snapshot.schema.$defs };
 }
 function bindingsForFile(snapshot, file) {
+  file = canonicalPath(file);
   return (snapshot.bindings || []).flatMap(binding => {
-    if (!binding.file.includes("{name}")) return binding.file === file ? [binding] : [];
-    const [start, end] = binding.file.split("{name}");
+    const pattern = canonicalPath(binding.file);
+    if (!pattern.includes("{name}")) return pattern === file ? [binding] : [];
+    const [start, end] = pattern.split("{name}");
     const name = file.slice(start.length, -end.length);
     return file.startsWith(start) && file.endsWith(end) && /^[A-Za-z][A-Za-z0-9_-]*$/.test(name)
       ? [{ ...binding, path: binding.path.map(key => key === "*" ? name : key) }] : [];

@@ -1,6 +1,7 @@
 """The CLI and editor consume one conventional file layout owned by PTK."""
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -218,7 +219,7 @@ def test_editor_reports_file_schemas_ownership_fingerprints_and_errors(write):
     assert binding["file"] == str(root / "config/jobs/{name}.ptk.yml")
     assert binding["document_path"] == []
     project_doc = next(
-        d for d in config["documents"] if d["file"].endswith("/project.ptk.yml")
+        d for d in config["documents"] if Path(d["file"]).name == "project.ptk.yml"
     )
     assert "name" in project_doc["schema"]["properties"]
     assert "jobs" not in project_doc["schema"]["properties"]
