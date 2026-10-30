@@ -39,7 +39,7 @@ function inventory(root = path.resolve("test project")) {
       alias: "demo", name: "Demo", root, entry_file: path.join(root, ".main.ptk.yml"),
       invocation: { cwd: root, prefix: [] },
       config_files: [path.join(root, ".main.ptk.yml")],
-      configuration: { version: 4, graphs: [], bindings: [], documents: [], schema: { properties: { project: {}, jobs: {}, variants: {} } }, value: { jobs: { build: { help: "Build" } } }, sources: [], files: [path.join(root, ".main.ptk.yml")] },
+      configuration: { version: 5, graphs: [], bindings: [], documents: [], schema: { properties: { project: {}, jobs: {}, variants: {} } }, value: { jobs: { build: { help: "Build" } } }, sources: [], files: [path.join(root, ".main.ptk.yml")] },
       capabilities: { variants: true, validate: true, reports: true },
       default_variant: "small",
       commands: builtinCommands(),

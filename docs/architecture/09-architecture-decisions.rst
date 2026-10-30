@@ -228,7 +228,7 @@ not imply that every related future capability has been implemented.
 
    **Related requirement:** :need:`REQ_Sw_GRAPH_INSPECTION`.
 
-.. ddec:: Target-first trees with explicit shared references
+.. ddec:: Execution-direction trees with explicit shared references
    :id: DD_GRAPH_TREE
    :status: accepted
 
@@ -242,21 +242,32 @@ not imply that every related future capability has been implemented.
    <https://docs.conan.io/2/reference/commands/graph/info.html>`_.
 
    **Decision:** Use one domain graph description with unique nodes and all needs
-   edges. Derive an ordered, target-first tree projection in Python: final targets
-   at the root, prerequisites as children, and each shared node expanded only on
-   its first visit. Later occurrences are explicit leaf references. Both tree
-   nesting and diagram arrows mean "depends on". Terminal trees use Rich; VS Code
-   renders the supplied projection and routes every occurrence to the same
-   editable configuration path. Workflow targets are secondary labels.
+   edges. Derive an ordered tree projection in Python in execution direction:
+   nodes without prerequisites at the root, direct dependents as children, and
+   each shared node expanded only on its first visit. Later occurrences are
+   explicit leaf references. Both tree nesting and diagram arrows run from
+   prerequisite to dependent. Terminal trees use Rich; VS Code renders the
+   supplied projection and routes every occurrence to the same editable path.
+   Workflow targets are secondary labels only when different from the invocation
+   ID. Joins list all prerequisites; being displayed under one branch does not
+   remove the other needs. Roots and siblings preserve authored order, and
+   independent branches can overlap.
+
+   **Changed decision:** The original target-first "depends on" direction put
+   package above test and check. User feedback showed that this reads backwards
+   when inspecting execution. All views now consistently show check → test →
+   package, with independent work in separate branches. The needs model and
+   scheduler semantics are unchanged; no alternate reverse-direction mode remains.
 
    **Alternatives considered:** Duplicating entire prerequisite subtrees can grow
    exponentially; discarding repeated edges misrepresents joins. Keeping depth
    buckets or inferring another graph in the extension was rejected.
 
    **Consequences:** Traversal is bounded by nodes plus edges and handles multiple
-   disconnected final targets. Terminal selection/skip annotations and single-step
+   independent roots. Terminal selection/skip annotations and single-step
    warnings remain explicit. The former table, depth groups and fixed-grid
-   renderer are removed. Configuration interface version 4 replaces version 3;
+   renderer are removed. Configuration interface version 5 replaces version 4
+   because the tree parent/child semantics changed;
    older interfaces are rejected, with no compatibility parser.
 
    **Related requirement:** :need:`REQ_Sw_GRAPH_INSPECTION`.
@@ -270,7 +281,7 @@ not imply that every related future capability has been implemented.
 
    **Decision:** Vendor the pinned Dagre browser bundle and its MIT notices with
    the Python package. Embed it and the shared viewer in each HTML file. Lay out
-   unique nodes from targets toward prerequisites; wrap full names and provide
+   unique nodes from prerequisites toward dependents; wrap full names and provide
    zoom, fit, pan, keyboard node activation and a dependency/result inspector.
    Respect light/dark themes and contain wide graphs in the canvas viewport.
 

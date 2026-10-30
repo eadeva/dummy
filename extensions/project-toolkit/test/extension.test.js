@@ -874,26 +874,28 @@ test("configuration graph trees use PTK metadata for job and workflow joins", as
   const doc = inventory(), config = doc.projects[0].configuration;
   config.value = {jobs: {build: {steps: {start: {uses: "echo"}, left: {uses: "echo", needs: "start"}, right: {uses: "echo", needs: "start"}, join: {uses: "echo", needs: ["left", "right"]}}}}, workflows: {verify: {jobs: {start: {job: "build"}, left: {job: "build", needs: "start"}, right: {job: "build", needs: "start"}, join: {job: "build", needs: ["left", "right"]}}}}};
   const nodes = [{id: "start", needs: []}, {id: "left", needs: ["start"]}, {id: "right", needs: ["start"]}, {id: "join", needs: ["left", "right"]}];
-  const projection = [{id: "join", parent: null, shared: false}, {id: "left", parent: 0, shared: false}, {id: "start", parent: 1, shared: false}, {id: "right", parent: 0, shared: false}, {id: "start", parent: 3, shared: true}];
+  const projection = [{id: "start", parent: null, shared: false}, {id: "left", parent: 0, shared: false}, {id: "join", parent: 1, shared: false}, {id: "right", parent: 0, shared: false}, {id: "join", parent: 3, shared: true}];
   config.graphs = [{path: ["jobs", "build", "steps"], nodes, tree: projection}, {path: ["workflows", "verify", "jobs"], nodes: nodes.map(node => ({...node, label: "engine:build"})), tree: projection}];
   const h = harness(t, [doc]); await h.controller.ready();
   const tree = h.controller.provider.getChildren()[0].children[0].children.find(item => item.label === "Configuration");
   for (const section of ["jobs", "workflows"]) {
     const graph = tree.children.find(item => item.label === section).children[0].children[0];
-    assert.deepEqual(graph.children.map(node => node.label), ["join"]);
-    const join = graph.children[0], [left, right] = join.children;
-    assert.deepEqual(join.children.map(node => node.label), ["left", "right"]);
-    assert.equal(left.children[0].label, "start");
+    assert.deepEqual(graph.children.map(node => node.label), ["start"]);
+    const start = graph.children[0], [left, right] = start.children;
+    const join = left.children[0];
+    assert.deepEqual(start.children.map(node => node.label), ["left", "right"]);
+    assert.equal(join.label, "join");
+    assert.match(join.description, /needs all: left, right/);
     const reference = right.children[0];
-    assert.equal(reference.label, "start");
+    assert.equal(reference.label, "join");
     assert.match(reference.description, /shared — shown above/);
     assert.equal(reference.children.length, 0);
     assert.notEqual(reference.id, left.children[0].id);
     assert.deepEqual(reference.configPath, left.children[0].configPath);
     await h.command("openConfig", reference);
-    assert.deepEqual(h.opened.at(-1).path, [...graph.configPath, "start"]);
+    assert.deepEqual(h.opened.at(-1).path, [...graph.configPath, "join"]);
     assert.match(join.tooltip, /Needs: left, right/);
-    if (section === "workflows") assert.equal(join.description, "engine:build");
+    if (section === "workflows") assert.match(join.description, /^engine:build · needs all:/);
     await h.command("openConfig", join); assert.deepEqual(h.opened.at(-1).path, [...config.graphs[section === "jobs" ? 0 : 1].path, "join"]);
   }
 });

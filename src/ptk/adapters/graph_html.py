@@ -34,7 +34,7 @@ def section(graph, title, *, collapsed=True):
     return f"""<details class="ptk-graph"{" open" if not collapsed else ""}>
 <summary><strong>Dependency graph</strong><span>{count} nodes · {edges} dependencies</span></summary>
 <div class="ptk-graph-body">
-<p class="ptk-graph-caption">Targets at the top. Arrows point to prerequisites. Shared dependencies appear once.</p>{notice}
+<p class="ptk-graph-caption">Execution flows top to bottom: prerequisites → dependents. Joins wait for all prerequisites; branches can overlap. Shared nodes appear once.</p>{notice}
 <div class="ptk-graph-toolbar" role="group" aria-label="Graph controls">
 <button type="button" data-graph-action="in" aria-label="Zoom in">+</button>
 <button type="button" data-graph-action="out" aria-label="Zoom out">−</button>

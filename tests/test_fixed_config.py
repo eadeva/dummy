@@ -214,7 +214,7 @@ def test_editor_reports_file_schemas_ownership_fingerprints_and_errors(write):
     result = runner.invoke(cli, args, cwd=root)
     assert result.exit_code == 0, result.output
     config = json.loads(result.output)["projects"][0]["configuration"]
-    assert config["version"] == 4
+    assert config["version"] == 5
     binding = next(b for b in config["bindings"] if b["path"] == ["jobs", "*"])
     assert binding["file"] == str(root / "config/jobs/{name}.ptk.yml")
     assert binding["document_path"] == []

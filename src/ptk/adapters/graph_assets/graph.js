@@ -84,10 +84,10 @@
       };
       for (const node of data.nodes) {
         const lines = wrap(node.id, "600 14px system-ui");
-        const subtitle = node.label ? wrap(node.label, "12px system-ui") : [];
+        const subtitle = node.label && node.label !== node.id ? wrap(node.label, "12px system-ui") : [];
         graph.setNode(node.id, { width: 246, height: 42 + lines.length * 18 + subtitle.length * 16, lines, subtitle });
       }
-      for (const node of data.nodes) for (const need of node.needs) graph.setEdge(node.id, need);
+      for (const node of data.nodes) for (const need of node.needs) graph.setEdge(need, node.id);
       dagre.layout(graph);
       ({ width, height } = graph.graph());
       svg.setAttribute("viewBox", `0 0 ${width} ${height}`);

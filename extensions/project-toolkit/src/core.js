@@ -32,17 +32,19 @@ function validGraph(graph) {
   if (graph.error !== undefined) return typeof graph.error === "string" && graph.nodes.length === 0 && graph.tree.length === 0;
   const nodes = new Map(graph.nodes.map(node => [node.id, node]));
   if (nodes.size !== graph.nodes.length || graph.nodes.some(node => node.needs.some(id => !nodes.has(id)))) return false;
+  const dependents = new Map(graph.nodes.map(node => [node.id, []]));
+  for (const node of graph.nodes) for (const need of node.needs) dependents.get(need).push(node.id);
   const seen = new Set(), children = graph.tree.map(() => []);
   for (const [index, entry] of graph.tree.entries()) {
     if (!object(entry) || !nodes.has(entry.id) || typeof entry.shared !== "boolean" || entry.shared !== seen.has(entry.id)) return false;
     if (entry.parent !== null) {
       if (!Number.isInteger(entry.parent) || entry.parent < 0 || entry.parent >= index || graph.tree[entry.parent].shared) return false;
       children[entry.parent].push(entry.id);
-    }
+    } else if (entry.shared || nodes.get(entry.id).needs.length) return false;
     seen.add(entry.id);
   }
   return seen.size === nodes.size && graph.tree.every((entry, index) =>
-    JSON.stringify(children[index]) === JSON.stringify(entry.shared ? [] : nodes.get(entry.id).needs));
+    JSON.stringify(children[index]) === JSON.stringify(entry.shared ? [] : dependents.get(entry.id)));
 }
 
 function parseInventory(text) {
@@ -61,7 +63,7 @@ function parseInventory(text) {
       throw new Error("Invalid repository paths in PTK inventory.");
     }
     const config = project.configuration;
-    if (!object(config) || config.version !== 4 || !object(config.schema) || !Array.isArray(config.graphs) || !config.graphs.every(validGraph) || config.value !== null && !object(config.value) ||
+    if (!object(config) || config.version !== 5 || !object(config.schema) || !Array.isArray(config.graphs) || !config.graphs.every(validGraph) || config.value !== null && !object(config.value) ||
         !Array.isArray(config.bindings) || !Array.isArray(config.documents) || !Array.isArray(config.files) || !config.files.every(absolute) ||
         !Array.isArray(config.sources) || !config.sources.every(source => object(source) && absolute(source.file) &&
           Array.isArray(source.path) && source.path.every(key => typeof key === "string" || Number.isSafeInteger(key) && key >= 0))) {

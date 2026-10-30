@@ -40,13 +40,13 @@ def show_graph(
         console.print(
             escape(graph["notice"]), style="yellow", highlight=False, soft_wrap=True
         )
-    tree = Tree(Text(f"{name} · targets → prerequisites", style="bold"))
+    tree = Tree(Text(f"{name} · prerequisites → dependents", style="bold"))
     metadata = {node["id"]: node for node in graph["nodes"]}
     branches = []
     for entry in graph["tree"]:
         node = metadata[entry["id"]]
         label = Text(node["id"], style="bold cyan")
-        if node.get("label"):
+        if node.get("label") and node["label"] != node["id"]:
             label.append(f"  {node['label']}", style="dim")
         if node.get("message"):
             label.append(f"  skipped: {node['message']}", style="dim")
@@ -54,6 +54,8 @@ def show_graph(
             label.append("  not selected", style="dim")
         elif selected is not None:
             label.append("  selected", style="green")
+        if len(node["needs"]) > 1:
+            label.append(f"  needs all: {', '.join(node['needs'])}", style="dim")
         if entry["shared"]:
             label.append("  ↩ shared — shown above", style="dim italic")
         parent = tree if entry["parent"] is None else branches[entry["parent"]]
@@ -61,6 +63,10 @@ def show_graph(
     if not graph["nodes"]:
         tree.add(Text("No steps configured", style="dim"))
     console.print(tree)
+    if any(len(node["needs"]) > 1 for node in graph["nodes"]):
+        console.print(
+            "Joins wait for all prerequisites; branches can overlap.", style="dim"
+        )
     suffix = f"-{safe(variant)}" if variant else ""
     target = root / ".ptk" / "graphs" / f"{kind}-{name.replace('/', '-')}{suffix}.html"
     target.parent.mkdir(parents=True, exist_ok=True)

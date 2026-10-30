@@ -83,13 +83,17 @@ jobs and workflows, execution settings, tools and credentials, artifacts and
 versioning, then output settings. PTK exports explicit field-order metadata;
 JSON key sorting cannot change the display order. Optional-field choices follow
 the same rules. Lists keep their authored order. Jobs and workflows show dependency
-trees supplied by PTK: final targets first, with prerequisites nested underneath.
-Nesting means **depends on**. Shared dependencies expand once; later occurrences
+trees supplied by PTK in execution direction: prerequisites first, with dependents
+nested underneath. Steps with no prerequisites are roots. Shared nodes expand
+once; later occurrences
 are leaf references marked **shared — shown above**. Activating either occurrence
 edits the same definition. Workflow nodes show their job target, including the
-repository qualifier when configured. Each occurrence has its own tree identity,
+repository qualifier when configured, and omit redundant target labels. Joins
+list **needs all** with every prerequisite, including those on other branches.
+Each occurrence has its own tree identity,
 so collapsing one branch does not affect another. The form provides the node's
-fields; dependency branches contain prerequisites, not scalar field lists.
+fields; dependency branches contain dependents, not scalar field lists. Independent
+branches can overlap; the tree is not a serial timeline.
 Display ordering does not reorder YAML source files.
 
 Multiple folders, VMR members and workspace workflows are supported. Discovery
@@ -114,7 +118,7 @@ refreshes the tree. Click **PTK unavailable** to see the exact discovery error.
 
 Build from the repository root with ``ptk extension`` or ``uv run ptk extension``.
 The job checks Node.js 22+ and npm, installs the build dependencies, runs the
-checks and writes ``extensions/project-toolkit/project-toolkit-0.14.0.vsix``.
+checks and writes ``extensions/project-toolkit/project-toolkit-0.15.0.vsix``.
 Use ``ptk self-service extension --dry-run`` to preview it. Node.js and npm must be on PATH.
 Set ``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
 integration tests. CX builds downloadable VSIX artifacts on Linux and Windows;
@@ -187,7 +191,7 @@ operations and flags, including validation, reports, initialization,
 Changing those semantics can break compatibility even if the schema is unchanged.
 
 The extension requires inventory ``schema_version: 4`` and per-project
-``configuration.version: 4``. These are interface versions, separate from the
+``configuration.version: 5``. These are interface versions, separate from the
 PTK package version, extension version and project marker's ``schema_version``.
 Unsupported interface versions or malformed inventories are rejected with an
 error; there is no legacy parser or schema fallback.
@@ -237,7 +241,7 @@ JavaScript, run ``npm run build`` and reload the development window.
 To install a development build into your normal VS Code instead::
 
    uv run ptk extension
-   uv run ptk self-service extension --vsix extensions/project-toolkit/project-toolkit-0.14.0.vsix --force
+   uv run ptk self-service extension --vsix extensions/project-toolkit/project-toolkit-0.15.0.vsix --force
 
 Editable installs intentionally contain no built-in VSIX; supply ``--vsix`` for
 this workflow. Full ``uv run ptk package`` builds the release artifacts containing

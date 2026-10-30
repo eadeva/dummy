@@ -265,8 +265,8 @@ function createController(vscode, context, editorFactory = createEditors) {
       const graph = config.graphs.find(item => JSON.stringify(item.path) === JSON.stringify(configPath));
       if (graph && !graph.error) {
         node.icon = "git-merge";
-        node.description = "targets → prerequisites";
-        node.tooltip = "Expand a target to see its prerequisites. Shared references edit the same step; each step executes once.";
+        node.description = "prerequisites → dependents";
+        node.tooltip = "Expand a prerequisite to see its dependents. Joins wait for all prerequisites; branches can overlap. Shared references edit the same definition.";
         node.children = [];
         const metadata = new Map(graph.nodes.map(item => [item.id, item]));
         const branches = [];
@@ -275,7 +275,7 @@ function createController(vscode, context, editorFactory = createEditors) {
           const child = field(value[item.id], [...configPath, item.id], item.id);
           child.id = `${node.id}:branch:${index}`;
           child.icon = entry.shared ? "references" : "git-branch";
-          child.description = [item.label, entry.shared ? "↩ shared — shown above" : ""].filter(Boolean).join(" · ");
+          child.description = [item.label !== item.id ? item.label : "", item.needs.length > 1 ? `needs all: ${item.needs.join(", ")}` : "", entry.shared ? "↩ shared — shown above" : ""].filter(Boolean).join(" · ");
           child.tooltip = `${item.label ? item.label + "\n" : ""}Needs: ${item.needs.join(", ") || "none"}\n${entry.shared ? "Shared dependency; edits the same definition.\n" : ""}${child.tooltip}`;
           child.children = [];
           branches.push(child);

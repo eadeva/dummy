@@ -218,12 +218,12 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :security: false
    :legal: false
    :status: accepted
-   :verification_criteria: Graph tests verify target-first trees, bounded shared references, disconnected targets and partial selections; offline browser checks verify all nodes/edges, layout and controls. Both dry-run paths include previews without executing commands.
+   :verification_criteria: Graph tests verify execution-direction trees, bounded shared references, disconnected targets and partial selections; offline browser checks verify all nodes/edges, layout and controls. Both dry-run paths include previews without executing commands.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall expose job and workflow dependency graphs through a graph-only option and include them automatically in dry-run output. Terminal trees shall nest prerequisites under final targets, retain authored traversal order and expand shared dependencies once. Offline HTML diagrams shall retain one node per invocation and all dependency edges, with zoom, fit, pan and node details. Selection, variant and known skip information shall remain visible.
+   PTK shall expose job and workflow dependency graphs through a graph-only option and include them automatically in dry-run output. Terminal trees shall start with nodes without prerequisites, nest dependents under their prerequisites, retain authored root/sibling order and expand shared nodes once. Joins shall list every prerequisite and remain subject to all declared needs. Offline HTML diagrams shall retain one node per invocation and all dependency edges directed from prerequisites to dependents, with zoom, fit, pan and node details. Selection, variant and known skip information shall remain visible.
 
    **Scope:** Graphs represent declared scheduling dependencies. They do not
    discover file inputs/outputs or guarantee artifact existence, freshness,

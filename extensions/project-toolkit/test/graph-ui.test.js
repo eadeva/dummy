@@ -28,9 +28,11 @@ test("offline graphs in previews, job and workflow reports preserve joins, state
       await graph.locator("summary").click();
     }
     await page.waitForFunction(() => document.querySelectorAll(".ptk-graph-node").length === 6);
+    if (file === "graph.html") assert.equal(await graph.locator(".ptk-graph-subtitle").count(), 0);
     assert.equal(await graph.locator(".ptk-graph-edge").count(), 5);
     assert.equal(await graph.locator('[data-node-id="compile"]').count(), 1);
-    assert.equal(await graph.locator('[data-to="compile"]').count(), 2);
+    assert.equal(await graph.locator('[data-from="compile"]').count(), 2);
+    assert.equal(await graph.locator('[data-to="compile"]').count(), 1);
     assert.equal(await graph.locator('[data-status="failed"]').count(), 2);
     assert.equal(await graph.locator('[data-allowed="true"]').count(), 1);
     assert.equal(await graph.locator('[data-status="cancelled"]').count(), 1);
@@ -48,7 +50,11 @@ test("offline graphs in previews, job and workflow reports preserve joins, state
     await graph.getByRole("button", { name: "Fit to view", exact: true }).click();
     const geometry = await graph.locator(".ptk-graph-node").evaluateAll(nodes => nodes.map(node => ({ id: node.dataset.nodeId, x: node.transform.baseVal.getItem(0).matrix.e, y: node.transform.baseVal.getItem(0).matrix.f, width: node.querySelector("rect").width.baseVal.value, height: node.querySelector("rect").height.baseVal.value })));
     for (const [i, box] of geometry.entries()) for (const other of geometry.slice(i + 1)) assert(box.x + box.width <= other.x || other.x + other.width <= box.x || box.y + box.height <= other.y || other.y + other.height <= box.y, `Overlap: ${box.id}, ${other.id}`);
-    assert(geometry.find(node => node.id === "package").y < geometry.find(node => node.id === "compile").y);
+    const edges = await graph.locator(".ptk-graph-edge").evaluateAll(edges => edges.map(edge => ({from: edge.dataset.from, to: edge.dataset.to})));
+    for (const edge of edges) {
+      const from = geometry.find(node => node.id === edge.from), to = geometry.find(node => node.id === edge.to);
+      assert(from.y + from.height < to.y, `${edge.from} must appear above ${edge.to}`);
+    }
     await graph.locator("summary").click(); await graph.locator("summary").click();
     assert.equal(await graph.locator(".ptk-graph-node").count(), 6);
     await page.emulateMedia({ colorScheme: "dark" });

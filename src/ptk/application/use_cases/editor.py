@@ -74,7 +74,7 @@ def describe_configuration(
                 )
     schema = ExportSchema().execute()
     return {
-        "version": 4,
+        "version": 5,
         "graphs": graphs,
         "fingerprints": fingerprints or {},
         **editor_layout(root / ".main.ptk.yml", tree, schema),

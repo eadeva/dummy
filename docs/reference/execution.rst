@@ -199,15 +199,22 @@ values or checking credentials/tools::
    ptk workflow run verify --graph
 
 Direct workflow commands and maintainer-prefixed routes support the same flag.
-The terminal shows a compact tree, starting with final targets. A child is a
-prerequisite of its parent: read the nesting as **depends on**, not execution
-order. Final targets and prerequisites retain authored order. A shared dependency
-expands at its first occurrence; later occurrences say **shared — shown above**.
-This also covers disconnected targets without duplicating whole subtrees.
+The terminal shows a compact tree in execution direction: **prerequisites →
+dependents**. Steps without prerequisites are roots; each child directly depends
+on its parent. For example, ``check`` is followed by ``test`` and then ``package``;
+an independent ``docs`` step is a separate root. Roots and siblings retain their
+authored order. Shared nodes expand once; subsequent occurrences say **shared —
+shown above**.
 
-The preview links to a self-contained HTML diagram in ``.ptk/graphs``. Targets
-are at the top and arrows point toward prerequisites, matching the tree's
-meaning. The diagram has one box per invocation, including all join edges.
+A join lists **needs all** with every prerequisite. Its first occurrence under
+one branch does not release it early: it still waits for every declared need.
+The tree is a navigation projection, not a serial timeline; independent branches
+can overlap. Redundant job labels are omitted when they match the invocation ID.
+
+The preview links to a self-contained HTML diagram in ``.ptk/graphs``.
+Prerequisites appear above their dependents and arrows point toward the work they
+release, matching the tree's execution direction. The diagram has one box per
+invocation, including all join edges.
 Use **Zoom in**, **Zoom out**, **Fit to view**, or drag the canvas to pan. Select a
 node (click, Enter or Space) to inspect its target, prerequisites and dependents;
 select a dependency in the details panel to navigate to it. Long names wrap.
@@ -224,8 +231,8 @@ alone shows authored topology, not the outcome of runtime conditions.
 The graph does not discover or verify artifact dependencies; see
 :ref:`execution-boundaries`.
 
-The extension consumes the same PTK-provided tree projection. Expand final
-targets to inspect their prerequisites; both canonical nodes and shared
+The extension consumes the same PTK-provided tree projection. Expand
+prerequisites to inspect their dependents; both canonical nodes and shared
 references edit the same configuration definition. There are no dependency-level
 navigation groups. See :doc:`/guides/editor` and the decisions in
 :doc:`/architecture/09-architecture-decisions`.

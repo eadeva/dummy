@@ -38,11 +38,11 @@ def test_tree_preserves_joins_disconnected_targets_and_authored_order():
         )
     )
     assert graph["tree"] == [
-        {"id": "package", "parent": None, "shared": False},
-        {"id": "left", "parent": 0, "shared": False},
-        {"id": "setup", "parent": 1, "shared": False},
+        {"id": "setup", "parent": None, "shared": False},
         {"id": "right", "parent": 0, "shared": False},
-        {"id": "setup", "parent": 3, "shared": True},
+        {"id": "package", "parent": 1, "shared": False},
+        {"id": "left", "parent": 0, "shared": False},
+        {"id": "package", "parent": 3, "shared": True},
         {"id": "docs", "parent": None, "shared": False},
     ]
     assert [node["id"] for node in graph["nodes"]] == [
@@ -68,7 +68,7 @@ def test_tree_expansion_is_bounded_for_deep_and_repeated_dependencies():
         shared.update({name: SimpleNamespace(needs=previous) for name in current})
         previous = current
     graph = describe_graph(shared)
-    assert len(graph["tree"]) == sum(len(node.needs) for node in shared.values()) + 2
+    assert len(graph["tree"]) == sum(len(node.needs) for node in shared.values()) + 1
     assert sum(not entry["shared"] for entry in graph["tree"]) == len(shared)
 
 
@@ -87,13 +87,62 @@ def test_terminal_tree_shows_shared_references_and_partial_run(tmp_path, monkeyp
         only_step="package",
     )
     text = output.getvalue()
-    assert text.index("package  selected") < text.index("left  not selected")
+    assert (
+        text.index("setup  not selected")
+        < text.index("left  not selected")
+        < text.index("package  selected")
+    )
+    assert text.count("needs all: left, right") == 2
     assert text.count("shared — shown above") == 1
     assert "prerequisites not run: left, right, setup" in text
     assert "debug" in text
     graph = graph_data(target.read_text(encoding="utf-8"))
     assert len(graph["nodes"]) == 4
     assert sum(node["selected"] for node in graph["nodes"]) == 1
+
+
+def test_workflow_tree_reads_in_execution_direction_without_duplicate_labels(
+    tmp_path, monkeypatch
+):
+    output = io.StringIO()
+    monkeypatch.setattr(
+        graphs, "console", Console(file=output, width=120, color_system=None)
+    )
+    workflow = nodes(check=[], test=["check"], package=["test"], docs=[])
+    for name, node in workflow.items():
+        node.job = name
+    target = graphs.show_graph(tmp_path, "verify", "workflow", workflow)
+    text = output.getvalue()
+    assert "prerequisites → dependents" in text
+    tree = graph_data(target.read_text(encoding="utf-8"))["tree"]
+    assert tree == [
+        {"id": "check", "parent": None, "shared": False},
+        {"id": "test", "parent": 0, "shared": False},
+        {"id": "package", "parent": 1, "shared": False},
+        {"id": "docs", "parent": None, "shared": False},
+    ]
+    assert (
+        text.index("check")
+        < text.index("test")
+        < text.index("package")
+        < text.index("docs")
+    )
+    for name in workflow:
+        assert f"{name}  {name}" not in text
+
+
+def test_independent_roots_keep_all_join_edges():
+    graph = describe_graph(
+        nodes(left=[], right=[], join=["left", "right"], after=["join"])
+    )
+    assert graph["tree"] == [
+        {"id": "left", "parent": None, "shared": False},
+        {"id": "join", "parent": 0, "shared": False},
+        {"id": "after", "parent": 1, "shared": False},
+        {"id": "right", "parent": None, "shared": False},
+        {"id": "join", "parent": 3, "shared": True},
+    ]
+    assert graph["nodes"][2]["needs"] == ["left", "right"]
 
 
 def test_job_report_records_all_edges_but_hides_disabled_step_details():

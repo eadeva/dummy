@@ -71,7 +71,10 @@ def generate(target):
     }
     report = from_summary(summary, [])
     (target / "job.html").write_text(render(report), encoding="utf-8")
-    graph = report.graph
+    graph = {
+        **report.graph,
+        "nodes": [{**node, "label": node["id"]} for node in report.graph["nodes"]],
+    }
     (target / "graph.html").write_text(
         graph_page(graph, "Job delivery · debug"), encoding="utf-8"
     )

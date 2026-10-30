@@ -54,14 +54,18 @@ def ancestors(nodes):
 
 
 def describe_graph(nodes):
-    """One node per ID and a target-first tree projection, in authored order.
+    """One node per ID and an execution-direction tree, in authored order.
 
-    Tree entries refer to an earlier parent index; repeated dependencies are
-    leaves referencing their first occurrence. This keeps joins and disconnected
-    targets without expanding exponentially or requiring recursive traversal.
+    Roots have no prerequisites; children are their direct dependents. Entries
+    refer to an earlier parent index; repeated dependents are shared leaves.
+    All original needs remain authoritative, including joins across branches.
+    This is a projection of dependencies, not a serial execution timeline.
     """
-    dependencies = {need for node in nodes.values() for need in node.needs}
-    pending = [(name, None) for name in reversed(nodes) if name not in dependencies]
+    dependents = {name: [] for name in nodes}
+    for name, node in nodes.items():
+        for need in node.needs:
+            dependents[need].append(name)
+    pending = [(name, None) for name in reversed(nodes) if not nodes[name].needs]
     tree = []
     seen = set()
     while pending:
@@ -71,7 +75,7 @@ def describe_graph(nodes):
         tree.append({"id": name, "parent": parent, "shared": shared})
         if not shared:
             seen.add(name)
-            pending.extend((need, index) for need in reversed(nodes[name].needs))
+            pending.extend((child, index) for child in reversed(dependents[name]))
     return {
         "nodes": [
             {"id": name, "needs": list(node.needs)}

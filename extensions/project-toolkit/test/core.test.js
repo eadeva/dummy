@@ -195,7 +195,7 @@ test("discovery does not retry without the configuration interface", async () =>
 });
 
 test("graph projections require current metadata and reject dangling or malformed occurrences", () => {
-  const valid = { path: ["jobs", "build", "steps"], nodes: [{id: "a", needs: []}, {id: "b", needs: ["a"]}], tree: [{id: "b", parent: null, shared: false}, {id: "a", parent: 0, shared: false}] };
+  const valid = { path: ["jobs", "build", "steps"], nodes: [{id: "a", needs: []}, {id: "b", needs: ["a"]}], tree: [{id: "a", parent: null, shared: false}, {id: "b", parent: 0, shared: false}] };
   const doc = inventory();
   doc.projects[0].configuration.graphs = [valid];
   assert.doesNotThrow(() => core.parseInventory(JSON.stringify(doc)));
@@ -208,6 +208,7 @@ test("graph projections require current metadata and reject dangling or malforme
     graph => { graph.tree[0] = null; },
     graph => { graph.tree = []; },
     graph => { graph.tree[1].parent = null; },
+    graph => { graph.tree = [{id: "b", parent: null, shared: false}, {id: "a", parent: 0, shared: false}]; },
   ]) {
     const graph = structuredClone(valid); mutate(graph);
     doc.projects[0].configuration.graphs = [graph];
@@ -215,7 +216,7 @@ test("graph projections require current metadata and reject dangling or malforme
   }
   doc.projects[0].configuration.graphs = [{path: valid.path, nodes: [], tree: [], error: "Invalid dependency"}];
   assert.doesNotThrow(() => core.parseInventory(JSON.stringify(doc)));
-  doc.projects[0].configuration.version = 3;
+  doc.projects[0].configuration.version = 4;
   assert.throws(() => core.parseInventory(JSON.stringify(doc)), /configuration interface/);
 });
 

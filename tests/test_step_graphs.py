@@ -227,8 +227,8 @@ def test_graph_inspection_needs_no_parameters_credentials_or_process(tmp_path):
     page = (tmp_path / ".ptk/graphs/job-go.html").read_text()
     assert 'class="ptk-graph" open' in page
     assert '"needs": ["first"]' in page
-    assert result.output.index("next  selected") < result.output.index(
-        "first  selected"
+    assert result.output.index("first  selected") < result.output.index(
+        "next  selected"
     )
     assert not (tmp_path / "_logs").exists()
     assert not (tmp_path / "_builds").exists()

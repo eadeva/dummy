@@ -39,7 +39,7 @@ function expand(bindings, before, after) {
 }
 
 function plan(snapshot, documents, operations) {
-  if (!snapshot || snapshot.version !== 4 || !snapshot.bindings || snapshot.value === null) throw new Error("Fix the configuration loading errors before editing the form.");
+  if (!snapshot || snapshot.version !== 5 || !snapshot.bindings || snapshot.value === null) throw new Error("Fix the configuration loading errors before editing the form.");
   const result = new Map(documents);
   let value = snapshot.value;
   for (const operation of operations) {
