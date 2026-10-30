@@ -19,7 +19,7 @@ window.PtkGraphEditor = (() => {
       const node = html("button", text, { type: "button", class: "secondary", "aria-label": label });
       node.addEventListener("click", action); return node;
     };
-    const root = html("section", undefined, { class: "dependency-editor", "aria-label": "Dependency graph" });
+    const root = html("section", undefined, { class: "dependency-editor", "data-entity": context.kind, "aria-label": "Dependency graph" });
     container.append(root);
     const toolbar = html("div", undefined, { class: "dependency-toolbar" });
     const select = html("select", undefined, { id: "graph-selection", "aria-label": `Select ${context.kind}` });

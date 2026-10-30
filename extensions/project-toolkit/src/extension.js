@@ -10,10 +10,11 @@ const { canonicalPath } = require("./file-path");
 
 // Native theme colours keep the tree readable in light, dark and high contrast
 // themes. Labels and icon shapes carry the same meaning without relying on colour.
+const entityColors = { workflow: "charts.purple", job: "terminal.ansiCyan", step: "charts.blue", builtin: "descriptionForeground" };
 const iconColors = {
   error: "errorForeground", warning: "list.warningForeground",
   repo: "charts.blue", "root-folder": "charts.blue", project: "charts.blue",
-  "play-circle": "charts.green", tasklist: "charts.green", check: "charts.green",
+  "play-circle": "terminal.ansiCyan", tasklist: "terminal.ansiCyan", check: "charts.green",
   "git-merge": "charts.purple", layers: "charts.orange", versions: "charts.orange",
   "settings-gear": "charts.yellow", folder: "charts.yellow", key: "charts.yellow",
   package: "charts.orange", tools: "charts.orange", calendar: "charts.purple",
@@ -241,11 +242,11 @@ function createController(vscode, context, editorFactory = createEditors) {
     help.icon = "question";
     help.command = { command: "project-toolkit.showHelp", title: "Show CLI help", arguments: [targets[0]] };
     const children = [help, ...treeCommands.map(spec => nodes.get(spec.path.join(" ")))];
-    return { label: "Built-in commands", children, icon: "terminal" };
+    return { label: "Built-in commands", children, icon: "terminal", entityKind: "builtin" };
   }
 
   function validationNode(owner = {}) {
-    return { ...owner, label: "Validate configuration", icon: "check",
+    return { ...owner, label: "Validate configuration", icon: "check", entityKind: "builtin",
       command: { command: "project-toolkit.validate", title: "Validate configuration", arguments: [owner] } };
   }
 
@@ -257,7 +258,7 @@ function createController(vscode, context, editorFactory = createEditors) {
       const object = value !== null && typeof value === "object";
       const node = { ...common, kind: "configuration", configPath, label,
         id: JSON.stringify([common.folder.uri.fsPath, common.project.entry_file, "configuration", configPath]),
-        collapsed: true, icon: presentation.icon(value, configPath),
+        collapsed: true, icon: presentation.icon(value, configPath), entityKind: presentation.entity(configPath),
         tooltip: source ? `${source.file}:${source.line}` : "Not configured",
         description: value === undefined ? "not configured" : object || typeof configPath.at(-1) === "number" ? "" : String(value),
       };
@@ -330,7 +331,7 @@ function createController(vscode, context, editorFactory = createEditors) {
         targetNodes.set(variantKey(target), nodes);
         return node;
       });
-      if (children.length) groups.push({ label: kind === "job" ? "Jobs" : "Workflows", icon: kind === "job" ? "tasklist" : "git-merge", children });
+      if (children.length) groups.push({ entityKind: kind, label: kind === "job" ? "Jobs" : "Workflows", icon: kind === "job" ? "tasklist" : "git-merge", children });
     }
     groups.push(builtinTree(common, project.commands), configurationNode(common));
     return { ...common, label: project.alias, description: project.name, tooltip: project.root,
@@ -359,7 +360,7 @@ function createController(vscode, context, editorFactory = createEditors) {
         };
         const children = record.inventory.projects.map(project => projectNode(project, record));
         if (!children.length) children.push(validationNode({ folder: record.folder, root: record.folder.uri.fsPath }));
-        if (record.inventory.workflows.length) children.unshift({ label: "Workspace workflows", icon: "git-merge", children: record.inventory.workflows.map(spec => ({
+        if (record.inventory.workflows.length) children.unshift({ label: "Workspace workflows", entityKind: "workflow", icon: "git-merge", children: record.inventory.workflows.map(spec => ({
           kind: "workflow", name: spec.name, spec, root: record.inventory.root, folder: record.folder, ci: record.inventory.ci,
           label: spec.name, tooltip: spec.help, icon: "git-merge",
           contextValue: core.canOpenReport({ kind: "workflow", commands: record.inventory.commands }) ? "workflow-report" : "workflow",
@@ -389,8 +390,9 @@ function createController(vscode, context, editorFactory = createEditors) {
           accessibilityInformation: { label: `${element.label}, variant for ${element.target.kind} ${element.target.name}` },
         };
       }
+      const color = entityColors[element.entityKind || element.kind] || iconColors[element.icon];
       if (element.icon) item.iconPath = new vscode.ThemeIcon(
-        element.icon, iconColors[element.icon] ? new vscode.ThemeColor(iconColors[element.icon]) : undefined
+        element.icon, color ? new vscode.ThemeColor(color) : undefined
       );
       return item;
     },

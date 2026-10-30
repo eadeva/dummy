@@ -10,6 +10,7 @@ from rich.text import Text
 from rich.tree import Tree
 
 from ...application.use_cases.run import PreparedRun, RunJob
+from ...domain import run_output as display
 from ...domain.execution.model import (
     JobPlan,
     PlannedStep,
@@ -17,7 +18,6 @@ from ...domain.execution.model import (
     Status,
     StepResult,
 )
-from ...domain.layout import NO_VARIANT
 from ...domain.logging import Level
 
 MESSAGE_STYLE = {
@@ -34,40 +34,75 @@ STYLE = {
     Status.CANCELLED: "yellow",
     Status.PENDING: "white",
 }
-ICON = {
-    Status.PASSED: "✔",
-    Status.FAILED: "✘",
-    Status.SKIPPED: "–",
-    Status.CANCELLED: "■",
-    Status.PENDING: "·",
-}
+
+
+ENTITY_STYLE = {"WORKFLOW": "bold magenta", "JOB": "bold cyan", "STEP": "bold blue"}
+
+
+def header(console, kind, identity, state, rows=(), *, status=None):
+    text = Text(display.boundary(kind, identity, state, console.width))
+    text.stylize(ENTITY_STYLE[kind])
+    if status is not None:
+        start = text.plain.find(str(status).upper(), text.plain.find(" | "))
+        if start >= 0:
+            text.stylize(STYLE[status], start, start + len(str(status)))
+    for row in rows:
+        text.append("\n" + row, style="default")
+    console.print(text, highlight=False, soft_wrap=True)
 
 
 class ConsoleObserver:
     """Identify step records consistently, including concurrent jobs and variants."""
 
     def __init__(
-        self, console: Console, *, quiet: bool = False, level: Level = Level.INFO
+        self,
+        console: Console,
+        *,
+        quiet: bool = False,
+        level: Level = Level.INFO,
+        job_label: str | None = None,
     ):
         self._console = console
         self._quiet = quiet
         self._level = level
         self._run_prefix = ""
+        self._job_label = job_label
         self._lock = threading.Lock()
 
     def run_started(self, plan: JobPlan) -> None:
-        self._run_prefix = f"[{plan.job}][{plan.variant or NO_VARIANT}]"
-        if plan.only_step:
-            self._print(
-                f"[yellow]Only step {escape(plan.only_step)}; prerequisites not run: {escape(', '.join(plan.omitted_dependencies) or 'none')}. Required outputs must already exist.[/]"
-            )
-        variant = f" [dim]variant[/] {escape(plan.variant)}" if plan.variant else ""
-        self._print(
-            f"[bold]ptk {escape(plan.job)}[/]{variant} [dim]run {plan.run_id}[/]"
+        self._job_label = self._job_label or plan.job
+        self._run_prefix = display.prefix(self._job_label, plan.variant)
+        header(
+            self._console,
+            "JOB",
+            self._job_label,
+            "START",
+            display.job_rows(plan, verbose=self._level <= Level.DEBUG),
         )
 
     def step_started(self, step: PlannedStep, command: str | None) -> None:
-        self._record(Text.assemble(("▶ ", "bold cyan"), (command or "", "dim")), step)
+        self._record(
+            Text("\n").join(
+                [
+                    self._step_boundary(step, "START"),
+                    *(
+                        Text(row, style="dim")
+                        for row in display.step_rows(step, command)
+                    ),
+                ]
+            ),
+            step,
+        )
+
+    def _step_boundary(self, step, state, status=None):
+        width = self._console.width - len(self._run_prefix) - len(step.name) - 3
+        text = Text(display.boundary("STEP", "", state, width))
+        text.stylize(ENTITY_STYLE["STEP"])
+        if status is not None:
+            start = text.plain.find(str(status).upper(), text.plain.find(" | "))
+            if start >= 0:
+                text.stylize(STYLE[status], start, start + len(str(status)))
+        return text
 
     def output(self, step: PlannedStep, line: str) -> None:
         if self._quiet:
@@ -84,22 +119,20 @@ class ConsoleObserver:
         self._record(Text(f"{level.label}: {text}", style=style), step)
 
     def step_finished(self, step: PlannedStep, result: StepResult) -> None:
-        style = STYLE[result.status]
-        message = result.message if result.message != result.status.value else ""
-        timing = (
-            f" {result.duration:.1f}s"
-            if result.status in (Status.PASSED, Status.FAILED)
-            else ""
-        )
-        text = Text(f"{ICON[result.status]} {result.status.value}{timing}", style=style)
-        if message:
-            text.append(f" {message}", style="dim")
-        if result.allowed_failure:
-            text.append(" (allowed)", style="yellow")
+        text = self._step_boundary(step, display.outcome(result), result.status)
+        if result.message and result.message != result.status.value:
+            text.append("\n" + result.message, style="dim")
         self._record(text, step)
 
     def run_finished(self, result: RunResult) -> None:
-        pass
+        header(
+            self._console,
+            "JOB",
+            self._job_label,
+            f"{str(result.status).upper()} | {result.duration:.1f}s",
+            display.result_rows(result),
+            status=result.status,
+        )
 
     def _record(self, text: Text, step: PlannedStep | None = None) -> None:
         prefix = Text(
@@ -117,38 +150,6 @@ class ConsoleObserver:
     def _print(self, text: str | Text) -> None:
         with self._lock:
             self._console.print(text, highlight=False, soft_wrap=True)
-
-
-def summary(console: Console, result: RunResult) -> None:
-    tree = Tree(
-        f"[bold]{escape(result.job)}[/] [{STYLE[result.status]}]{result.status.value}[/] "
-        f"in {result.duration:.1f}s"
-    )
-
-    def add(node: Tree, step: StepResult) -> None:
-        style = STYLE[step.status]
-        timing = (
-            f" {step.duration:.1f}s"
-            if step.status in (Status.PASSED, Status.FAILED)
-            else ""
-        )
-        show = (
-            step.message
-            and step.status is not Status.PASSED
-            and step.message != step.status.value
-        )
-        extra = f" [dim]{escape(step.message)}[/]" if show else ""
-        if step.allowed_failure:
-            extra += " [yellow](allowed)[/]"
-        node.add(f"[{style}]{ICON[step.status]} {escape(step.name)}{timing}[/]{extra}")
-
-    for step in result.steps:
-        add(tree, step)
-    console.print(tree, highlight=False)
-    if result.log_file:
-        console.print(
-            f"[dim]log: {escape(result.log_file)}[/]", highlight=False, soft_wrap=True
-        )
 
 
 def dry_run(
@@ -191,7 +192,7 @@ def dry_run(
             )
             return
         command, python = runner.describe(prepared, step)
-        child = node.add(f"[bold cyan]{escape(step.name)}[/]  {escape(command)}")
+        child = node.add(f"[bold blue]{escape(step.name)}[/]  {escape(command)}")
         child.add(
             "needs: " + escape(", ".join(step.spec.needs))
             if step.spec.needs

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.19.0
+
+- Match CLI entity colors: purple workflows, cyan jobs, blue steps, neutral gray built-in commands.
+- Apply entity colors to navigation, configuration graph branches and graphical editor nodes. Other category and status colors retain their existing meaning.
+
 ## 0.18.0
 
 - Match PTK's removal of third-party plugins and custom installer configuration.

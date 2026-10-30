@@ -400,7 +400,15 @@ Zero and false remain filled values. Starter URLs use ``example.invalid`` and
 must be replaced with the intended endpoint before use.
 The form uses the VS Code tree and breadcrumbs for navigation. List rows show
 names or values. There is no duplicate navigation sidebar or destination picker.
-Theme-aware colors distinguish jobs, workflows and configuration categories.
+Theme-aware entity colors match the CLI headings: purple workflows, cyan jobs
+and blue steps. They apply to tree entries, configuration entity headings and
+graph nodes; a workflow graph contains cyan jobs and a job graph contains blue
+steps. Built-in commands use neutral gray, including Validate Configuration.
+The extension uses ``charts.purple``, ``terminal.ansiCyan``, ``charts.blue`` and
+``descriptionForeground`` respectively, so exact shades follow the active
+theme. Labels and icon shapes also identify entities. Focus, selection and
+error indicators keep their own semantics; other configuration categories
+retain their existing colors pending a separate color review.
 Fingerprints reject stale edits, and dirty YAML must be saved first.
 
 Loading errors appear in the tree and Problems panel. Validate Configuration stays

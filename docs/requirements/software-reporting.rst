@@ -18,17 +18,60 @@ Canonical results, retained evidence and diagnostic interpretation.
    PTK shall prefix each logical console step line with [job][variant][step],
    including output, start/finish records and step messages. It shall use the
    selected variant or the established default name when no variant is selected.
+   Workspace and cross-repository workflows shall qualify the job field with
+   its repository alias while preserving the three-field format.
    Presentation shall preserve tool indentation and keep every logical line
    identifiable without inserting console prefixes into captured step logs.
 
    **Origin:** Explicit user request for contextual step printouts and consistent
    console indentation. Presentation choices are recorded in :need:`DD_CONSOLE_CONTEXT`.
 
-   **Implementation:** Implemented in the shared console observer. Captured file
-   logging and structured reports retain their existing contracts.
+   **Implementation:** Implemented in the shared console observer. Raw captured
+   step text and structured report identities are unchanged. Log layout is
+   specified by :need:`REQ_Sw_RUN_HEADERS`.
 
    **Evidence:** ``tests/test_console_output.py``; ``tests/test_logging.py``;
    ``src/ptk/drivers/cli/console.py``.
+
+.. req-sw:: Show execution hierarchy and prepared metadata in run transcripts
+   :id: REQ_Sw_RUN_HEADERS
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: accepted
+   :verification_criteria: Observer and real workflow tests verify level boundaries, prepared metadata, verbose variant details, entity/status colors, masked values, concurrent repository identity, plain transcripts and failed/blocked outcomes.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_LOGS
+   :tags: implemented
+
+   PTK shall separate workflow, job and step start/finish records with labelled
+   boundaries. Workflow/job headers shall expose prepared project versions,
+   variants, run identity and execution limits without additional version
+   discovery. Verbose console output shall include resolved variant details.
+   Header blocks shall remain intact during concurrent execution, while step
+   output continues streaming. Finish records shall include outcomes, durations
+   and relevant status counts or reasons.
+
+   PTK shall use purple workflow, cyan job and blue step headings, retain
+   independent status colors and provide readable output without color. It
+   shall write matching plain-text aggregate job logs and an immutable workflow
+   transcript alongside workflow reports, without adding presentation prefixes
+   to raw captured step output or exposing resolved secrets.
+   Raw step logs shall use a separate directory so valid step IDs cannot
+   overwrite the aggregate job transcript or its metadata.
+
+   **Origin:** Explicit user request for workflow/job/step separation, informative
+   headers and consistent extension colors. See :need:`DD_RUN_HIERARCHY`.
+
+   **Implementation:** Shared presentation helpers feed the CLI observer and
+   file transcript observers; workflow execution owns the combined transcript.
+   The extension applies the same entity roles to tree and editor views.
+
+   **Evidence:** ``tests/test_console_output.py``; ``tests/test_logging.py``;
+   ``tests/workflows/test_transcript.py``;
+   ``extensions/project-toolkit/test/extension.test.js``;
+   ``extensions/project-toolkit/test/graph-editor-ui.test.js``.
 
 .. req-sw:: Use simple reporting and retention defaults
    :id: REQ_Sw_REPORT_DEFAULTS

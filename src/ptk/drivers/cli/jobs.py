@@ -388,7 +388,6 @@ def _execute_one_unlocked(
     if "error" in holder:
         raise holder["error"]
     result = holder["result"]
-    present.summary(console, result)
     write_reports(state, project, prepared.plan, result)
     codes = {Status.PASSED: 0, Status.SKIPPED: 0, Status.CANCELLED: 130}
     return codes.get(result.status, 1)

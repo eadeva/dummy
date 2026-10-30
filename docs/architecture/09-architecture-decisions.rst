@@ -626,10 +626,52 @@ not imply that every related future capability has been implemented.
 
    **Consequences:** Identifiers remain literal and unpadded. The terminal owns
    visual wrapping; very long lines can wrap to its left margin. Raw captured
-   step logs and structured report identities remain unchanged. The tuple does
-   not distinguish equal job/variant/step IDs in different repositories; it
-   follows the requested format without adding a repository field.
+   step logs and structured report identities remain unchanged. Workspace and
+   cross-repository workflows qualify the first field as repository:job to
+   distinguish equal IDs while retaining three fields. The workflow invocation
+   alias belongs in header metadata and the summary.
    See :need:`REQ_Sw_CONSOLE_PREFIX` and :doc:`/guides/log-analysis`.
+
+.. ddec:: Separate execution levels and give entity colors a consistent meaning
+   :id: DD_RUN_HIERARCHY
+   :status: accepted
+
+   **Context:** Streaming output needs visible workflow, job and step boundaries,
+   useful run metadata and consistent identity under concurrency. Colors in the
+   terminal and extension should refer to the same execution entities.
+
+   **Decision:** Print start/finish boundaries with equals signs for workflows,
+   long dash separators for jobs and compact dash separators for steps. Use
+   purple workflows, cyan jobs and blue steps in CLI headings and extension
+   entity views; use neutral gray for built-in extension commands. Keep outcome,
+   warning, selection and focus colors independent. Exact shades follow the
+   terminal/editor theme and text labels remain available without color.
+
+   Reuse prepared, masked project version and variant metadata; do not run extra
+   discovery to decorate output. Workflow headers list actual participating
+   repositories, versions and variants, without inventing a single workspace
+   project version. Job headers include project/repository identity, project/PTK
+   versions, variant description and counts, run ID and execution limits.
+   Verbose console output and debug file logs include resolved variant details.
+   Footer counts and reasons include skipped, blocked and allowed-failure cases.
+
+   Share plain presentation helpers between the console and aggregate logs.
+   Write each header block atomically and retain live interleaving of contextual
+   records from concurrent jobs. Add an immutable workflow.log beside workflow
+   reports; preserve per-job rotation and original raw per-step capture. Store
+   raw logs under steps/STEP.log so a step named run cannot truncate run.log;
+   do not reject valid IDs or add a special-name fallback. Declared log paths
+   and report links follow the layout. Avoid
+   nested indentation, fixed-width ID columns and terminal cursor rewriting.
+
+   **Consequences:** Long lines can still wrap at the terminal margin. Concurrent
+   output is identified by prefixes rather than assumed containment below the
+   most recent heading. Aggregate human-readable log formatting changes; raw
+   step capture and machine-readable event/result contracts remain available.
+   This decision does not change project responsibility for script behavior or
+   artifact validation (:need:`DD_EXECUTION_BOUNDARIES`). Other extension
+   category colors remain pending a separate review. No migration or fallback
+   presentation mode is introduced. See :need:`REQ_Sw_RUN_HEADERS`.
 
 Open boundaries
 ---------------

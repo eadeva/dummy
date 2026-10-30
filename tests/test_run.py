@@ -195,7 +195,7 @@ def test_full_run(project):
     assert steps["after"].status is Status.SKIPPED
     # logs follow the layout and never contain the secret
     run_log = project / "_logs/default/go/run.log"
-    assert run_log.is_file() and (project / "_logs/default/go/a.log").is_file()
+    assert run_log.is_file() and (project / "_logs/default/go/steps/a.log").is_file()
     text = run_log.read_text()
     assert "s3cr3t" not in text and "token is ********" in text
     assert "s3cr3t" not in steps["secret"].command

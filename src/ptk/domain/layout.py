@@ -3,7 +3,7 @@
     <root>/_builds/<variant>/<job>/<step>/    build folder per step
     <root>/_bin/<variant>/<job>/                        binaries / artifacts per job
     <root>/_logs/<variant>/<job>/run.log             whole run of a job
-    <root>/_logs/<variant>/<job>/<step>.log    one log per step
+    <root>/_logs/<variant>/<job>/steps/<step>.log    one log per step
     <root>/_reports/<variant>/<job>/<step>/    reports per step
     <root>/_reports/<variant>/<job>/report.*         job report
 
@@ -61,7 +61,9 @@ class Layout:
         self, variant: str | None, job: str, step_path: tuple[str, ...]
     ) -> PurePath:
         parts = self._steps(step_path)
-        return self.job_log_dir(variant, job).joinpath(*parts[:-1], f"{parts[-1]}.log")
+        return self.job_log_dir(variant, job).joinpath(
+            "steps", *parts[:-1], f"{parts[-1]}.log"
+        )
 
     def reports_dir(
         self, variant: str | None, job: str, step_path: tuple[str, ...] = ()

@@ -201,7 +201,7 @@
         const path = selected.slice(0, i + 1);
         crumbs.append(el("span", "/"), button(P.pathLabel(state.value, path), () => navigate(path), "link"));
       });
-      main.append(crumbs, el("h2", P.pathLabel(state.value, selected)));
+      main.append(crumbs, el("h2", P.pathLabel(state.value, selected), { "data-entity": P.entity(selected, state) || "" }));
       const graph = PtkDependencies.context(schema, state.value, selected, S);
       if (graph) {
         graph.owner = (state.logical ? state.value : state.configurationValue)?.repository?.alias;
@@ -259,7 +259,7 @@
     const key = path.at(-1);
     const id = `field-${JSON.stringify(path)}`;
     const resolved = S.effective(spec, value, schema);
-    const field = el("section", undefined, { className: "field", "data-type": S.type(value) });
+    const field = el("section", undefined, { className: "field", "data-type": S.type(value), "data-entity": P.entity(path, state) || "" });
     const top = el("div", undefined, { className: "field-top" });
     const name = el("label", P.pathLabel(state.value, path), { className: "name", for: id });
     top.append(name);

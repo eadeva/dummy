@@ -1,7 +1,7 @@
 """RunObserver writing the logs of the workspace layout (unified logging).
 
     _logs/<variant>/<job>/run.log            the whole run, each line tagged with its step
-    _logs/<variant>/<job>/<set>/<step>.log   output of one step
+    _logs/<variant>/<job>/steps/<step>.log   output of one step
     _logs/<variant>/<job>/events.jsonl       machine-readable events (one JSON per line)
     _logs/<variant>/<job>/run.json           summary of the run (status, steps, params)
     _logs/<variant>/<job>/_history/<run id>/ previous runs (``logging.keep_history``)
@@ -30,6 +30,7 @@ from ...domain.execution.model import (
 )
 from ...domain.logging import Level, history_name, runs_to_prune
 from ...domain.reporting.summary import header, run_summary, step_dict
+from .transcript import RunTranscript
 
 HISTORY = "_history"
 SUMMARY = "run.json"
@@ -111,6 +112,7 @@ class FileLogObserver:
         self._steps: dict[tuple[str, ...], TextIO] = {}
         self._plan: JobPlan | None = None
         self._folder: Path | None = None
+        self._transcript = RunTranscript(self._line, level=level)
 
     # -- RunObserver -------------------------------------------------------------------
 
@@ -125,10 +127,7 @@ class FileLogObserver:
         self._write_summary(
             {**header(plan), "status": "running", "started_at": _timestamp()}
         )
-        self._line(
-            f"ptk run {plan.run_id}: project {plan.project}, job {plan.job}, "
-            f"variant {plan.variant or lay.NO_VARIANT}"
-        )
+        self._transcript.run_started(plan)
         for name, value in plan.params.items():
             self._line(f"param {name} = {value!r} ({plan.param_sources[name]})")
         self._event("run_started", params=plan.params, param_sources=plan.param_sources)
@@ -142,18 +141,17 @@ class FileLogObserver:
         with self._lock:
             self._steps[step.path] = path.open("w", encoding="utf-8")
         self._step_line(step, f"$ {command}" if command else "start")
-        self._line(f"[{step.label}] $ {command}")
+        self._transcript.step_started(step, command)
         self._event("step_started", step=step.label, kind=step.kind, command=command)
 
     def output(self, step: PlannedStep, line: str) -> None:
         self._step_line(step, line, stamp=False)
-        self._line(f"[{step.label}] {line}")
+        self._transcript.output(step, line)
 
     def message(self, level: Level, text: str, step: PlannedStep | None = None) -> None:
         if level < self._level:
             return
-        prefix = f"[{step.label}] " if step else ""
-        self._line(f"{prefix}{level.label}: {text}")
+        self._transcript.message(level, text, step)
         if step is not None:
             self._step_line(step, f"{level.label}: {text}")
         self._event(
@@ -163,7 +161,7 @@ class FileLogObserver:
     def step_finished(self, step: PlannedStep, result: StepResult) -> None:
         text = describe(result)
         self._step_line(step, text)
-        self._line(f"[{step.label}] {text}")
+        self._transcript.step_finished(step, result)
         self._event("step_finished", **step_dict(result))
         with self._lock:
             handle = self._steps.pop(step.path, None)
@@ -171,7 +169,7 @@ class FileLogObserver:
             handle.close()
 
     def run_finished(self, result: RunResult) -> None:
-        self._line(f"run {result.status.value} in {result.duration:.1f}s")
+        self._transcript.run_finished(result)
         self._event(
             "run_finished",
             status=result.status.value,
@@ -214,7 +212,9 @@ class FileLogObserver:
     def _line(self, text: str) -> None:
         with self._lock:
             if self._run:
-                self._run.write(f"{_clock()} {text}\n")
+                self._run.write(
+                    "".join(f"{_clock()} {line}\n" for line in text.split("\n"))
+                )
                 self._run.flush()
 
     def _step_line(self, step: PlannedStep, text: str, stamp: bool = True) -> None:

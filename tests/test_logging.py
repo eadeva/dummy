@@ -121,10 +121,10 @@ def test_logs_events_and_summary(write):
         "run.log",
         "run.json",
         "events.jsonl",
-        "hello.log",
-        "a.log",
-        "b.log",
-        "flaky.log",
+        "steps/hello.log",
+        "steps/a.log",
+        "steps/b.log",
+        "steps/flaky.log",
     }
     events = [
         json.loads(line) for line in (folder / "events.jsonl").read_text().splitlines()
@@ -157,7 +157,7 @@ def test_logs_events_and_summary(write):
 def test_trace_level_logs_masked_environment(write):
     root = project(write)
     run(root, verbose=2)
-    text = (root / LOGS / "hello.log").read_text()
+    text = (root / LOGS / "steps/hello.log").read_text()
     assert "trace: env TOKEN=********" in text and "trace: env PTK_STEP=hello" in text
 
 
@@ -170,7 +170,7 @@ def test_history_is_kept_and_pruned(write):
     history = root / LOGS / "_history"
     assert sorted(p.name for p in history.iterdir()) == ids[1:3]
     assert json.loads((root / LOGS / "run.json").read_text())["run_id"] == ids[3]
-    assert (history / ids[2] / "a.log").is_file()
+    assert (history / ids[2] / "steps/a.log").is_file()
 
 
 def test_keep_history_zero_keeps_only_latest(write):

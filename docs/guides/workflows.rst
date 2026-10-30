@@ -234,6 +234,7 @@ The workflow also writes an immutable summary and child HTML/JSON reports under:
 
    _reports/workflows/NAME/RUN-ID/workflow.json
    _reports/workflows/NAME/RUN-ID/workflow.html
+   _reports/workflows/NAME/RUN-ID/workflow.log
    _reports/workflows/NAME/RUN-ID/jobs/INVOCATION-ID/report.html
 
 Repository-owned workflows honor the owner's layout/report directory; workspace
@@ -243,6 +244,17 @@ Their table shows invocation IDs, ``needs``, targets, status and skip reasons.
 The JSON summary exposes the same information in its ``jobs`` list.
 Open a child report for its project versions, tool dependencies and test details.
 Workflow history is retained until explicitly removed; it has no automatic rotation.
+
+``workflow.log`` is a timestamped plain-text transcript written as child jobs
+run, including workflow/job/step boundaries, metadata and final status counts.
+The console uses purple workflow headers, cyan job headers and blue step
+headers. It lists participating repositories' already prepared versions and
+variants; it does not perform another version lookup just for display. Workspace
+and cross-repository workflows qualify step prefixes as
+``[repository:job][variant][step]``. Header blocks stay together while output
+from parallel jobs can alternate between them. Individual raw step logs remain
+available through the child reports. See :doc:`log-analysis` for metadata,
+verbosity and formatting details.
 
 Use ``ptk report open --workflow NAME`` to reopen the latest saved aggregate HTML report.
 At a VMR root, use a workspace workflow name or qualify a member workflow as

@@ -11,7 +11,7 @@ def test_folder_structure_follows_variant_job_step():
     )
     assert (
         str(layout.step_log("b_us", "build", ("checks", "lint")))
-        == "/p/_logs/b_us/build/checks/lint.log"
+        == "/p/_logs/b_us/build/steps/checks/lint.log"
     )
     assert str(layout.run_log("b_us", "build")) == "/p/_logs/b_us/build/run.log"
     assert (

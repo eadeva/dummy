@@ -313,7 +313,7 @@ def test_creds_cli_end_to_end(cli_env):
     ran = cli_env("go")
     assert ran.exit_code == 0 and "got ********" in ran.output
     assert "vault-secret-1" not in ran.output
-    log = (cli_env.root / "_logs/default/go/use.log").read_text()
+    log = (cli_env.root / "_logs/default/go/steps/use.log").read_text()
     assert "vault-secret-1" not in log
     setup = cli_env("self-service", "creds", "setup")
     assert "vault" in setup.output and "ready" in setup.output

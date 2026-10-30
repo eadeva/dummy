@@ -31,7 +31,8 @@ def show_graph(
     title = f"{kind.title()} {name}: dependency graph" + (
         f" · {variant}" if variant else ""
     )
-    console.print(f"[bold]{escape(title)}[/]", highlight=False, soft_wrap=True)
+    color = "magenta" if kind == "workflow" else "cyan"
+    console.print(f"[bold {color}]{escape(title)}[/]", highlight=False, soft_wrap=True)
     if only_step:
         omitted = ", ".join(sorted(ancestors(nodes)[only_step])) or "none"
         graph["notice"] = (
@@ -45,7 +46,9 @@ def show_graph(
     branches = []
     for entry in graph["tree"]:
         node = metadata[entry["id"]]
-        label = Text(node["id"], style="bold cyan")
+        label = Text(
+            node["id"], style="bold cyan" if kind == "workflow" else "bold blue"
+        )
         if node.get("label") and node["label"] != node["id"]:
             label.append(f"  {node['label']}", style="dim")
         if node.get("message"):

@@ -817,14 +817,22 @@ test("an editor save waits for a superseding refresh instead of acknowledging an
 });
 
 test("tree icons use distinct theme colours for jobs, workflows and configuration categories", async t => {
-  const h = harness(t);
+  const doc = inventory();
+  doc.projects[0].configuration.value.jobs.build.steps = { compile: { run: "cc" } };
+  const h = harness(t, [doc]);
   await h.controller.ready();
   const project = h.controller.provider.getChildren()[0].children[0];
   const jobs = project.children.find(item => item.label === "Jobs");
   const workflows = project.children.find(item => item.label === "Workflows");
   const config = project.children.find(item => item.label === "Configuration");
   const items = [project, jobs, jobs.children[0], workflows, config].map(item => h.controller.provider.getTreeItem(item));
-  assert.deepEqual(items.map(item => item.iconPath.color.id), ["charts.blue", "charts.green", "charts.green", "charts.purple", "charts.yellow"]);
+  assert.deepEqual(items.map(item => item.iconPath.color.id), ["charts.blue", "terminal.ansiCyan", "terminal.ansiCyan", "charts.purple", "charts.yellow"]);
+  const builtin = project.children.find(item => item.label === "Built-in commands");
+  for (const node of [builtin, ...builtin.children]) assert.equal(h.controller.provider.getTreeItem(node).iconPath.color.id, "descriptionForeground");
+  function walk(node) { return [node, ...(node.children || []).flatMap(walk)]; }
+  const steps = walk(config).filter(item => item.entityKind === "step");
+  assert.ok(steps.length);
+  for (const node of steps) assert.equal(h.controller.provider.getTreeItem(node).iconPath.color.id, "charts.blue");
 });
 
 test("job run form selects multiple variants and restores the same step range", async t => {

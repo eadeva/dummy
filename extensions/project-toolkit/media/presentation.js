@@ -38,5 +38,16 @@
     if (Array.isArray(value)) return "list-unordered";
     return object(value) ? "symbol-object" : undefined;
   }
-  return { listLabel, pathLabel, icon };
+  function entity(path, state) {
+    if (state && !state.logical) {
+      const binding = state.pathBindings?.find(item => item.document_path.every((key, i) => path[i] === key));
+      if (!binding) return undefined;
+      path = [...binding.path, ...path.slice(binding.document_path.length)];
+    }
+    if (["jobs", "workflows"].includes(path[0]) && path.length <= 2) return path[0] === "jobs" ? "job" : "workflow";
+    if (path[0] === "jobs" && path[2] === "steps" && path.length <= 4) return "step";
+    if (path[0] === "workflows" && path[2] === "jobs" && path.length <= 4) return "job";
+    return undefined;
+  }
+  return { listLabel, pathLabel, icon, entity };
 });

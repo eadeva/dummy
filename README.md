@@ -310,7 +310,7 @@ steps:
 ```
 _builds/<variant>/<job>/<step>/    build folder per step (${run.build_dir})
 _bin/<variant>/                             binaries per variant
-_logs/<variant>/<job>/run.log            + <step>.log, events.jsonl, run.json, _history/
+_logs/<variant>/<job>/run.log            + steps/<step>.log, events.jsonl, run.json, _history/
 _reports/<variant>/<job>/report.{json,xml,html,md} + <step>/ (tool results)
 ```
 

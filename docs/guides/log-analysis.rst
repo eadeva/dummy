@@ -33,15 +33,48 @@ retains its structured data, and Markdown/GitHub include its findings. JUnit
 exports execution steps and test cases; it does not convert log diagnostics into
 failed tests. Report findings never overwrite a process exit code.
 
-Console step identity and spacing
-----------------------------------
+Console hierarchy, identity and spacing
+----------------------------------------
+
+Real runs print start and finish boundaries for each execution level:
+``======== WORKFLOW``, ``-------- JOB`` and ``--- STEP``. Workflow headings
+are purple, job headings cyan and step headings blue. Outcome words retain
+their status colors (green passed, red failed, yellow cancelled); labels also
+identify the level and outcome when color is unavailable. Terminal and VS Code
+themes choose the exact shades. The extension uses the same entity colors and
+neutral gray for built-in commands.
+
+The workflow header shows its owner or workspace, PTK version, run ID, job count
+and concurrency limit. It lists the participating repositories' project names,
+resolved project versions and selected variants. Each job header shows its
+project and repository, project/PTK versions, variant name and description,
+component/feature counts, run ID, step count and concurrency limit. Workflow
+jobs also identify the workflow and invocation. An unconfigured project version
+is shown as ``not configured``; an absent variant model is shown as
+``default (no variant model)``. Headers reuse prepared, masked metadata without
+performing additional version discovery. Use ``-v`` to include variant
+inheritance, selected components and resolved feature values on the console.
+
+Step starts include the command, optional display title and requested generators.
+Step finishes show outcome, duration and an available failure/skip reason.
+Job/workflow footers give outcome, duration, status counts and log location;
+workflow footers also list individual invocations, including jobs blocked before
+they could start. An allowed failure is explicitly labelled.
 
 PTK prefixes step output, start/finish records and step messages with
 ``[job][variant][step]``. For example, the documentation job prints
 ``[docs][default][sphinx]``. These are the job and step IDs, not display titles or
 workflow invocation aliases. ``default`` is the existing no-variant convention;
 a selected variant uses its own name. Job-level messages use ``[job][variant]``.
-Each concurrent job retains its own context.
+Each concurrent job retains its own context. Workspace and cross-repository
+workflows qualify the first field as ``[repository:job][variant][step]`` to
+distinguish equal job IDs while preserving three fields. Invocation aliases
+appear in job metadata and the workflow summary.
+
+Each header and its metadata are written as one block. Parallel jobs continue
+streaming between blocks; they are not buffered until completion. PTK does not
+increase indentation with nesting. The prefix identifies the emitting step
+even when several jobs have started since its header.
 
 Every logical line receives a prefix, including multiline messages. Tabs expand
 to eight-column stops within the tool text before PTK adds the prefix, preserving
@@ -52,8 +85,17 @@ console. Carriage-return progress updates become separate lines.
 PTK does not pad identifiers into fixed-width columns or reflow captured output.
 Long lines may wrap at the terminal's current width, with wrapped continuations
 starting at the terminal margin. Captured step logs retain their original text
-without these console prefixes or presentation changes. See :need:`DD_CONSOLE_CONTEXT`
-and :need:`REQ_Sw_CONSOLE_PREFIX`.
+without these console prefixes or presentation changes. The aggregate job
+``run.log`` and workflow ``workflow.log`` contain the same boundaries and
+contextual records as plain text, with timestamps and file-level debug detail.
+Raw step logs live at ``_logs/VARIANT/JOB/steps/STEP.log``, separate from the
+job's ``run.log`` and metadata. This prevents a valid step named ``run`` from
+overwriting the job transcript. Use ``${run.log_file}`` or
+``${steps.ID.log_file}`` in steps to obtain the declared step log path.
+The workflow log lives alongside its immutable workflow reports and combines
+child job output as it arrives. See :doc:`workflows`, :need:`DD_CONSOLE_CONTEXT`,
+:need:`DD_RUN_HIERARCHY`, :need:`REQ_Sw_CONSOLE_PREFIX` and
+:need:`REQ_Sw_RUN_HEADERS`.
 
 Recognition and rules
 ----------------------

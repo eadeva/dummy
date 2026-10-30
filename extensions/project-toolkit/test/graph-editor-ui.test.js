@@ -23,7 +23,7 @@ test("shipped graphical editor connects by drag and dropdown, saves real YAML, a
     if (url.origin !== "http://ptk.test") { requests.push(url.href); return route.abort(); }
     if (url.pathname === "/index.html") return route.fulfill({ contentType: "text/html", body: panel.webview.html });
     const body = await fs.readFile(path.join(media, url.pathname.slice(1)));
-    return route.fulfill({ contentType: url.pathname.endsWith("css") ? "text/css" : "application/javascript", body: url.pathname.endsWith("css") ? Buffer.concat([Buffer.from(theme), body]) : body });
+    return route.fulfill({ contentType: url.pathname.endsWith("css") ? "text/css" : "application/javascript", body: url.pathname.endsWith("css") ? Buffer.concat([Buffer.from(theme + ":root{--vscode-charts-blue:#3366ee;--vscode-terminal-ansiCyan:#008b8b}"), body]) : body });
   });
   await page.exposeFunction("ptkHost", message => panel.receive(message));
   await page.addInitScript(() => { window.acquireVsCodeApi = () => ({ postMessage: message => window.ptkHost(message), getState: () => ({}), setState() {} }); });
@@ -31,6 +31,8 @@ test("shipped graphical editor connects by drag and dropdown, saves real YAML, a
   await page.goto("http://ptk.test/index.html");
   await h.editors.open(h.document.uri, ["jobs", "build", "steps", "package"]);
   await page.locator(".dependency-node").first().waitFor();
+  assert.equal(await page.locator(".dependency-editor").getAttribute("data-entity"), "step");
+  assert.equal(await page.locator(".dependency-node [aria-pressed=false] rect").first().evaluate(node => getComputedStyle(node).stroke), "rgb(51, 102, 238)");
   assert.equal(await page.locator(".dependency-node").count(), 4);
   assert.equal(await page.locator(".dependency-edge").count(), 2);
   assert.deepEqual(await page.getByLabel("Add prerequisite", { exact: true }).locator("option").evaluateAll(options => options.map(option => option.value)), ["", "check", "docs"]);
@@ -79,6 +81,8 @@ test("shipped graphical editor connects by drag and dropdown, saves real YAML, a
   await page.waitForFunction(() => document.querySelectorAll(".dependency-edge").length === 2);
   await h.editors.open(h.document.uri, ["workflows", "verify", "jobs", "deploy"]);
   await page.getByLabel("Select job", { exact: true }).waitFor();
+  assert.equal(await page.locator(".dependency-editor").getAttribute("data-entity"), "job");
+  assert.equal(await page.locator(".dependency-node [aria-pressed=false] rect").first().evaluate(node => getComputedStyle(node).stroke), "rgb(0, 139, 139)");
   assert.equal(await page.getByLabel("Select job", { exact: true }).inputValue(), "deploy");
   assert.match(await page.locator(".dependency-node").last().textContent(), /other:deploy/);
   assert.equal(await page.getByLabel("job", { exact: true }).inputValue(), "other:deploy");

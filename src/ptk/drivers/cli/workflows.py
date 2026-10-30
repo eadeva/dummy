@@ -195,8 +195,10 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False):
         RunWorkflow,
     )
     from ...domain.execution.model import Status
+    from ...domain.logging import console_level
     from ...domain.reporting.summary import run_summary
     from . import console as present
+    from .workflow_output import WorkflowOutput
 
     parent, entries, owner, spec, root = select(ctx, name)
     if graph or dry_run:
@@ -270,14 +272,15 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False):
         return alias, prepared
 
     plan = PrepareWorkflow().execute(name, spec, prepare)
-    for node in plan.jobs:
-        p = node.prepared.plan
-        readiness = (
-            "needs: " + ", ".join(node.spec.needs) if node.spec.needs else "ready"
-        )
-        click.echo(
-            f"{node.id}: {node.repo}:{p.job} [{p.variant or 'default'}] — {readiness}"
-        )
+    if dry_run or cleaning:
+        for node in plan.jobs:
+            p = node.prepared.plan
+            readiness = (
+                "needs: " + ", ".join(node.spec.needs) if node.spec.needs else "ready"
+            )
+            click.echo(
+                f"{node.id}: {node.repo}:{p.job} [{p.variant or 'default'}] — {readiness}"
+            )
     if cleaning:
         clean_selected(
             [node.prepared for node in plan.jobs],
@@ -298,18 +301,32 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False):
     run_id = datetime.now(UTC).strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8]
     target = report_directory(root, name, owner_project) / run_id
     child_openings = {}
+    for node in plan.jobs:
+        node.prepared.plan.report_context["workflow"] = {
+            "name": name,
+            "run_id": run_id,
+            "invocation": node.id,
+        }
+    output = WorkflowOutput(
+        console, plan, target, run_id, root, owner_project, variants.selected
+    )
 
     def run(node, cancel):
         state, prepared = bindings[node.id], node.prepared
         p = prepared.plan
         with job_lock(prepared.project.root, p.variant, p.job):
-            console.print(
-                f"[bold]{escape(node.id)}: {escape(node.repo)}:{escape(p.job)}[/]"
-            )
             runner = state.app.run_job(prepared.project)
             result = runner.execute(
                 prepared,
-                [present.ConsoleObserver(console), *state.app.log_observers(prepared)],
+                [
+                    present.ConsoleObserver(
+                        console,
+                        level=console_level("info", verbose=parent.verbose),
+                        job_label=output.job_label(node),
+                    ),
+                    *state.app.log_observers(prepared, verbose=parent.verbose),
+                    output.observer(node, verbose=parent.verbose),
+                ],
                 cancel,
             )
             opening = write_reports(
@@ -348,20 +365,22 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False):
         except BaseException as exc:  # noqa: BLE001 - propagate in the main thread
             holder["error"] = exc
 
-    worker = threading.Thread(target=work, name="ptk-workflow")
-    worker.start()
     try:
-        while worker.is_alive():
-            worker.join(0.2)
-    except KeyboardInterrupt:
-        cancel.set()
-        worker.join()
-    if "error" in holder:
-        raise holder["error"]
-    result = holder["result"]
-    console.print(
-        f"Workflow {escape(name)}: {result.status.value} ({result.duration:.1f}s)"
-    )
+        output.start()
+        worker = threading.Thread(target=work, name="ptk-workflow")
+        worker.start()
+        try:
+            while worker.is_alive():
+                worker.join(0.2)
+        except KeyboardInterrupt:
+            cancel.set()
+            worker.join()
+        if "error" in holder:
+            raise holder["error"]
+        result = holder["result"]
+        output.finish(result)
+    finally:
+        output.close()
     open_summary = False
     try:
         path = write_workflow_report(result, target)
