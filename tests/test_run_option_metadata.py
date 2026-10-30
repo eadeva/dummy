@@ -1,6 +1,7 @@
 """Project-aware suggestions use PTK's commands and never resolve run-time values."""
 
 import json
+from pathlib import Path
 
 import pytest
 from click.shell_completion import BashComplete
@@ -94,7 +95,8 @@ def test_help_inventory_and_completion_share_read_only_suggestions(
     assert result.exit_code == 0, result.output
     doc = json.loads(result.output)
     info = doc["projects"][0]
-    assert info["invocation"] == {"cwd": str(project), "prefix": []}
+    assert Path(info["invocation"]["cwd"]).resolve() == project.resolve()
+    assert info["invocation"]["prefix"] == []
     options = {param["name"]: param for param in info["jobs"][0]["run_options"]}
     assert options["only_step"]["choices"] == ["z_configure", "compile", "package"]
     assert options["end"]["choices"] == options["only_step"]["choices"]
@@ -140,7 +142,8 @@ def test_inventory_routes_members_through_workspace_aliases(tmp_path, monkeypatc
     projects = json.loads(result.output)["projects"]
     for project in projects:
         route = project["invocation"]
-        assert route == {"cwd": str(tmp_path), "prefix": [project["alias"]]}
+        assert Path(route["cwd"]).resolve() == tmp_path.resolve()
+        assert route["prefix"] == [project["alias"]]
         child = runner.invoke(
             cli, [*route["prefix"], "describe", "--json"], cwd=route["cwd"]
         )

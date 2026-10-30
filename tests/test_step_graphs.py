@@ -4,6 +4,7 @@ import os
 import sys
 import threading
 from itertools import pairwise
+from pathlib import Path
 
 import pytest
 import yaml
@@ -185,8 +186,9 @@ def test_known_step_directories_are_available_without_stored_outputs(tmp_path):
             },
         },
     )
-    assert prepared.plan.steps[1].with_["message"] == str(
-        tmp_path / "_builds/default/go/compile.one"
+    assert (
+        Path(prepared.plan.steps[1].with_["message"]).resolve()
+        == (tmp_path / "_builds/default/go/compile.one").resolve()
     )
     with pytest.raises(PtkError, match="unknown|unavailable"):
         prepare(

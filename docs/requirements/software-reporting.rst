@@ -95,7 +95,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_LOGS
    :tags: implemented
 
-   PTK shall recognize documented GCC/Clang, MSVC, CMake, prefixed/bracketed severity and Python-style exception diagnostics without treating arbitrary occurrences of error/warning as findings.
+   PTK shall recognize documented GCC/Clang, MSVC, CMake, prefixed/bracketed severity, Python-style exception and pytest per-test failure/error summary diagnostics without treating arbitrary occurrences of error/warning as findings or counting pytest traceback lines and aggregate totals again.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -175,7 +175,12 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_LOGS
    :tags: implemented
 
-   PTK HTML reports shall show occurrence-count cards and a finding table with severity, disposition, step, message, source log/location and count, with choice filters for severity and disposition.
+   PTK HTML reports shall integrate collapsible log analysis with the existing
+   failure details, showing log occurrence-count cards and expandable diagnostic
+   entries with severity, disposition, step, message, source log/location and
+   count, with choice filters for severity and disposition. Log occurrence counts
+   shall remain distinct from execution and imported test results. Disabling or
+   filtering log analysis shall not hide those failure details.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 

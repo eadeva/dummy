@@ -4,6 +4,9 @@ import re
 from fnmatch import fnmatchcase
 
 ANSI = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+PYTEST_RESULT = re.compile(
+    r"^(?P<status>FAILED|ERROR) (?P<file>.+?\.py)(?P<test>::.*?)?(?: - (?P<message>.*))?$"
+)
 # Deliberately anchored: command echoes and summaries such as '0 errors' are not diagnostics.
 PATTERNS = [
     re.compile(
@@ -27,6 +30,17 @@ def diagnostic(line):
     text = ANSI.sub("", line).strip()
     if re.match(r"^\d\d:\d\d:\d\d(?:\.\d+)? ptk:", text):
         return None
+    # Pytest prefixes traceback assertions with E; recognize its final per-test
+    # results instead, avoiding one finding per line of the same traceback.
+    if match := PYTEST_RESULT.fullmatch(text):
+        node = match["file"] + (match["test"] or "")
+        return {
+            "level": "error",
+            "message": node + (f": {match['message']}" if match["message"] else ""),
+            "file": match["file"],
+            "line": None,
+            "rule": "pytest." + match["status"].lower(),
+        }
     for pattern in PATTERNS:
         match = pattern.match(text)
         if match:

@@ -216,14 +216,19 @@ def test_editor_reports_file_schemas_ownership_fingerprints_and_errors(write):
     config = json.loads(result.output)["projects"][0]["configuration"]
     assert config["version"] == 5
     binding = next(b for b in config["bindings"] if b["path"] == ["jobs", "*"])
-    assert binding["file"] == str(root / "config/jobs/{name}.ptk.yml")
+    assert (
+        Path(binding["file"]).resolve()
+        == (root / "config/jobs/{name}.ptk.yml").resolve()
+    )
     assert binding["document_path"] == []
     project_doc = next(
         d for d in config["documents"] if Path(d["file"]).name == "project.ptk.yml"
     )
     assert "name" in project_doc["schema"]["properties"]
     assert "jobs" not in project_doc["schema"]["properties"]
-    assert str(root / "config/artifactory_paths.ptk.yml") in config["fingerprints"]
+    assert (root / "config/artifactory_paths.ptk.yml").resolve() in {
+        Path(path).resolve() for path in config["fingerprints"]
+    }
     (root / "config/artifactory_paths.ptk.yml").write_text(
         "events: {push: {step: {run: bad}}}"
     )

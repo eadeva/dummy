@@ -201,7 +201,7 @@ if ($env:TEST_MODE -eq 'default') {
     & $env:TEST_INSTALL @options
     $matches = @((TabExpansion2 'ptk self-service ' 17).CompletionMatches.CompletionText)
     if ('completion' -notin $matches -or 'tools' -notin $matches) { throw "completion missing: $matches" }
-    if ((Get-PSReadLineKeyHandler -Chord Tab).Function -ne 'Complete') { throw 'Tab binding missing' }
+    if ((Get-PSReadLineKeyHandler | Where-Object { $_.Key -eq 'Tab' }).Function -ne 'Complete') { throw 'Tab binding missing' }
 }
 """)
     result = _powershell(
@@ -231,7 +231,7 @@ if ($env:TEST_MODE -eq 'default') {
     # A fresh PowerShell process loads the persisted profile without the installer.
     script.write_text(""". $env:TEST_PROFILE
 $matches = @((TabExpansion2 'ptk self-service ' 17).CompletionMatches.CompletionText)
-@{ matches = $matches; kept = $global:KeptSetting; tab = (Get-PSReadLineKeyHandler -Chord Tab).Function } | ConvertTo-Json -Compress
+@{ matches = $matches; kept = $global:KeptSetting; tab = (Get-PSReadLineKeyHandler | Where-Object { $_.Key -eq 'Tab' }).Function } | ConvertTo-Json -Compress
 """)
     fresh = _powershell(
         script,

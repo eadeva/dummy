@@ -7,6 +7,7 @@ from ptk.adapters.reporting.html import render
 from ptk.domain.reporting.model import (
     Contribution,
     Finding,
+    LogFinding,
     TestCase,
     TestSuite,
     from_summary,
@@ -55,8 +56,63 @@ contribution = Contribution(
         )
     ],
     findings=[Finding("ruff", "F401", "warning", "Unused import", "app.py", 3)],
+    log_findings=[
+        LogFinding(
+            "log-analyzer",
+            "pytest.failed",
+            "error",
+            "tests/test_api.py::test_bad: AssertionError: <expected>",
+            step="pytest",
+            source_log="pytest.log",
+            log_line=10,
+            log_lines=[10],
+            context=[
+                "9: short test summary info",
+                "10: FAILED tests/test_api.py::test_bad",
+            ],
+        ),
+        LogFinding(
+            "log-analyzer",
+            "",
+            "warning",
+            "SDK function deprecated",
+            step="compile",
+            source_log="compile.log",
+            log_line=1,
+            log_lines=[1, 2],
+            occurrences=2,
+        ),
+        LogFinding(
+            "log-analyzer",
+            "",
+            "warning",
+            "Known SDK warning",
+            step="compile",
+            disposition="justified",
+            reason="Upgrade pending",
+            suppression_rule="sdk",
+            source_log="compile.log",
+            log_line=3,
+            log_lines=[3],
+        ),
+        LogFinding(
+            "log-analyzer",
+            "",
+            "error",
+            "Expected negative test",
+            step="pytest",
+            disposition="ignored",
+            reason="Negative test",
+            suppression_rule="negative",
+            source_log="pytest.log",
+            log_line=4,
+            log_lines=[4],
+        ),
+    ],
 )
 if __name__ == "__main__":
     path = Path(sys.argv[1])
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(render(from_summary(summary, [contribution])), encoding="utf-8")
+    report = from_summary(summary, [contribution])
+    report.log_analysis_enabled = True
+    path.write_text(render(report), encoding="utf-8")

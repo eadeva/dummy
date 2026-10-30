@@ -62,8 +62,12 @@ def test_mutation_commands_denied_before_side_effects(tmp_path, args, forced):
     assert snapshot(tmp_path) == before
 
 
-def test_normal_help_html_and_completion_exclude_mutations(tmp_path):
+def test_normal_help_html_and_completion_exclude_mutations(tmp_path, monkeypatch):
     config = project(tmp_path)
+    # Direct Click completion does not run inside CliRunner's cwd/env isolation.
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("PTK_ROLE", "user")
+    monkeypatch.setenv("PTK_CI", "0")
     runner = CliRunner(env={"PTK_ROLE": "user"})
     base = []
     for group, hidden, shown in [

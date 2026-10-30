@@ -39,6 +39,24 @@ from ptk.drivers.cli.main import cli
         ("\x1b[31mERROR: bad input\x1b[0m", "error", "", None),
         ("[WARN] no cache", "warning", "", None),
         ("ValueError: invalid number", "error", "", None),
+        (
+            "FAILED tests/test_api.py::test_request[default]",
+            "error",
+            "tests/test_api.py",
+            None,
+        ),
+        (
+            r"ERROR tests\test_api.py::test_request - ValueError: missing",
+            "error",
+            r"tests\test_api.py",
+            None,
+        ),
+        (
+            "ERROR tests/test_api.py - ImportError: missing dependency",
+            "error",
+            "tests/test_api.py",
+            None,
+        ),
     ],
 )
 def test_diagnostic_formats(line, level, file, number):
@@ -54,6 +72,9 @@ def test_diagnostic_formats(line, level, file, number):
         "echo ERROR: test",
         '12:00:01 ptk: $ echo "ERROR: test"',
         "This documentation explains error handling",
+        "E           AssertionError: expected 3",
+        "FAILED is a possible test status",
+        "======= 7 failed, 788 passed, 62 skipped =======",
     ],
 )
 def test_non_diagnostics_are_not_findings(line):
@@ -317,3 +338,64 @@ def test_rule_order_step_scope_and_multiline_headers(tmp_path):
     assert all(f.disposition == "active" for f in analyze(summary).log_findings)
     summary["log_analysis"]["enabled"] = False
     assert analyze(summary).log_findings == []
+
+
+@pytest.mark.parametrize("enabled", [True, False])
+def test_test_failures_and_log_diagnostics_share_section_without_changing_counts(
+    tmp_path, enabled
+):
+    entry = tmp_path / ".main.ptk.yml"
+    write_project(entry, {"project": {"name": "tests"}})
+    app = create_app(environ={"PTK_ROLE": "user"})
+    project = app.load_project.execute(tmp_path)
+    summary = make_summary(tmp_path)
+    summary["log_analysis"] = {"enabled": enabled, "rules": []}
+    summary["status"] = summary["steps"][0]["status"] = "failed"
+    summary["steps"][0]["message"] = "exit code 1"
+    summary["reports_dir"] = str(tmp_path / "results")
+    folder = tmp_path / "results/compile"
+    folder.mkdir(parents=True)
+    (folder / "tests.xml").write_text(
+        '<testsuite name="unit"><testcase classname="tests.test_api" name="test_request">'
+        "<failure>AssertionError: &lt;expected&gt;</failure>"
+        "</testcase></testsuite>"
+    )
+    Path(summary["steps"][0]["log_file"]).write_text(
+        "E           AssertionError: &lt;expected&gt;\n"
+        "================ short test summary info ================\n"
+        "FAILED tests/test_api.py::test_request - AssertionError: <expected>\n"
+        "================ 1 failed in 0.12s ================\n"
+    )
+    report = app.reports.build(project, summary)
+    assert report.test_totals() == {"failed": 1}
+    assert len(report.log_findings) == int(enabled)
+    if enabled:
+        finding = report.log_findings[0]
+        assert finding.rule == "pytest.failed"
+        assert (
+            finding.message
+            == "tests/test_api.py::test_request: AssertionError: <expected>"
+        )
+        assert finding.log_line == 3 and finding.occurrences == 1
+    page = html.render(report)
+    assert page.count("<h2>What failed</h2>") == 1
+    section = page.split("<h2>What failed</h2>", 1)[1].split("</section>", 1)[0]
+    assert "tests.test_api.test_request" in section
+    assert "AssertionError: &lt;expected&gt;" in section
+    assert ("<summary>Log analysis</summary>" in section) == enabled
+    assert 'class="log-analysis" open' not in section
+    assert "No active errors or warnings" not in page
+    assert json.loads(exporters.to_json(report))["totals"]["tests"] == {"failed": 1}
+
+
+def test_failed_run_with_unrecognized_output_does_not_claim_no_errors(tmp_path):
+    summary = make_summary(tmp_path)
+    summary["status"] = summary["steps"][0]["status"] = "failed"
+    Path(summary["steps"][0]["log_file"]).write_text("Something went wrong\n")
+    report = from_summary(summary, [analyze(summary)])
+    report.log_analysis_enabled = True
+    page = html.render(report)
+    assert "<h2>What failed</h2>" in page
+    assert "No recognized active log diagnostics" in page
+    assert "No active errors or warnings" not in page
+    assert not report.log_findings and report.has_errors

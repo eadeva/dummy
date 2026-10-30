@@ -407,6 +407,14 @@ not imply that every related future capability has been implemented.
 
    **Consequences:** Importer support bounds structured detail. Historical runs retain their context and evidence; absent findings do not prove success.
 
+   **Presentation clarification:** Keep execution and imported test failure details
+   in **What failed**, with expandable log diagnostics in the same section.
+   Pytest summary lines supply log findings when present; JUnit supplies test
+   counts and detailed test results. Log occurrence counts stay separate because
+   a test failure can appear in both sources. Suppression or disabling log
+   analysis never removes execution or test failures. An empty analysis means
+   no recognized diagnostics, not proof of a clean run.
+
    **Related requirement:** :need:`REQ_Sw_CANONICAL`.
 
 .. ddec:: Keep severity separate from disposition
@@ -415,7 +423,7 @@ not imply that every related future capability has been implemented.
 
    **Context:** Known diagnostic noise needs explanation without concealing execution failure.
 
-   **Decision:** Retain warning/error severity, with active/ignored/justified disposition and reasons. Show counts, source log locations and table filters; exclude ignored and justified findings from the initial table view.
+   **Decision:** Retain warning/error severity, with active/ignored/justified disposition and reasons. Show occurrence counts, source log locations and filters on expandable diagnostic entries; exclude ignored and justified findings from the initial view. Keep log analysis collapsible beside the existing failure details.
 
    **Alternatives considered:** Changing severity or making a failed process pass because its log message was ignored was rejected.
 

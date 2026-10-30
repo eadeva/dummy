@@ -135,7 +135,8 @@ def test_vmr_inventory_retains_healthy_members_when_one_is_invalid(
     assert "repos" in command_paths(doc["commands"])
     for member in doc["projects"]:
         route = member["invocation"]
-        assert route == {"cwd": str(tmp_path), "prefix": [member["alias"]]}
+        assert Path(route["cwd"]).resolve() == tmp_path.resolve()
+        assert route["prefix"] == [member["alias"]]
         child = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"}).invoke(
             cli, [*route["prefix"], "describe", "--json"], cwd=route["cwd"]
         )

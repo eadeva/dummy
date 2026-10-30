@@ -315,8 +315,7 @@ def render(report: Report, *, link_root: Path | None = None) -> str:
                 )
     for text in report.problems:
         problems.append(f'<div class="problem">{_e(text)}</div>')
-    if problems:
-        parts.append(f"<section><h2>What failed</h2>{''.join(problems)}</section>")
+    parts.append(log_html.render(report, link_root, problems=problems))
 
     legend = "".join(
         f'<span><i style="background:var(--{c})"></i>{_e(t)}</span>'
@@ -390,7 +389,6 @@ def render(report: Report, *, link_root: Path | None = None) -> str:
             f"<th>Rule</th><th>Location</th><th>Message</th></tr>{rows}</table></div>{more}</section>"
         )
 
-    parts.append(log_html.render(report, link_root))
     parts.append(
         f"<footer>ptk {_e(report.ptk_version)} report, started {_e(report.started_at)}. "
         "Regenerate with <code>ptk report export</code>.</footer>"

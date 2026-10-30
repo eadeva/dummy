@@ -1,9 +1,14 @@
 const {chromium}=require('playwright');
 const assert=require('node:assert/strict');
 (async()=>{
-const browser=await chromium.launch({headless:true,args:['--no-sandbox']});
+const browser=await chromium.launch({headless:true,executablePath:process.env.PTK_TEST_CHROMIUM,args:['--no-sandbox']});
 const page=await browser.newPage({viewport:{width:1280,height:1000}});
+const errors=[];
+page.on('pageerror',error=>errors.push(error.message));
 await page.goto(require('node:url').pathToFileURL(process.argv[2]).href);
+const logs=page.locator('.log-analysis');
+assert.equal(await logs.evaluate(el=>el.open),false);
+assert.equal(await logs.locator('xpath=..').getByRole('heading',{name:'What failed',exact:true}).count(),1);
 await page.locator('details').evaluateAll(ds=>ds.forEach(d=>d.open=true));
 for(const table of await page.locator('table').all()) assert.equal(await table.locator('input').count(),await table.locator('tr').first().locator('th').count());
 const cards=await page.locator('.cards').allTextContents();
@@ -18,9 +23,32 @@ for(const input of await table.locator('input').all()) await input.fill('');
 assert.equal(await table.locator('tr[hidden]').count(),0);
 assert.deepEqual(await page.locator('.cards').allTextContents(),cards);
 
+assert.equal(await logs.locator('.log-finding:visible').count(),2);
+assert.equal(await logs.locator('.log-status').textContent(),'3 occurrences in 2 diagnostic groups shown');
+const counts=await logs.locator('.log-cards').textContent();
+await logs.getByRole('button',{name:'Show justified log findings',exact:true}).click();
+assert.equal(await logs.locator('.log-finding:visible').count(),1);
+assert.match(await logs.locator('.log-finding:visible').textContent(),/Upgrade pending/);
+await logs.getByRole('button',{name:'Show active log errors',exact:true}).click();
+assert.equal(await logs.locator('.log-finding:visible').count(),1);
+assert.match(await logs.locator('.log-finding:visible').textContent(),/AssertionError: <expected>/);
+assert.equal(await logs.locator('.log-finding:visible a').getAttribute('href'),'pytest.log');
+await logs.getByLabel('Step',{exact:true}).selectOption('compile');
+assert.equal(await logs.locator('.log-finding:visible').count(),0);
+await logs.getByRole('button',{name:'Reset filters',exact:true}).click();
+await logs.getByLabel('Search',{exact:true}).fill('SDK');
+assert.equal(await logs.locator('.log-finding:visible').count(),1);
+await logs.getByLabel('Disposition',{exact:true}).selectOption('');
+assert.equal(await logs.locator('.log-finding:visible').count(),2);
+await logs.getByRole('button',{name:'Reset filters',exact:true}).click();
+assert.equal(await logs.getByLabel('Disposition',{exact:true}).inputValue(),'active');
+assert.equal(await logs.locator('.log-cards').textContent(),counts);
+assert.equal(await page.locator('.problem').count(),2);
+assert.deepEqual(errors,[]);
+
 await page.setViewportSize({width:390,height:844});
 
 assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
-console.log('All table filters: combined, case-insensitive, no-match, clear, totals preserved; mobile layout passed');
+console.log('Report tables and integrated log cards: source separation, combined filters, suppression, reset, escaped details, stable counts, collapse and mobile layout passed');
 await browser.close();
 })();

@@ -28,7 +28,7 @@ remain unchanged. Dry runs do not analyze logs or write reports.
 
 JUnit XML, Cobertura XML (aggregate line coverage), SARIF and contributor plugins
 supply tool results. Log analysis imports captured step diagnostics. These inputs
-feed PTK's canonical report model. HTML renders the log-analysis section; JSON
+feed PTK's canonical report model. HTML integrates log analysis with **What failed**; JSON
 retains its structured data, and Markdown/GitHub include its findings. JUnit
 exports execution steps and test cases; it does not convert log diagnostics into
 failed tests. Report findings never overwrite a process exit code.
@@ -39,7 +39,11 @@ Recognition and rules
 Log analysis is enabled by default. Set ``log_analysis.enabled: false`` to disable
 it. It recognizes GCC/Clang file:line diagnostics, MSVC file(line) diagnostics,
 CMake error/warning headers, prefixed ``ERROR:``/``WARNING:`` and bracketed
-``[ERROR]``/``[WARNING]``/``[WARN]`` messages, and Python-style exception messages.
+``[ERROR]``/``[WARNING]``/``[WARN]`` messages, Python-style exception messages,
+and pytest's per-test ``FAILED``/``ERROR`` summary lines (including collection
+errors). Pytest traceback assertion lines and aggregate totals are not counted
+again. JUnit remains the source of structured test counts and failure details;
+log recognition does not create additional test cases.
 It does not classify arbitrary text merely containing "error", command echoes,
 PTK log envelopes or summaries such as "0 errors". Unrecognized output remains
 available in the original log; no findings does not prove a successful run.
@@ -92,20 +96,30 @@ network request is involved in deterministic analysis.
 HTML interaction
 -----------------
 
-The **Log analysis** section has cards for active errors, active warnings,
-justified findings and ignored findings. All cards count occurrences, not grouped
-rows. Clicking a card sets the severity/disposition filters. Counts describe the
-whole run and do not change when filtering.
+**What failed** brings execution failures, imported test failures and report
+problems together with a collapsible **Log analysis** view. The existing failure
+details stay visible; log analysis starts collapsed when these details exist,
+and expanded under **Diagnostics** otherwise. Disabling log analysis still leaves
+execution and imported test failures visible.
 
-The table shows severity, disposition, step, message/details, source-log filename,
-source location (or log line) and occurrence count. Severity and disposition have
-choice dropdowns in their column headers. **Active** is the default disposition,
+Log analysis has cards for active log errors, active log warnings, justified log
+findings and ignored log findings. These counts cover recognized log occurrences
+only, not failed tests or failed steps. A test failure may also appear in its
+captured log; these are two views of the evidence, not additional test failures.
+Clicking a card sets the severity/disposition filters. Counts describe the whole
+run and do not change when filtering.
+
+Each diagnostic is an expandable entry showing severity, disposition, step,
+message/details, source-log filename, source location (or log line) and occurrence
+count. Severity and disposition have choice dropdowns. **Active** is the default disposition,
 so justified and ignored findings start hidden. Step filtering and search combine
 with those choices. **Reset filters** restores all severities, active findings,
 all steps and an empty search. Expanded messages show context with the matching
 line highlighted, the full source-log path, diagnostic code, rule and reason.
 Source-log links point to the original captured log or retained historical copy.
 Logs and reports can be moved together while preserving relative links.
+If no diagnostics match, the view says that no active log diagnostics were
+recognized; it does not claim that the execution or test results are clean.
 
 Assistant support
 ------------------
