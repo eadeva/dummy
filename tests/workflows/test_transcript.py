@@ -29,6 +29,9 @@ def test_workspace_transcript_identifies_equal_jobs_and_resolved_versions(tmp_pa
     )
     result = invoke(tmp_path, "workflow", "run", "verify")
     assert result.exit_code == 0, result.output
+    assert "[workspace][verify] report: " in result.output
+    for alias in ["a", "b"]:
+        assert f"[default][{alias}:build] report: " in result.output
     log = next(tmp_path.glob("_reports/workflows/verify/*/workflow.log"))
     text = log.read_text()
     for output in [result.output, text]:

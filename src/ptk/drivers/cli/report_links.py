@@ -1,9 +1,9 @@
 """Print report file paths without starting a browser or background server."""
 
-from rich.markup import escape
-
+from ...domain import run_output as display
+from .console import print_block
 from .state import console
 
 
-def print_report(path):
-    console.print(f"report: {escape(str(path))}", highlight=False, soft_wrap=True)
+def print_report(path, *, identity, kind):
+    print_block(console, display.contextual(identity, [f"report: {path}"], kind))

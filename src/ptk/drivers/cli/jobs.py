@@ -23,6 +23,7 @@ import rich_click as click
 import yaml
 from rich.markup import escape
 
+from ...domain import run_output as display
 from ...domain.config.model import JobSpec, ParamSpec
 from ...domain.errors import PtkError
 from ...domain.suggest import did_you_mean
@@ -430,7 +431,13 @@ def install_tools(
 
 
 def write_reports(
-    state: Any, project: Any, plan: Any, result: Any, *, open_browser=True
+    state: Any,
+    project: Any,
+    plan: Any,
+    result: Any,
+    *,
+    open_browser=True,
+    job_label: str | None = None,
 ) -> Path | None:
     """Reports after every run; a reporting problem never changes the run's result."""
     from ...domain.reporting.summary import run_summary
@@ -451,7 +458,11 @@ def write_reports(
     html = next((f for f in files if f.suffix == ".html"), None)
     shown = html or (files[0] if files else None)
     if shown is not None:
-        print_report(shown)
+        print_report(
+            shown,
+            identity=display.prefix(job_label or plan.job, plan.variant),
+            kind="JOB",
+        )
     for problem in report.problems:
         err_console.print(f"[yellow]report: {escape(problem)}[/]")
     if html is not None and (

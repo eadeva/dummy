@@ -106,6 +106,8 @@ def test_workflow_opens_its_aggregate_report(
     assert result.exit_code == (1 if outcome == "failed" else 0), result.output
     assert len(opened_reports) == int(expected)
     assert all(path.name == "workflow.html" for path in opened_reports)
+    assert "[default][verify] report: " in result.output
+    assert "[default][check] report: " in result.output
 
 
 @pytest.mark.parametrize("ci", [False, True, "auto"])
@@ -141,7 +143,7 @@ def test_browser_unavailable_preserves_failure_exit_code(invoke, monkeypatch, ra
 def test_failed_aggregate_report_write_does_not_open_a_file(
     invoke, monkeypatch, opened_reports
 ):
-    def fail_write(*args):
+    def fail_write(*args, **kwargs):
         raise OSError("cannot write report")
 
     monkeypatch.setattr(workflows, "write_workflow_report", fail_write)
@@ -203,7 +205,10 @@ def test_explicit_workflow_report_opens_latest_aggregate_only(
         workflows={
             "verify": {"open_report": None, "jobs": {"build": {"job": "build"}}}
         },
-        extra={"layout": {"reports": "custom-reports"}} if custom else {},
+        extra={
+            "variants": {"default": "small", "variants": {"small": {}, "large": {}}},
+            **({"layout": {"reports": "custom-reports"}} if custom else {}),
+        },
     )
     missing = invoke(root, "report", "open", "--if-exists", "--workflow", "verify")
     assert missing.exit_code == 0 and "Info:" in missing.output
@@ -213,18 +218,21 @@ def test_explicit_workflow_report_opens_latest_aggregate_only(
         invoke(root, "report", "open", "--if-exists", "--workflow", "unknown").exit_code
         != 0
     )
-    assert invoke(root, "workflow", "run", "verify").exit_code == 0
+    assert invoke(root, "-V", "small", "workflow", "run", "verify").exit_code == 0
     assert opened_reports == []
     folder = root / ("custom-reports" if custom else "_reports") / "workflows/verify"
     [report] = list(folder.glob("*/workflow.html"))
     os.utime(report, (1, 1))
-    assert invoke(root, "workflow", "run", "verify").exit_code == 0
+    executed = invoke(root, "-V", "large", "workflow", "run", "verify")
+    assert executed.exit_code == 0
+    assert "[large][verify] report: " in executed.output
     latest = next(p for p in folder.glob("*/workflow.html") if p != report)
-    assert (
-        invoke(root, "report", "open", "--if-exists", "--workflow", "verify").exit_code
-        == 0
+    reopened = invoke(
+        root, "-V", "small", "report", "open", "--if-exists", "--workflow", "verify"
     )
+    assert reopened.exit_code == 0
     assert opened_reports == [latest]
+    assert f"[large][verify] report: {latest}" in reopened.output
 
 
 def test_workspace_report_respects_owner_and_member_report_policy(
@@ -254,13 +262,19 @@ def test_workspace_report_respects_owner_and_member_report_policy(
         report.parent.mkdir(parents=True)
         report.write_text("<html></html>", encoding="utf-8")
         reports.append(report)
-    for name in ["verify", "alpha/verify"]:
+    for name, identity, path in zip(
+        ["verify", "alpha/verify"],
+        ["[workspace][verify]", "[alpha/verify]"],
+        reports,
+        strict=True,
+    ):
         result = runner.invoke(
             cli,
             ["report", "open", "--if-exists", "--workflow", name],
             catch_exceptions=False,
         )
         assert result.exit_code == 0, result.output
+        assert f"{identity} report: {path}" in result.output
     assert opened_reports == reports
     config = tmp_path / "a/.main.ptk.yml"
     data = read_project(config)

@@ -44,12 +44,13 @@ def read_workflows(folder: Path) -> WorkflowFile:
     return WorkflowFile(workflows=workflows)
 
 
-def write_workflow_report(result, target: Path) -> Path:
+def write_workflow_report(result, target: Path, *, owner_variant=None) -> Path:
     from .reporting.html import CSS, FILTER_SCRIPT, _cards
 
     target.mkdir(parents=True, exist_ok=True)
     (target / "workflow.json").write_text(
-        json.dumps(asdict(result), indent=2) + "\n", encoding="utf-8"
+        json.dumps({**asdict(result), "owner_variant": owner_variant}, indent=2) + "\n",
+        encoding="utf-8",
     )
     rows = []
     counts = {"Passed": 0, "Failed": 0, "Skipped": 0, "Cancelled": 0}

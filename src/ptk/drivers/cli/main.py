@@ -19,6 +19,7 @@ from rich.markup import escape
 from rich.table import Table
 
 from ... import __version__
+from ...domain import run_output as display
 from ...domain.errors import (
     ConfigError,
     ProjectNotFoundError,
@@ -849,7 +850,9 @@ def report_open(
             / run_id
         )
     _report, files = service.write(project, summary, ["html"], target)
-    print_report(files[0])
+    print_report(
+        files[0], identity=display.prefix(name, summary.get("variant")), kind="JOB"
+    )
     if not _state(ctx).app.open_in_browser(files[0]):
         console.print("[dim]no browser available here - open the file above[/]")
 

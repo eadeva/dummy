@@ -90,6 +90,8 @@ def test_open_policy(invoke, policy, fail, ci, dry, expected):
     result, opened, root = invoke(policy, fail=fail, ci=ci, dry=dry)
     assert result.exit_code == (1 if fail and not dry else 0), result.output
     assert bool(opened) == expected
+    if not dry:
+        assert "[default][check] report: " in result.output
     if ci or dry or policy is None:
         assert not list(root.rglob("report.html"))
 
@@ -105,6 +107,8 @@ def test_each_variant_and_html_with_empty_formats(invoke):
     assert result.exit_code == 0, result.output
     assert len(opened) == 2
     assert {p.parent.parent.name for p in opened} == {"one", "two"}
+    for path in opened:
+        assert f"[{path.parent.parent.name}][check] report: {path}" in result.output
 
 
 @pytest.mark.parametrize("raises", [False, True])
@@ -231,10 +235,10 @@ jobs:
         invoke("-V", "large", "report", "open", "--if-exists", "build").exit_code == 0
     )
     assert opened == []
-    assert (
-        invoke("-V", "small", "report", "open", "--if-exists", "build").exit_code == 0
-    )
+    reopened = invoke("-V", "small", "report", "open", "--if-exists", "build")
+    assert reopened.exit_code == 0
     assert opened == [root / "custom-reports/small/build/report.html"]
+    assert f"[small][build] report: {opened[0]}" in reopened.output
     assert "</html>" in opened[0].read_text(encoding="utf-8")
     summary = root / "_logs/small/build/run.json"
     summary.write_text("not json", encoding="utf-8")

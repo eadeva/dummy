@@ -242,6 +242,9 @@ workflows use the workspace's ``_reports``. Child report snapshots include their
 own log copies so later runs do not redirect earlier report links to newer logs. Workflow reports use colored status cards and per-column filters.
 Their table shows invocation IDs, ``needs``, targets, status and skip reasons.
 The JSON summary exposes the same information in its ``jobs`` list.
+It also records ``owner_variant`` so reopened report links retain the saved
+workflow's variant. Report-link lines use the same owner prefix and entity
+color as the run headers, including qualified child job names.
 Open a child report for its project versions, tool dependencies and test details.
 Workflow history is retained until explicitly removed; it has no automatic rotation.
 

@@ -647,6 +647,12 @@ not imply that every related future capability has been implemented.
    workflows use [workspace][workflow] because their jobs can have different
    variants. Use compact [variant][job][step] start/result lines without long
    step separators. These identities remain explicit under parallel output.
+   Prefix report-link lines with that same owner identity and entity color.
+   Preserve the workflow owner's variant in its saved report metadata so
+   reopening the latest report cannot label it with today's variant selection.
+   If that metadata is unavailable, identify the workflow without guessing a
+   variant. Keep paths literal and child job identities repository-qualified
+   whenever their run headers are qualified.
    Use purple workflows, cyan jobs and blue steps in CLI headings and extension
    entity views; use neutral gray for built-in extension commands. Keep outcome,
    warning, selection and focus colors independent. Exact shades follow the

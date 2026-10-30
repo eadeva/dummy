@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import threading
 import uuid
 from datetime import UTC, datetime
@@ -18,6 +19,7 @@ from ...adapters.workflow_files import (
 )
 from ...application.use_cases.role import command_allowed, visible
 from ...bootstrap import create_app
+from ...domain import run_output as display
 from ...domain.errors import PtkError
 from .access import AccessGroup, denied_command, in_maintainer
 from .completion import workflows as complete_workflows
@@ -181,7 +183,20 @@ def open_workflow_report(ctx, name, if_exists=False):
         )
         return
     latest = max(reports, key=lambda path: (path.stat().st_mtime_ns, path.parent.name))
-    print_report(latest)
+    identity = display.prefix(name, "workspace") if owner is None else f"[{name}]"
+    if owner is not None:
+        # Opening the latest report does not select a variant. Use the saved run,
+        # never today's CLI selection; an HTML-only report still has its owner.
+        try:
+            summary = json.loads(
+                latest.with_suffix(".json").read_text(encoding="utf-8")
+            )
+        except (OSError, ValueError):
+            pass
+        else:
+            if isinstance(summary, dict) and "owner_variant" in summary:
+                identity = display.prefix(name, summary["owner_variant"])
+    print_report(latest, identity=identity, kind="WORKFLOW")
     if not parent.app.open_in_browser(latest):
         console.print("[dim]no browser available here - open the file above[/]")
 
@@ -331,7 +346,12 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False):
             )
             output.job_finished(node, result)
             opening = write_reports(
-                state, prepared.project, p, result, open_browser=False
+                state,
+                prepared.project,
+                p,
+                result,
+                open_browser=False,
+                job_label=output.job_label(node),
             )
             files = []
             report_errors = False
@@ -384,8 +404,8 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False):
         output.close()
     open_summary = False
     try:
-        path = write_workflow_report(result, target)
-        print_report(path)
+        path = write_workflow_report(result, target, owner_variant=variants.selected)
+        print_report(path, identity=output.identity, kind="WORKFLOW")
     except OSError as exc:
         err_console.print(f"[yellow]workflow report not written: {escape(str(exc))}[/]")
     else:

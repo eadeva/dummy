@@ -51,6 +51,9 @@ Canonical results, retained evidence and diagnostic interpretation.
    variants, run identity and execution limits without additional version
    discovery. Verbose console output shall include resolved variant details.
    Start and summary titles and metadata lines shall repeat their owner context.
+   Report-link lines shall repeat their owner context and entity color, including
+   repository-qualified child jobs. Explicit report opening shall use the saved
+   run's variant when available, never infer it from a new CLI selection.
    Workspace workflows shall identify workspace scope and list each job's actual
    variant. Header and summary blocks shall remain intact during concurrent
    execution, while step output continues streaming. Job summaries shall list

@@ -47,6 +47,16 @@ Each metadata line repeats its owner's prefix. Step records use
 ``[debug][build][compile] STEP | START`` and a matching result line without
 another long separator.
 
+Report-link lines repeat the same owner context: for example,
+``[debug][build] report: /path/to/report.html`` or
+``[debug][verify] report: /path/to/workflow.html``. The prefix uses the owning
+job's cyan or workflow's purple color; the path stays literal. Child reports
+use the same repository-qualified job identity as their run headers when
+needed. Explicit ``report open`` commands identify the saved report's owner
+and variant, not a newly selected variant. Workflow summaries save their owner
+variant for this purpose; an HTML-only workflow report still shows its workflow
+name when that metadata is unavailable.
+
 Entity labels, separators and metadata prefixes are purple for workflows,
 cyan for jobs and blue for steps. A failed job's title stays cyan while its
 ``FAILED`` outcome is red. ``PASSED`` is green, ``SKIPPED`` gray and
