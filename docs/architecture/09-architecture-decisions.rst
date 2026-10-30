@@ -610,6 +610,27 @@ not imply that every related future capability has been implemented.
    :need:`REQ_Sw_SCHEMA_AUTHORITY` govern removal and editor recovery.
    See :doc:`/guides/python-tools`.
 
+.. ddec:: Keep console step identity explicit and tool indentation local
+   :id: DD_CONSOLE_CONTEXT
+   :status: accepted
+
+   **Context:** A step-only prefix is ambiguous when jobs or variants run
+   concurrently. Prefixing only the first line of a multiline message loses
+   context, and expanding tabs after adding the prefix shifts tool indentation.
+
+   **Decision:** Use [job][variant][step] for console step records, and
+   [job][variant] for job-level messages. Reuse the established default label
+   for an absent variant. Prefix every logical line, expand tabs in tool text
+   before adding the prefix, interpret ANSI styling and present carriage-return
+   updates as separate lines without terminal cursor/erase operations.
+
+   **Consequences:** Identifiers remain literal and unpadded. The terminal owns
+   visual wrapping; very long lines can wrap to its left margin. Raw captured
+   step logs and structured report identities remain unchanged. The tuple does
+   not distinguish equal job/variant/step IDs in different repositories; it
+   follows the requested format without adding a repository field.
+   See :need:`REQ_Sw_CONSOLE_PREFIX` and :doc:`/guides/log-analysis`.
+
 Open boundaries
 ---------------
 

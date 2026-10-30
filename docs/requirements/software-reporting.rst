@@ -3,6 +3,33 @@ Logging and reporting
 
 Canonical results, retained evidence and diagnostic interpretation.
 
+.. req-sw:: Identify console step records by job, variant and step
+   :id: REQ_Sw_CONSOLE_PREFIX
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: accepted
+   :verification_criteria: Console and real-process tests verify contextual prefixes, concurrent observer isolation, multiline/tab/control handling, quiet behavior and unchanged captured step text.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_LOGS
+   :tags: implemented
+
+   PTK shall prefix each logical console step line with [job][variant][step],
+   including output, start/finish records and step messages. It shall use the
+   selected variant or the established default name when no variant is selected.
+   Presentation shall preserve tool indentation and keep every logical line
+   identifiable without inserting console prefixes into captured step logs.
+
+   **Origin:** Explicit user request for contextual step printouts and consistent
+   console indentation. Presentation choices are recorded in :need:`DD_CONSOLE_CONTEXT`.
+
+   **Implementation:** Implemented in the shared console observer. Captured file
+   logging and structured reports retain their existing contracts.
+
+   **Evidence:** ``tests/test_console_output.py``; ``tests/test_logging.py``;
+   ``src/ptk/drivers/cli/console.py``.
+
 .. req-sw:: Use simple reporting and retention defaults
    :id: REQ_Sw_REPORT_DEFAULTS
    :req_type: functional

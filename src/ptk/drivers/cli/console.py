@@ -6,6 +6,7 @@ import threading
 
 from rich.console import Console
 from rich.markup import escape
+from rich.text import Text
 from rich.tree import Tree
 
 from ...application.use_cases.run import PreparedRun, RunJob
@@ -16,6 +17,7 @@ from ...domain.execution.model import (
     Status,
     StepResult,
 )
+from ...domain.layout import NO_VARIANT
 from ...domain.logging import Level
 
 MESSAGE_STYLE = {
@@ -42,7 +44,7 @@ ICON = {
 
 
 class ConsoleObserver:
-    """Streams output; concurrent steps get a ``[step]`` prefix."""
+    """Identify step records consistently, including concurrent jobs and variants."""
 
     def __init__(
         self, console: Console, *, quiet: bool = False, level: Level = Level.INFO
@@ -50,11 +52,11 @@ class ConsoleObserver:
         self._console = console
         self._quiet = quiet
         self._level = level
-        self._parallel: set[tuple[str, ...]] = set()
+        self._run_prefix = ""
         self._lock = threading.Lock()
 
     def run_started(self, plan: JobPlan) -> None:
-        self._parallel = {step.path for step in plan.steps}
+        self._run_prefix = f"[{plan.job}][{plan.variant or NO_VARIANT}]"
         if plan.only_step:
             self._print(
                 f"[yellow]Only step {escape(plan.only_step)}; prerequisites not run: {escape(', '.join(plan.omitted_dependencies) or 'none')}. Required outputs must already exist.[/]"
@@ -65,45 +67,54 @@ class ConsoleObserver:
         )
 
     def step_started(self, step: PlannedStep, command: str | None) -> None:
-        self._print(
-            f"[bold cyan]▶ {escape(step.label)}[/] [dim]{escape(command or '')}[/]"
-        )
+        self._record(Text.assemble(("▶ ", "bold cyan"), (command or "", "dim")), step)
 
     def output(self, step: PlannedStep, line: str) -> None:
         if self._quiet:
             return
-        self._print(self._prefix(step) + escape(line))
-
-    def _prefix(self, step: PlannedStep | None) -> str:
-        if step is not None and step.path in self._parallel:
-            return f"[dim]\\[{escape(step.name)}][/] "
-        return "  "
+        # Captured tools cannot redraw a shared console. Keep progress updates
+        # as separate records and interpret ANSI styling without cursor motion.
+        line = line.replace("\r\n", "\n").replace("\r", "\n")
+        self._record(Text.from_ansi(line), step)
 
     def message(self, level: Level, text: str, step: PlannedStep | None = None) -> None:
         if level < self._level:
             return
         style = MESSAGE_STYLE[level]
-        self._print(f"{self._prefix(step)}[{style}]{level.label}: {escape(text)}[/]")
+        self._record(Text(f"{level.label}: {text}", style=style), step)
 
     def step_finished(self, step: PlannedStep, result: StepResult) -> None:
         style = STYLE[result.status]
         message = result.message if result.message != result.status.value else ""
-        detail = f" [dim]{escape(message)}[/]" if message else ""
-        if result.allowed_failure:
-            detail += " [yellow](allowed)[/]"
         timing = (
             f" {result.duration:.1f}s"
             if result.status in (Status.PASSED, Status.FAILED)
             else ""
         )
-        self._print(
-            f"[{style}]{ICON[result.status]} {escape(step.label)} {result.status.value}{timing}[/]{detail}"
-        )
+        text = Text(f"{ICON[result.status]} {result.status.value}{timing}", style=style)
+        if message:
+            text.append(f" {message}", style="dim")
+        if result.allowed_failure:
+            text.append(" (allowed)", style="yellow")
+        self._record(text, step)
 
     def run_finished(self, result: RunResult) -> None:
         pass
 
-    def _print(self, text: str) -> None:
+    def _record(self, text: Text, step: PlannedStep | None = None) -> None:
+        prefix = Text(
+            self._run_prefix + (f"[{step.name}]" if step else "") + " ", style="dim"
+        )
+        # Expand relative to the tool's text, not the variable-width PTK prefix.
+        text.expand_tabs(8)
+        self._print(
+            Text("\n").join(
+                Text.assemble(prefix, line)
+                for line in text.split("\n", allow_blank=True)
+            )
+        )
+
+    def _print(self, text: str | Text) -> None:
         with self._lock:
             self._console.print(text, highlight=False, soft_wrap=True)
 

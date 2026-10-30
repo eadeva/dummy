@@ -33,6 +33,28 @@ retains its structured data, and Markdown/GitHub include its findings. JUnit
 exports execution steps and test cases; it does not convert log diagnostics into
 failed tests. Report findings never overwrite a process exit code.
 
+Console step identity and spacing
+----------------------------------
+
+PTK prefixes step output, start/finish records and step messages with
+``[job][variant][step]``. For example, the documentation job prints
+``[docs][default][sphinx]``. These are the job and step IDs, not display titles or
+workflow invocation aliases. ``default`` is the existing no-variant convention;
+a selected variant uses its own name. Job-level messages use ``[job][variant]``.
+Each concurrent job retains its own context.
+
+Every logical line receives a prefix, including multiline messages. Tabs expand
+to eight-column stops within the tool text before PTK adds the prefix, preserving
+the tool's indentation independently of identifier lengths. Tool ANSI colors
+are interpreted; cursor movement and erase controls do not redraw the shared
+console. Carriage-return progress updates become separate lines.
+
+PTK does not pad identifiers into fixed-width columns or reflow captured output.
+Long lines may wrap at the terminal's current width, with wrapped continuations
+starting at the terminal margin. Captured step logs retain their original text
+without these console prefixes or presentation changes. See :need:`DD_CONSOLE_CONTEXT`
+and :need:`REQ_Sw_CONSOLE_PREFIX`.
+
 Recognition and rules
 ----------------------
 

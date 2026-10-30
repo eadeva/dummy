@@ -199,7 +199,7 @@ def test_console_verbosity(write):
         cli, [*args, "run"], catch_exceptions=False, cwd=root
     )
     assert "debug:" not in normal.output and "warning: exit code 2" in normal.output
-    assert "  A" in normal.output or "[a] A" in normal.output
+    assert "[go][default][a] A" in normal.output
     (root / ".once").unlink(missing_ok=True)
     verbose = CliRunner(env={"PTK_CI": "0", **env}).invoke(
         cli, ["-v", *args, "run"], catch_exceptions=False, cwd=root
@@ -209,4 +209,4 @@ def test_console_verbosity(write):
     quiet = CliRunner(env={"PTK_CI": "0", **env}).invoke(
         cli, [*args, "run", "-q"], catch_exceptions=False, cwd=root
     )
-    assert "[a] A" not in quiet.output and "warning:" in quiet.output
+    assert "[go][default][a] A" not in quiet.output and "warning:" in quiet.output
