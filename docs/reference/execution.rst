@@ -72,12 +72,25 @@ PTK cannot infer every resource accessed by arbitrary commands.
 
 .. _execution-boundaries:
 
-Execution guarantees and limits
--------------------------------
+Project responsibility and execution boundaries
+------------------------------------------------
 
-PTK orchestrates declared commands and records their results. Its dependency
+**Project implementation responsibility is intentional: it preserves flexibility
+for projects.** Projects choose their languages, build tools, artifact layouts,
+checks, caching, resource coordination and recovery policies. They can reuse
+existing scripts and integrate hardware or external services without adapting
+their internals to one PTK-specific build model.
+
+PTK provides common orchestration and records the outcomes reported by those
+implementations. Project scripts, plugins and selected tools own the correctness
+of their operations. PTK does not inspect or control their arbitrary internal
+file and resource operations. Projects decide which validation and isolation
+guarantees their work requires, implement them, and report failure when their
+contracts are not met. This is the intended division of responsibility.
+
+The dependency
 graph represents **declared scheduling relationships**, not a discovered or
-verified graph of file inputs and outputs. These limits apply equally to steps
+verified graph of file inputs and outputs. These boundaries apply equally to steps
 inside a job and job invocations inside a workflow.
 
 .. list-table:: Responsibility boundaries
@@ -86,7 +99,7 @@ inside a job and job invocations inside a workflow.
 
    * - Area
      - PTK provides
-     - Project authors and invoked tools provide
+     - Project implementation owns
    * - Dependencies
      - Validation of declared IDs and edges; scheduling after prerequisites pass
        or their failures are explicitly allowed.
@@ -140,9 +153,11 @@ Retries may repeat writes or remote actions; cancellation cannot undo completed
 side effects. Project commands must handle those cases explicitly.
 
 A graph preview therefore cannot prove that a build will work or that independent
-branches are safe to run together. A green report node records the execution
-outcome, not general proof of artifact validity or reproducibility. See the
-current-scope decision :need:`DD_EXECUTION_BOUNDARIES` and
+branches are safe to run together. A green report node records the outcome
+reported by the project implementation. The project is responsible for making
+that outcome reflect its required artifact checks; PTK performs no independent
+general validation of artifact correctness or reproducibility. See the
+project-flexibility decision :need:`DD_EXECUTION_BOUNDARIES` and
 :need:`DD_ROOT_CWD`.
 
 Selecting part of a job

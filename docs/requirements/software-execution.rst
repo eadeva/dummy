@@ -80,6 +80,9 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    **Scope:** Environment composition does not provide filesystem, process,
    network or device sandboxing. Commands and plugins retain the user's
    permissions; per-step directories do not enforce an access boundary.
+   Projects choose and implement any required isolation. This responsibility
+   remains with the project implementation to preserve flexibility in its tools
+   and execution policies.
    See :need:`DD_EXECUTION_BOUNDARIES`.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
@@ -224,7 +227,10 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
 
    **Scope:** Graphs represent declared scheduling dependencies. They do not
    discover file inputs/outputs or guarantee artifact existence, freshness,
-   correctness, sandboxing or freedom from shared-resource races. See
+   correctness, sandboxing or freedom from shared-resource races. Project
+   implementations own these semantics and report their outcomes. This is an
+   intentional boundary that preserves project flexibility, rather than an
+   obligation for PTK to monitor or validate arbitrary script operations. See
    :need:`DD_EXECUTION_BOUNDARIES`.
 
    **Origin:** User request for graph inspection and automatic dry-run graphs.

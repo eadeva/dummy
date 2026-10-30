@@ -138,31 +138,45 @@ not imply that every related future capability has been implemented.
 
    **Related requirement:** :need:`REQ_Sw_ENVIRONMENT`.
 
-.. ddec:: Explicit execution boundaries and project-owned artifact contracts
+.. ddec:: Project implementation owns script behavior to preserve flexibility
    :id: DD_EXECUTION_BOUNDARIES
    :status: accepted
 
-   **Context:** A dependency tree and per-step output folders can suggest stronger
-   guarantees than PTK actually implements. Build commands can access arbitrary
-   paths, shared caches, hardware and remote systems. Scheduling success does not
-   establish that the expected artifacts exist or are valid.
+   **Context:** Projects use different languages, build systems, artifact layouts,
+   caches, hardware and remote services. They need to integrate existing scripts
+   and choose the execution guarantees appropriate to their work. PTK cannot
+   infer the meaning or correctness of arbitrary project script operations from
+   a command, dependency edge or output path.
 
-   **Decision:** Keep the current responsibility boundary explicit. PTK validates
+   **Decision:** Deliberately assign project-specific script behavior and its
+   correctness to the **project implementation**. PTK validates
    declared dependency graphs, schedules their nodes, composes environments,
    provides storage conventions, guards managed cleanup and records outcomes.
    It detects specific known storage/uv environment conflicts and applies
-   job/variant run locks. Project commands, plugins and invoked build tools own
-   input/output validation, undeclared resource coordination and side effects.
+   job/variant run locks. Project implementations own their commands, plugins and
+   selected build tools, including input/output validation, shared-resource
+   coordination, retry safety, recovery and any required isolation. They report
+   success or failure according to their own contracts; PTK uses those outcomes
+   for scheduling and reporting. PTK does not inspect or control arbitrary
+   internal file and resource operations performed by project scripts.
    PTK supplies no general step input/output contract, file-access discovery,
    freshness tracking, artifact cache or filesystem/process/network sandbox.
    Repository-root cwd remains the default; changing cwd or providing separate
    directories does not restrict access to other locations.
 
+   **Rationale:** Preserve flexibility for projects. Projects can reuse existing
+   implementations, choose tools and languages, and define artifact, caching,
+   isolation and recovery policies suited to their needs. PTK supplies common
+   orchestration without imposing one build model or taking ownership of those
+   project-specific semantics. This is an intentional division of responsibility,
+   not an incomplete implementation of promised script monitoring or validation.
+
    **Alternatives considered:** Inferring dependencies from command text cannot
-   account for arbitrary scripts and external resources. Universal artifact
-   tracking and sandboxing would require explicit contracts and execution-backend
-   support beyond the current scheduler. They are not implemented or promised by
-   the graph work; this record does not permanently rule out a future proposal.
+   account for arbitrary scripts and external resources. Requiring every project
+   to adopt a universal I/O model, artifact tracker or mandatory sandbox would
+   constrain integration and duplicate responsibilities of project-selected tools.
+   Projects may provide such guarantees through their own implementation and
+   execution tools where needed.
 
    **Consequences:** A needs edge waits for a prerequisite's accepted execution
    outcome; it neither transfers files nor checks their existence, freshness or
@@ -177,8 +191,10 @@ not imply that every related future capability has been implemented.
 
    **Presentation:** Guides, graph previews and reports must not imply automatic
    I/O dependency discovery, artifact correctness, race freedom or reproducible
-   execution. Green nodes record execution outcomes. The concrete responsibility
-   table is in :ref:`execution-boundaries`.
+   execution. Green nodes record the outcome reported by the project
+   implementation. Documentation must explain project flexibility as the reason
+   for this boundary and identify project implementation responsibility. The
+   concrete responsibility table is in :ref:`execution-boundaries`.
 
    **Related requirements:** :need:`REQ_Sw_CONTROL`, :need:`REQ_Sw_ENVIRONMENT`,
    :need:`REQ_Sw_STEP_SELECTION`, :need:`REQ_Sw_GRAPH_INSPECTION` and
@@ -396,12 +412,16 @@ not imply that every related future capability has been implemented.
 Open boundaries
 ---------------
 
-The current execution boundary is recorded in :need:`DD_EXECUTION_BOUNDARIES`.
+The intentional division of responsibility for project flexibility is recorded
+in :need:`DD_EXECUTION_BOUNDARIES`. Project-specific script behavior, artifact
+validation and recovery belong to the project implementation.
 General input/output contracts, inferred file dependencies, artifact freshness or
 correctness checks, content-addressed caching, enforced sandboxing, arbitrary
 runtime step output values and automatic restoration of previous-run outputs are
 not implemented by the dependency graph change. Nor is GitHub workflow generation.
-These are explicit limits, not guarantees inferred from a diagram or separate
-step folders. Future proposals need their own decisions and verification.
+These boundaries preserve project freedom to choose its tools and guarantees;
+they do not represent a promise that PTK will take over script behavior. A
+diagram or separate step folders do not change that responsibility. Future
+proposals need their own decisions and verification.
 Known planned product gaps remain in
 :doc:`/requirements/decisions-and-gaps`.

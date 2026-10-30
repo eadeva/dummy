@@ -171,11 +171,18 @@ also protect against a separate PTK invocation using the same output folders.
 PTK cannot infer arbitrary paths or external resources used by scripts: authors
 must add dependencies between jobs that write the same files, hardware device or service.
 
-These checks do not sandbox jobs or establish a general input/output contract.
+This division of responsibility deliberately preserves project flexibility:
+projects choose their scripts, build tools, artifact contracts and execution
+policies. **The project implementation is responsible** for its input/output
+checks, shared-resource coordination, safe retries and recovery, and any required
+isolation. PTK orchestrates the declared calls and uses the outcomes they report.
+It does not inspect or control arbitrary internal operations of project scripts.
+
+The orchestration checks do not sandbox jobs or establish a general input/output contract.
 A workflow edge orders job calls; it does not copy artifacts, verify required
 files or guarantee that a successful producer created valid outputs. Commands
 run with the user's permissions and can access paths outside their configured
-folders. Authors must validate artifacts and coordinate other shared resources;
+folders. Project implementations validate artifacts and coordinate other shared resources;
 worker limits and known-conflict checks do not provide general mutual exclusion.
 See :ref:`execution-boundaries` for the full responsibility table and the limits
 of retries, cancellation, cleanup and partial runs.
