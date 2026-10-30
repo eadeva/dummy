@@ -98,7 +98,7 @@ PTK workflows currently orchestrate work locally. CX pipelines use their own
 orchestration and invoke PTK jobs. See :doc:`guides/workflows` for the structure
 in configuration and :doc:`architecture/06-runtime-view` for execution behavior.
 
-Why teams use PTK
+Why PTK?
 -----------------
 
 .. grid:: 1 1 3 3

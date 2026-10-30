@@ -236,30 +236,7 @@ Current CX coverage and its limits are documented in :doc:`/ci/index`.
 Authoring convention
 --------------------
 
-The supplied meta-model is followed as an authoring convention, not loaded.
-``docs/conf.py`` explicitly declares the selected Sphinx-Needs directive types,
-attributes and relations. ``tests/test_documentation_requirements.py`` checks
-that subset. The archived YAML is not a Sphinx or runtime dependency.
-
-.. list-table:: Selected conventions
-   :header-rows: 1
-   :widths: 20 25 55
-
-   * - Directive
-     - ID prefix
-     - Mandatory metadata and traceability
-   * - ``feature``
-     - ``FEAT_``
-     - Organizational grouping; optional ``func_parent`` links another feature.
-   * - ``req-stkh``
-     - ``REQ_Stkh_``
-     - ``req_type``, ``legal``, ``safety``, ``security``, ``status_crs``, ``safety_relevance``; exactly one ``clustered_by`` feature.
-   * - ``req-sys``
-     - ``REQ_Sys_``
-     - ``req_type``, ``legal``, ``safety``, ``security``, ``status``, ``verification_criteria``, ``verification_level``; one or more ``req_satisfies`` links to stakeholder/system requirements.
-   * - ``req-sw``
-     - ``REQ_Sw_``
-     - Same mandatory attributes as system requirements, with software verification-level values; one or more ``req_satisfies`` links to stakeholder/system/software requirements.
+The supplied meta-model is followed as an authoring convention.
 
 All requirements have ``safety: QM``, ``security: false`` and ``legal: false``.
 Stakeholder requirements also have ``safety_relevance: no``. These are the agreed
@@ -283,6 +260,3 @@ coverage. Source/test paths are candidate evidence; they are not a statement
 that those tests passed on every operating system or that stakeholder acceptance
 has occurred. Verification criteria describe what must be demonstrated. Current
 CX coverage and its limits are in :doc:`/ci/index`.
-
-The generated ``needs.json`` exports these authored records and relations for
-inspection. No generated data is loaded back as the authoring source.

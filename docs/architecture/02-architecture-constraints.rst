@@ -21,11 +21,6 @@ remain external dependencies. A configured tool can have platform-specific
 requirements even when PTK itself runs on both platforms.
 
 The requirements use the supplied directive names, attributes and relations as
-an authoring convention. They do not load the reference meta-model. All authored
-requirements use ``safety: QM``, ``security: false`` and ``legal: false``; these
+an authoring convention. All authored requirements use ``safety: QM``, ``security: false`` and ``legal: false``; these
 are agreed classifications, not a claim that credential or path handling can
 ignore normal engineering safeguards.
-
-The documentation uses RST, Sphinx-Needs and the Read the Docs theme. The supplied
-CSS controls width and table wrapping. Java, Doxygen, legacy custom extensions
-and a meta-model loader are unnecessary for this site.
