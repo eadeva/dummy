@@ -225,7 +225,11 @@ def test_graph_inspection_needs_no_parameters_credentials_or_process(tmp_path):
     assert result.exit_code == 0, result.output
     assert "dependency graph" in result.output
     page = (tmp_path / ".ptk/graphs/job-go.html").read_text()
-    assert "<svg" in page and 'marker-end="url(#arrow)"' in page
+    assert 'class="ptk-graph" open' in page
+    assert '"needs": ["first"]' in page
+    assert result.output.index("next  selected") < result.output.index(
+        "first  selected"
+    )
     assert not (tmp_path / "_logs").exists()
     assert not (tmp_path / "_builds").exists()
     rejected = CliRunner().invoke(cli, ["go", "--from", "first"], cwd=tmp_path)

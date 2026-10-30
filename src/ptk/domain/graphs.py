@@ -54,17 +54,29 @@ def ancestors(nodes):
 
 
 def describe_graph(nodes):
-    """One node per ID; joins retain every incoming edge."""
-    depths = {}
-    for name in TopologicalSorter(
-        {name: node.needs for name, node in nodes.items()}
-    ).static_order():
-        depths[name] = max(
-            (depths[parent] + 1 for parent in nodes[name].needs), default=0
-        )
+    """One node per ID and a target-first tree projection, in authored order.
+
+    Tree entries refer to an earlier parent index; repeated dependencies are
+    leaves referencing their first occurrence. This keeps joins and disconnected
+    targets without expanding exponentially or requiring recursive traversal.
+    """
+    dependencies = {need for node in nodes.values() for need in node.needs}
+    pending = [(name, None) for name in reversed(nodes) if name not in dependencies]
+    tree = []
+    seen = set()
+    while pending:
+        name, parent = pending.pop()
+        shared = name in seen
+        index = len(tree)
+        tree.append({"id": name, "parent": parent, "shared": shared})
+        if not shared:
+            seen.add(name)
+            pending.extend((need, index) for need in reversed(nodes[name].needs))
     return {
         "nodes": [
-            {"id": name, "needs": list(node.needs), "depth": depths[name]}
+            {"id": name, "needs": list(node.needs)}
+            | ({"label": node.job} if hasattr(node, "job") else {})
             for name, node in nodes.items()
-        ]
+        ],
+        "tree": tree,
     }

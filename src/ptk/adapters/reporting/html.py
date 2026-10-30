@@ -21,6 +21,7 @@ from ...domain.reporting.model import (
     ReportStep,
     test_metrics,
 )
+from .. import graph_html
 from . import log_html
 
 CSS = """
@@ -264,16 +265,7 @@ def render(report: Report, *, link_root: Path | None = None) -> str:
             + ". Required outputs must already exist; PTK does not restore outputs from previous runs.</p></section>"
         )
     parts.append(
-        '<section><h2>Dependencies</h2><div class="table-wrap"><table><tr><th>Step</th><th>Needs</th></tr>'
-        + "".join(
-            "<tr><td>"
-            + _e(step.label)
-            + "</td><td>"
-            + _e(", ".join(step.needs) or "ready")
-            + "</td></tr>"
-            for step in report.steps
-        )
-        + "</table></div></section>"
+        graph_html.section(report.graph, f"Job {report.job} · {report.variant}")
     )
     figures = [
         ("Steps passed", counts[PASSED]),
@@ -408,5 +400,5 @@ def render(report: Report, *, link_root: Path | None = None) -> str:
         '<!doctype html><html lang="en"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
         f"<title>{_e(title)}</title><style>{CSS}{log_html.CSS}</style></head><body><main>"
-        f"{''.join(parts)}</main>{FILTER_SCRIPT}{log_html.SCRIPT}</body></html>"
+        f"{''.join(parts)}</main>{FILTER_SCRIPT}{log_html.SCRIPT}{graph_html.assets()}</body></html>"
     )

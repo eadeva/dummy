@@ -264,21 +264,23 @@ function createController(vscode, context, editorFactory = createEditors) {
       if (object) node.children = schemaTools.orderedEntries(schemaTools.at(config.schema, config.value, configPath, config.schema), value, config.schema).filter(([key]) => !(key === "components" && configPath.length === 1 && ["project", "variants"].includes(configPath[0]))).map(([key, child]) => field(child, [...configPath, Array.isArray(value) ? Number(key) : key], Array.isArray(value) ? presentation.listLabel(child, [...configPath, Number(key)]) : key));
       const graph = config.graphs.find(item => JSON.stringify(item.path) === JSON.stringify(configPath));
       if (graph && !graph.error) {
-        const levels = [...new Set(graph.nodes.map(item => item.depth))].sort((a, b) => a - b);
         node.icon = "git-merge";
-        node.tooltip = "Dependency graph supplied by PTK. Levels are not execution barriers; each node starts when its own prerequisites finish.";
-        node.children = levels.map(depth => ({
-          label: depth === 0 ? "Ready" : `Dependency level ${depth}`,
-          icon: "git-branch", collapsed: false,
-          id: `${node.id}:level:${depth}`,
-          tooltip: "Each item appears once. Needs lists every incoming dependency, including joins.",
-          children: graph.nodes.filter(item => item.depth === depth).map(item => {
-            const child = field(value[item.id], [...configPath, item.id], item.id);
-            child.description = item.needs.length ? `needs: ${item.needs.join(", ")}` : "ready";
-            child.tooltip = `${child.description}\n${child.tooltip}`;
-            return child;
-          }),
-        }));
+        node.description = "targets → prerequisites";
+        node.tooltip = "Expand a target to see its prerequisites. Shared references edit the same step; each step executes once.";
+        node.children = [];
+        const metadata = new Map(graph.nodes.map(item => [item.id, item]));
+        const branches = [];
+        for (const [index, entry] of graph.tree.entries()) {
+          const item = metadata.get(entry.id);
+          const child = field(value[item.id], [...configPath, item.id], item.id);
+          child.id = `${node.id}:branch:${index}`;
+          child.icon = entry.shared ? "references" : "git-branch";
+          child.description = [item.label, entry.shared ? "↩ shared — shown above" : ""].filter(Boolean).join(" · ");
+          child.tooltip = `${item.label ? item.label + "\n" : ""}Needs: ${item.needs.join(", ") || "none"}\n${entry.shared ? "Shared dependency; edits the same definition.\n" : ""}${child.tooltip}`;
+          child.children = [];
+          branches.push(child);
+          (entry.parent === null ? node : branches[entry.parent]).children.push(child);
+        }
       } else if (graph?.error) {
         node.description = "invalid graph";
         node.tooltip = graph.error;

@@ -271,6 +271,7 @@ def execute(
             steps,
             selected=select_steps(steps, request.end, request.only_step),
             only_step=request.only_step,
+            variant=request.variant,
         )
         return
     if request.all_variants and request.variant:

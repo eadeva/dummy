@@ -194,6 +194,31 @@ test("discovery does not retry without the configuration interface", async () =>
   await assert.rejects(core.readInventory({ executable: process.execPath, arguments: ["-e", script, "--"], timeout: 10 }, process.cwd()), /No such option: --configuration/);
 });
 
+test("graph projections require current metadata and reject dangling or malformed occurrences", () => {
+  const valid = { path: ["jobs", "build", "steps"], nodes: [{id: "a", needs: []}, {id: "b", needs: ["a"]}], tree: [{id: "b", parent: null, shared: false}, {id: "a", parent: 0, shared: false}] };
+  const doc = inventory();
+  doc.projects[0].configuration.graphs = [valid];
+  assert.doesNotThrow(() => core.parseInventory(JSON.stringify(doc)));
+  for (const mutate of [
+    graph => { delete graph.tree; },
+    graph => { graph.tree[1].parent = 99; },
+    graph => { graph.tree[1].shared = true; },
+    graph => { graph.tree[1].id = "missing"; },
+    graph => { graph.nodes[1].needs = ["missing"]; },
+    graph => { graph.tree[0] = null; },
+    graph => { graph.tree = []; },
+    graph => { graph.tree[1].parent = null; },
+  ]) {
+    const graph = structuredClone(valid); mutate(graph);
+    doc.projects[0].configuration.graphs = [graph];
+    assert.throws(() => core.parseInventory(JSON.stringify(doc)), /configuration interface/);
+  }
+  doc.projects[0].configuration.graphs = [{path: valid.path, nodes: [], tree: [], error: "Invalid dependency"}];
+  assert.doesNotThrow(() => core.parseInventory(JSON.stringify(doc)));
+  doc.projects[0].configuration.version = 3;
+  assert.throws(() => core.parseInventory(JSON.stringify(doc)), /configuration interface/);
+});
+
 test("maintainer command paths come from PTK for run, preview, help and cleanup", () => {
   const job = target();
   job.spec.command = ["maintainer", "run", "build"];

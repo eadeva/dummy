@@ -128,6 +128,16 @@ def test_tagged_build_and_frozen_sdist_rebuild(tmp_path):
     ):
         resource = "ptk/resources/extension/project-toolkit.vsix"
         assert original.read(resource) == rebuilt_wheel.read(resource)
+        for name in (
+            "dagre.min.js",
+            "dagre.LICENSE.txt",
+            "dagre.min.js.LEGAL.txt",
+            "graph.js",
+            "graph.css",
+        ):
+            resource = f"ptk/adapters/graph_assets/{name}"
+            assert original.read(resource) == rebuilt_wheel.read(resource)
+            assert (source / "src" / resource).is_file()
 
 
 def test_editable_build_does_not_need_node(tmp_path):

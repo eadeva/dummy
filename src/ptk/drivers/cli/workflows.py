@@ -203,7 +203,7 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False):
     if graph or dry_run:
         from .graphs import show_graph
 
-        show_graph(root, name, "workflow", spec.jobs)
+        show_graph(root, name, "workflow", spec.jobs, variant=parent.variant)
         if graph and not dry_run:
             return
     is_ci = parent.app.host.is_ci() if parent.ci is None else parent.ci

@@ -58,7 +58,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
               const selection = selections.get(key) || [];
               selections.delete(key);
               const installed = await configuration(document.uri);
-              if (!installed?.schema || installed.version !== 3) return state({ error: "No compatible PTK project schema is available. Open the project and refresh PTK, or use Raw YAML.", schema: {}, selection });
+              if (!installed?.schema || installed.version !== 4) return state({ error: "No compatible PTK project schema is available. Open the project and refresh PTK, or use Raw YAML.", schema: {}, selection });
               const schema = projectEdits.schemaForFile(installed, document.uri.fsPath);
               configurationValue = installed.value;
               variables = installed.variables;
@@ -125,7 +125,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
       return panels.get(key).webview.postMessage({ type: "navigate", selection });
     }
     let config = owner.project.configuration;
-    if (!config || config.version !== 3) throw new Error("The installed PTK does not support this configuration editor. Update PTK and the extension together.");
+    if (!config || config.version !== 4) throw new Error("The installed PTK does not support this configuration editor. Update PTK and the extension together.");
     const panel = vscode.window.createWebviewPanel(viewType, `${owner.project.alias}: Configuration`, vscode.ViewColumn.Active, { retainContextWhenHidden: true });
     panels.set(key, panel);
     let version = 1, chain = Promise.resolve(), disposed = false;

@@ -109,17 +109,52 @@ values or checking credentials/tools::
    ptk workflow run verify --graph
 
 Direct workflow commands and maintainer-prefixed routes support the same flag.
-The terminal shows IDs and prerequisites and links to a self-contained HTML/SVG
-diagram in ``.ptk/graphs``. Prepared job previews have separate files per
-concrete variant. No diagram server or external renderer is needed.
-Graph inspection does not execute commands. A dry-run also shows the prepared
-selection; unselected steps remain visible in the graph with a distinct style.
-Generated graph previews are the only preview files written; run outputs,
-logs and reports are untouched. ``--graph`` alone shows the authored topology,
-not the outcome of runtime conditions.
+The terminal shows a compact tree, starting with final targets. A child is a
+prerequisite of its parent: read the nesting as **depends on**, not execution
+order. Final targets and prerequisites retain authored order. A shared dependency
+expands at its first occurrence; later occurrences say **shared — shown above**.
+This also covers disconnected targets without duplicating whole subtrees.
 
-The configuration tree in the extension consumes PTK's graph metadata. Each node
-appears once, grouped by dependency depth, and lists all its prerequisites.
-These levels are navigation aids, not barriers: a ready node need not wait for
-unrelated work in the preceding level. See :doc:`/guides/editor` and the decisions
-in :doc:`/architecture/09-architecture-decisions`.
+The preview links to a self-contained HTML diagram in ``.ptk/graphs``. Targets
+are at the top and arrows point toward prerequisites, matching the tree's
+meaning. The diagram has one box per invocation, including all join edges.
+Use **Zoom in**, **Zoom out**, **Fit to view**, or drag the canvas to pan. Select a
+node (click, Enter or Space) to inspect its target, prerequisites and dependents;
+select a dependency in the details panel to navigate to it. Long names wrap.
+Layout uses bundled Dagre; no network service, Graphviz executable or Node
+installation is needed to inspect a generated file. JavaScript must be enabled
+for the interactive diagram.
+
+Prepared job previews have separate files per concrete variant. Graph inspection
+does not execute commands. A dry-run also shows the prepared selection and skip
+reasons; omitted steps remain visible. ``--only-step`` lists prerequisites that
+will not run and retains their edges. Generated graph previews are the only
+preview files written; run outputs, logs and reports are untouched. ``--graph``
+alone shows authored topology, not the outcome of runtime conditions.
+
+The extension consumes the same PTK-provided tree projection. Expand final
+targets to inspect their prerequisites; both canonical nodes and shared
+references edit the same configuration definition. There are no dependency-level
+navigation groups. See :doc:`/guides/editor` and the decisions in
+:doc:`/architecture/09-architecture-decisions`.
+
+Graphs in execution reports
+---------------------------
+
+Every job and workflow HTML report contains a **Dependency graph** disclosure,
+collapsed initially. Open it to use the same offline diagram controls. The
+workflow graph shows job invocations with repository/job targets and the concrete
+variant of each invocation. A child job report shows that job's steps.
+
+Report graphs use the run's recorded dependencies and outcomes, not current YAML.
+Later configuration changes therefore do not alter the graph on re-export.
+Passed nodes are green, failed nodes red, skipped nodes grey, and cancelled or
+allowed-failure nodes amber. Each node also spells out its state; failure allowed
+remains explicit. Selecting a node shows its duration and recorded reason,
+including blocked dependencies and steps omitted by partial execution. The
+timeline remains the source of actual execution order and overlap.
+
+``report: false`` excludes a step's details and results as before. Its ID and
+prerequisite edges remain as a **Details hidden** node, so the graph cannot imply
+that a dependency did not exist. Its message, command, duration, logs and result
+are not exposed by the graph. The graph does not execute or rerun anything.

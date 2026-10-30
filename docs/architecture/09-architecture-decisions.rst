@@ -158,13 +158,98 @@ not imply that every related future capability has been implemented.
 
    **Context:** Users need to understand dependencies before running project commands.
 
-   **Decision:** Provide --graph on job/workflow execution routes and include graph previews automatically in dry-runs. Export offline SVG/HTML plus terminal dependency details. Supply graph metadata to the configuration tree.
+   **Decision:** Provide --graph on job/workflow execution routes and include graph previews automatically in dry-runs. Export an offline interactive HTML/SVG diagram plus a compact terminal dependency tree. Supply the same graph and tree projection to configuration navigation.
 
    **Alternatives considered:** Treating YAML order as a diagram or relying on an external diagram server was rejected.
 
-   **Consequences:** Inspection alone does not prepare commands or resolve credentials/tools. Graph previews write only under .ptk/graphs; dependency levels are not scheduling barriers.
+   **Consequences:** Inspection alone does not prepare commands or resolve credentials/tools. Graph previews write only under .ptk/graphs; the presentation does not change scheduling. The detailed presentation and report decisions follow.
 
    **Related requirement:** :need:`REQ_Sw_GRAPH_INSPECTION`.
+
+.. ddec:: Target-first trees with explicit shared references
+   :id: DD_GRAPH_TREE
+   :status: accepted
+
+   **Context:** Dependency tables, artificial depth groups and a fixed four-column
+   diagram obscure the relationships users need to inspect. A dependency graph
+   can contain joins and is not necessarily a strict tree. Ninja's indented
+   target inspection informed the tree view; Bazel's DOT output and Conan's HTML
+   graph informed the retained graphical view. Sources: `Ninja targets and graph
+   tools <https://ninja-build.org/manual.html#_extra_tools>`_, `Bazel graph output
+   <https://bazel.build/query/language#graph>`_, and `Conan graph info
+   <https://docs.conan.io/2/reference/commands/graph/info.html>`_.
+
+   **Decision:** Use one domain graph description with unique nodes and all needs
+   edges. Derive an ordered, target-first tree projection in Python: final targets
+   at the root, prerequisites as children, and each shared node expanded only on
+   its first visit. Later occurrences are explicit leaf references. Both tree
+   nesting and diagram arrows mean "depends on". Terminal trees use Rich; VS Code
+   renders the supplied projection and routes every occurrence to the same
+   editable configuration path. Workflow targets are secondary labels.
+
+   **Alternatives considered:** Duplicating entire prerequisite subtrees can grow
+   exponentially; discarding repeated edges misrepresents joins. Keeping depth
+   buckets or inferring another graph in the extension was rejected.
+
+   **Consequences:** Traversal is bounded by nodes plus edges and handles multiple
+   disconnected final targets. Terminal selection/skip annotations and single-step
+   warnings remain explicit. The former table, depth groups and fixed-grid
+   renderer are removed. Configuration interface version 4 replaces version 3;
+   older interfaces are rejected, with no compatibility parser.
+
+   **Related requirement:** :need:`REQ_Sw_GRAPH_INSPECTION`.
+
+.. ddec:: Bundle the layout engine for interactive offline diagrams
+   :id: DD_GRAPH_LAYOUT
+   :status: accepted
+
+   **Context:** Join edges and wide graphs need a layout engine. Generated files
+   must remain useful when copied to a machine without PTK or network access.
+
+   **Decision:** Vendor the pinned Dagre browser bundle and its MIT notices with
+   the Python package. Embed it and the shared viewer in each HTML file. Lay out
+   unique nodes from targets toward prerequisites; wrap full names and provide
+   zoom, fit, pan, keyboard node activation and a dependency/result inspector.
+   Respect light/dark themes and contain wide graphs in the canvas viewport.
+
+   **Alternatives considered:** Installing Graphviz on every consumer machine,
+   fetching scripts from a CDN and retaining the hand-positioned SVG were rejected.
+
+   **Consequences:** HTML files are larger but self-contained. Interactive diagrams
+   require JavaScript. No browser request or installed Node/Graphviz is needed.
+   Dagre and its bundled graphlib remain third-party code whose version, source
+   and local modification are recorded in graph_assets/README.txt. Package tests
+   verify that wheel and sdist rebuilds retain these resources and licenses.
+
+   **Related requirement:** :need:`REQ_Sw_GRAPH_INSPECTION`.
+
+.. ddec:: Collapsible report graphs preserve recorded evidence
+   :id: DD_REPORT_GRAPHS
+   :status: accepted
+
+   **Context:** Users need to relate run outcomes to prerequisites, including
+   shared steps, blocked chains and partial runs, without losing report overview.
+
+   **Decision:** Embed the same diagram viewer in job and workflow HTML reports
+   inside a native details disclosure, collapsed by default. Derive topology and
+   outcomes from recorded step/job results, never reload current configuration to
+   reconstruct them. Keep one node per invocation; include state text and colour,
+   duration, reason, allowed-failure indication and workflow repository/job variant
+   metadata. Keep the timeline for actual execution timing. The canonical job
+   report model includes its graph so JSON export carries the same evidence.
+
+   **Alternatives considered:** Linking only to a mutable preview file would lose
+   portability and historical accuracy. Expanding every graph by default would
+   obscure report totals. Removing report-disabled nodes would break their edges.
+
+   **Consequences:** Layout is computed on first expansion. Reopening does not
+   duplicate nodes, and reports remain single offline files. report: false keeps
+   only the step ID and dependency edges as "Details hidden"; result, message,
+   command, duration, logs and tool contributions remain excluded. Single-step
+   reports retain omitted edges and the explicit bypass notice. No old renderer
+   or graph reconstruction fallback is retained.
+
+   **Related requirement:** :need:`REQ_Sw_REPORT_GRAPHS`.
 
 .. ddec:: Independent variant selections with an explicit all action
    :id: DD_VARIANT_SELECTION

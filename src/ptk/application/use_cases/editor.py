@@ -69,10 +69,12 @@ def describe_configuration(
                 spec = model.model_validate(authored)
                 graphs.append({"path": path, **describe_graph(getattr(spec, child))})
             except ValidationError as exc:
-                graphs.append({"path": path, "nodes": [], "error": str(exc)})
+                graphs.append(
+                    {"path": path, "nodes": [], "tree": [], "error": str(exc)}
+                )
     schema = ExportSchema().execute()
     return {
-        "version": 3,
+        "version": 4,
         "graphs": graphs,
         "fingerprints": fingerprints or {},
         **editor_layout(root / ".main.ptk.yml", tree, schema),

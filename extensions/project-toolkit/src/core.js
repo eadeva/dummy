@@ -25,6 +25,26 @@ function validCommands(commands) {
     Array.isArray(command.params) && command.params.every(validBuiltinParam));
 }
 
+function validGraph(graph) {
+  if (!object(graph) || !Array.isArray(graph.path) || graph.path.length !== 3 || !graph.path.every(part => typeof part === "string") ||
+      !Array.isArray(graph.nodes) || !Array.isArray(graph.tree) || !graph.nodes.every(node => object(node) && typeof node.id === "string" &&
+      Array.isArray(node.needs) && node.needs.every(id => typeof id === "string") && (node.label === undefined || typeof node.label === "string"))) return false;
+  if (graph.error !== undefined) return typeof graph.error === "string" && graph.nodes.length === 0 && graph.tree.length === 0;
+  const nodes = new Map(graph.nodes.map(node => [node.id, node]));
+  if (nodes.size !== graph.nodes.length || graph.nodes.some(node => node.needs.some(id => !nodes.has(id)))) return false;
+  const seen = new Set(), children = graph.tree.map(() => []);
+  for (const [index, entry] of graph.tree.entries()) {
+    if (!object(entry) || !nodes.has(entry.id) || typeof entry.shared !== "boolean" || entry.shared !== seen.has(entry.id)) return false;
+    if (entry.parent !== null) {
+      if (!Number.isInteger(entry.parent) || entry.parent < 0 || entry.parent >= index || graph.tree[entry.parent].shared) return false;
+      children[entry.parent].push(entry.id);
+    }
+    seen.add(entry.id);
+  }
+  return seen.size === nodes.size && graph.tree.every((entry, index) =>
+    JSON.stringify(children[index]) === JSON.stringify(entry.shared ? [] : nodes.get(entry.id).needs));
+}
+
 function parseInventory(text) {
   let doc;
   try { doc = JSON.parse(text); } catch {
@@ -41,7 +61,7 @@ function parseInventory(text) {
       throw new Error("Invalid repository paths in PTK inventory.");
     }
     const config = project.configuration;
-    if (!object(config) || config.version !== 3 || !object(config.schema) || !Array.isArray(config.graphs) || !config.graphs.every(graph => object(graph) && Array.isArray(graph.path) && graph.path.length === 3 && graph.path.every(part => typeof part === "string") && Array.isArray(graph.nodes) && graph.nodes.every(node => typeof node.id === "string" && Array.isArray(node.needs) && node.needs.every(id => typeof id === "string") && Number.isInteger(node.depth) && node.depth >= 0)) || config.value !== null && !object(config.value) ||
+    if (!object(config) || config.version !== 4 || !object(config.schema) || !Array.isArray(config.graphs) || !config.graphs.every(validGraph) || config.value !== null && !object(config.value) ||
         !Array.isArray(config.bindings) || !Array.isArray(config.documents) || !Array.isArray(config.files) || !config.files.every(absolute) ||
         !Array.isArray(config.sources) || !config.sources.every(source => object(source) && absolute(source.file) &&
           Array.isArray(source.path) && source.path.every(key => typeof key === "string" || Number.isSafeInteger(key) && key >= 0))) {

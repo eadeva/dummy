@@ -1,0 +1,41 @@
+.ptk-graph{--g-paper:#fff;--g-ink:#18212f;--g-muted:#5b6778;--g-line:#dce2ea;--g-edge:#8592a5;--g-accent:#2767b1;--g-node:#eaf3ff;--g-pass:#216539;--g-pass-bg:#eaf7ee;--g-fail:#a92e24;--g-fail-bg:#fff0ee;--g-skip:#657183;--g-skip-bg:#edf0f3;--g-warn:#805600;--g-warn-bg:#fff6df;background:var(--g-paper);color:var(--g-ink);border:1px solid var(--g-line);border-radius:12px;margin:0 0 24px;overflow:hidden;min-width:0}
+@media(prefers-color-scheme:dark){.ptk-graph{--g-paper:#161d27;--g-ink:#e6ebf2;--g-muted:#a8b4c5;--g-line:#364354;--g-edge:#8293aa;--g-accent:#91c4fa;--g-node:#182a40;--g-pass:#82d5a2;--g-pass-bg:#182f24;--g-fail:#ffa397;--g-fail-bg:#392321;--g-skip:#bdc6d2;--g-skip-bg:#252c35;--g-warn:#f0cb78;--g-warn-bg:#352d1a}}
+.ptk-graph *{box-sizing:border-box}
+.ptk-graph [hidden]{display:none!important}
+.ptk-graph>summary{cursor:pointer;padding:14px 18px;font-size:16px}
+.ptk-graph>summary>span{font-size:13px;color:var(--g-muted);margin-left:16px;display:inline-block}
+.ptk-graph-body{border-top:1px solid var(--g-line);padding:0 16px 16px}
+.ptk-graph-caption{font-size:13px;color:var(--g-muted);margin:12px 0}
+.ptk-graph-notice{border-left:3px solid var(--g-warn);padding:8px 12px;background:var(--g-warn-bg);font-size:14px}
+.ptk-graph-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0}
+.ptk-graph button{font:inherit;color:var(--g-ink);background:var(--g-paper);border:1px solid var(--g-line);border-radius:6px;cursor:pointer;padding:5px 11px}
+.ptk-graph button:hover{border-color:var(--g-accent);background:var(--g-node)}
+.ptk-graph button:focus-visible,.ptk-graph summary:focus-visible,.ptk-graph-viewport:focus-visible{outline:2px solid var(--g-accent);outline-offset:2px}
+.ptk-graph-toolbar output{font-size:13px;min-width:45px;color:var(--g-muted)}
+.ptk-graph-toolbar>span{font-size:12px;color:var(--g-muted);margin-left:auto}
+.ptk-graph-viewport{height:440px;max-height:60vh;min-height:240px;overflow:auto;border:1px solid var(--g-line);border-radius:8px;cursor:grab;touch-action:pan-x pan-y;background-image:radial-gradient(var(--g-line) 1px,transparent 1px);background-size:18px 18px}
+.ptk-graph-viewport:active{cursor:grabbing}
+.ptk-graph svg{display:block;max-width:none;margin:auto;overflow:visible}
+.ptk-graph-edge{fill:none;stroke:var(--g-edge);stroke-width:1.6}
+.ptk-graph-arrow{fill:var(--g-edge)}
+.ptk-graph-node{--node-fill:var(--g-node);--node-stroke:var(--g-accent);cursor:pointer}
+.ptk-graph-node[data-status=passed]{--node-fill:var(--g-pass-bg);--node-stroke:var(--g-pass)}
+.ptk-graph-node[data-status=failed],.ptk-graph-node[data-status=error]{--node-fill:var(--g-fail-bg);--node-stroke:var(--g-fail)}
+.ptk-graph-node[data-status=skipped],.ptk-graph-node[data-status=hidden],.ptk-graph-node[data-status=unselected]{--node-fill:var(--g-skip-bg);--node-stroke:var(--g-skip)}
+.ptk-graph-node[data-status=cancelled],.ptk-graph-node[data-allowed=true]{--node-fill:var(--g-warn-bg);--node-stroke:var(--g-warn)}
+.ptk-graph-node rect{fill:var(--node-fill);stroke:var(--node-stroke);stroke-width:1.5}
+.ptk-graph-node[data-status=unselected] rect,.ptk-graph-node[data-status=hidden] rect{stroke-dasharray:5 3}
+.ptk-graph-node text{font:600 14px system-ui,sans-serif;fill:var(--g-ink);pointer-events:none}
+.ptk-graph-node .ptk-graph-subtitle{font:12px system-ui,sans-serif;fill:var(--g-muted)}
+.ptk-graph-node .ptk-graph-state{font:600 12px system-ui,sans-serif;fill:var(--node-stroke)}
+.ptk-graph-node[aria-pressed=true] rect,.ptk-graph-node:focus rect{stroke-width:3;stroke:var(--g-accent)}
+.ptk-graph-node:focus{outline:none}
+.ptk-graph-edge[data-active=true]{stroke:var(--g-accent);stroke-width:3}
+.ptk-graph-inspector{padding-top:12px;overflow-wrap:anywhere;font-size:14px}
+.ptk-graph-inspector p{margin:4px 0;color:var(--g-muted)}
+.ptk-graph-inspector h3{margin:0 0 8px;font:600 16px system-ui,sans-serif}
+.ptk-graph-inspector dl{margin:0;display:grid;grid-template-columns:100px minmax(0,1fr);gap:6px 12px}
+.ptk-graph-inspector dt{color:var(--g-muted)}
+.ptk-graph-inspector dd{margin:0;white-space:pre-wrap}
+.ptk-graph-inspector dd button{margin:0 5px 4px 0;font-size:13px}
+@media(max-width:500px){.ptk-graph-body{padding:0 10px 10px}.ptk-graph>summary{padding:12px}.ptk-graph-toolbar>span{width:100%;margin:0}.ptk-graph>summary>span{margin-left:6px}.ptk-graph-inspector dl{grid-template-columns:75px minmax(0,1fr)}}

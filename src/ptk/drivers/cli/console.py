@@ -158,6 +158,9 @@ def dry_run(
         selected={step.name for step in plan.steps if step.skip_reason is None},
         variant=plan.variant,
         only_step=plan.only_step,
+        skipped={
+            step.name: step.skip_reason for step in plan.steps if step.skip_reason
+        },
     )
     head = f"[bold]{escape(plan.job)}[/] [dim](dry run - nothing is executed)[/]"
     if plan.variant:

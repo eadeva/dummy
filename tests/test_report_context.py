@@ -93,6 +93,12 @@ jobs:
         - PYTHON
         - -c
         - print("hello")
+      verify:
+        needs: hello
+        run:
+        - PYTHON
+        - -c
+        - print("verify")
 """.replace("PYTHON", sys.executable)
         )
     )
@@ -107,9 +113,13 @@ jobs:
     assert summary["context"]["tools"][0]["version"]
     assert summary["context"]["tools"][0]["source"]
     project.config.versioning.project.version = "9.9.9"
+    project.config.jobs["build"].steps["verify"].needs = []
     report = from_summary(summary, [], "another-ptk-version")
     assert report.ptk_version == summary["context"]["ptk_version"]
     assert report.context["versions"]["projects"]["engine"]["value"] == "3.4.5"
+    assert report.graph["nodes"][1]["needs"] == ["hello"]
+    regenerated = app.reports.build(project, summary)
+    assert regenerated.graph == report.graph
 
 
 def test_report_header_uses_available_ptk_version_fallback():

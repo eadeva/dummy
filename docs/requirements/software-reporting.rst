@@ -222,3 +222,30 @@ Canonical results, retained evidence and diagnostic interpretation.
    **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
 
    **Evidence:** ``src/ptk/application/use_cases/report.py``; ``tests/test_report_open.py``.
+
+.. req-sw:: Inspect recorded execution graphs in reports
+   :id: REQ_Sw_REPORT_GRAPHS
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: accepted
+   :verification_criteria: Job and workflow reports retain recorded joins and outcomes after configuration changes; browser tests open initially collapsed sections, inspect statuses, navigate dependencies and exercise offline zoom, pan, fit and narrow layouts.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_REPORTS
+   :tags: implemented
+
+   PTK shall embed a collapsible dependency diagram, initially closed, in job
+   and workflow HTML reports. It shall use recorded run topology and outcomes,
+   display shared invocations once with all edges, distinguish passed, failed,
+   skipped, cancelled and allowed-failure states using text and colour, and expose
+   recorded durations, skip/block reasons and concrete workflow target variants.
+   A report-disabled step shall retain only its topology with an explicit hidden
+   marker. Diagrams shall work offline and shall not execute commands.
+
+   **Origin:** User request to add collapsible graphs to workflow and job reports.
+
+   **Implementation:** Implemented; the tests are candidate verification evidence, not an acceptance record.
+
+   **Evidence:** ``tests/test_graph_presentation.py``; ``tests/test_report_context.py``;
+   ``extensions/project-toolkit/test/graph-ui.test.js``.

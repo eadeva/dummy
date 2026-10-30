@@ -10,8 +10,8 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
    support `ptk describe --json --configuration` (inventory version 4 and configuration interface version 3).
 2. If PTK was installed directly with uv, run `ptk self-service extension` afterwards.
    Alternatively, in VS Code run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.13.0.vsix`. You can also use
-   `code --install-extension project-toolkit-0.13.0.vsix`.
+   `project-toolkit-0.14.0.vsix`. You can also use
+   `code --install-extension project-toolkit-0.14.0.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -75,8 +75,8 @@ Some action paths and flags are known by the extension, including validation,
 reports, initialization, variants, dry runs and cleanup; the schema alone is
 not the full contract.
 
-Extension 0.13.0 requires inventory `schema_version: 4` and
-`configuration.version: 3`. These are independent of package/release numbers
+Extension 0.14.0 requires inventory `schema_version: 4` and
+`configuration.version: 4`. These are independent of package/release numbers
 and the project marker's schema version. Unsupported interfaces are rejected;
 there is no legacy parser or runtime schema fallback. Breaking changes must
 update the affected interface version, extension and integration tests together.
@@ -267,7 +267,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.13.0.vsix`. Use `ptk self-service extension --dry-run`
+`extensions/project-toolkit/project-toolkit-0.14.0.vsix`. Use `ptk self-service extension --dry-run`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:
@@ -328,8 +328,13 @@ Chromium executable. Without Playwright these tests are explicitly skipped.
 
 
 Jobs and workflows under **Configuration** use graph metadata supplied by PTK.
-Expand **Ready** and dependency levels to inspect nodes. Each node appears once;
-its description lists all prerequisites, and selecting it opens its fields.
-Levels are navigation aids, not execution barriers. Invalid graphs show PTK's
-error while their current-format fields remain editable. Dry-runs include a
-terminal dependency summary and a link to an offline SVG/HTML graph.
+Expand final targets to see their prerequisites. Nesting means **depends on**.
+Shared dependencies expand once; later references are marked **shared — shown
+above** and edit the same definition. Workflow nodes include their job target.
+The CLI supplies the complete projection; the extension does not infer another
+graph or retain the old dependency-level groups.
+
+Job and workflow reports include a **Dependency graph** section, collapsed by
+default. Open it for an offline diagram with one box per invocation, all join
+edges, recorded outcomes, zoom/pan/fit controls and selectable node details.
+The same viewer is used by graph-only previews and dry-runs.

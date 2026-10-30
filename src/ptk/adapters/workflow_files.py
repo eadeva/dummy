@@ -10,7 +10,9 @@ from pathlib import Path
 from ..application.use_cases.project import validation_problems
 from ..domain.config.tree import to_plain
 from ..domain.errors import ConfigError, Location, Problem
+from ..domain.graphs import describe_graph
 from ..domain.workflows import WorkflowFile, WorkflowSpec
+from . import graph_html
 from .config.discovery import checked_path
 from .config.yaml_loader import YamlConfigReader
 
@@ -99,6 +101,21 @@ def write_workflow_report(result, target: Path) -> Path:
     )
     status = result.status.value
     title = escape(f"Workflow - {result.name}")
+    graph = describe_graph({job.id: job for job in result.jobs})
+    for node, job in zip(graph["nodes"], result.jobs, strict=True):
+        node.update(
+            label=f"{job.repo}:{job.job}" if job.repo else job.job,
+            variant=job.variant or "default",
+            status=job.status.value,
+            duration=job.duration,
+            allowed_failure=job.allowed_failure,
+            message=job.message
+            or (
+                "Child report contains errors or could not be written"
+                if job.report_errors
+                else ""
+            ),
+        )
     page = (
         '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
         f"<title>{title}</title><style>{CSS}</style></head><body><main>"
@@ -113,12 +130,14 @@ def write_workflow_report(result, target: Path) -> Path:
             },
         )
         + f'<p class="meta">Job calls only; duration {result.duration:.2f}s. Open a child report for project, tool and test details.</p>'
+        + graph_html.section(graph, f"Workflow {result.name}")
         + '<div class="table-wrap"><table><tr>'
         + "".join(f"<th>{t}</th>" for t in titles)
         + "</tr>"
         + "".join(rows)
         + "</table></div></main>"
         + FILTER_SCRIPT
+        + graph_html.assets()
         + "</body></html>"
     )
     output = target / "workflow.html"

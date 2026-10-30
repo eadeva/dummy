@@ -195,6 +195,15 @@ To regenerate all three diagrams, use Java and the official
 
 The helper checks the pinned renderer checksum and renders locally. Component
 diagrams use PlantUML's bundled Smetana layout, so Graphviz is not required.
+
+Execution graph previews and report graphs use a separate bundled Dagre browser
+engine. Its pinned version, source and license notices live in
+``src/ptk/adapters/graph_assets/README.txt``. The wheel and sdist include the
+engine and viewer; generated HTML embeds them without external requests. Run
+``scripts/graph_preview.py OUTPUT_DIRECTORY`` for representative offline fixtures.
+``extensions/project-toolkit/test/graph-ui.test.js`` exercises the real viewer
+with Playwright and ``PTK_TEST_PYTHON``; CI runs it in the quality job. Set
+``PTK_TEST_CHROMIUM`` locally only when using a custom Chromium executable.
 It records source and output checksums in each SVG. The Sphinx build rejects
 missing, stale or manually edited renderings; the check itself needs only Python::
 

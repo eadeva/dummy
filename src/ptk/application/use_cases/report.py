@@ -26,16 +26,13 @@ class ReportService:
         return self._version
 
     def build(self, project: Project, summary: dict[str, Any]) -> Report:
-        summary = {
-            **summary,
-            "steps": [s for s in summary.get("steps", []) if s.get("report", True)],
-        }
         reports_dir = self._reports_dir(project, summary)
-        labels = [s["step"] for s in summary.get("steps", [])]
+        visible = [s for s in summary.get("steps", []) if s.get("report", True)]
+        labels = [s["step"] for s in visible]
         contributions = self._store.contributions(reports_dir, labels)
         report = from_summary(summary, contributions, self._version)
         if summary.get("log_analysis", {}).get("enabled", False):
-            analysis = self._store.analyze_logs(summary)
+            analysis = self._store.analyze_logs({**summary, "steps": visible})
             report.log_analysis_enabled = True
             report.log_findings.extend(analysis.log_findings)
             report.problems.extend(analysis.problems)

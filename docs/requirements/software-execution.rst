@@ -210,18 +210,18 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :security: false
    :legal: false
    :status: accepted
-   :verification_criteria: Job and workflow graph inspection shows nodes and all edges without executing commands; both dry-run paths include graph previews by default.
+   :verification_criteria: Graph tests verify target-first trees, bounded shared references, disconnected targets and partial selections; offline browser checks verify all nodes/edges, layout and controls. Both dry-run paths include previews without executing commands.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall expose job and workflow dependency graphs through a graph-only option and include them automatically in dry-run output.
+   PTK shall expose job and workflow dependency graphs through a graph-only option and include them automatically in dry-run output. Terminal trees shall nest prerequisites under final targets, retain authored traversal order and expand shared dependencies once. Offline HTML diagrams shall retain one node per invocation and all dependency edges, with zoom, fit, pan and node details. Selection, variant and known skip information shall remain visible.
 
    **Origin:** User request for graph inspection and automatic dry-run graphs.
 
    **Implementation:** Implemented; the tests are candidate verification evidence, not an acceptance record.
 
-   **Evidence:** ``tests/test_step_graphs.py``; ``tests/workflows/test_cli.py``.
+   **Evidence:** ``tests/test_step_graphs.py``; ``tests/test_graph_presentation.py``; ``tests/workflows/test_cli.py``; ``extensions/project-toolkit/test/graph-ui.test.js``.
 
 .. req-sw:: Schedule local job workflows
    :id: REQ_Sw_WORKFLOWS

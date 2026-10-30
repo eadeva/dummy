@@ -6,6 +6,8 @@ from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any
 
+from ..graphs import describe_graph
+
 PASSED, FAILED, ERROR, SKIPPED = "passed", "failed", "error", "skipped"
 
 
@@ -116,6 +118,7 @@ class Report:
     log_analysis_enabled: bool = False
     ptk_version: str = ""
     context: dict[str, Any] = field(default_factory=dict)
+    graph: dict[str, Any] = field(default_factory=lambda: describe_graph({}))
 
     @property
     def ok(self) -> bool:
@@ -174,6 +177,27 @@ def from_summary(
         )
         for s in summary.get("steps", [])
     ]
+    graph = describe_graph({step.label: step for step in steps})
+    for node, step, recorded in zip(
+        graph["nodes"], steps, summary.get("steps", []), strict=True
+    ):
+        if not recorded.get("report", True):
+            node["status"] = "hidden"
+            node["message"] = "Step details excluded by report: false"
+        else:
+            node.update(
+                status=step.status,
+                duration=step.duration,
+                message=step.message,
+                allowed_failure=step.allowed_failure,
+            )
+    selection = summary.get("context", {}).get("selection", {})
+    if selection.get("only_step"):
+        graph["notice"] = (
+            f"Only step {selection['only_step']}; prerequisites not run: "
+            + (", ".join(selection["omitted_dependencies"]) or "none")
+            + ". Required outputs must already exist. All configured dependency edges are retained."
+        )
     report = Report(
         project=summary.get("project", ""),
         job=summary.get("job", ""),
@@ -184,7 +208,12 @@ def from_summary(
         duration=float(summary.get("duration", 0.0)),
         params=dict(summary.get("params", {})),
         param_sources=dict(summary.get("param_sources", {})),
-        steps=steps,
+        steps=[
+            step
+            for step, recorded in zip(steps, summary.get("steps", []), strict=True)
+            if recorded.get("report", True)
+        ],
+        graph=graph,
         ptk_version=summary.get("context", {}).get("ptk_version") or ptk_version,
         context=summary.get("context", {}),
     )
