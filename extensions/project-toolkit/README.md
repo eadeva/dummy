@@ -10,8 +10,8 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
    support `ptk describe --json --configuration` (inventory version 5 and configuration interface version 5).
 2. If PTK was installed directly with uv, run `ptk self-service extension` afterwards.
    Alternatively, in VS Code run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.20.0.vsix`. You can also use
-   `code --install-extension project-toolkit-0.20.0.vsix`.
+   `project-toolkit-0.21.0.vsix`. You can also use
+   `code --install-extension project-toolkit-0.21.0.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -75,7 +75,7 @@ Some action paths and flags are known by the extension, including validation,
 reports, initialization, variants, dry runs and cleanup; the schema alone is
 not the full contract.
 
-Extension 0.20.0 requires inventory `schema_version: 5` and
+Extension 0.21.0 requires inventory `schema_version: 5` and
 `configuration.version: 5`. These are independent of package/release numbers
 and the project marker's schema version. Unsupported interfaces are rejected;
 there is no legacy parser or runtime schema fallback. Breaking changes must
@@ -301,7 +301,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.20.0.vsix`. Use `ptk self-service extension --dry-run`
+`extensions/project-toolkit/project-toolkit-0.21.0.vsix`. Use `ptk self-service extension --dry-run`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:
@@ -375,3 +375,19 @@ Job and workflow reports include a **Dependency graph** section, collapsed by
 default. Open it for an offline diagram with one box per invocation, all join
 edges, recorded outcomes, zoom/pan/fit controls and selectable node details.
 The same viewer is used by graph-only previews and dry-runs.
+
+### Outputs and optional PTK cache
+
+The job and step configuration forms explain that `outputs` primarily describes
+artifacts for uploads and downloads in workflows. Declaring outputs does not
+transfer files. The project owns the output contract and cache correctness;
+PTK's built-in cache is an optional aid.
+
+Reuse requires `cache: true` and explicit file/folder outputs. Root steps and
+workflow jobs always execute; eligible dependents can reuse existing outputs
+when their dependencies and configuration match. There is no implicit build
+directory or artifact restoration. Job/workflow parameter forms and saved tasks
+expose `--no-cache-ptk`, which disables PTK reuse for the entire invocation while
+leaving native tool caches unchanged. Reports identify reused work and its source
+run; they do not claim commands or tests ran again. See
+[the complete output and cache guide](../../docs/guides/output-reuse.rst).

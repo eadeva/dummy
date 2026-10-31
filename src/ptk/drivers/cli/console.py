@@ -28,6 +28,7 @@ MESSAGE_STYLE = {
     Level.ERROR: "bold red",
 }
 STYLE = {
+    "reused": "bold blue",
     Status.PASSED: "bold green",
     Status.FAILED: "bold red",
     Status.SKIPPED: "bright_black",
@@ -168,6 +169,11 @@ def dry_run(
     if plan.variant:
         head += f"  variant [bold]{escape(plan.variant)}[/]"
     tree = Tree(head)
+    tree.add(
+        "PTK cache: disabled for this invocation"
+        if plan.no_cache_ptk
+        else "PTK cache: opt-in; reuse is checked after prerequisites run"
+    )
     if plan.params:
         params = tree.add("[bold]parameters[/]")
         for name, value in plan.params.items():
@@ -200,7 +206,13 @@ def dry_run(
             details.append(f"cwd {step.cwd}")
         if python and step.python is not None:
             details.append(f"python: {python}")
+        if step.outputs:
+            details.append(
+                "declared outputs: "
+                + ", ".join(prepared.mask(path) for path in step.outputs)
+            )
         flags = [
+            "cache: true (requires successful needs)" if step.spec.cache else "",
             f"timeout {step.spec.timeout:g}s" if step.spec.timeout else "",
             f"retries {step.spec.retries}" if step.spec.retries else "",
             "continue_on_error" if step.spec.continue_on_error else "",

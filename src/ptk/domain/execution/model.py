@@ -52,6 +52,8 @@ class PlannedStep:
     env: dict[str, str] = field(default_factory=dict)  # step env (substituted)
     with_: dict[str, Any] = field(default_factory=dict)  # uses parameters (substituted)
     secrets: dict[str, str] = field(default_factory=dict)  # ENV_VAR: credential.field
+    outputs: list[str] = field(default_factory=list)
+    cache_key: str = ""
 
     @property
     def name(self) -> str:
@@ -97,6 +99,10 @@ class JobPlan:
     omitted_dependencies: list[str] = field(default_factory=list)
     report_context: dict[str, Any] = field(default_factory=dict)
     log_analysis: dict[str, Any] = field(default_factory=dict)
+    outputs: list[str] = field(default_factory=list)
+    cache: bool = False
+    no_cache_ptk: bool = False
+    cache_key: str = ""
 
     def walk(self):
         for step in self.steps:
@@ -119,6 +125,7 @@ class StepResult:
     allowed_failure: bool = False  # failed, but continue_on_error was set
     needs: list[str] = field(default_factory=list)
     launched_pid: int | None = None  # launch receipt, not a monitored application
+    reused_from: str = ""
 
     @property
     def label(self) -> str:
@@ -149,6 +156,7 @@ class RunResult:
     steps: list[StepResult]
     log_file: str | None = None
     report_problems: list[str] = field(default_factory=list)
+    reused_from: str = ""
 
     @property
     def ok(self) -> bool:

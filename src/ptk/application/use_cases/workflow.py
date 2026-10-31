@@ -92,6 +92,7 @@ class CallOutcome:
     reports: list[str] = field(default_factory=list)
     run_id: str = ""
     report_errors: bool = False
+    reused_from: str = ""
 
 
 @dataclass
@@ -109,6 +110,7 @@ class WorkflowJobResult:
     run_id: str = ""
     report_errors: bool = False
     needs: list[str] = field(default_factory=list)
+    reused_from: str = ""
 
     @property
     def has_errors(self) -> bool:
@@ -149,6 +151,8 @@ class RunWorkflow:
         self, plan: WorkflowPlan, run: Callable, cancel: Cancelled
     ) -> WorkflowResult:
         started = time.monotonic()
+        completed = {}
+        calls = {job.id: job for job in plan.jobs}
 
         def record(node, status, message=""):
             prepared = node.prepared
@@ -168,6 +172,12 @@ class RunWorkflow:
                 return record(node, Status.CANCELLED, "workflow cancelled")
             result = record(node, Status.PENDING)
             try:
+                node.prepared.cache_dependencies = {
+                    parent: calls[parent].prepared.plan.outputs
+                    if completed[parent].status == Status.PASSED
+                    else None
+                    for parent in node.spec.needs
+                }
                 outcome = run(node, cancel)
                 result.status, result.reports, result.run_id = (
                     outcome.status,
@@ -175,12 +185,16 @@ class RunWorkflow:
                     outcome.run_id,
                 )
                 result.report_errors = outcome.report_errors
+                result.reused_from = outcome.reused_from
+                if result.reused_from:
+                    result.message = f"Reused declared outputs from run {result.reused_from}; job not executed"
             except (PtkError, OSError, ValueError) as exc:
                 result.status, result.message = Status.FAILED, str(exc)
             result.duration = time.monotonic() - started - result.start
             result.allowed_failure = (
                 node.spec.continue_on_error and result.status == Status.FAILED
             )
+            completed[node.id] = result
             return result
 
         results = schedule(

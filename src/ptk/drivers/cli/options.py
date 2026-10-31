@@ -6,6 +6,18 @@ import rich_click as click
 from rich.markup import escape
 
 
+def cache_option():
+    return click.Option(
+        ["--no-cache-ptk"],
+        is_flag=True,
+        help="Disable PTK's optional built-in output cache for all jobs and steps in this execution. Tool-native caches are unchanged.",
+    )
+
+
+def workflow_run_options(ctx):
+    return [describe_parameter(ctx, cache_option())]
+
+
 def suggestions(ctx, param):
     """Only declared completion callbacks supply dynamic values; never scan paths."""
     if isinstance(param.type, click.Choice):
@@ -107,4 +119,4 @@ def describe_execution(ctx, project):
                 not in {"all_variants", "dry_run", "params_path", "graph"}
             ]
     for workflow in project["workflows"]:
-        workflow["run_options"] = []
+        workflow["run_options"] = workflow_run_options(ctx)

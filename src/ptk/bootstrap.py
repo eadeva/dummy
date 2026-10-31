@@ -337,6 +337,8 @@ class App:
 
             return statuses
 
+        from .adapters.output_cache import LocalOutputCache
+
         return RunJob(
             self.host,
             self.runner,
@@ -347,6 +349,7 @@ class App:
             version_writer=self.versions().write,
             variant_writer=variant_writer(GENERATORS),
             reporting_runner=ReportingRunner(self.runner, self.host.os_name()),
+            output_cache=LocalOutputCache(project.root),
         )
 
     def role(self, project: Project | None) -> Role:

@@ -9,7 +9,7 @@ from ...application.use_cases.role import visible
 from ...bootstrap import create_app
 from ...domain.errors import ConfigError, PtkError
 from .access import allowed
-from .options import describe_execution, describe_parameter
+from .options import describe_execution, describe_parameter, workflow_run_options
 from .state import CliState, guarded, state_of
 
 
@@ -124,7 +124,7 @@ def describe(ctx, as_json, configuration):
                 {
                     "name": name,
                     "help": spec.help,
-                    "run_options": [],
+                    "run_options": workflow_run_options(ctx),
                     "command": [
                         *(["maintainer"] if spec.audience == "maintainer" else []),
                         "workflow",

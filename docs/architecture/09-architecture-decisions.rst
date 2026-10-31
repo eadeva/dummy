@@ -163,7 +163,9 @@ not imply that every related future capability has been implemented.
    for scheduling and reporting. PTK does not inspect or control arbitrary
    internal file and resource operations performed by project scripts.
    PTK supplies no general step input/output contract, file-access discovery,
-   freshness tracking, artifact cache or filesystem/process/network sandbox.
+   inferred freshness tracking, artifact restoration store or filesystem/process/network
+   sandbox. The opt-in output-reuse aid in :need:`DD_OUTPUT_REUSE` compares only
+   project-declared outputs and preserves project ownership of cache correctness.
    Repository-root cwd remains the default; changing cwd or providing separate
    directories does not restrict access to other locations.
 
@@ -537,7 +539,8 @@ not imply that every related future capability has been implemented.
 
    **Consequences:** Dry-run/graph/skip/blocked paths do not generate. Retried
    commands regenerate inputs; generator exceptions themselves are not retried.
-   No automatic cache or stale-output cleanup is introduced. Timeout/cancellation
+   Generators introduce no automatic cache or stale-output cleanup. Explicit
+   output reuse follows :need:`DD_OUTPUT_REUSE`. Timeout/cancellation
    includes generation but cannot preempt synchronous trusted Python. Other steps
    use explicit paths and needs edges. Distinct variant/job/step identities have
    separate folders; overlapping runs of the same identity still share paths.
@@ -976,6 +979,36 @@ not imply that every related future capability has been implemented.
    interface to version 5; configuration interface version 5 is unchanged.
    No legacy inventory fallback is added. See :need:`REQ_Sw_GUI_JOBS`.
 
+.. ddec:: Optional local output reuse with project-owned contracts
+   :id: DD_OUTPUT_REUSE
+   :status: accepted
+
+   **Context:** Projects want a small reuse aid without a new input model,
+   artifact store or inferred build directories. Output declarations principally
+   describe artifacts for workflow uploads/downloads and belong to the project.
+
+   **Decision:** Add explicit outputs and cache: true to step/job definitions.
+   Root work always executes. At dependency readiness, hash every successful
+   prerequisite's declared files/directories and compare the consumer's resolved
+   configuration and existing outputs with a local successful receipt. Apply
+   the same rule to dependent workflow jobs. Retain only hashes and original
+   run IDs, with atomic receipt replacement. Do not copy or restore artifacts.
+
+   **Bypass:** --no-cache-ptk propagates to all child jobs and steps; --re-run
+   forces execution; --only-step bypasses reuse. Forced attempts invalidate old
+   receipts and do not populate new ones. GUI launches remain uncached. Tool
+   native caches are unchanged.
+
+   **Consequences:** The project owns output completeness, validation, input
+   coverage and side-effect safety. No default run.build_dir, source scanning,
+   remote-state inference or automatic upload/download is introduced. Content
+   hashing costs time; unsupported/missing outputs are misses. Failed attempts
+   cannot fall back to old receipts. Reports label reuse, retain provenance and
+   avoid claiming new test execution. Extension forms explain this responsibility
+   before users enable cache. This narrowly extends :need:`DD_EXECUTION_BOUNDARIES`
+   without promising a general build system. See :need:`REQ_Sw_OUTPUT_REUSE` and
+   :doc:`/guides/output-reuse`.
+
 Open boundaries
 ---------------
 
@@ -985,7 +1018,9 @@ validation and recovery belong to the project implementation.
 General input/output contracts, inferred file dependencies, artifact freshness or
 correctness checks, content-addressed caching, enforced sandboxing, arbitrary
 runtime step output values and automatic restoration of previous-run outputs are
-not implemented by the dependency graph change. Nor is GitHub workflow generation.
+not implemented by the dependency graph change. The optional in-place reuse
+aid in :need:`DD_OUTPUT_REUSE` is the explicit, limited exception for declared
+output fingerprint comparisons. Nor is GitHub workflow generation implemented.
 These boundaries preserve project freedom to choose its tools and guarantees;
 they do not represent a promise that PTK will take over script behavior. A
 diagram or separate step folders do not change that responsibility. Future

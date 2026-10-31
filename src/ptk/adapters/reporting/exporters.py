@@ -135,7 +135,7 @@ def to_junit(report: Report) -> str:
         elif step.status == "cancelled":
             counts["errors"] += 1
             ET.SubElement(case, "error", message=step.message or "cancelled")
-        elif step.status == SKIPPED:
+        elif step.status == SKIPPED or step.reused_from:
             counts["skipped"] += 1
             ET.SubElement(case, "skipped", message=step.message)
         elif step.allowed_failure:
@@ -180,7 +180,7 @@ def _cell(text: object) -> str:
 
 def to_markdown(report: Report) -> str:
     lines = [
-        f"## Job - {report.job} {ICON.get(report.status, '')} — {report.status}",
+        f"## Job - {report.job} {ICON.get(report.status, '')} — {'reused' if report.reused_from else report.status}",
         "",
         (
             f"Project **{_cell(report.project)}**, variant **{_cell(report.variant)}**, "
@@ -188,6 +188,11 @@ def to_markdown(report: Report) -> str:
         ),
         "",
     ]
+    if report.reused_from:
+        lines += [
+            f"**Reused from run:** `{_cell(report.reused_from)}`; job not executed.",
+            "",
+        ]
     context = report.context
     alias = context.get("repository_alias", report.project)
     version = (
@@ -223,10 +228,16 @@ def to_markdown(report: Report) -> str:
         lines.append("")
     lines += ["| Step | Result | Time |", "|---|---|---|"]
     for step in report.steps:
-        result = step.status + (" (allowed)" if step.allowed_failure else "")
-        if step.message and step.status != PASSED:
+        result = ("reused" if step.reused_from else step.status) + (
+            " (allowed)" if step.allowed_failure else ""
+        )
+        if step.message and (step.status != PASSED or step.reused_from):
             result += f": {step.message}"
-        time = f"{step.duration:.1f}s" if step.status in (PASSED, FAILED) else ""
+        time = (
+            f"{step.duration:.1f}s"
+            if step.status in (PASSED, FAILED) and not step.reused_from
+            else ""
+        )
         lines.append(
             f"| {ICON.get(step.status, '')} {_cell(step.name)} | {_cell(result)} | {time} |"
         )

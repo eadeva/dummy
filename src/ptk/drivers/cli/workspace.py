@@ -32,6 +32,7 @@ class RepositoryGroup(ProjectGroup):
             variant=parent_state.variant,
             clean=parent_state.clean,
             re_run=parent_state.re_run,
+            no_cache_ptk=parent_state.no_cache_ptk,
         )
         if parent_state.ci is not None and extra["obj"].role() != "maintainer":
             raise click.ClickException("--ci/--no-ci is a maintainer-only option")

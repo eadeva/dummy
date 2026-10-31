@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.21.0
+
+- Add project-owned `outputs` and opt-in built-in `cache` configuration for steps and jobs, with no implicit build directory. Explain that outputs primarily describe workflow upload/download artifacts and cache correctness belongs to the project.
+- Expose `--no-cache-ptk` for jobs, workflows and saved tasks. Roots execute; eligible dependents may reuse unchanged outputs. Reports distinguish reused work and its original run.
+
 ## 0.20.0
 
 - Add a teal window-icon GUIs branch for `gui: true` jobs, retaining job actions, variants and saved tasks. PTK runs preparation normally and detaches the final launch command.

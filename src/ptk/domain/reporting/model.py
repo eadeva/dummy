@@ -208,6 +208,7 @@ class ReportStep:
     allowed_failure: bool = False
     needs: list[str] = field(default_factory=list)
     launched_pid: int | None = None
+    reused_from: str = ""
 
     @property
     def name(self) -> str:
@@ -239,6 +240,8 @@ class Report:
     cmake: list[CMakeReport] = field(default_factory=list)
     bazel: list[BazelReport] = field(default_factory=list)
     gn: list[GNReport] = field(default_factory=list)
+
+    reused_from: str = ""
 
     @property
     def ok(self) -> bool:
@@ -318,6 +321,7 @@ def from_summary(
             log_file=s.get("log_file", ""),
             allowed_failure=bool(s.get("allowed_failure", False)),
             launched_pid=s.get("launched_pid"),
+            reused_from=s.get("reused_from", ""),
         )
         for s in summary.get("steps", [])
     ]
@@ -330,7 +334,7 @@ def from_summary(
             node["message"] = "Step details excluded by report: false"
         else:
             node.update(
-                status=step.status,
+                status="reused" if step.reused_from else step.status,
                 duration=step.duration,
                 message=step.message,
                 allowed_failure=step.allowed_failure,
@@ -347,6 +351,7 @@ def from_summary(
         job=summary.get("job", ""),
         variant=summary.get("variant", ""),
         run_id=summary.get("run_id", ""),
+        reused_from=summary.get("reused_from", ""),
         status=summary.get("status", "pending"),
         started_at=summary.get("started_at", ""),
         duration=float(summary.get("duration", 0.0)),

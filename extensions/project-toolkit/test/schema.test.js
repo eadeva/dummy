@@ -81,3 +81,18 @@ test("impossible required recursion fails clearly instead of inserting invalid n
   const spec = { $defs: { Node: { type: "object", required: ["child"], properties: { child: { $ref: "#/$defs/Node" } } } } };
   assert.throws(() => S.initial({ $ref: "#/$defs/Node" }, spec), /recursive value/);
 });
+
+test("output and cache guidance preserves project ownership and transfer purpose", () => {
+  for (const name of ["StepSpec", "JobSpec"]) {
+    const fields = schema.$defs[name].properties;
+    assert.equal(fields.cache.default, false);
+    assert.equal(fields.cache.type, "boolean");
+    assert.equal(fields.outputs.type, "array");
+    assert.equal(fields.outputs["x-ptk-template-context"], name === "StepSpec" ? "step" : "job");
+    assert.match(fields.outputs.description, /uploads and downloads/);
+    assert.match(fields.outputs.description, /does not transfer files/);
+    assert.match(fields.cache.description, /optional aid/);
+    assert.match(fields.cache.description, /project’s responsibility/);
+    assert.match(fields.cache.description, /--no-cache-ptk/);
+  }
+});

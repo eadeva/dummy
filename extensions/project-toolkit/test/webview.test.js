@@ -475,3 +475,15 @@ test("workflow invocation editor exposes qualified jobs and needs without step g
   assert.deepEqual(edits.at(-1).operations[0].path, ["workflows", "verify", "jobs", "test", "job"]);
   assert.equal(edits.at(-1).operations[0].value, "backend_repo:run_tests");
 });
+
+test("job and step configuration explain outputs and optional cache before opt-in", options, async t => {
+  const value = {jobs: {build: {steps: {compile: {run: "make"}}}}};
+  const h = await form(t, value, ["jobs", "build"]);
+  const guidance = h.page.locator("[data-output-guidance]");
+  assert.match(await guidance.innerText(), /uploads and downloads in workflows/);
+  assert.match(await guidance.innerText(), /project owns the output declarations and cache correctness/);
+  await h.state({selection: ["jobs", "build", "steps", "compile"]});
+  assert.match(await guidance.innerText(), /optional aid/);
+  assert.match(await guidance.innerText(), /--no-cache-ptk/);
+  assert.deepEqual(await h.edits(), []);
+});

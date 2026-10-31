@@ -88,7 +88,7 @@ def test_help_inventory_and_completion_share_read_only_suggestions(
     ]:
         result = runner.invoke(cli, args)
         assert result.exit_code == 0, result.output
-        assert "Possible values:" in result.output
+        assert "Possible values:" in " ".join(result.output.replace("│", " ").split())
         assert all(name in result.output for name in expected)
         assert "--config " not in result.output
     result = runner.invoke(cli, ["describe", "--json"])
@@ -103,7 +103,10 @@ def test_help_inventory_and_completion_share_read_only_suggestions(
     assert options["only_step"]["suggestions"][0]["help"] == "Prepare build files"
     assert options["args_for"]["choices"] == []
     assert options["args_for"]["suggestions"][0]["value"] == "compile="
-    assert info["workflows"][0]["run_options"] == []
+    assert [
+        (option["name"], option["option"])
+        for option in info["workflows"][0]["run_options"]
+    ] == [("no_cache_ptk", "--no-cache-ptk")]
     complete = BashComplete(cli, {}, "ptk", "_PTK_COMPLETE")
     values = lambda args, partial: {
         i.value for i in complete.get_completions(args, partial)

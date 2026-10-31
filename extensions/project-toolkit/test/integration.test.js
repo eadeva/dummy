@@ -481,3 +481,22 @@ test("PTK run-option metadata drives a real bounded job execution", { skip: !pyt
   assert.match(output, /IN_SELECTED_RANGE/);
   assert.doesNotMatch(output, /SHOULD_NOT_RUN/);
 });
+
+test("real CLI offers PTK cache bypass for job and workflow tasks", { skip: !python }, t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk-cache-options-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  writeProject(root, {
+    repository: { alias: "demo", config_path: "." }, project: { name: "cache" },
+    jobs: { build: { steps: { run: { uses: "echo" } } } },
+    workflows: { all: { jobs: { build: { job: "build" } } } },
+  });
+  const inventory = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));
+  const project = inventory.projects[0];
+  for (const [kind, name, spec] of [["job", "build", project.jobs[0]], ["workflow", "all", project.workflows[0]]]) {
+    const option = spec.run_options.find(option => option.name === "no_cache_ptk");
+    assert.equal(option.option, "--no-cache-ptk");
+    const args = core.argsFor({kind, name, spec, project}, {preview: true, runOptions: {no_cache_ptk: ["true"]}});
+    assert.ok(args.includes("--no-cache-ptk"));
+    assert.match(invoke(root, args), /PTK cache: disabled/);
+  }
+});

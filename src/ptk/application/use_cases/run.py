@@ -39,7 +39,7 @@ from ...domain.execution.model import (
     StepResult,
 )
 from ...domain.execution.params import resolve_params
-from ...domain.execution.planning import PlanContext, plan_job
+from ...domain.execution.planning import PlanContext, plan_job, resolve_outputs
 from ...domain.graphs import ancestors
 from ...domain.logging import Level
 from ...domain.suggest import did_you_mean
@@ -49,6 +49,7 @@ from ..ports import (
     CancelToken,
     GitMetadata,
     HostEnvironment,
+    OutputCache,
     ProcessRunner,
     PythonEnvManager,
     RunObserver,
@@ -77,6 +78,7 @@ class RunRequest:
     args_for: Mapping[str, list[str]] = field(default_factory=dict)
     dry_run: bool = False
     graph: bool = False
+    no_cache_ptk: bool = False
     role: Role = "user"  # maintainer-only jobs are refused for users
 
 
@@ -92,6 +94,7 @@ class PreparedRun:
     versions: dict = field(default_factory=dict)
     version_file: str | None = None
     resolved_variant: ResolvedVariant | None = None
+    cache_dependencies: dict[str, list[str] | None] = field(default_factory=dict)
 
     def mask(self, text: str) -> str:
         for value in sorted(self.secret_values, key=len, reverse=True):
@@ -444,6 +447,10 @@ class PrepareRun:
                 raise PtkError(
                     f"step '{step.label}': generators require a selected variant"
                 )
+        try:
+            job_outputs = resolve_outputs(job.outputs, scope(base))
+        except SubstitutionError as exc:
+            raise PtkError(f"job '{request.job}' outputs: {exc}") from None
         plan = JobPlan(
             project=config.project.name,
             job=request.job,
@@ -478,6 +485,12 @@ class PrepareRun:
             },
             max_workers=job.max_workers,
             gui_step=job.gui_step,
+            outputs=[
+                str(Path(path) if Path(path).is_absolute() else project.root / path)
+                for path in job_outputs
+            ],
+            cache=job.cache,
+            no_cache_ptk=request.no_cache_ptk,
             only_step=request.only_step,
             omitted_dependencies=sorted(ancestors(job.steps)[request.only_step])
             if request.only_step
@@ -502,6 +515,57 @@ class PrepareRun:
                                 step_secrets[ref] = secret(ref)
                             except SubstitutionError as exc:
                                 raise PtkError(str(exc)) from None
+        from ...domain.execution.cache import fingerprint
+
+        common_key = fingerprint(
+            {
+                "ptk": self._ptk_version,
+                "os": os_name,
+                "root": str(project.root),
+                "job": plan.job,
+                "variant": variant_name,
+                "features": vh_ns,
+                "params": params,
+                "tools": job.requires_tools,
+                "tool_statuses": [
+                    dataclasses.asdict(status) for status in tool_statuses
+                ],
+                "environment": {
+                    key: value
+                    for key, value in base.items()
+                    if key not in {"PTK_RUN_ID", "PTK_VERSION_FILE"}
+                },
+            }
+        )
+        for step in steps:
+            cwd = Path(step.cwd)
+            if not cwd.is_absolute():
+                cwd = project.root / cwd
+            step.outputs = [
+                str(Path(path) if Path(path).is_absolute() else cwd / path)
+                for path in step.outputs
+            ]
+            step.cache_key = fingerprint(
+                [
+                    common_key,
+                    step.spec.model_dump(),
+                    step.run,
+                    str(cwd),
+                    step.env,
+                    step.with_,
+                    step.outputs,
+                    step.skip_reason,
+                    {ref: step_secrets.get(ref) for ref in step.secrets.values()},
+                ]
+            )
+        plan.cache_key = fingerprint(
+            [
+                common_key,
+                job.model_dump(),
+                [step.cache_key for step in steps],
+                plan.outputs,
+            ]
+        )
         return PreparedRun(
             plan,
             project,
@@ -603,6 +667,7 @@ class RunJob:
         version_writer=None,
         variant_writer=None,
         reporting_runner=None,
+        output_cache: OutputCache | None = None,
     ):
         self._host = host
         self._runner = runner
@@ -614,6 +679,7 @@ class RunJob:
         self._version_writer = version_writer
         self._variant_writer = variant_writer
         self._reporting_runner = reporting_runner
+        self._output_cache = output_cache
         self._powershell: str | None = None
         self._python_lock = threading.Lock()
 
@@ -633,6 +699,8 @@ class RunJob:
         self._observers = list(observers)
         self._cancel = cancel
         self._report_problems = []
+        self._step_results = {}
+        self._cache_available = self._output_cache is not None and not prepared.dry_run
         started_at = datetime.now().astimezone().isoformat(timespec="seconds")
         start = time.monotonic()
         self._run_start = start
@@ -644,18 +712,32 @@ class RunJob:
         reports.mkdir(parents=True, exist_ok=True)
         plan.report_context = prepared.mask_context(plan.report_context)
         self._emit("run_started", plan)
+        job_key = (
+            self._cache_key(plan.cache_key, prepared.cache_dependencies)
+            if plan.cache
+            and not plan.gui_step
+            and not any(step.skip_reason for step in plan.steps)
+            else None
+        )
+        reused = self._cache_probe("job", job_key, plan.outputs)
         from ..scheduling import schedule
 
-        results = schedule(
-            {step.name: step for step in plan.steps},
-            {
-                step.name: [] if plan.only_step or step.skip_reason else step.spec.needs
-                for step in plan.steps
-            },
-            self._run_step,
-            self._not_run,
-            cancel,
-            min(plan.max_workers, self._max_parallel or plan.max_workers),
+        results = (
+            [self._reused(step, reused) for step in plan.steps]
+            if reused
+            else schedule(
+                {step.name: step for step in plan.steps},
+                {
+                    step.name: []
+                    if plan.only_step or step.skip_reason
+                    else step.spec.needs
+                    for step in plan.steps
+                },
+                self._run_step,
+                self._not_run,
+                cancel,
+                min(plan.max_workers, self._max_parallel or plan.max_workers),
+            )
         )
         status = _combine(results)
         if cancel.is_set():
@@ -673,7 +755,14 @@ class RunJob:
             steps=results,
             log_file=str(prepared.layout.run_log(plan.variant, plan.job)),
             report_problems=self._report_problems,
+            reused_from=reused,
         )
+        if (
+            not reused
+            and result.ok
+            and all(step.status == Status.PASSED for step in results)
+        ):
+            self._cache_save("job", job_key, plan.outputs)
         self._emit("run_finished", result)
         return result
 
@@ -704,6 +793,7 @@ class RunJob:
             message=message,
             needs=list(step.spec.needs),
         )
+        self._step_results[step.name] = result
         self._emit("step_finished", step, result)
         return result
 
@@ -713,7 +803,106 @@ class RunJob:
             return self._not_run(step, Status.CANCELLED, "cancelled")
         if step.skip_reason:
             return self._not_run(step, Status.SKIPPED, step.skip_reason)
-        return self._run_leaf(step, cancel)
+        plan = self._prepared.plan
+        specs = {item.name: item for item in plan.steps}
+        dependencies = {
+            name: specs[name].outputs
+            if self._step_results.get(name)
+            and self._step_results[name].status == Status.PASSED
+            else None
+            for name in step.spec.needs
+        }
+        key = (
+            self._cache_key(step.cache_key, dependencies)
+            if step.spec.cache and not plan.only_step and plan.gui_step != step.name
+            else None
+        )
+        identity = "step:" + step.name
+        reused = self._cache_probe(identity, key, step.outputs)
+        if reused:
+            result = self._reused(step, reused)
+        else:
+            result = self._run_leaf(step, cancel)
+            if result.status == Status.PASSED:
+                self._cache_save(identity, key, step.outputs)
+        self._step_results[step.name] = result
+        return result
+
+    def _cache_key(self, configuration, dependencies):
+        from ...domain.execution.cache import input_key
+
+        if not self._cache_available or self._prepared.plan.no_cache_ptk:
+            return None
+        return input_key(
+            configuration,
+            {
+                name: self._output_cache.fingerprint(paths, self._cancel)
+                if paths
+                else None
+                for name, paths in dependencies.items()
+            },
+        )
+
+    def _cache_identity(self, identity):
+        plan = self._prepared.plan
+        return f"{plan.variant or 'default'}:{plan.job}:{identity}"
+
+    def _cache_probe(self, identity, key, outputs):
+        from ...domain.execution.cache import matches
+
+        if not self._cache_available:
+            return ""
+        identity = self._cache_identity(identity)
+        try:
+            record = self._output_cache.read(identity) if key else None
+            if record and matches(
+                record, key, self._output_cache.fingerprint(outputs, self._cancel)
+            ):
+                return record["run_id"]
+            # A new attempt invalidates its previous receipt, including forced
+            # runs. Failed attempts cannot fall back to an older successful run.
+            self._output_cache.invalidate(identity)
+        except OSError as exc:
+            self._cache_available = False
+            self._log(
+                Level.WARNING, f"PTK cache unavailable; executing normally: {exc}"
+            )
+        return ""
+
+    def _cache_save(self, identity, key, outputs):
+        if not key or not self._cache_available or self._cancel.is_set():
+            return
+        digest = self._output_cache.fingerprint(outputs, self._cancel)
+        if digest is None:
+            return
+        try:
+            self._output_cache.write(
+                self._cache_identity(identity),
+                {
+                    "version": 1,
+                    "inputs": key,
+                    "outputs": digest,
+                    "run_id": self._prepared.plan.run_id,
+                },
+            )
+        except OSError as exc:
+            self._cache_available = False
+            self._log(Level.WARNING, f"PTK cache receipt not written: {exc}")
+
+    def _reused(self, step, source):
+        result = StepResult(
+            step.path,
+            step.name,
+            step.kind,
+            status=Status.PASSED,
+            start=time.monotonic() - self._run_start,
+            needs=list(step.spec.needs),
+            reused_from=source,
+            message=f"Reused declared outputs from run {source}; no commands or built-in operations executed",
+        )
+        self._step_results[step.name] = result
+        self._emit("step_finished", step, result)
+        return result
 
     def _run_leaf(self, step: PlannedStep, cancel) -> StepResult:
         prepared = self._prepared

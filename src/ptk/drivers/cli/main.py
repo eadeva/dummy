@@ -115,6 +115,11 @@ click.rich_click.SHOW_ARGUMENTS = True
     help="Delete selected job/variant output folders, then run (jobs/workflows only).",
 )
 @click.version_option(__version__, prog_name="ptk")
+@click.option(
+    "--no-cache-ptk",
+    is_flag=True,
+    help="Disable PTK's built-in output cache for all executed jobs and steps. Tool-native caches are unchanged.",
+)
 @click.pass_context
 @guarded
 def cli(
@@ -125,6 +130,7 @@ def cli(
     variant: str | None,
     clean: bool = False,
     re_run: bool = False,
+    no_cache_ptk: bool = False,
 ) -> None:
     """[bold]ptk[/] - project tool kit.
 

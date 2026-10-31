@@ -742,6 +742,21 @@
     "JobSpec": {
       "additionalProperties": false,
       "properties": {
+        "outputs": {
+          "description": "Explicit job output files or folders, relative to the repository root or absolute. Supports PTK variables including steps.<id>.build_dir. Used by workflow dependents; no outputs are inferred from steps or build directories. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. The project owns completeness, validity and the output contract.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Outputs",
+          "type": "array",
+          "x-ptk-template-context": "job"
+        },
+        "cache": {
+          "default": false,
+          "description": "PTK cache is an optional aid; cache correctness is the project’s responsibility. Allow whole-job output reuse in workflows after unchanged successful needs. Requires explicit outputs. Standalone jobs and workflow roots always run; --no-cache-ptk disables this and all step caches. Existing outputs are reused in place.",
+          "title": "Cache",
+          "type": "boolean"
+        },
         "gui": {
           "default": false,
           "description": "Show this job under GUIs. Run prerequisites normally, then launch the single final command in a detached process and let PTK exit. Success means the process started, not that the application finished. The final step cannot use timeout or retries.",
@@ -895,6 +910,8 @@
       "title": "JobSpec",
       "type": "object",
       "x-ptk-field-order": [
+        "outputs",
+        "cache",
         "gui",
         "only_cx",
         "only_variants",
@@ -1444,6 +1461,21 @@
     "StepSpec": {
       "additionalProperties": false,
       "properties": {
+        "outputs": {
+          "description": "Explicit output files or folders, relative to this step's cwd or absolute. Supports PTK variables; no globs or implicit build directory. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. The project owns completeness and validity. Outputs can provide dependency fingerprints without enabling this step's cache.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Outputs",
+          "type": "array",
+          "x-ptk-template-context": "step"
+        },
+        "cache": {
+          "default": false,
+          "description": "PTK cache is an optional aid; cache correctness is the project’s responsibility. Reuse existing outputs after unchanged successful dependencies. Requires explicit outputs. Steps without needs always execute; --no-cache-ptk disables reuse throughout the execution. No files are copied or restored.",
+          "title": "Cache",
+          "type": "boolean"
+        },
         "generators": {
           "description": "Variant generators run in order before each command or built-in operation attempt. Outputs are written into this step's build directory. A step may contain only generators. Built-ins: header, make, cmake, bazel, gn, yocto, robot, sphinx.",
           "items": {
@@ -1666,6 +1698,8 @@
         "run": "echo Hello"
       },
       "x-ptk-field-order": [
+        "outputs",
+        "cache",
         "generators",
         "only_cx",
         "only_variants",

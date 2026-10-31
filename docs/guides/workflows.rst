@@ -360,3 +360,18 @@ such a repository is an error. Names are VMR repository aliases, not directory
 paths. Workflow calls do not accept ``variant``; configure cross-repository selections
 with ``repo_variants``. Dry runs print the resolved repository/job/variant for each
 call; clean and re-run use those same selections.
+
+Optional reuse of dependent jobs
+--------------------------------
+
+Configure ``outputs`` and ``cache: true`` on the project job definition to allow
+whole-job reuse after successful unchanged prerequisites. All workflow roots
+always run. A dependent checks every prerequisite's explicit job outputs and its
+own existing outputs; job outputs are not inferred from step outputs. A missed
+job-level check still permits eligible step-level reuse.
+
+``ptk workflow run NAME --no-cache-ptk`` (or ``ptk NAME --no-cache-ptk``) disables
+PTK reuse for every child job and step, including calls into other repositories.
+Outputs primarily describe artifacts for workflow uploads and downloads; the
+project owns their validity, cache policy and transfer operations. See
+:doc:`output-reuse` for examples and the full contract.

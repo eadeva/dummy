@@ -432,3 +432,14 @@ environment values and template defaults are resolved by PTK at execution time.
 Required non-secret parameters open this form automatically. Use Run job or Dry
 run to submit it, or Cancel to leave without executing. Secret parameters are
 not exposed in this window.
+
+Output and cache configuration
+------------------------------
+
+Job and step forms explain that outputs primarily describe workflow upload and
+download artifacts. They show PTK cache as an optional aid, with output
+completeness and cache correctness owned by the project. ``cache`` defaults to
+false and requires explicit ``outputs`` when enabled. Field help explains path
+resolution and roots that always run. Job/workflow parameter forms and saved
+tasks expose ``--no-cache-ptk`` to bypass PTK reuse throughout the invocation.
+See :doc:`output-reuse` for complete behavior.

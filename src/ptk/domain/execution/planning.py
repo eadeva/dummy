@@ -91,9 +91,19 @@ def _plan(
             node.cwd = _text(scope(step.cwd)) if step.cwd else "."
             node.env = {k: _text(scope(v)) for k, v in step.env.items()}
             node.with_ = scope(step.with_)
+            node.outputs = resolve_outputs(step.outputs, scope)
         except SubstitutionError as exc:
             raise PlanError(f"step '{label}': {exc}") from None
     return node
+
+
+def resolve_outputs(paths, scope):
+    resolved = [_text(path) for path in scope(paths)]
+    if any(not path.strip() for path in resolved) or len(set(resolved)) != len(
+        resolved
+    ):
+        raise SubstitutionError("outputs must resolve to unique, non-empty paths")
+    return resolved
 
 
 def _text(value: Any) -> str:

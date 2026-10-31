@@ -834,3 +834,15 @@ extension inventory, and explicit execution is rejected. Job variant restriction
 return an error. At step level, these filters skip the step (and nested children).
 They never select a variant. Variant filters match resolved concrete names;
 ``default`` represents repositories without variants.
+
+Project-owned outputs and optional caching
+------------------------------------------
+
+Both jobs and steps accept ``outputs: [file, folder]`` and ``cache: true``.
+Outputs primarily describe artifacts for uploads and downloads in workflows;
+cache is an optional aid whose correctness belongs to the project. Declarations
+alone do not transfer files or enable reuse. No build directory is inferred.
+Step output paths are relative to step cwd; job paths are relative to repository
+root. Roots always execute, and only dependents with explicit outputs and cache
+enabled are eligible for reuse. See :doc:`output-reuse` for complete examples,
+limitations, reporting and the execution-wide ``--no-cache-ptk`` bypass.

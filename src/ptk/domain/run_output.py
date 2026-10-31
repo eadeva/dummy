@@ -117,13 +117,21 @@ def step_rows(step, command):
     return rows
 
 
+def display_status(result):
+    return "reused" if getattr(result, "reused_from", "") else str(result.status)
+
+
 def elapsed(result):
-    return "—" if result.status in ("skipped", "pending") else f"{result.duration:.1f}s"
+    return (
+        "—"
+        if display_status(result) in ("skipped", "pending", "reused")
+        else f"{result.duration:.1f}s"
+    )
 
 
 def outcome(result, *, duration=None) -> Line:
     row = [
-        (str(result.status).upper(), str(result.status)),
+        (display_status(result).upper(), display_status(result)),
         (f" | {duration if duration is not None else elapsed(result)}", ""),
     ]
     if getattr(result, "allowed_failure", False):
@@ -145,7 +153,7 @@ def entry(identity, result, *, detail="", allowed=False, kind="STEP"):
     reason = result.message if result.message != str(result.status) else ""
     return SummaryEntry(
         one_line(identity),
-        str(result.status),
+        display_status(result),
         result.duration,
         allowed or result.allowed_failure,
         one_line("; ".join(part for part in (detail, reason) if part)),
@@ -183,7 +191,15 @@ def summary_block(
         rows.append(row)
     statuses = Counter(item.status for item in entries)
     counts = [(f"{identity} ", kind), (label + "s: ", "")]
-    for index, status in enumerate(("passed", "failed", "skipped", "cancelled")):
+    for index, status in enumerate(
+        (
+            "passed",
+            "failed",
+            "skipped",
+            "cancelled",
+            *(("reused",) if statuses["reused"] else ()),
+        )
+    ):
         if index:
             counts.append((" | ", ""))
         count = statuses[status]

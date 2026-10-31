@@ -31,7 +31,7 @@ from .access import AccessGroup, denied_command, in_maintainer
 from .completion import features as complete_features
 from .completion import passthrough_steps as complete_passthrough
 from .completion import steps as complete_steps
-from .options import SuggestedCommand, SuggestedOption
+from .options import SuggestedCommand, SuggestedOption, cache_option
 from .report_links import print_report
 from .state import console, err_console, guarded, report_error, state_of
 
@@ -119,6 +119,7 @@ def param_option(name: str, spec: ParamSpec) -> click.Option:
 
 def common_options() -> list[click.Parameter]:
     params: list[click.Parameter] = [
+        cache_option(),
         click.Option(
             ["--graph"],
             is_flag=True,
@@ -208,6 +209,7 @@ def build_request(
     args_for: tuple[str, ...] = (),
     dry_run: bool = False,
     graph: bool = False,
+    no_cache_ptk: bool = False,
 ) -> RunRequest:
     from ...application.use_cases.run import RunRequest
 
@@ -243,6 +245,7 @@ def build_request(
         args_for={k: shlex.split(v) for k, v in pairs(args_for, "--args-for").items()},
         dry_run=dry_run,
         graph=graph,
+        no_cache_ptk=no_cache_ptk or state_of(ctx).no_cache_ptk or state_of(ctx).re_run,
         role=state_of(ctx).role(),
     )
 

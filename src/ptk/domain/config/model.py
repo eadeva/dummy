@@ -67,6 +67,7 @@ RESERVED_PARAMS = {
     "env",
     "quiet",
     "args_for",
+    "no_cache_ptk",
     "help",
 }
 
@@ -81,6 +82,13 @@ def _listify(value: Any) -> Any:
     if value is None:
         return []
     return [value] if isinstance(value, str) else value
+
+
+def _check_outputs(cache: bool, outputs: list[str]) -> None:
+    if any(not path.strip() for path in outputs) or len(set(outputs)) != len(outputs):
+        raise ValueError("outputs must contain unique, non-empty paths")
+    if cache and not outputs:
+        raise ValueError("cache: true requires explicit outputs")
 
 
 # --------------------------------------------------------------------------- project
@@ -325,6 +333,14 @@ class PythonSpec(_Strict):
 
 
 class StepSpec(_Strict):
+    outputs: list[StrictStr] = Field(
+        default_factory=list,
+        description="Explicit output files or folders, relative to this step's cwd or absolute. Supports PTK variables; no globs or implicit build directory. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. The project owns completeness and validity. Outputs can provide dependency fingerprints without enabling this step's cache.",
+    )
+    cache: StrictBool = Field(
+        default=False,
+        description="PTK cache is an optional aid; cache correctness is the project’s responsibility. Reuse existing outputs after unchanged successful dependencies. Requires explicit outputs. Steps without needs always execute; --no-cache-ptk disables reuse throughout the execution. No files are copied or restored.",
+    )
     generators: list[
         Literal["header", "make", "cmake", "bazel", "gn", "yocto", "robot", "sphinx"]
     ] = Field(
@@ -440,6 +456,7 @@ class StepSpec(_Strict):
 
     @model_validator(mode="after")
     def _check(self) -> StepSpec:
+        _check_outputs(self.cache, self.outputs)
         if self.run is not None and self.uses is not None:
             raise ValueError("step needs at most one of: run, uses")
         if self.run is None and self.uses is None and not self.generators:
@@ -461,6 +478,14 @@ class StepSpec(_Strict):
 
 
 class JobSpec(_Strict):
+    outputs: list[StrictStr] = Field(
+        default_factory=list,
+        description="Explicit job output files or folders, relative to the repository root or absolute. Supports PTK variables including steps.<id>.build_dir. Used by workflow dependents; no outputs are inferred from steps or build directories. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. The project owns completeness, validity and the output contract.",
+    )
+    cache: StrictBool = Field(
+        default=False,
+        description="PTK cache is an optional aid; cache correctness is the project’s responsibility. Allow whole-job output reuse in workflows after unchanged successful needs. Requires explicit outputs. Standalone jobs and workflow roots always run; --no-cache-ptk disables this and all step caches. Existing outputs are reused in place.",
+    )
     gui: StrictBool = Field(
         default=False,
         description="Show this job under GUIs. Run prerequisites normally, then launch the single final command in a detached process and let PTK exit. Success means the process started, not that the application finished. The final step cannot use timeout or retries.",
@@ -542,7 +567,10 @@ class JobSpec(_Strict):
     @model_validator(mode="after")
     def _step_graph(self) -> JobSpec:
         validate_graph(self.steps, "step")
+        _check_outputs(self.cache, self.outputs)
         if self.gui:
+            if self.cache:
+                raise ValueError("GUI jobs cannot enable whole-job cache")
             final = self.gui_step
             if final is None or self.steps[final].run is None:
                 raise ValueError(
@@ -551,6 +579,8 @@ class JobSpec(_Strict):
                 )
             if self.steps[final].timeout is not None or self.steps[final].retries:
                 raise ValueError("a gui launch step cannot use timeout or retries")
+            if self.steps[final].cache:
+                raise ValueError("a gui launch step cannot enable cache")
         return self
 
     @property

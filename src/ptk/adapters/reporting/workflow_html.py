@@ -88,7 +88,7 @@ def render(result, target, *, owner_variant, children, context, diagnostics_only
                 "label": f"{job.id} · {job.repo + ':' if job.repo else ''}{job.job}",
                 "owner": identity,
                 "kind": "job",
-                "status": job.status.value,
+                "status": "reused" if job.reused_from else job.status.value,
                 "duration": job.duration,
                 "start": job.start,
                 "allowed": job.allowed_failure,
@@ -98,7 +98,7 @@ def render(result, target, *, owner_variant, children, context, diagnostics_only
         node.update(
             label=f"{job.repo}:{job.job}" if job.repo else job.job,
             variant=job.variant or "default",
-            status=job.status.value,
+            status="reused" if job.reused_from else job.status.value,
             duration=job.duration,
             allowed_failure=job.allowed_failure,
             message=message,

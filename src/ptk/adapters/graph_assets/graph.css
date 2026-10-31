@@ -19,6 +19,7 @@
 .ptk-graph-edge{fill:none;stroke:var(--g-edge);stroke-width:1.6}
 .ptk-graph-arrow{fill:var(--g-edge)}
 .ptk-graph-node{--node-fill:var(--g-node);--node-stroke:var(--g-accent);cursor:pointer}
+.ptk-graph-node[data-status=reused]{--node-fill:var(--g-node);--node-stroke:var(--g-accent)}
 .ptk-graph-node[data-status=passed]{--node-fill:var(--g-pass-bg);--node-stroke:var(--g-pass)}
 .ptk-graph-node[data-status=failed],.ptk-graph-node[data-status=error]{--node-fill:var(--g-fail-bg);--node-stroke:var(--g-fail)}
 .ptk-graph-node[data-status=skipped],.ptk-graph-node[data-status=hidden],.ptk-graph-node[data-status=unselected]{--node-fill:var(--g-skip-bg);--node-stroke:var(--g-skip)}

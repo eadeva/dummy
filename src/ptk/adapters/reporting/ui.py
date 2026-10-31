@@ -101,6 +101,7 @@ def execution(entries, title):
                     [
                         ("", "All results"),
                         ("passed", "Passed"),
+                        ("reused", "Reused"),
                         ("failed", "Failed"),
                         ("skipped", "Skipped"),
                         ("cancelled", "Cancelled"),
@@ -118,7 +119,7 @@ def execution(entries, title):
 def duration(item):
     return (
         "—"
-        if item["status"] in ("skipped", "pending", "not_run", "hidden")
+        if item["status"] in ("skipped", "pending", "not_run", "hidden", "reused")
         else f"{item['duration']:.2f}s"
     )
 
@@ -139,7 +140,7 @@ def timeline(entries, total):
         + f"{total:.2f}s"
         + "</span></div>"
         + "".join(rows)
-        + '</div><p class="meta">Hatched bars: failure allowed. Skipped and not-run items have no execution duration.</p></section>'
+        + '</div><p class="meta">Hatched bars: failure allowed. Reused, skipped and not-run items have no execution duration. Reused outputs refer to an earlier run; commands and tests were not executed again.</p></section>'
     )
 
 

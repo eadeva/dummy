@@ -254,8 +254,8 @@ class FileLogObserver:
 
 
 def describe(result: StepResult) -> str:
-    text = f"{result.status.value}"
-    if result.status in (Status.PASSED, Status.FAILED):
+    text = "reused" if result.reused_from else result.status.value
+    if result.status in (Status.PASSED, Status.FAILED) and not result.reused_from:
         text += f" in {result.duration:.1f}s"
     if result.exit_code not in (None, 0):
         text += f" (exit code {result.exit_code})"

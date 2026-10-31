@@ -30,6 +30,7 @@ class CliState:
     variant: str | None = None
     clean: bool = False
     re_run: bool = False
+    no_cache_ptk: bool = False
     _project: Project | None = field(default=None, repr=False)
     _project_error: PtkError | None = field(default=None, repr=False)
     _loaded: bool = field(default=False, repr=False)
@@ -88,6 +89,7 @@ def state_of(ctx: click.Context) -> CliState:
             variant=params.get("variant"),
             clean=params.get("clean", False),
             re_run=params.get("re_run", False),
+            no_cache_ptk=params.get("no_cache_ptk", False),
         )
     return root.obj
 

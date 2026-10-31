@@ -24,6 +24,7 @@ from ...domain.errors import PtkError
 from .access import AccessGroup, denied_command, in_maintainer
 from .completion import workflows as complete_workflows
 from .jobs import write_reports
+from .options import cache_option
 from .report_links import print_report
 from .state import CliState, console, err_console, guarded, state_of
 
@@ -201,7 +202,7 @@ def open_workflow_report(ctx, name, if_exists=False):
         console.print("[dim]no browser available here - open the file above[/]")
 
 
-def execute_workflow(ctx, name, *, dry_run=False, graph=False):
+def execute_workflow(ctx, name, *, dry_run=False, graph=False, no_cache_ptk=False):
     from ...adapters.locking import job_lock
     from ...application.use_cases.run import Cancelled, RunRequest
     from ...application.use_cases.workflow import (
@@ -275,6 +276,7 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False):
             params=node.params,
             dry_run=dry_run,
             role=state.role(),
+            no_cache_ptk=no_cache_ptk or parent.no_cache_ptk or parent.re_run,
         )
         if parent.clean:
             from ...application.use_cases.cleanup import prepare_cleanup
@@ -305,6 +307,11 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False):
         if parent.clean:
             return
     if dry_run:
+        click.echo(
+            "PTK cache: disabled for this invocation"
+            if no_cache_ptk or parent.no_cache_ptk or parent.re_run
+            else "PTK cache: opt-in; reuse is checked after prerequisites run"
+        )
         click.echo("workflow dry-run; no jobs executed")
         return
     # Install once per participating repository, before any parallel job starts.
@@ -379,7 +386,11 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False):
             if opening is not None:
                 child_openings[node.id] = (state.app, opening)
             return CallOutcome(
-                result.status, [str(f) for f in files], p.run_id, report_errors
+                result.status,
+                [str(f) for f in files],
+                p.run_id,
+                report_errors,
+                reused_from=result.reused_from,
             )
 
     cancel = Cancelled()
@@ -496,8 +507,11 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False):
 )
 @click.pass_context
 @guarded
-def run_workflow(ctx, name, dry_run, graph):
-    execute_workflow(ctx, name, dry_run=dry_run, graph=graph)
+def run_workflow(ctx, name, dry_run, graph, no_cache_ptk):
+    execute_workflow(ctx, name, dry_run=dry_run, graph=graph, no_cache_ptk=no_cache_ptk)
+
+
+run_workflow.params.append(cache_option())
 
 
 def workflow_command(name, spec, *, hidden=False):
@@ -506,13 +520,16 @@ def workflow_command(name, spec, *, hidden=False):
 
     @click.pass_context
     @guarded
-    def run(ctx, dry_run, graph):
-        execute_workflow(ctx, name, dry_run=dry_run, graph=graph)
+    def run(ctx, dry_run, graph, no_cache_ptk):
+        execute_workflow(
+            ctx, name, dry_run=dry_run, graph=graph, no_cache_ptk=no_cache_ptk
+        )
 
     command = click.RichCommand(
         name,
         callback=run,
         params=[
+            cache_option(),
             click.Option(
                 ["--graph"],
                 is_flag=True,

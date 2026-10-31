@@ -512,3 +512,14 @@ rewritten. Suppression changes diagnostic disposition, active-error handling and
 presentation only; execution failures and collection errors are not suppressible
 through imported-diagnostic rules. See :need:`DD_DEDICATED_DIAGNOSTICS` and
 :need:`REQ_Sw_DEDICATED_DIAGNOSTICS`.
+
+Reused outputs
+--------------
+
+Optional PTK caching labels reused steps and workflow jobs **Reused**, records
+the original run ID and distinguishes them from newly executed work. Reused
+steps have zero attempts, no new exit code or command log, and no execution
+duration. JSON retains successful dependency status with ``reused_from``;
+JUnit marks these steps skipped. Previously imported tests and diagnostics are
+not presented as newly executed evidence. Consult the originating run, subject
+to ordinary log retention. See :doc:`output-reuse`.

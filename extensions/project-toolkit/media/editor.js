@@ -228,6 +228,9 @@
       const spec = S.at(schema, state.value, selected, schema);
       const resolved = S.effective(spec, value, schema);
       if (resolved.description) main.append(el("p", resolved.description, { className: "help" }));
+      if (resolved.properties?.outputs && resolved.properties?.cache) {
+        main.append(el("p", "Outputs primarily describe artifacts for uploads and downloads in workflows. Declaring outputs does not transfer files. PTK’s built-in cache is an optional aid: the project owns the output declarations and cache correctness. Reuse requires cache: true and explicit outputs; --no-cache-ptk disables it for the whole invocation.", { className: "help", "data-output-guidance": "true" }));
+      }
       if (state.locked.some(prefix => prefix.length <= selected.length && prefix.every((key, i) => key === selected[i]))) {
         main.append(el("p", "This value uses an alias, unsupported tag or complex mapping. Use Raw YAML to edit it.", { className: "notice" }));
       } else if (value === null || typeof value !== "object") {

@@ -47,7 +47,7 @@ def step_entries(report, root=None, *, scope=""):
                 "label": step.label,
                 "owner": owner(report),
                 "kind": "step",
-                "status": step.status,
+                "status": "reused" if step.reused_from else step.status,
                 "allowed": step.allowed_failure,
                 "duration": step.duration,
                 "start": step.start,
@@ -82,6 +82,9 @@ def overview(entries, reports, diagnostics_items, *, entity="Steps"):
         f"{entity} skipped": counts["skipped"],
         f"{entity} cancelled": counts["cancelled"],
     }
+    reused = sum(row["status"] == "reused" for row in entries)
+    if reused:
+        values[f"{entity} reused"] = reused
     tones = {
         f"{entity} passed": "passed",
         f"{entity} failed": "failed",
@@ -287,8 +290,9 @@ def render(report, *, link_root=None):
         title=f"Job - {report.job} {report.status} - {report.project}",
         kind="job",
         name=report.job,
-        status=report.status,
+        status="reused" if report.reused_from else report.status,
         metadata={
+            **({"Reused from run": report.reused_from} if report.reused_from else {}),
             "Owner": owner(report),
             "Project": report.project,
             "Project version": version(report),

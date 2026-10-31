@@ -17,7 +17,7 @@ from ptk.domain.workflows import WorkflowSpec
 def prepare(node, invocation):
     return "app", SimpleNamespace(
         project=SimpleNamespace(root=Path(".")),
-        plan=SimpleNamespace(variant=None, job=node.job, walk=list),
+        plan=SimpleNamespace(variant=None, job=node.job, walk=list, outputs=[]),
     )
 
 

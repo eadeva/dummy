@@ -83,6 +83,18 @@ class GitMetadata(Protocol):
 # --------------------------------------------------------------------------- execution
 
 
+class OutputCache(Protocol):
+    """Local receipts and content fingerprints; never restores output files."""
+
+    def fingerprint(self, paths: list[str], cancel: CancelToken) -> str | None: ...
+
+    def read(self, identity: str) -> dict | None: ...
+
+    def write(self, identity: str, record: dict) -> None: ...
+
+    def invalidate(self, identity: str) -> None: ...
+
+
 @dataclass(frozen=True)
 class ProcessOutcome:
     exit_code: int

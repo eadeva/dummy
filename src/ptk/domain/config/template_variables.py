@@ -49,9 +49,15 @@ def annotate_schema(schema):
             "path_prepend": "environment",
             "path_append": "environment",
         },
-        "JobSpec": {"env": "job"},
+        "JobSpec": {"env": "job", "outputs": "job"},
         "ParamSpec": {"default": "default"},
-        "StepSpec": {"run": "step", "cwd": "step", "with": "step", "env": "secret"},
+        "StepSpec": {
+            "run": "step",
+            "cwd": "step",
+            "with": "step",
+            "env": "secret",
+            "outputs": "step",
+        },
     }.items():
         for name, context in fields.items():
             defs[definition]["properties"][name]["x-ptk-template-context"] = context
@@ -187,7 +193,7 @@ def catalogue(value, environment_names=()):
                     f"steps.{step_name}.{field}",
                     "Steps",
                     f"Current-run {field.replace('_', ' ')} for step {step_name}. Declare needs when consuming its files.",
-                    ["step", "secret"],
+                    ["job", "step", "secret"],
                     job=job_name,
                 )
 

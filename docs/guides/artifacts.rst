@@ -100,3 +100,14 @@ timezone-aware ISO timestamp and fixes all date placeholders for this resolution
 Use the same value across separate invocations when they must share a timestamp;
 otherwise each invocation has its own current time. Other preview context comes
 from the usual ``GITHUB_*`` variables and ``GITHUB_EVENT_PATH``.
+
+Declared artifact outputs
+-------------------------
+
+Jobs and steps can declare ``outputs`` as a list of files or folders. These
+project-owned declarations primarily describe artifacts for workflow uploads and
+downloads; the workflow's transfer commands remain responsible for moving them.
+They do not replace the destination rules above or automatically transfer files.
+PTK's optional built-in cache can also use explicit outputs when ``cache: true``.
+Cache configuration and correctness remain the project's responsibility. See
+:doc:`output-reuse` for paths, ownership, workflow reuse and ``--no-cache-ptk``.

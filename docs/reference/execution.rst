@@ -259,3 +259,13 @@ contracts; see :ref:`execution-boundaries`.
 prerequisite edges remain as a **Details hidden** node, so the graph cannot imply
 that a dependency did not exist. Its message, command, duration, logs and result
 are not exposed by the graph. The graph does not execute or rerun anything.
+
+PTK output reuse
+----------------
+
+Jobs and steps support project-owned ``outputs`` and opt-in ``cache: true``.
+Every root runs, and only dependents can reuse unchanged existing declared
+outputs. ``--no-cache-ptk`` on a job or workflow disables all PTK reuse in that
+invocation without changing tool-native caches. ``--re-run`` also bypasses reuse;
+``--only-step`` never reuses the selected step. See :doc:`/guides/output-reuse`
+for the complete matching, storage and reporting contract.

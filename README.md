@@ -304,6 +304,12 @@ steps:
   be changed explicitly with `--set` and may use `${env:..}`,
   `${vars.x}`, `${vh.*}` (per-variant defaults) or `${project.*}`
 * `project.default_job` is what plain `ptk` runs
+* `outputs: [file, folder]` declares project-owned artifacts, primarily for workflow
+  uploads/downloads. Transfers remain the workflow's responsibility. PTK's optional
+  built-in `cache: true` can reuse existing outputs of successful dependent work;
+  roots always run, and there is no inferred build directory or artifact restoration.
+  Cache correctness belongs to the project. `--no-cache-ptk` disables PTK reuse for
+  the whole job/workflow invocation. See the [complete output/cache guide](docs/guides/output-reuse.rst).
 
 ## Workspace layout
 

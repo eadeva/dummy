@@ -19,11 +19,18 @@ def step_dict(result: StepResult) -> dict[str, Any]:
         "start": round(result.start, 3),
         "duration": round(result.duration, 3),
     }
-    for key in ("exit_code", "message", "command", "log_file", "launched_pid"):
+    for key in (
+        "exit_code",
+        "message",
+        "command",
+        "log_file",
+        "launched_pid",
+        "reused_from",
+    ):
         value = getattr(result, key)
         if value not in (None, ""):
             data[key] = value
-    if result.attempts > 1:
+    if result.attempts > 1 or result.reused_from:
         data["attempts"] = result.attempts
     if result.allowed_failure:
         data["allowed_failure"] = True
@@ -50,6 +57,7 @@ def run_summary(plan: JobPlan, result: RunResult) -> dict[str, Any]:
     hidden = [s.path for s in plan.walk() if not s.spec.report]
     return {
         **header(plan),
+        **({"reused_from": result.reused_from} if result.reused_from else {}),
         "status": result.status.value,
         "started_at": result.started_at,
         "duration": round(result.duration, 3),

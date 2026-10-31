@@ -3,6 +3,46 @@ Execution and variants
 
 Preparation, scheduling, isolation, cancellation and output lifecycle.
 
+.. req-sw:: Reuse explicitly declared outputs as an optional project-owned aid
+   :id: REQ_Sw_OUTPUT_REUSE
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: under review
+   :verification_criteria: Real command, built-in, workflow and CLI tests verify opt-in declarations, always-run roots, unchanged dependency reuse, content/configuration invalidation, failure handling, execution-wide bypass, report provenance and extension guidance.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_EXECUTION
+   :tags: implemented
+
+   PTK shall accept project-owned file/folder outputs on jobs and steps,
+   principally as artifact declarations for workflow uploads and downloads.
+   Declarations shall not imply file transfer. Built-in caching shall be an
+   optional aid requiring explicit outputs and cache: true, with correctness
+   owned by the project and no inferred run.build_dir fallback.
+
+   Root steps and root workflow jobs shall always execute. Successful dependents
+   may reuse existing outputs only when every declared prerequisite output,
+   resolved execution configuration and own output fingerprint matches a prior
+   successful receipt. Whole-job reuse shall apply only to dependent workflow
+   calls. No artifact copies or restoration shall be introduced.
+
+   --no-cache-ptk shall bypass reuse for all jobs and steps in the invocation,
+   without changing native tool caches. Reports shall distinguish reused work
+   and its source run, preserving zero execution attempts and avoiding claims of
+   newly executed tests. Extension configuration shall explain output purpose,
+   optional caching and project responsibility.
+
+   **Origin:** User request for lightweight built-in caching, explicit outputs,
+   workflow extrapolation, global bypass and project ownership documentation.
+
+   **Implementation:** See :need:`DD_OUTPUT_REUSE` and :doc:`/guides/output-reuse`.
+   Tests are candidate verification evidence, not an acceptance record.
+
+   **Evidence:** ``tests/test_output_cache.py``;
+   ``extensions/project-toolkit/test/schema.test.js``;
+   ``extensions/project-toolkit/test/integration.test.js``.
+
 .. req-sw:: Launch GUI jobs independently of PTK
    :id: REQ_Sw_GUI_JOBS
    :req_type: functional
