@@ -883,13 +883,26 @@ not imply that every related future capability has been implemented.
    command exit codes, including a failing program after a successful bazel run
    build. Broken/incomplete streams are collection problems, not silent successes.
 
+   Use native cquery JSON with configured dependency edges for a target-level
+   overview. Replay canonical expanded options after direct invocations, preserve
+   the execution context and verify top-level configuration checksums. Bound this
+   extra analysis separately from execution; graph failure cannot change command
+   outcomes. Omit files, configuration helper rules and toolchain internals; map
+   generated files to producing rules and stop at external dependency boundaries.
+   Preserve shared nodes and configuration identity. Only BEP target results
+   supply execution states. Import paired cquery evidence without launching Bazel
+   during report regeneration. Keep normalized graphs in immutable snapshots.
+
    **Consequences:** No Bazel/protobuf runtime dependency or BES service is added.
    JSON arrays, binary/text-protobuf BEP, arbitrary wrapper argument rewriting,
-   remote artifact downloads, profile import and target dependency discovery are
+   remote artifact downloads and profile import are
    outside this importer. Artifact URIs remain references; local file links may
    expire. Action-event counts are not execution totals, and BEP event graphs are
    not target dependency graphs. Unknown optional events are ignored and missing
    metrics remain unavailable. The 100 MiB cap is not an aggregate memory budget.
+   Native graph collection adds up to 60 seconds of analysis outside the command
+   timeout; displayed graphs are bounded to 2,000 targets. Unsupported queries or
+   incomplete builds have explicit graph availability, not invented dependencies.
    Projects retain artifact correctness and execution responsibilities under
    :need:`DD_EXECUTION_BOUNDARIES`. See :need:`REQ_Sw_BAZEL_REPORTS`.
 

@@ -89,6 +89,7 @@ class ProcessOutcome:
     timed_out: bool = False
     cancelled: bool = False
     error: str | None = None  # e.g. program not found
+    reporting_duration: float = 0.0  # post-process collection, outside command timeout
 
 
 class CancelToken(Protocol):

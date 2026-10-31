@@ -45,10 +45,16 @@ def section(graph, title, *, collapsed=True):
         if graph.get("notice")
         else ""
     )
+    caption = escape(
+        graph.get(
+            "caption",
+            "Execution flows top to bottom: prerequisites → dependents. Joins wait for all prerequisites; branches can overlap. Shared nodes appear once.",
+        )
+    )
     return f"""<details class="ptk-graph"{" open" if not collapsed else ""}>
 <summary><strong>Dependency graph</strong><span>{count} nodes · {edges} dependencies</span></summary>
 <div class="ptk-graph-body">
-<p class="ptk-graph-caption">Execution flows top to bottom: prerequisites → dependents. Joins wait for all prerequisites; branches can overlap. Shared nodes appear once.{hierarchy}</p>{notice}
+<p class="ptk-graph-caption">{caption}{hierarchy}</p>{notice}
 <div class="ptk-graph-toolbar" role="group" aria-label="Graph controls">
 <button type="button" data-graph-action="in" aria-label="Zoom in">+</button>
 <button type="button" data-graph-action="out" aria-label="Zoom out">−</button>

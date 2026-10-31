@@ -484,6 +484,17 @@ Canonical results, retained evidence and diagnostic interpretation.
    and normalized snapshots shall be bounded to 100 MiB each and retained snapshots
    shall be masked and immutable per attempt.
 
+   Full reports shall include an offline, collapsed target dependency graph from
+   native cquery evidence where available. Configured edges and top-level
+   configuration checksums shall preserve the build's selected dependencies.
+   Shared targets shall appear once, files and toolchain internals shall be
+   omitted, and external dependencies shall stop at boundary nodes. Graph
+   collection shall be bounded separately from execution, preserve build outcomes
+   and reporting destinations, and never run during saved-report regeneration.
+   Missing graph evidence shall be explicit; BEP event links shall not be used as
+   target dependencies. Paired cquery imports shall be validated and snapshots
+   retained with the producing invocation.
+
    Warnings and errors shall use the shared full and dedicated diagnostics views,
    recorded ignore/justify rules and source identities. Matching findings shall be
    merged conservatively. Local active errors shall open diagnostics, including

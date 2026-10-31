@@ -362,6 +362,12 @@ def to_markdown(report: Report) -> str:
             "",
         ]
         for bazel in report.bazel:
+            if bazel.graph:
+                nodes = bazel.graph["nodes"]
+                lines += [
+                    f"**Target dependency graph:** {len(nodes)} targets, {sum(len(n['needs']) for n in nodes)} dependencies. {_cell(bazel.graph['source'])}. Interactive view in the full HTML report.",
+                    "",
+                ]
             lines += [
                 f"**{_cell(bazel.step)} · Bazel {_cell(bazel.version or 'version unavailable')}:** {_cell(bazel.status)}; {len(bazel.targets)} target results; {len(bazel.tests)} test-target summaries; BEP {'complete' if bazel.complete else 'incomplete/unavailable'}",
                 "",

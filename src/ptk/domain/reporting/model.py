@@ -157,6 +157,7 @@ class BazelReport:
     metrics: dict[str, Any] = field(default_factory=dict)
     artifacts: list[dict[str, Any]] = field(default_factory=list)
     availability: dict[str, str] = field(default_factory=dict)
+    graph: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

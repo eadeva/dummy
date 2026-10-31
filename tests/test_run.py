@@ -413,3 +413,33 @@ def test_dry_run_masks_secrets_and_does_not_execute(project):
     command, _ = runner.describe(prepared, secret_step)
     assert "s3cr3t" not in command
     assert not (project / "_builds").exists() and not (project / "_logs").exists()
+
+
+@pytest.mark.parametrize(
+    "execution, timed_out, failed",
+    [(0.5, False, False), (1.5, False, True), (0.5, True, True)],
+)
+def test_post_process_reporting_does_not_expire_the_command_deadline(
+    write, monkeypatch, execution, timed_out, failed
+):
+    from types import SimpleNamespace
+
+    from ptk.adapters.reporting.runner import ReportingRunner
+    from ptk.application.ports import ProcessOutcome
+    from ptk.application.use_cases import run as run_module
+
+    clock = [0.0]
+    monkeypatch.setattr(run_module, "time", SimpleNamespace(monotonic=lambda: clock[0]))
+
+    def collect(self, *args, **kwargs):
+        clock[0] += execution + 40
+        return ProcessOutcome(0, timed_out=timed_out, reporting_duration=40)
+
+    monkeypatch.setattr(ReportingRunner, "run", collect)
+    root = write(
+        project_files(
+            "project:\n  name: t\njobs:\n  go:\n    steps:\n      build:\n        run: echo build\n        timeout: 1\n"
+        )
+    )
+    result, _, _ = run(root)
+    assert (by_label(result)["build"].status is Status.FAILED) == failed

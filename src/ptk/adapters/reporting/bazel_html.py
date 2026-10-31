@@ -6,6 +6,7 @@ from collections import Counter
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
+from .. import graph_html
 from . import ui
 from .ui import e, fields, link
 
@@ -79,6 +80,20 @@ def section(reports, root=None):
             + fields(bazel.availability)
             + "</details>"
         )
+        if bazel.graph:
+            content += "<h3>Build target dependencies</h3>" + graph_html.section(
+                bazel.graph, f"Bazel targets · {identity}[{bazel.step}]"
+            )
+        else:
+            content += (
+                '<p class="meta">Target dependencies: '
+                + e(
+                    bazel.availability.get(
+                        "target graph", "No cquery evidence recorded"
+                    )
+                )
+                + "</p>"
+            )
         if bazel.tests:
             counts = Counter(t["status"] for t in bazel.tests)
             content += "<h3>Test-target outcomes</h3>" + ui.cards(

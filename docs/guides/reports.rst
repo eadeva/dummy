@@ -351,8 +351,46 @@ followed by a successful retry do not become permanent test errors: the final
 ``FLAKY`` target summary is a warning and the individual attempts remain visible.
 An imported JUnit case failure and its Bazel test-target summary have different
 granularity and retain their source labels. BEP targets/attempts do not increase
-JUnit totals. BEP event relationships are not a target dependency graph; PTK
-does not present them as build dependencies.
+JUnit totals. BEP event relationships are not a target dependency graph.
+
+The full report includes a collapsed **Build target dependencies** graph, using
+Bazel's built-in ``cquery``. It shows libraries, binaries, tests and other rule
+targets with shared dependencies appearing once. Source/output files, toolchains
+and configuration helper rules are omitted; generated-file dependencies connect
+to their producing rule. External libraries appear as boundary nodes without
+expanding their internals. Select a node for its dependencies, configuration and
+recorded status; zoom, pan and fit work offline. Only target results actually
+recorded by BEP get passed/failed states. Other targets remain ``configured``.
+
+After a supported direct invocation, PTK runs a bounded ``cquery`` using the same
+launcher, environment, working directory and startup arguments. It replays the
+canonical expanded build options, including ``.bazelrc``/``--config`` settings,
+without rereading rc files or forwarding program arguments. Reporting destinations
+are removed so the query does not overwrite the original BEP/profile or publish
+another BES stream. This is additional analysis, with a separate 60-second timeout;
+it does not rebuild targets and does not consume the command's timeout. Step wall
+time includes collection. Query failure never changes the original build exit or
+duplicates its diagnostics. Configuration checksums must match the recorded build.
+
+Automatic capture requires Bazel 6+ with canonical command options and native
+``cquery --output=jsonproto --output_file`` support. If unavailable, cancelled,
+too large (over 2,000 displayed targets), or inconsistent with the build, the
+report explains why it has no graph. Incomplete/analysis-failed builds may have
+no usable graph. A saved report never runs Bazel again. The masked graph snapshot
+is retained with each invocation in full job/workflow reports and JSON exports.
+
+For a manual ``report.import``, copy matching ``name.bep.json`` (or
+``name.bep.jsonl``) and ``name.cquery.json`` files into the same step report
+directory. Produce the latter with the same build options and top-level targets::
+
+   bazel cquery 'kind("rule|generated file", deps(//app:app))' \
+     --universe_scope=//app:app --noimplicit_deps --notool_deps --noinclude_aspects \
+     --output=jsonproto --transitions=lite --proto:include_configurations \
+     --proto:output_rule_attrs= > name.cquery.json
+
+Use the same source revision as the BEP build; matching configurations cannot
+detect intervening source edits. PTK validates target/configuration identity and
+does not infer graph edges from BEP event links or unresolved ``select()`` inputs.
 
 Bazel warnings, errors and test warnings share the existing Diagnostics section
 and ``diagnostics.html``. Matching structured, BEP-progress, console and PTK-log
@@ -377,7 +415,9 @@ retry and history rules apply as for other importers.
 See :need:`DD_BAZEL_REPORTS`, :need:`REQ_Sw_BAZEL_REPORTS`, the
 `Bazel BEP documentation <https://bazel.build/remote/bep>`_ and its
 `event glossary <https://bazel.build/remote/bep-glossary>`_. No Bazel runtime,
-protobuf package, Build Event Service or additional plugin is required by PTK.
+protobuf package, Build Event Service or additional plugin is required to read
+saved evidence. Target graph capture uses the project's existing Bazel; see
+`configured query <https://bazel.build/query/cquery>`_.
 
 Dedicated diagnostics reports
 -----------------------------

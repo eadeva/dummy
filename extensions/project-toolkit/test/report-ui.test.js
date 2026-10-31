@@ -125,6 +125,7 @@ b.tests=[{'label':'//:unit','configuration':'cfg','status':'FLAKY'}]
 b.test_attempts=[{'label':'//:unit','configuration':'cfg','status':'PASSED','run':1,'shard':2,'attempt':3,'cached_locally':True}]
 b.metrics={'actionSummary':{'actionsExecuted':'7'},'timingMetrics':{'wallTimeInMs':'1234'}}
 b.artifacts=[{'name':'test.log','uri':(root/'test.log').as_uri()}]
+b.graph={'nodes':[{'id':'//:core','needs':[],'status':'configured','configuration':'cfg'},{'id':'//:app','needs':['//:core'],'status':'failed','configuration':'cfg'}],'caption':'Target dependencies: prerequisites → dependents. Shared targets appear once.'}
 r.bazel=[b]
 FileReportStore({}).write(r,['html','json'],root)
 `;
@@ -151,6 +152,17 @@ FileReportStore({}).write(r,['html','json'],root)
   const bazel = page.locator("#bazel");
   assert.equal(await bazel.locator(":scope > details").evaluate(node => node.open), false);
   await bazel.locator(":scope > details > summary").click();
+  const graph = bazel.locator(".ptk-graph");
+  assert.equal(await graph.evaluate(node => node.open), false);
+  await graph.locator(":scope > summary").click();
+  await graph.locator('[data-node-id="//:app"]').click();
+  assert.match(await graph.locator(".ptk-graph-inspector").innerText(), /Bazel configuration/);
+  assert.equal(await graph.locator(".ptk-graph-node").count(), 2);
+  assert.equal(await graph.locator(".ptk-graph-edge").count(), 1);
+  const beforeZoom = await graph.locator("output").innerText();
+  await graph.getByRole("button", { name: "Zoom in", exact: true }).click();
+  assert.notEqual(await graph.locator("output").innerText(), beforeZoom);
+  await graph.getByRole("button", { name: "Fit to view", exact: true }).click();
   const targets = bazel.locator('[data-filter="Bazel Targets"]');
   await targets.getByRole("searchbox").fill("//:app");
   assert.equal(await targets.locator("[data-record]:visible").count(), 1);

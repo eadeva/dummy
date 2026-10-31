@@ -817,7 +817,10 @@ class RunJob:
                         outcome = self._runner.run(command, out, cancel)
                     exit_code = outcome.exit_code
                     message = outcome.error or ""
-                    if outcome.timed_out or scope.expired:
+                    expired = scope.deadline is not None and (
+                        time.monotonic() - outcome.reporting_duration >= scope.deadline
+                    )
+                    if outcome.timed_out or expired:
                         exit_code = exit_code or 1
                         message = f"timed out after {step.spec.timeout:g}s"
                     if outcome.cancelled or exit_code == 0:

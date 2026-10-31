@@ -142,8 +142,9 @@ class Findings:
 class BepImporter:
     name = "bazel-bep-json"
 
-    def __init__(self, report, problems):
+    def __init__(self, report, problems, replay=None):
         self.report, self.problems = report, problems
+        self.replay = replay
         self.findings = Findings(report)
         self.seen, self.announced = {}, set()
         self.started = self.finished = self.last = False
@@ -180,6 +181,18 @@ class BepImporter:
         self.announced.update(object_id(child) for child in event.get("children", []))
         self.last = bool(event.get("lastMessage", False))
         ids, report = event["id"], self.report
+        if self.replay is not None and "structuredCommandLine" in event:
+            value = event["structuredCommandLine"]
+            if value.get("commandLineLabel") == "canonical":
+                # Ephemeral: expanded options may contain credentials. Never put
+                # the command line in normalized evidence or the graph itself.
+                self.replay.update(
+                    {
+                        section["sectionLabel"]: section["optionList"].get("option", [])
+                        for section in value.get("sections", [])
+                        if "optionList" in section
+                    }
+                )
         if "buildFinished" in ids and "aborted" in event:
             self.finished = True
         if "started" in event:
@@ -465,12 +478,22 @@ class BepImporter:
 
 
 def parse(
-    path, root, step, problems, *, console=(), executable="", outcome="", duration=0
+    path,
+    root,
+    step,
+    problems,
+    *,
+    console=(),
+    executable="",
+    outcome="",
+    duration=0,
+    replay=None,
+    graph_sidecar=True,
 ):
     report = BazelReport(
         step, str(path), executable=executable, status=outcome, duration=duration
     )
-    importer = BepImporter(report, problems)
+    importer = BepImporter(report, problems, replay)
     text = bounded_text(path, root)
     for number, line in enumerate(text.splitlines(), 1):
         if not line.strip():
@@ -481,4 +504,10 @@ def parse(
             importer.valid = False
             importer.problem(f"cannot import BEP event on line {number}: {exc}")
     importer.finish(console)
+    from .bazel_graph import sidecar
+
+    if graph_sidecar:
+        sidecar(report, path, root, problems)
+    else:
+        report.availability["target graph"] = "Unavailable: no cquery evidence captured"
     return report

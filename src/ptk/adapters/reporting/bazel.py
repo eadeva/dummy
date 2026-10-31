@@ -13,6 +13,7 @@ from pathlib import Path
 from ...domain.execution.commands import split_words
 from ...domain.reporting.model import BazelReport, Contribution, LogFinding
 from .bazel_bep import MAX_BYTES, READ_ERRORS, Findings, bounded_text, parse, stamp
+from .bazel_graph import collect
 from .evidence import mask_data
 
 SNAPSHOT = ".ptk-bazel"
@@ -188,6 +189,7 @@ class BazelReportingRunner:
         try:
             outcome = execute(effective, output, cancel)
             duration = time.monotonic() - started
+            collecting = time.monotonic()
             state = (
                 "cancelled"
                 if outcome.cancelled
@@ -205,19 +207,37 @@ class BazelReportingRunner:
                     candidates[bep] = bep.parent
                 for path, root in candidates.items():
                     try:
-                        records.append(
-                            parse(
-                                path,
-                                root,
-                                step,
-                                problems,
-                                console=lines if direct and path == bep else (),
-                                executable=executable if direct and path == bep else "",
-                                outcome=state,
-                                duration=duration,
-                            )
+                        replay = {}
+                        record = parse(
+                            path,
+                            root,
+                            step,
+                            problems,
+                            console=lines if direct and path == bep else (),
+                            executable=executable if direct and path == bep else "",
+                            outcome=state,
+                            duration=duration,
+                            replay=replay if direct and path == bep else None,
+                            graph_sidecar=False,
                         )
+                        records.append(record)
                         captured_direct |= direct is not None and path == bep
+                        if (
+                            direct
+                            and path == bep
+                            and not outcome.cancelled
+                            and not outcome.timed_out
+                        ):
+                            collect(
+                                record,
+                                replay,
+                                command,
+                                direct,
+                                self.runner,
+                                cancel,
+                                target,
+                                on_output,
+                            )
                     except READ_ERRORS as exc:
                         problems.append(
                             f"{step}: cannot import Bazel evidence {path}: {exc}"
@@ -277,7 +297,12 @@ class BazelReportingRunner:
                     )
                 except READ_ERRORS as exc:
                     on_problem(f"cannot save Bazel evidence: {exc}")
-            return outcome
+            return replace(
+                outcome,
+                reporting_duration=outcome.reporting_duration
+                + time.monotonic()
+                - collecting,
+            )
         finally:
             if temporary and bep is not None:
                 try:

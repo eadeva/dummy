@@ -822,11 +822,13 @@ def test_native_bazel_success_and_analysis_failure(tmp_path):
     root.mkdir()
     (root / "MODULE.bazel").write_text('module(name="ptk_report_probe")\n')
     (root / "probe.bzl").write_text(
-        'def _probe(ctx):\n    if ctx.attr.bad:\n        fail("Deliberate analysis failure")\n    out = ctx.actions.declare_file(ctx.label.name + ".txt")\n    ctx.actions.write(out, "ok")\n    return [DefaultInfo(files=depset([out]))]\nprobe=rule(implementation=_probe, attrs={"bad":attr.bool()})\n'
+        'def _probe(ctx):\n    if ctx.attr.bad:\n        fail("Deliberate analysis failure")\n    out = ctx.actions.declare_file(ctx.label.name + ".txt")\n    ctx.actions.write(out, "ok")\n    return [DefaultInfo(files=depset([out]))]\nprobe=rule(implementation=_probe, attrs={"bad":attr.bool(), "deps":attr.label_list(allow_files=True)})\n'
     )
     (root / "BUILD.bazel").write_text(
-        'load(":probe.bzl", "probe")\nprobe(name="ok")\nprobe(name="bad", bad=True)\n'
+        'load(":probe.bzl", "probe")\nprobe(name="common")\nprobe(name="left", deps=[":common"])\nprobe(name="chosen")\nprobe(name="unused")\nconfig_setting(name="choice", define_values={"choice":"yes"})\nprobe(name="ok", deps=[":left", ":common", "input.txt"]+select({":choice":[":chosen"], "//conditions:default":[":unused"]}))\nprobe(name="bad", bad=True)\n'
     )
+    (root / "input.txt").write_text("source\n")
+    (root / ".bazelrc").write_text("build:chosen --define=choice=yes\n")
     startup = [
         os.environ["PTK_TEST_BAZEL"],
         "--batch",
@@ -843,6 +845,7 @@ def test_native_bazel_success_and_analysis_failure(tmp_path):
                 "build",
                 "--incompatible_autoload_externally=",
                 "--lockfile_mode=off",
+                "--config=chosen",
                 "//:" + label,
             ],
         )
@@ -868,5 +871,12 @@ def test_native_bazel_success_and_analysis_failure(tmp_path):
                 report.targets[0]["label"] == "//:ok"
                 and report.targets[0]["status"] == "passed"
             )
+            nodes = {n["id"]: n for n in report.graph.get("nodes", [])}
+            assert set(nodes) == {"//:ok", "//:left", "//:common", "//:chosen"}, (
+                report.availability
+            )
+            assert nodes["//:ok"]["needs"] == ["//:chosen", "//:common", "//:left"]
+            assert nodes["//:left"]["needs"] == ["//:common"]
+            assert nodes["//:common"]["status"] == "configured"
         reports.append(report)
     assert reports[0].invocation_id != reports[1].invocation_id
