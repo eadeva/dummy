@@ -1,0 +1,46 @@
+name: ptk-upload
+description: Upload declared files and ZIP directories to Artifactory using curl.
+inputs:
+  working-directory:
+    description: Repository root for relative output paths.
+    default: .
+  artifact-scope:
+    description: Isolation key; defaults to GitHub repository/run ID. Use the same value for producers and consumers.
+    default: ''
+  technical-user:
+    description: Artifactory technical user ID.
+    required: true
+  token:
+    description: Artifactory access token (pass a secret).
+    required: true
+  base-url:
+    description: Artifactory destination URL from the setup matrix.
+    required: true
+  uploads-json:
+    description: Path to the PTK upload.json manifest; filename may be arbitrary.
+    required: true
+  producer:
+    description: Optional setup row JSON to validate identity; otherwise use the manifest producer.
+    default: '{}'
+  additional_properties:
+    description: Extra Artifactory properties as JSON; cannot override producer identity.
+    default: '{}'
+outputs:
+  manifest-url:
+    description: Published manifest URL; available after all payloads are uploaded.
+    value: ${{ steps.action.outputs.manifest-url }}
+runs:
+  using: composite
+  steps:
+  - id: action
+    shell: bash
+    env:
+      PTK_ACTION_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+      PTK_ACTION_ARTIFACT_SCOPE: ${{ inputs.artifact-scope }}
+      PTK_ACTION_TECHNICAL_USER: ${{ inputs.technical-user }}
+      PTK_ACTION_TOKEN: ${{ inputs.token }}
+      PTK_ACTION_BASE_URL: ${{ inputs.base-url }}
+      PTK_ACTION_UPLOADS_JSON: ${{ inputs.uploads-json }}
+      PTK_ACTION_PRODUCER: ${{ inputs.producer }}
+      PTK_ACTION_ADDITIONAL_PROPERTIES: ${{ inputs.additional_properties }}
+    run: python -m ptk.adapters.github_actions upload

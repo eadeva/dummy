@@ -141,6 +141,8 @@ def build_commands(root, entries):
         )
     )
     config.add_command(originals["maintainer"].commands["config"].commands["schema"])
+    maintainer.add_command(originals["maintainer"].commands["matrix"])
+    maintainer.add_command(originals["maintainer"].commands["gen-workflows"])
     maintainer.add_command(config)
     maintainer.add_command(originals["maintainer"].commands["sync"])
     maintainer.add_command(originals["workflow"])

@@ -2,8 +2,9 @@ Open work and superseded decisions
 ==================================
 
 The accepted package-downgrade guard is not implemented:
-:need:`REQ_Sw_KEEP_NEWER_PACKAGE`. Native CX generation remains a draft proposal:
-:need:`REQ_Sw_CI_GENERATION`. Neither is covered by a claimed passing result.
+:need:`REQ_Sw_KEEP_NEWER_PACKAGE`. Native CX generation is implemented under
+:need:`REQ_Sw_CI_GENERATION`, with project-owned Docker/runner/event and VMR
+checkout TODOs. Live Artifactory/GitHub execution is not covered by local tests.
 The optional setup metadata export is implemented separately under
 :need:`REQ_Sw_CX_MATRIX`; it does not generate pipeline files.
 

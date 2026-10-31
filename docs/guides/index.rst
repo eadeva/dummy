@@ -16,6 +16,7 @@ and defaults, use :doc:`/reference/configuration-schema`.
    versioning
    artifacts
    cx-matrix
+   github-actions
    output-reuse
    log-analysis
    reports

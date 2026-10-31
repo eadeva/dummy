@@ -1086,7 +1086,7 @@ not imply that every related future capability has been implemented.
 
    **Context:** A first GitHub job needs variant/job selections and enough
    information to execute jobs and transfer their declared artifacts. Native
-   pipeline generation remains outside the current implementation.
+   pipeline generation is now implemented separately under :need:`DD_GITHUB_ACTIONS`.
 
    **Decision:** Export a hidden built-in maintainer matrix command with a
    narrow CX read exception. Filter concrete variants and eligible jobs using
@@ -1098,8 +1098,8 @@ not imply that every related future capability has been implemented.
    inventory, inferred outputs or automatic transfers enter the payload.
    GitHub needs supplies the producer job name; no separate inputs mapping is
    introduced. Actual output paths and step/artifact_type properties are supplied
-   by completed producer jobs. CX access grants no maintenance privileges; local workflows remain local-only. Projects supply execution
-   parameters, runner selection, dependencies, packaging and transfer steps.
+   by completed producer jobs. CX access grants no maintenance privileges; local workflows remain local-only. Generated native workflows use the shipped
+   Actions; projects still own runner/image selection and output declarations.
    See :need:`REQ_Sw_CX_MATRIX` and :doc:`/guides/cx-matrix`.
 
 .. ddec:: Record completed outputs for workflow uploaders
@@ -1143,3 +1143,28 @@ diagram or separate step folders do not change that responsibility. Future
 proposals need their own decisions and verification.
 Known planned product gaps remain in
 :doc:`/requirements/decisions-and-gaps`.
+
+.. ddec:: Native callable workflows and portable declared-output Actions
+   :id: DD_GITHUB_ACTIONS
+   :status: accepted
+
+   **Context:** Projects need reusable GitHub templates following PTK variants
+   and needs, with actual output locations resolved only after producer execution.
+
+   **Decision:** Generate callable-only workflows with a first setup matrix job
+   required by every other job. Use separate per-invocation matrices and exact
+   producer selectors, not last-finishing matrix job outputs. Ship composite
+   Actions using preinstalled PTK and curl. ZIP folders, upload files directly,
+   publish the remote manifest last, and restore repository-relative paths after
+   identity/SHA256 validation. Use the GitHub run ID as the default artifact scope.
+   Keep producer properties in Artifactory and manifests; extra properties cannot
+   override identity. VMR generation emits checkout TODOs instead of normal
+   checkout. Runners, Docker images, caller events and service credentials belong
+   to the project. Existing workflow files are never overwritten.
+
+   **Consequences:** No general artifact repository search, cross-run latest
+   selection, implicit build-directory outputs or installation logic. Source and
+   output ownership stay with the project. External paths, symlinks and overlapping
+   restores fail. Consumers wait for every producer matrix variant; max_workers
+   limits each job matrix, not the whole GitHub workflow. VMR placeholders fail
+   until completed. See :doc:`/guides/github-actions` for operational constraints.

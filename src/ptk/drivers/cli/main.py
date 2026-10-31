@@ -1296,6 +1296,7 @@ def maintainer_group(ctx):
         click.echo(ctx.get_help())
 
 
+from .github_workflows import gen_workflows
 from .hooks import hooks_group
 from .matrix import matrix_command
 
@@ -1310,6 +1311,7 @@ for command in (
     self_service.add_command(command)
 for command in (
     matrix_command,
+    gen_workflows,
     config_group,
     sync_command,
     version_group,

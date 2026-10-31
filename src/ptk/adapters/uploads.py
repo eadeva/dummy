@@ -3,6 +3,7 @@
 import json
 import os
 import tempfile
+from contextlib import suppress
 from pathlib import Path
 
 from ..domain.execution.model import Status
@@ -59,6 +60,11 @@ def write_upload(prepared, result):
             if artifact_type is not None:
                 properties["artifact_type"] = artifact_type
             item = {"path": str(path), "kind": kind, "properties": properties}
+            # External local outputs intentionally have no portable path.
+            with suppress(ValueError):
+                item["relative_path"] = path.relative_to(
+                    prepared.project.root.resolve()
+                ).as_posix()
             if reused_from:
                 item["reused_from"] = reused_from
             if prepared.mask_context(item) != item:
@@ -110,6 +116,13 @@ def write_upload(prepared, result):
         "schema_version": 1,
         "run_id": plan.run_id,
         "repository": alias,
+        "producer": {
+            "repository": alias,
+            "job": plan.job,
+            "variant": plan.variant,
+            "version": version,
+            "commit": common["commit"],
+        },
         "files": files,
     }
     destination = Path(plan.dirs["log_dir"]) / "upload.json"

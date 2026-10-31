@@ -1,0 +1,42 @@
+name: ptk-download
+description: Restore producer files and unzip directories to their original relative locations.
+inputs:
+  working-directory:
+    description: Repository root for relative output paths.
+    default: .
+  artifact-scope:
+    description: Isolation key; defaults to GitHub repository/run ID. Use the same value for producers and consumers.
+    default: ''
+  technical-user:
+    description: Artifactory technical user ID.
+    required: true
+  token:
+    description: Artifactory access token (pass a secret).
+    required: true
+  base-url:
+    description: Optional fallback base URL; per-producer matrix upload URL takes precedence.
+    default: ''
+  needs:
+    description: GitHub needs JSON, passed with toJSON(needs).
+    required: true
+  producers:
+    description: Producer selectors from the setup matrix, passed with toJSON(matrix.producers).
+    required: true
+outputs:
+  output-paths:
+    description: JSON array of restored relative output paths.
+    value: ${{ steps.action.outputs.output-paths }}
+runs:
+  using: composite
+  steps:
+  - id: action
+    shell: bash
+    env:
+      PTK_ACTION_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+      PTK_ACTION_ARTIFACT_SCOPE: ${{ inputs.artifact-scope }}
+      PTK_ACTION_TECHNICAL_USER: ${{ inputs.technical-user }}
+      PTK_ACTION_TOKEN: ${{ inputs.token }}
+      PTK_ACTION_BASE_URL: ${{ inputs.base-url }}
+      PTK_ACTION_NEEDS: ${{ inputs.needs }}
+      PTK_ACTION_PRODUCERS: ${{ inputs.producers }}
+    run: python -m ptk.adapters.github_actions download

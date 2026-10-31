@@ -5,6 +5,10 @@ env:
   UV_PROJECT_ENVIRONMENT: ${project.root}/.ptk/venvs/test
 environment:
   inherit_path: true
+# Explicit report artifact; PTK completes its contents before the upload Action runs.
+outputs:
+- path: ${run.reports_dir}
+  artifact_type: test-reports
 steps:
   pytest:
     python:

@@ -170,16 +170,25 @@ items are explicitly marked and must not be presented as supported commands.
    :safety: QM
    :security: false
    :legal: false
-   :status: draft
-   :verification_criteria: Before acceptance, define supported job/variant mapping, credential references, generated-file ownership and repeat-generation tests.
+   :status: under review
+   :verification_criteria: Integration tests generate the real verify graph, verify setup and producer needs, per-variant selectors, callable-only Docker inputs, VMR checkout TODOs, maintainer access and repeated-generation preservation.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_EXECUTION
-   :tags: planned
+   :tags: implemented
 
-   PTK should provide a reviewed generation mechanism for native GitHub workflows without executing local workflows inside CX pipelines.
+   PTK shall generate commented callable GitHub workflows in the owning
+   repository's .github/workflows directory. Setup shall run the matrix command
+   first; every execution job shall depend on it and its configured producers,
+   download producer outputs, run one PTK job and upload available outputs.
+   Generation shall never overwrite existing files and shall warn instead.
+   Runner selection, Docker images and caller events remain project TODOs.
+   A detected VMR shall replace normal checkout with VMR checkout TODOs.
 
-   **Origin:** Historical roadmap proposal for pipeline generation; not an agreed current command or implementation.
+   **Origin:** User request for built-in Actions and almost-finished workflow
+   templates, with setup matrix dependencies and VMR-specific checkout.
 
-   **Implementation:** Not implemented. No passing verification result is claimed.
+   **Implementation:** Implemented; see :doc:`/guides/github-actions` for limits.
+   No remote workflow execution is implied by generation.
 
-   **Planning reference:** the archived development plan, summarized in :doc:`decisions-and-gaps`.
+   **Evidence:** ``src/ptk/drivers/cli/github_workflows.py``;
+   ``tests/test_github_actions.py``; ``.github/workflows/ptk-verify.yml``.

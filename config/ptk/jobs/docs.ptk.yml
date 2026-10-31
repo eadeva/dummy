@@ -2,8 +2,15 @@
 help: Build PTK's Sphinx documentation with warnings treated as errors
 env:
   UV_PROJECT_ENVIRONMENT: ${project.root}/.ptk/venvs/docs
+# Explicit report artifact; PTK completes its contents before the upload Action runs.
+outputs:
+- path: ${run.reports_dir}
+  artifact_type: docs-reports
 steps:
   sphinx:
+    outputs:
+    - path: ${run.build_dir}/html
+      artifact_type: documentation
     python:
       project: .
       groups:

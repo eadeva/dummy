@@ -393,6 +393,20 @@ def _execute_one_unlocked(
         raise holder["error"]
     result = holder["result"]
     write_reports(state, project, prepared.plan, result)
+    # A private, action-owned handoff avoids guessing the latest run directory.
+    import json
+    import os
+
+    if handoff := os.environ.get("PTK_GITHUB_RESULT"):
+        Path(handoff).write_text(
+            json.dumps(
+                {
+                    "upload_file": result.upload_file,
+                    "upload_problem": result.upload_problem,
+                }
+            ),
+            encoding="utf-8",
+        )
     codes = {Status.PASSED: 0, Status.SKIPPED: 0, Status.CANCELLED: 130}
     return codes.get(result.status, 1)
 

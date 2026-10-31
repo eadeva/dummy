@@ -162,6 +162,7 @@ For example, the completed run can produce:
      "repository": "firmware",
      "files": [{
        "path": "/workspace/firmware/dist/application.bin",
+       "relative_path": "dist/application.bin",
        "kind": "file",
        "properties": {
          "version": "1.2.3",
@@ -216,3 +217,14 @@ A project uploader can read the configuration directly:
 Use GitHub ``needs`` to choose producer job names when downloading. Combine that
 name with version/commit/variant and, when needed, producer step and
 ``artifact_type``. There is no separate PTK input configuration.
+
+Portable GitHub transfers
+-------------------------
+
+The manifest also includes a top-level ``producer`` identity (repository, job,
+variant, version and commit), including for an empty output set.
+Internal outputs also include ``relative_path``, relative to the producing
+repository. External outputs omit it and cannot be transferred by the shipped
+Actions. See :doc:`github-actions`: files upload directly, folders use ZIP, and
+downloads restore the original relative locations. Optional manifest
+``upload_path`` changes the remote suffix without changing the restore path.

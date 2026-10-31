@@ -102,80 +102,16 @@ For example, artifacts from ``build/compile`` can share version, commit and
 variant while using ``artifact_type=binaries`` or ``artifact_type=symbols``.
 A test job depending on ``build`` can select only the binaries. Completed jobs
 write an :doc:`upload manifest <artifacts>` with actual paths, producing steps
-and optional output ``artifact_type`` labels. Projects own property assignment
-in the remote service, matching, packaging and downloads. A type
+and optional output ``artifact_type`` labels. The shipped Actions own property assignment, matching, ZIP packaging and
+downloads; projects may also supply their own transfer steps. A type
 can group several files; it need not equal a filename extension. Do not select
 an arbitrary artifact if the supplied properties match several candidates.
 
-GitHub workflow setup
----------------------
+Generated GitHub workflows
+--------------------------
 
-``--format github`` prints exactly three single-line outputs: ``matrix`` and
-``upload_base`` as compact JSON, and ``has_jobs`` as ``true``/``false``. This
-example selects one build per variant. Add the project's checkout, Python, PTK
-and tool installation steps where indicated. The ``ci/*.py`` transfer scripts
-are project-owned examples, not commands shipped by PTK.
-
-.. code-block:: yaml
-
-   jobs:
-     setup:
-       runs-on: ubuntu-latest
-       outputs:
-         matrix: ${{ steps.ptk.outputs.matrix }}
-         upload_base: ${{ steps.ptk.outputs.upload_base }}
-         has_jobs: ${{ steps.ptk.outputs.has_jobs }}
-       steps:
-         # Add checkout and PTK installation.
-         - id: ptk
-           run: ptk maintainer matrix --job build --format github >> "$GITHUB_OUTPUT"
-
-     build:
-       needs: setup
-       if: needs.setup.outputs.has_jobs == 'true'
-       runs-on: ubuntu-latest
-       strategy:
-         matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
-       steps:
-         # Add the same checkout, PTK and required tools.
-         - name: Execute producer
-           env:
-             PTK_COMMAND: ${{ toJSON(matrix.command) }}
-           shell: python
-           run: |
-             import json, os, subprocess
-             subprocess.run(json.loads(os.environ['PTK_COMMAND']), check=True)
-         - name: Upload completed outputs with properties
-           env:
-             PTK_MATRIX_ROW: ${{ toJSON(matrix) }}
-             PTK_UPLOAD_BASE: ${{ needs.setup.outputs.upload_base }}
-           run: python ci/upload_artifacts.py
-
-     test:
-       needs: [setup, build]
-       if: needs.setup.outputs.has_jobs == 'true'
-       runs-on: ubuntu-latest
-       strategy:
-         matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}
-       steps:
-         # Add checkout and the project's transfer tooling.
-         - name: Download artifacts from needed producers
-           env:
-             PTK_NEEDS: ${{ toJSON(needs) }}
-             PTK_MATRIX_ROW: ${{ toJSON(matrix) }}
-             PTK_UPLOAD_BASE: ${{ needs.setup.outputs.upload_base }}
-             PTK_PRODUCER_STEP: compile
-             PTK_ARTIFACT_TYPE: binaries
-           run: python ci/download_artifacts.py
-
-The download script reads producer names from ``PTK_NEEDS`` (excluding
-``setup``), and combines them with version/commit/variant and the chosen
-producer step/type. The upload script reads the completed job's ``upload.json`` (located by
-``run.json.upload_file``) and assigns its recorded properties. Authentication, archive
-layout and restoration remain in these scripts. If versioning is unconfigured,
-choose the project's version policy rather than treating null as a real version.
-
-Pass argv through JSON as shown, rather than joining it into a shell command.
-Retain setup's resolved upload base instead of recomputing timestamped routes
-in later jobs. This is optional help for initial workflow setup; GitHub owns
-dependencies and automatic workflow-file generation remains a separate proposal.
+Use ``ptk maintainer gen-workflows`` to create callable workflows. Their setup
+job calls ``ptk maintainer matrix --workflow NAME --format github`` to export
+per-invocation matrices and producer selectors. Every execution job depends on
+setup and its configured producers. See :doc:`github-actions` for the shipped
+upload/download/run Actions, Docker/VMR TODOs and full contracts.

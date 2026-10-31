@@ -5,6 +5,10 @@ requires_tools:
 - npm
 environment:
   inherit_path: true
+# Explicit report artifact; PTK completes its contents before the upload Action runs.
+outputs:
+- path: ${run.reports_dir}
+  artifact_type: extension-reports
 steps:
   dependencies:
     cwd: ${project.root}/extensions/project-toolkit
@@ -14,11 +18,17 @@ steps:
     - --include=dev
     timeout: 600
   package:
+    outputs:
+    - path: ${run.bin_dir}/project-toolkit.vsix
+      artifact_type: vscode-extension
     cwd: ${project.root}/extensions/project-toolkit
     run:
     - npm
     - run
     - package
+    - --
+    - --out
+    - ${run.bin_dir}/project-toolkit.vsix
     timeout: 600
     needs:
     - dependencies

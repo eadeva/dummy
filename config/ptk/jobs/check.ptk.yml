@@ -2,6 +2,10 @@
 help: Check PTK's lint rules and formatting
 env:
   UV_PROJECT_ENVIRONMENT: ${project.root}/.ptk/venvs/check
+# Explicit report artifact; PTK completes its contents before the upload Action runs.
+outputs:
+- path: ${run.reports_dir}
+  artifact_type: check-reports
 steps:
   lint:
     python:

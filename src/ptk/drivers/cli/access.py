@@ -77,6 +77,11 @@ def allowed(ctx, name):
             role = state.app.workspace_role(root) if root else "user"
         except PtkError:
             role = "user"  # Invalid identity lists never expose mutation commands.
+        if state.app.host.is_ci() and ".".join(parts) in {
+            "maintainer",
+            "maintainer.matrix",
+        }:
+            return True
         return command_allowed(".".join(parts), role, {})
     project = state.try_project()
     # CX can read the matrix without a human maintainer login. This grants no

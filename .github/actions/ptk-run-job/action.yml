@@ -1,0 +1,41 @@
+name: ptk-run-job
+description: Run exactly one installed PTK job and expose its manifest and relative outputs.
+inputs:
+  working-directory:
+    description: Repository root for relative output paths.
+    default: .
+  job:
+    description: One PTK job name (never a workflow).
+    required: true
+  variant:
+    description: One concrete variant or alias; omit for the project default.
+    default: ''
+  params:
+    description: JSON object with typed job parameters. Secret parameters should use configured environment variables.
+    default: '{}'
+  no-cache:
+    description: Set true to disable PTK output reuse.
+    default: 'false'
+  maintainer:
+    description: Set true for a maintainer job; existing PTK authorization still applies.
+    default: 'false'
+outputs:
+  uploads-json:
+    description: Absolute path of the upload manifest written by this exact job execution.
+    value: ${{ steps.action.outputs.uploads-json }}
+  output-paths:
+    description: JSON array of available repository-relative output paths.
+    value: ${{ steps.action.outputs.output-paths }}
+runs:
+  using: composite
+  steps:
+  - id: action
+    shell: bash
+    env:
+      PTK_ACTION_WORKING_DIRECTORY: ${{ inputs.working-directory }}
+      PTK_ACTION_JOB: ${{ inputs.job }}
+      PTK_ACTION_VARIANT: ${{ inputs.variant }}
+      PTK_ACTION_PARAMS: ${{ inputs.params }}
+      PTK_ACTION_NO_CACHE: ${{ inputs.no-cache }}
+      PTK_ACTION_MAINTAINER: ${{ inputs.maintainer }}
+    run: python -m ptk.adapters.github_actions run

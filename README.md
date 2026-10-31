@@ -373,7 +373,9 @@ its repository's tools, environment, credentials and reports. Use `job: REPO:JOB
 independent jobs can run concurrently, regardless of YAML order. PTK preflights every call before execution
 and rejects conflicting parallel outputs or shared uv project environments.
 Generated VS Code tasks include workflows. These workflows run locally;
-execution on CX/CI is refused.
+execution on CX/CI is refused. For native GitHub execution, run
+`ptk maintainer gen-workflows verify` to generate a callable workflow with a
+setup matrix and one GitHub job per configured invocation.
 
 Workflow `open_report` defaults to `always`. Use `on-errors` to open the summary
 only for execution or imported report errors, or `null` to disable it.
@@ -510,7 +512,12 @@ Completed executions list declared output paths and write `upload.json` beside
 `run.json`, containing available artifacts and producer properties for workflow
 uploaders. Outputs accept strings or `{path, artifact_type}` entries. The hidden built-in command works
 for local maintainers and in CX without granting maintenance rights.
-See [CX setup, uploads and downloads](docs/guides/cx-matrix.rst).
+The shipped `ptk-upload`, `ptk-download` and `ptk-run-job` Actions upload files,
+ZIP folders and restore producer-relative output paths. Generated templates
+leave Docker images, runners and caller events to the project; detected VMRs
+get VMR checkout TODOs instead of normal checkout. Existing workflow files
+are never overwritten. See [GitHub Actions](docs/guides/github-actions.rst) and
+[CX matrix setup](docs/guides/cx-matrix.rst).
 
 See [destination configuration and examples](docs/guides/artifacts.rst) and
 [date substitutions](docs/guides/configuration.rst#date-and-time-substitutions).

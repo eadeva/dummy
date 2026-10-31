@@ -20,6 +20,8 @@ completion follow the same permissions and ordering.
 
    * - Command
      - Purpose
+   * - ``ptk maintainer gen-workflows [NAMES...]``
+     - Generate callable GitHub workflow templates without overwriting existing files
    * - ``ptk init [DIRECTORY]``
      - Create project configuration, or initialize missing VMR members; no existing project or maintainer role is required
    * - ``ptk NAME [--dry-run]``

@@ -482,3 +482,36 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
 
    **Evidence:** ``src/ptk/adapters/uploads.py``;
    ``src/ptk/domain/run_output.py``; ``tests/test_upload_configuration.py``.
+
+.. req-sw:: Transfer declared GitHub job outputs through Artifactory
+   :id: REQ_Sw_GITHUB_ARTIFACTS
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: under review
+   :verification_criteria: Tests verify file/ZIP round trips, relative path and permission restoration, VMR producer paths, checksum and identity checks, traversal/symlink/overlap rejection, protected properties, credential handling and exact run-result handoff.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_EXECUTION
+   :tags: implemented
+
+   PTK shall ship ptk-upload, ptk-download and ptk-run-job composite Actions.
+   Upload shall use curl with technical-user/token credentials, ZIP directories,
+   upload files directly and retain declared producer properties plus additional
+   properties. Download shall select producers declared in GitHub needs, verify
+   identity and checksums, restore files and unzip directories at their original
+   repository-relative paths. The run Action shall expose those paths and the
+   completed execution's upload manifest without searching for stale logs.
+
+   **Origin:** User request for upload/download/job Actions using declared outputs,
+   technical-user credentials, ZIP folders and repository-relative restoration.
+
+   **Implementation:** Implemented with local round-trip and integration tests;
+   live Artifactory and hosted GitHub execution remain unverified.
+
+   **Decision:** Setup selectors and a run-scoped remote manifest avoid ambiguous
+   property searches and matrix job output races. PTK is preinstalled in the
+   project's Docker image. See :need:`DD_GITHUB_ACTIONS`.
+
+   **Evidence:** ``src/ptk/adapters/github_actions.py``;
+   ``.github/actions``; ``tests/test_github_actions.py``.

@@ -1,7 +1,7 @@
 """Hidden machine-readable workflow setup export for maintainers and CX."""
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 
 import rich_click as click
 
@@ -33,9 +33,13 @@ from .state import guarded, state_of
     show_default=True,
     help="JSON document, or matrix/upload_base/has_jobs lines for GITHUB_OUTPUT.",
 )
+@click.option(
+    "--workflow",
+    help="Export per-invocation matrices and producer selectors for a configured workflow.",
+)
 @click.pass_context
 @guarded
-def matrix_command(ctx, jobs, event, at, format_):
+def matrix_command(ctx, jobs, event, at, format_, workflow):
     """Export execution and artifact metadata for a GitHub workflow's setup job.
 
     Available to local maintainers and in CX. -V selects concrete variants or
@@ -59,12 +63,26 @@ def matrix_command(ctx, jobs, event, at, format_):
                 raise ValueError("timezone offset is required")
         except ValueError as exc:
             raise PtkError(f"invalid --at timestamp: {exc}") from None
-    project = state.project()
-    data = ExportMatrix(state.app.artifacts()).execute(
-        project, role=state.role(), variant=state.variant, jobs=jobs, event=event, at=at
-    )
+    if workflow:
+        if jobs:
+            raise PtkError("--workflow cannot be combined with --job")
+        from .github_workflows import workflow_matrix
+
+        data = workflow_matrix(ctx, workflow, at=at or datetime.now(UTC), event=event)
+    else:
+        project = state.project()
+        data = ExportMatrix(state.app.artifacts()).execute(
+            project,
+            role=state.role(),
+            variant=state.variant,
+            jobs=jobs,
+            event=event,
+            at=at,
+        )
     encode = lambda value: json.dumps(value, ensure_ascii=False, separators=(",", ":"))
     if format_ == "github":
+        for invocation, matrix in data.get("jobs", {}).items():
+            click.echo("matrix_" + invocation + "=" + encode(matrix))
         click.echo("matrix=" + encode(data["matrix"]))
         click.echo("upload_base=" + encode(data["upload_base"]))
         click.echo("has_jobs=" + ("true" if data["matrix"]["include"] else "false"))

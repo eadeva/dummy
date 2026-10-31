@@ -154,12 +154,11 @@ Open work worth knowing about
       +++
       :need:`Package downgrade protection <REQ_Sw_KEEP_NEWER_PACKAGE>`
 
-   .. grid-item-card:: Draft proposal
+   .. grid-item-card:: Callable GitHub templates
       :class-card: ptk-card ptk-amber
 
-      Generating native GitHub pipeline files needs an agreed mapping and
-      ownership policy. Local workflow execution is not a substitute for
-      a native CX pipeline.
+      Native GitHub templates and artifact Actions are implemented. Projects
+      complete runner, Docker, caller-event and VMR checkout TODOs before use.
 
       +++
       :need:`Native CX generation <REQ_Sw_CI_GENERATION>`
