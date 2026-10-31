@@ -1031,6 +1031,29 @@ not imply that every related future capability has been implemented.
    parameters, runner selection, dependencies, packaging and transfer steps.
    See :need:`REQ_Sw_CX_MATRIX` and :doc:`/guides/cx-matrix`.
 
+.. ddec:: Record completed outputs for workflow uploaders
+   :id: DD_UPLOAD_CONFIGURATION
+   :status: accepted
+
+   **Context:** Workflow setup knows execution identity and upload destinations;
+   actual artifact paths belong to producer execution. Consumers identify
+   producers using native GitHub needs, without a separate PTK inputs mapping.
+
+   **Decision:** Accept optional path/artifact_type output objects alongside
+   string paths. After execution, record declared-path availability in summaries
+   and reports, and atomically write upload.json beside run.json. Include
+   available files/directories with version, source commit, variant aliases,
+   producer job/step and optional artifact type. Keep actual transfers and the
+   setup-resolved destination with the workflow uploader.
+
+   **Consequences:** Output/cache ownership remains with the project. Missing,
+   failed, skipped, cancelled, detached or masked outputs are not upload
+   candidates. Successful step artifacts can survive a later job failure;
+   whole-job outputs require complete successful execution. Reuse retains its
+   source run. History and workflow reports preserve manifests, not artifact
+   contents. Writing failures warn without replacing execution outcomes.
+   See :need:`REQ_Sw_UPLOAD_CONFIGURATION` and :doc:`/guides/artifacts`.
+
 Open boundaries
 ---------------
 

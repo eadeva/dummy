@@ -121,6 +121,7 @@ def test_logs_events_and_summary(write):
         "run.log",
         "run.json",
         "events.jsonl",
+        "upload.json",
         "steps/hello.log",
         "steps/a.log",
         "steps/b.log",

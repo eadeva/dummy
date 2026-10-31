@@ -98,7 +98,12 @@ def _plan(
 
 
 def resolve_outputs(paths, scope):
-    resolved = [_text(path) for path in scope(paths)]
+    resolved = [
+        _text(path)
+        for path in scope(
+            [item if isinstance(item, str) else item.path for item in paths]
+        )
+    ]
     if any(not path.strip() for path in resolved) or len(set(resolved)) != len(
         resolved
     ):

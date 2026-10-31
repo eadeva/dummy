@@ -523,3 +523,13 @@ duration. JSON retains successful dependency status with ``reused_from``;
 JUnit marks these steps skipped. Previously imported tests and diagnostics are
 not presented as newly executed evidence. Consult the originating run, subject
 to ordinary log retention. See :doc:`output-reuse`.
+
+Declared outputs and upload configuration
+-----------------------------------------
+
+Job summaries and full reports show declared output paths, producer steps,
+optional artifact types and availability. ``run.json`` records ``outputs``,
+``upload_file`` and any ``upload_problem``. The generated ``upload.json`` holds
+only available artifacts from completed successful producers. Workflow child
+reports preserve a copy of this manifest; no artifact contents are copied.
+See :doc:`artifacts` for the format and upload/download property contract.

@@ -34,6 +34,7 @@ def render(result, target, *, owner_variant, children, context, diagnostics_only
             detail += f"<p>{links}</p>"
             evidence.append(f"<li>{e(identity)} · {links}</li>")
         if report:
+            detail += html.outputs(report, target)
             child_items = diagnostics.collect(
                 report, identity, target, scope=job.id, allowed=job.allowed_failure
             )

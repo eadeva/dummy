@@ -108,4 +108,10 @@ def snapshot_logs(summary: dict, target: Path) -> dict:
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, destination)
             step["log_file"] = str(destination)
+    upload = summary.get("upload_file")
+    if upload and Path(upload).is_file():
+        destination = target / "upload.json"
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(upload, destination)
+        summary["upload_file"] = str(destination)
     return summary

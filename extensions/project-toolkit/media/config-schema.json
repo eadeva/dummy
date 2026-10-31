@@ -242,7 +242,7 @@
           "type": "array"
         },
         "constraints": {
-          "description": "Validation expressions applied to this component’s feature selection.",
+          "description": "Validation expressions applied to this component\u2019s feature selection.",
           "items": {
             "$ref": "#/$defs/Constraint"
           },
@@ -444,13 +444,13 @@
       "properties": {
         "isolate": {
           "default": true,
-          "description": "Start from a minimal operating-system environment instead of copying the caller’s full environment.",
+          "description": "Start from a minimal operating-system environment instead of copying the caller\u2019s full environment.",
           "title": "Isolate",
           "type": "boolean"
         },
         "inherit_path": {
           "default": false,
-          "description": "Include the caller’s PATH when creating an isolated environment.",
+          "description": "Include the caller\u2019s PATH when creating an isolated environment.",
           "title": "Inherit Path",
           "type": "boolean"
         },
@@ -743,9 +743,16 @@
       "additionalProperties": false,
       "properties": {
         "outputs": {
-          "description": "Explicit job output files or folders, relative to the repository root or absolute. Supports PTK variables including steps.<id>.build_dir. Used by workflow dependents; no outputs are inferred from steps or build directories. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. The project owns completeness, validity and the output contract.",
+          "description": "Explicit job output files or folders, as strings or {path, artifact_type} objects, relative to the repository root or absolute. Supports PTK variables including steps.<id>.build_dir. Used by workflow dependents; no outputs are inferred from steps or build directories. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. The project owns completeness, validity and the output contract.",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/$defs/OutputSpec"
+              }
+            ]
           },
           "title": "Outputs",
           "type": "array",
@@ -753,7 +760,7 @@
         },
         "cache": {
           "default": false,
-          "description": "PTK cache is an optional aid; cache correctness is the project’s responsibility. Allow whole-job output reuse in workflows after unchanged successful needs. Requires explicit outputs. Standalone jobs and workflow roots always run; --no-cache-ptk disables this and all step caches. Existing outputs are reused in place.",
+          "description": "PTK cache is an optional aid; cache correctness is the project\u2019s responsibility. Allow whole-job output reuse in workflows after unchanged successful needs. Requires explicit outputs. Standalone jobs and workflow roots always run; --no-cache-ptk disables this and all step caches. Existing outputs are reused in place.",
           "title": "Cache",
           "type": "boolean"
         },
@@ -876,7 +883,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Environment variables supplied to this job’s steps. Step settings can override them.",
+          "description": "Environment variables supplied to this job\u2019s steps. Step settings can override them.",
           "title": "Env",
           "type": "object",
           "x-ptk-template-context": "job"
@@ -1084,6 +1091,40 @@
         "match",
         "action",
         "reason"
+      ]
+    },
+    "OutputSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "description": "Literal output file or folder path. Supports the same PTK variables as a string output.",
+          "title": "Path",
+          "type": "string"
+        },
+        "artifact_type": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional literal artifact type, such as binaries, symbols or report, retained in the upload configuration.",
+          "title": "Artifact Type",
+          "x-ptk-template-context": "literal"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "OutputSpec",
+      "type": "object",
+      "x-ptk-field-order": [
+        "path",
+        "artifact_type"
       ]
     },
     "ParamSpec": {
@@ -1347,7 +1388,7 @@
             }
           ],
           "default": null,
-          "description": "Python project directory passed to uv run --project. Uses that project’s dependencies.",
+          "description": "Python project directory passed to uv run --project. Uses that project\u2019s dependencies.",
           "title": "Project"
         },
         "groups": {
@@ -1369,7 +1410,7 @@
             }
           ],
           "default": null,
-          "description": "Use cli to run with PTK’s own Python environment. Choose exactly one Python execution mode.",
+          "description": "Use cli to run with PTK\u2019s own Python environment. Choose exactly one Python execution mode.",
           "title": "Interpreter"
         }
       },
@@ -1462,9 +1503,16 @@
       "additionalProperties": false,
       "properties": {
         "outputs": {
-          "description": "Explicit output files or folders, relative to this step's cwd or absolute. Supports PTK variables; no globs or implicit build directory. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. The project owns completeness and validity. Outputs can provide dependency fingerprints without enabling this step's cache.",
+          "description": "Explicit output files or folders, as strings or {path, artifact_type} objects, relative to this step's cwd or absolute. Supports PTK variables; no globs or implicit build directory. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. The project owns completeness and validity. Outputs can provide dependency fingerprints without enabling this step's cache.",
           "items": {
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "$ref": "#/$defs/OutputSpec"
+              }
+            ]
           },
           "title": "Outputs",
           "type": "array",
@@ -1472,7 +1520,7 @@
         },
         "cache": {
           "default": false,
-          "description": "PTK cache is an optional aid; cache correctness is the project’s responsibility. Reuse existing outputs after unchanged successful dependencies. Requires explicit outputs. Steps without needs always execute; --no-cache-ptk disables reuse throughout the execution. No files are copied or restored.",
+          "description": "PTK cache is an optional aid; cache correctness is the project\u2019s responsibility. Reuse existing outputs after unchanged successful dependencies. Requires explicit outputs. Steps without needs always execute; --no-cache-ptk disables reuse throughout the execution. No files are copied or restored.",
           "title": "Cache",
           "type": "boolean"
         },
@@ -1509,7 +1557,7 @@
           "type": "array"
         },
         "omit_variants": {
-          "description": "Skip this step for these variants. This does not change the job’s selected variant.",
+          "description": "Skip this step for these variants. This does not change the job\u2019s selected variant.",
           "items": {
             "type": "string"
           },
@@ -2049,7 +2097,7 @@
       "additionalProperties": false,
       "properties": {
         "requirements": {
-          "description": "Requirement files to install in this step’s isolated Python environment.",
+          "description": "Requirement files to install in this step\u2019s isolated Python environment.",
           "items": {
             "type": "string"
           },
@@ -2099,7 +2147,7 @@
             }
           ],
           "default": null,
-          "description": "Variant used when resolving the dependency repository’s version.",
+          "description": "Variant used when resolving the dependency repository\u2019s version.",
           "title": "Variant"
         }
       },

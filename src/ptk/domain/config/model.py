@@ -84,8 +84,20 @@ def _listify(value: Any) -> Any:
     return [value] if isinstance(value, str) else value
 
 
-def _check_outputs(cache: bool, outputs: list[str]) -> None:
-    if any(not path.strip() for path in outputs) or len(set(outputs)) != len(outputs):
+class OutputSpec(_Strict):
+    path: StrictStr = Field(
+        description="Literal output file or folder path. Supports the same PTK variables as a string output."
+    )
+    artifact_type: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        description="Optional literal artifact type, such as binaries, symbols or report, retained in the upload configuration.",
+    )
+
+
+def _check_outputs(cache: bool, outputs: list[str | OutputSpec]) -> None:
+    paths = [item if isinstance(item, str) else item.path for item in outputs]
+    if any(not path.strip() for path in paths) or len(set(paths)) != len(paths):
         raise ValueError("outputs must contain unique, non-empty paths")
     if cache and not outputs:
         raise ValueError("cache: true requires explicit outputs")
@@ -333,9 +345,9 @@ class PythonSpec(_Strict):
 
 
 class StepSpec(_Strict):
-    outputs: list[StrictStr] = Field(
+    outputs: list[StrictStr | OutputSpec] = Field(
         default_factory=list,
-        description="Explicit output files or folders, relative to this step's cwd or absolute. Supports PTK variables; no globs or implicit build directory. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. The project owns completeness and validity. Outputs can provide dependency fingerprints without enabling this step's cache.",
+        description="Explicit output files or folders, as strings or {path, artifact_type} objects, relative to this step's cwd or absolute. Supports PTK variables; no globs or implicit build directory. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. The project owns completeness and validity. Outputs can provide dependency fingerprints without enabling this step's cache.",
     )
     cache: StrictBool = Field(
         default=False,
@@ -478,9 +490,9 @@ class StepSpec(_Strict):
 
 
 class JobSpec(_Strict):
-    outputs: list[StrictStr] = Field(
+    outputs: list[StrictStr | OutputSpec] = Field(
         default_factory=list,
-        description="Explicit job output files or folders, relative to the repository root or absolute. Supports PTK variables including steps.<id>.build_dir. Used by workflow dependents; no outputs are inferred from steps or build directories. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. The project owns completeness, validity and the output contract.",
+        description="Explicit job output files or folders, as strings or {path, artifact_type} objects, relative to the repository root or absolute. Supports PTK variables including steps.<id>.build_dir. Used by workflow dependents; no outputs are inferred from steps or build directories. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. The project owns completeness, validity and the output contract.",
     )
     cache: StrictBool = Field(
         default=False,

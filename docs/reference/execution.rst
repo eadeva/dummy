@@ -269,3 +269,12 @@ outputs. ``--no-cache-ptk`` on a job or workflow disables all PTK reuse in that
 invocation without changing tool-native caches. ``--re-run`` also bypasses reuse;
 ``--only-step`` never reuses the selected step. See :doc:`/guides/output-reuse`
 for the complete matching, storage and reporting contract.
+
+Completed-job artifacts
+-----------------------
+
+After execution, summaries list resolved output paths and availability. PTK
+writes a versioned ``upload.json`` in the job log directory with available
+files/directories and producer properties. Outputs accept strings or
+``{path: ..., artifact_type: ...}`` entries. This does not transfer files or
+change cache eligibility. See :doc:`/guides/artifacts` for the manifest contract.

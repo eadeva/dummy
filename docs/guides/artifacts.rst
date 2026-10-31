@@ -115,3 +115,104 @@ Cache configuration and correctness remain the project's responsibility. See
 Use :doc:`cx-matrix` in a GitHub setup job to export eligible variant/job pairs,
 version/source commit, per-job destinations and the shared upload base
 in one invocation. It is available in CX without human maintainer identity.
+
+Completed-job upload configuration
+----------------------------------
+
+After each actual job execution PTK writes ``upload.json`` alongside ``run.json``
+in that job's log directory, normally ``_logs/VARIANT/JOB/upload.json``. Custom
+layouts apply. The execution summary prints declared output paths, their producer
+and availability, and the configuration file location. JSON, HTML and Markdown
+reports retain this information; workflow reports retain each child's manifest.
+Dry runs do not generate this file. A job with no available outputs gets an
+empty ``files`` list, so an uploader can skip it.
+
+This is a **PTK upload manifest**, not a JFrog CLI File Spec. A workflow uploader
+reads it and supplies the destination exported by the setup matrix. Keeping the
+destination separate preserves the first job's timestamped upload base. PTK does
+not perform a transfer or write credentials into the manifest.
+
+String outputs remain valid. To distinguish artifacts from one step, add an
+optional literal ``artifact_type`` to that output's declaration:
+
+.. code-block:: yaml
+
+   steps:
+     compile:
+       run: python ci/build.py
+       outputs:
+         - path: dist/application.bin
+           artifact_type: binaries
+         - path: dist/application.map
+           artifact_type: symbols
+         - dist/build-info.json
+
+``path`` has the same substitutions and relative-path rules as a string output.
+``artifact_type`` is optional metadata, not inferred from the filename. The
+same form works on job outputs and with the optional PTK cache. Path ownership
+and cache correctness remain the project's responsibility.
+
+For example, the completed run can produce:
+
+.. code-block:: json
+
+   {
+     "schema_version": 1,
+     "run_id": "20261031-150000-example",
+     "repository": "firmware",
+     "files": [{
+       "path": "/workspace/firmware/dist/application.bin",
+       "kind": "file",
+       "properties": {
+         "version": "1.2.3",
+         "commit": "0123456789abcdef0123456789abcdef01234567",
+         "variant_alias": ["debug", "dev"],
+         "job": "build",
+         "step": "compile",
+         "artifact_type": "binaries"
+       }
+     }]
+   }
+
+``path`` is an absolute, literal local path; ``kind`` is ``file`` or ``directory``.
+The uploader decides how to package or walk directories. ``variant_alias``
+includes the canonical variant and all configured aliases, or ``["default"]``
+without variants. Version and source commit are captured from the run context,
+with null when unavailable. A job-only output has ``step: null``; declare outputs
+on their producing steps when step-based lookup is needed. If the exact same path
+is declared by a job and a step, the step declaration takes precedence.
+
+Only existing files/directories from completed successful producers enter
+``files``. Successful step outputs remain usable if a later step fails.
+Missing paths, symlinks and failed/cancelled/skipped or detached GUI producers
+are not upload candidates. Whole-job declarations require a complete successful
+run with all steps passed; partial executions do not publish stale job outputs.
+Cache-reused artifacts retain ``reused_from``. Paths or properties containing
+masked secrets are excluded. These checks establish availability, not artifact
+freshness, completeness or correctness.
+
+The summary's ``outputs`` list includes resolved declarations that are unavailable
+and their reasons. Steps excluded by selection or conditions do not resolve
+their output declarations; ``upload_file`` identifies the manifest. A write failure is reported as
+``upload_problem`` without changing the executed job's outcome. Log history
+archives earlier manifests; workflow child snapshots copy the manifest so its
+link cannot silently point to a later job run. Artifact contents are not copied
+or restored, and a later build can replace files named in an old manifest.
+
+A project uploader can read the configuration directly:
+
+.. code-block:: python
+
+   import json
+   from pathlib import Path
+
+   summary = json.loads(Path("_logs/debug/build/run.json").read_text())
+   config = json.loads(Path(summary["upload_file"]).read_text())
+   for artifact in config["files"]:
+       # Upload artifact["path"] under the matrix destination, attaching
+       # artifact["properties"] using the selected service's API.
+       print(artifact["path"], artifact["properties"])
+
+Use GitHub ``needs`` to choose producer job names when downloading. Combine that
+name with version/commit/variant and, when needed, producer step and
+``artifact_type``. There is no separate PTK input configuration.

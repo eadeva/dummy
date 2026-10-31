@@ -472,6 +472,7 @@ class PrepareRun:
                 "variant": (
                     {
                         "name": resolved.name,
+                        "aliases": list(resolved.aliases),
                         "description": resolved.description,
                         "chain": resolved.chain,
                         "components": resolved.components,
@@ -501,6 +502,11 @@ class PrepareRun:
             "only_step": request.only_step,
             "omitted_dependencies": plan.omitted_dependencies,
         }
+        if plan.outputs or any(step.outputs for step in steps):
+            try:
+                plan.report_context["source_commit"] = git["commit"]
+            except PtkError:
+                plan.report_context["source_commit"] = None
         validate_step_resources(plan, project.root)
         # resolve every secret the selected steps need now: a missing credential
         # stops the run before anything starts, and prompts never happen in the
@@ -668,6 +674,7 @@ class RunJob:
         variant_writer=None,
         reporting_runner=None,
         output_cache: OutputCache | None = None,
+        upload_writer=None,
     ):
         self._host = host
         self._runner = runner
@@ -680,6 +687,7 @@ class RunJob:
         self._variant_writer = variant_writer
         self._reporting_runner = reporting_runner
         self._output_cache = output_cache
+        self._upload_writer = upload_writer
         self._powershell: str | None = None
         self._python_lock = threading.Lock()
 
@@ -763,6 +771,14 @@ class RunJob:
             and all(step.status == Status.PASSED for step in results)
         ):
             self._cache_save("job", job_key, plan.outputs)
+        if self._upload_writer and not prepared.dry_run:
+            try:
+                self._upload_writer(prepared, result)
+            except (OSError, ValueError, TypeError, PtkError) as exc:
+                result.upload_problem = prepared.mask(
+                    f"Cannot write upload configuration: {exc}"
+                )
+                self._log(Level.WARNING, result.upload_problem)
         self._emit("run_finished", result)
         return result
 

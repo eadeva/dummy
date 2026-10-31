@@ -242,6 +242,27 @@ def to_markdown(report: Report) -> str:
             f"| {ICON.get(step.status, '')} {_cell(step.name)} | {_cell(result)} | {time} |"
         )
     lines.append("")
+    if report.outputs:
+        lines += [
+            "### Declared outputs",
+            "",
+            "| Producer | Type | Path | Availability |",
+            "|---|---|---|---|",
+        ]
+        for output in report.outputs:
+            state = (
+                output["kind"]
+                if output["available"]
+                else output.get("reason", "unavailable")
+            )
+            lines.append(
+                f"| {_cell(output['step'] or 'Job')} | {_cell(output.get('artifact_type') or '—')} | {_cell(output['path'])} | {_cell(state)} |"
+            )
+        lines.append("")
+    if report.upload_file:
+        lines += [f"**Upload configuration:** `{_cell(report.upload_file)}`", ""]
+    if report.upload_problem:
+        lines += [_cell(report.upload_problem), ""]
     totals = report.test_totals()
     if totals:
         metrics = test_metrics(c for suite in report.suites for c in suite.cases)

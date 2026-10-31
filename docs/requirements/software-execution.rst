@@ -434,3 +434,33 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
 
    **Evidence:** ``src/ptk/application/use_cases/matrix.py``;
    ``src/ptk/drivers/cli/matrix.py``; ``tests/test_matrix_export.py``.
+
+.. req-sw:: Summarize declared outputs and generate upload configuration
+   :id: REQ_Sw_UPLOAD_CONFIGURATION
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: under review
+   :verification_criteria: Execution tests verify runtime paths, typed and untyped declarations, output availability, producer properties, missing/failed/partial outputs, cache provenance, secret masking, dry-run preservation, atomic-write failures, report serialization and history/workflow snapshots.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_EXECUTION
+   :tags: implemented
+
+   PTK shall show declared output paths and availability in completed job
+   summaries and reports and generate a versioned upload configuration containing
+   available files/directories and producer properties. It shall accept optional
+   artifact_type metadata without inferring output paths or changing cache opt-in.
+   It shall leave transfer credentials, destination selection and actual uploads
+   to workflow commands. Native GitHub needs remains the producer-job selector.
+
+   **Origin:** User request for output paths in execution summaries and an upload
+   configuration generated after execution, with producer step and artifact type
+   distinguishing multiple outputs.
+
+   **Implementation:** Implemented. Availability is not a guarantee of artifact
+   correctness or freshness. Manifest history preserves metadata rather than file
+   contents; a manifest write failure does not change the process result.
+
+   **Evidence:** ``src/ptk/adapters/uploads.py``;
+   ``src/ptk/domain/run_output.py``; ``tests/test_upload_configuration.py``.

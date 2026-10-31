@@ -4,6 +4,7 @@
     _logs/<variant>/<job>/steps/<step>.log   output of one step
     _logs/<variant>/<job>/events.jsonl       machine-readable events (one JSON per line)
     _logs/<variant>/<job>/run.json           summary of the run (status, steps, params)
+    _logs/<variant>/<job>/upload.json        completed artifact upload configuration
     _logs/<variant>/<job>/_history/<run id>/ previous runs (``logging.keep_history``)
 
 The latest run is always directly in the job folder. Everything arrives

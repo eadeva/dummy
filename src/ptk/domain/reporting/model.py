@@ -242,6 +242,9 @@ class Report:
     gn: list[GNReport] = field(default_factory=list)
 
     reused_from: str = ""
+    outputs: list[dict[str, Any]] = field(default_factory=list)
+    upload_file: str | None = None
+    upload_problem: str | None = None
 
     @property
     def ok(self) -> bool:
@@ -366,6 +369,17 @@ def from_summary(
         ptk_version=summary.get("context", {}).get("ptk_version") or ptk_version,
         context=summary.get("context", {}),
         problems=list(summary.get("report_problems", [])),
+        outputs=[
+            item
+            for item in summary.get("outputs", [])
+            if item.get("step") is None
+            or any(
+                s["step"] == item["step"] and s.get("report", True)
+                for s in summary.get("steps", [])
+            )
+        ],
+        upload_file=summary.get("upload_file"),
+        upload_problem=summary.get("upload_problem"),
     )
     for contribution in contributions:
         report.suites += contribution.suites

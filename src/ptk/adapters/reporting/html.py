@@ -260,10 +260,30 @@ def evidence(report, root=None):
     return content
 
 
+def outputs(report, root=None):
+    if not report.outputs and not report.upload_file and not report.upload_problem:
+        return ""
+    content = "<h3>Declared outputs</h3>"
+    if report.outputs:
+        content += "<table><thead><tr><th>Producer</th><th>Type</th><th>Path</th><th>Availability</th></tr></thead><tbody>"
+        for item in report.outputs:
+            state = (
+                item["kind"] if item["available"] else item.get("reason", "unavailable")
+            )
+            content += f"<tr><td>{e(item['step'] or 'Job')}</td><td>{e(item.get('artifact_type') or '—')}</td><td>{e(item['path'])}</td><td>{e(state)}</td></tr>"
+        content += "</tbody></table>"
+    if report.upload_file:
+        content += "<p>Upload configuration: " + link(report.upload_file, root) + "</p>"
+    if report.upload_problem:
+        content += "<p>" + e(report.upload_problem) + "</p>"
+    return content
+
+
 def render(report, *, link_root=None):
     entries = step_entries(report, link_root)
     items = diagnostics.collect(report, owner(report), link_root)
     summary = overview(entries, [report], items)
+    summary += outputs(report, link_root)
     selection = report.context.get("selection", {})
     if selection.get("only_step"):
         summary += (

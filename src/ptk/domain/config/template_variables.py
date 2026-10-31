@@ -62,6 +62,9 @@ def annotate_schema(schema):
         for name, context in fields.items():
             defs[definition]["properties"][name]["x-ptk-template-context"] = context
     schema["properties"]["artifactory"]["x-ptk-template-context"] = "destination"
+    defs["OutputSpec"]["properties"]["artifact_type"]["x-ptk-template-context"] = (
+        "literal"
+    )
 
 
 def catalogue(value, environment_names=()):

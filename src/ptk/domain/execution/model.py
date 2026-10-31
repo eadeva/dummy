@@ -157,6 +157,9 @@ class RunResult:
     log_file: str | None = None
     report_problems: list[str] = field(default_factory=list)
     reused_from: str = ""
+    outputs: list[dict[str, Any]] = field(default_factory=list)
+    upload_file: str | None = None
+    upload_problem: str | None = None
 
     @property
     def ok(self) -> bool:

@@ -505,7 +505,10 @@ ptk maintainer artifacts destination --job package --format github
 For a GitHub workflow's first job, `ptk maintainer matrix --format github`
 exports eligible variant/job pairs, execution arguments, version/source commit
 and the shared upload base. GitHub `needs` identifies artifact producers; output
-paths and optional `artifact_type` properties belong to completed jobs. The hidden built-in command works
+paths and optional `artifact_type` properties belong to completed jobs.
+Completed executions list declared output paths and write `upload.json` beside
+`run.json`, containing available artifacts and producer properties for workflow
+uploaders. Outputs accept strings or `{path, artifact_type}` entries. The hidden built-in command works
 for local maintainers and in CX without granting maintenance rights.
 See [CX setup, uploads and downloads](docs/guides/cx-matrix.rst).
 

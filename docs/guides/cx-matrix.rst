@@ -90,7 +90,7 @@ base, using its GitHub ``needs`` to supply the producer job name:
    * - ``commit``
      - Producer source commit from the matrix.
    * - ``variant_alias``
-     - Agreed producer variant alias; use the canonical name when there is no alias, or ``default`` without variants. Use the same choice for upload and download.
+     - The upload manifest supplies the canonical variant and all configured aliases, or default without variants. Select the desired producer alias when downloading.
    * - ``job``
      - Producing PTK job, selected by the consumer's GitHub ``needs``.
    * - ``step``
@@ -100,9 +100,10 @@ base, using its GitHub ``needs`` to supply the producer job name:
 
 For example, artifacts from ``build/compile`` can share version, commit and
 variant while using ``artifact_type=binaries`` or ``artifact_type=symbols``.
-A test job depending on ``build`` can select only the binaries. Step and type
-are uploader/consumer metadata, not predicted output paths or new PTK fields.
-Projects own property assignment, matching, packaging and downloads. A type
+A test job depending on ``build`` can select only the binaries. Completed jobs
+write an :doc:`upload manifest <artifacts>` with actual paths, producing steps
+and optional output ``artifact_type`` labels. Projects own property assignment
+in the remote service, matching, packaging and downloads. A type
 can group several files; it need not equal a filename extension. Do not select
 an arbitrary artifact if the supplied properties match several candidates.
 
@@ -169,8 +170,8 @@ are project-owned examples, not commands shipped by PTK.
 
 The download script reads producer names from ``PTK_NEEDS`` (excluding
 ``setup``), and combines them with version/commit/variant and the chosen
-producer step/type. The upload script receives actual output paths from the
-completed job and assigns those same properties. Authentication, archive
+producer step/type. The upload script reads the completed job's ``upload.json`` (located by
+``run.json.upload_file``) and assigns its recorded properties. Authentication, archive
 layout and restoration remain in these scripts. If versioning is unconfigured,
 choose the project's version policy rather than treating null as a real version.
 

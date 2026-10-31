@@ -41,3 +41,10 @@ test("completion replaces only the active template and ignores escaped or closed
   assert.equal(V.token("plain", 5), undefined);
   assert.deepEqual(V.filter(variables.entries, "git short").map(e => e.reference), ["git.short_commit"]);
 });
+
+test("typed output paths offer variables while artifact types stay literal", () => {
+  const value = { jobs: { build: { outputs: [{ path: "", artifact_type: "binaries" }] } } };
+  const state = { logical: true, value, variables };
+  assert.ok(V.available(state, schema, ["jobs", "build", "outputs", 0, "path"], S).some(entry => entry.reference === "run.bin_dir"));
+  assert.deepEqual(V.available(state, schema, ["jobs", "build", "outputs", 0, "artifact_type"], S), []);
+});

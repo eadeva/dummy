@@ -226,7 +226,7 @@ def summary_block(
 
 
 def job_summary(result, label, *, width=80) -> Block:
-    return summary_block(
+    rows = summary_block(
         "JOB",
         prefix(label, result.variant),
         result,
@@ -235,3 +235,20 @@ def job_summary(result, label, *, width=80) -> Block:
         log_file=result.log_file,
         width=width,
     )
+    details = []
+    for output in result.outputs:
+        owner = output["step"] or "job"
+        kind = output.get("artifact_type")
+        state = (
+            output["kind"]
+            if output["available"]
+            else output.get("reason", "unavailable")
+        )
+        details.append(
+            f"Output [{owner}{': ' + kind if kind else ''}]: {one_line(output['path'])} ({state})"
+        )
+    if result.upload_file:
+        details.append(f"Upload configuration: {one_line(result.upload_file)}")
+    if result.upload_problem:
+        details.append(result.upload_problem)
+    return rows + contextual(prefix(label, result.variant), details, "JOB")

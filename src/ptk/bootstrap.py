@@ -279,6 +279,7 @@ class App:
             report_import,
         )
         from .adapters.reporting.runner import ReportingRunner
+        from .adapters.uploads import write_upload
         from .adapters.variant_files import variant_writer
         from .adapters.versioning import version_generator
         from .application.use_cases.run import BUILTINS, RunJob, layout_of
@@ -350,6 +351,7 @@ class App:
             variant_writer=variant_writer(GENERATORS),
             reporting_runner=ReportingRunner(self.runner, self.host.os_name()),
             output_cache=LocalOutputCache(project.root),
+            upload_writer=write_upload,
         )
 
     def role(self, project: Project | None) -> Role:

@@ -22,7 +22,8 @@ match an earlier successful execution; it does not prove a build is current.
 
 Both steps and jobs accept:
 
-* ``outputs: [path, ...]`` — explicit literal file or directory paths. Directories
+* ``outputs: [path, ...]`` — explicit literal file or directory paths. Entries
+  may also be ``{path: ..., artifact_type: ...}`` to label artifacts for uploads. Directories
   include their contents recursively. PTK variables are supported; globs are not
   expanded. Blank paths and duplicate declarations are rejected.
 * ``cache: true`` — opt into local output reuse; default ``false``. Enabling it
@@ -35,6 +36,10 @@ step outputs to job outputs. You can explicitly select a PTK-managed location
 with ``${run.build_dir}`` on a step or ``${steps.compile.build_dir}`` on a job.
 Prefer stable build artifacts over PTK log/report directories, which PTK rotates
 or recreates for each invocation.
+
+Completed jobs print their output paths and write an ``upload.json`` manifest
+for workflow uploaders. This works independently of caching; see
+:doc:`artifacts` for its format and availability rules.
 
 Step reuse
 ----------
