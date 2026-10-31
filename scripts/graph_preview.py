@@ -92,6 +92,65 @@ def generate(target):
         for step in summary["steps"]
     ]
     write_workflow_report(WorkflowResult("verify", Status.CANCELLED, 9, jobs), target)
+    children = {}
+    for name in ("build", "test", "docs"):
+        child_summary = {
+            **summary,
+            "job": name,
+            "context": {
+                "repository_alias": "engine",
+                "ptk_version": "0.19.0",
+                "versions": {"projects": {"engine": {"value": "1.2.3"}}},
+            },
+            "steps": [dict(step) for step in summary["steps"]],
+        }
+        child_summary["steps"][0]["report"] = False
+        child_summary["steps"][0]["command"] = "hidden command must not appear"
+        child_summary["steps"][2]["start"] = 4
+        children[name] = from_summary(child_summary, [])
+    nested_jobs = [
+        WorkflowJobResult(
+            "build",
+            Status.PASSED,
+            repo="engine",
+            job="build",
+            variant="debug",
+            duration=4,
+        ),
+        WorkflowJobResult(
+            "test",
+            Status.FAILED,
+            repo="engine",
+            job="test",
+            variant="debug",
+            start=4,
+            duration=2,
+            needs=["build"],
+        ),
+        WorkflowJobResult(
+            "docs",
+            Status.PASSED,
+            repo="docs",
+            job="build",
+            variant="release",
+            duration=3,
+        ),
+        WorkflowJobResult(
+            "publish",
+            Status.SKIPPED,
+            repo="engine",
+            job="publish",
+            needs=["test", "docs"],
+            message="blocked by test",
+        ),
+    ]
+    write_workflow_report(
+        WorkflowResult("delivery", Status.FAILED, 6, nested_jobs),
+        target / "expanded",
+        owner_variant="debug",
+        children=children,
+        context={"run_id": "review", "started_at": "2026-10-31T10:00:00+01:00"},
+    )
     wide = {f"target-{index}": SimpleNamespace(needs=["shared"]) for index in range(24)}
     wide["shared"] = SimpleNamespace(needs=[])
     (target / "wide.html").write_text(

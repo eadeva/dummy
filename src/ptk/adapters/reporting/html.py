@@ -1,211 +1,198 @@
-"""Single-file HTML report (offline, no external resources, light/dark).
+"""Job reports: outcome first, then execution, diagnostics and retained evidence."""
 
-The centre piece is a timeline: every step is a bar at its real start time and
-duration, so concurrent and slow steps are visible at a glance.
-"""
-
-from __future__ import annotations
-
-import contextlib
+import copy
 import json
-import os
-from html import escape
-from pathlib import Path
 
-from ...domain.reporting.model import (
-    ERROR,
-    FAILED,
-    PASSED,
-    SKIPPED,
-    Report,
-    ReportStep,
-    test_metrics,
-)
 from .. import graph_html
-from . import log_html
-
-CSS = """
-:root{--bg:#f3f5f8;--paper:#fff;--ink:#18212f;--muted:#5b6778;--line:#dce2ea;--accent:#0f7b8a;
---pass:#2b8a57;--fail:#c43d2f;--skip:#9aa5b4;--cancel:#b7791f;--code:#eef1f5;
---card-info:#eaf3ff;--card-info-ink:#245b91;--card-pass:#eaf7ee;--card-pass-ink:#216539;
---card-fail:#fff0ee;--card-fail-ink:#a92e24;--card-skip:#edf0f3;--card-skip-ink:#526071;
---card-warn:#fff6df;--card-warn-ink:#805600}
-@media (prefers-color-scheme:dark){:root{--bg:#0f141b;--paper:#161d27;--ink:#e6ebf2;--muted:#95a1b2;
---line:#273140;--accent:#4fc3cf;--pass:#52c08a;--fail:#f07462;--skip:#5d6b7e;--cancel:#e3b341;--code:#1d2531;
---card-info:#182a40;--card-info-ink:#91c4fa;--card-pass:#182f24;--card-pass-ink:#82d5a2;
---card-fail:#392321;--card-fail-ink:#ffa397;--card-skip:#252c35;--card-skip-ink:#bdc6d2;
---card-warn:#352d1a;--card-warn-ink:#f0cb78}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-h1,h2{font-family:Charter,"Bitstream Charter","Sitka Text",Cambria,Georgia,serif;letter-spacing:-.01em;line-height:1.2}
-code,pre{font-family:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace;font-size:13px}
-code{background:var(--code);padding:1px 6px;border-radius:4px}
-a{color:var(--accent)}
-main{max-width:1180px;margin:0 auto;padding:32px 24px 24px}
-.status{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;padding-bottom:18px;
-border-bottom:1px solid var(--line);margin-bottom:22px}
-.status h1{margin:0;font-size:40px}
-.verdict{font-size:22px;font-weight:700}
-.passed{color:var(--pass)}.failed,.error{color:var(--fail)}.skipped{color:var(--skip)}.cancelled{color:var(--cancel)}
-.meta{color:var(--muted)}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:12px 0 20px}
-.cards div{--card-bg:var(--card-info);--card-ink:var(--card-info-ink);
-background:var(--card-bg);border:1px solid var(--line);border-left:4px solid var(--card-ink);
-border-radius:8px;padding:14px;overflow-wrap:anywhere}
-.cards .card-passed{--card-bg:var(--card-pass);--card-ink:var(--card-pass-ink)}
-.cards .card-failed{--card-bg:var(--card-fail);--card-ink:var(--card-fail-ink)}
-.cards .card-skipped{--card-bg:var(--card-skip);--card-ink:var(--card-skip-ink)}
-.cards .card-warning{--card-bg:var(--card-warn);--card-ink:var(--card-warn-ink)}
-.cards dt{color:var(--card-ink);font-size:13px}.cards dd{color:var(--card-ink);margin:4px 0 0;font-size:22px;font-weight:650}
-section{margin:0 0 34px}
-section>h2{font-size:24px;margin:0 0 10px}
-.timeline{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:10px 14px}
-.row{display:grid;grid-template-columns:minmax(140px,240px) 1fr 64px;gap:12px;align-items:center;
-padding:3px 0;font-size:14px}
-.row .label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.row .time{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
-.track{position:relative;height:16px;background:repeating-linear-gradient(90deg,transparent 0 calc(10% - 1px),var(--line) calc(10% - 1px) 10%)}
-.bar{position:absolute;top:2px;bottom:2px;min-width:3px;border-radius:3px}
-.bar.passed{background:var(--pass)}.bar.failed,.bar.error{background:var(--fail)}
-.bar.skipped{background:transparent;border:1px dashed var(--skip)}.bar.cancelled{background:var(--cancel)}
-.bar.allowed{background:repeating-linear-gradient(45deg,var(--fail) 0 4px,transparent 4px 8px);border:1px solid var(--fail)}
-.legend{display:flex;flex-wrap:wrap;gap:14px;color:var(--muted);font-size:13px;margin-top:8px}
-.legend i{display:inline-block;width:12px;height:10px;border-radius:2px;margin-right:5px;vertical-align:middle}
-.problem{border-left:3px solid var(--fail);background:var(--paper);padding:10px 14px;margin:0 0 10px;border-radius:0 6px 6px 0}
-.problem pre{margin:6px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;color:var(--muted)}
-table{border-collapse:collapse;width:100%;font-size:14px;background:var(--paper);border:1px solid var(--line)}
-th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);vertical-align:top}
-th{color:var(--muted);font-weight:600;font-size:13px;background:var(--bg)}
-.table-wrap{overflow-x:auto}
-.column-filter{width:100%;min-width:100px;padding:7px;border:1px solid var(--line);border-radius:4px;background:var(--paper);color:var(--ink)}
-.filter-row td{background:var(--bg)}
-.filter-status{font-size:12px;color:var(--muted);margin:5px 0}
-[hidden]{display:none!important}
-details{background:var(--paper);border:1px solid var(--line);border-radius:6px;margin:0 0 8px}
-details>summary{cursor:pointer;padding:8px 12px}
-details table{border:none;border-top:1px solid var(--line)}
-footer{color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:12px}
-@media (max-width:700px){.row{grid-template-columns:110px 1fr 48px}.status h1{font-size:30px}}
-"""
+from . import diagnostics, ui
+from .ui import anchor, badge, e, fields, link
 
 
-FILTER_SCRIPT = r"""
-<script>
-for (const table of document.querySelectorAll('table')) {
-  if (table.dataset.logAnalysis) continue;
-  const heading = table.rows[0];
-  if (!heading) continue;
-  const rows = Array.from(table.rows).slice(1);
-  const filters = document.createElement('tr');
-  filters.className = 'filter-row';
-  const inputs = Array.from(heading.cells, (cell) => {
-    const td = document.createElement('td');
-    const input = document.createElement('input');
-    input.type = 'search';
-    input.className = 'column-filter';
-    input.placeholder = 'Filter ' + cell.textContent.trim();
-    input.setAttribute('aria-label', input.placeholder);
-    td.append(input); filters.append(td);
-    return input;
-  });
-  heading.after(filters);
-  const status = document.createElement('p');
-  status.className = 'filter-status';
-  status.setAttribute('aria-live', 'polite');
-  table.after(status);
-  const apply = () => {
-    const queries = inputs.map(input => input.value.trim().toLocaleLowerCase());
-    let visible = 0;
-    for (const row of rows) {
-      row.hidden = !queries.every((query, i) =>
-        (row.cells[i]?.textContent || '').toLocaleLowerCase().includes(query));
-      if (!row.hidden) visible++;
-    }
-    status.textContent = visible + ' of ' + rows.length + ' rows shown';
-  };
-  inputs.forEach(input => input.addEventListener('input', apply));
-  apply();
-}
-</script>
-"""
-
-
-def _e(text: object) -> str:
-    return escape(str(text), quote=True)
-
-
-def _link(path: str, root: Path | None) -> str:
-    """Relative link from the report folder, so _logs and _reports can move together."""
-    if not path:
-        return ""
-    href = Path(path).as_uri() if Path(path).is_absolute() else path
-    if root is not None:
-        with contextlib.suppress(ValueError):
-            href = os.path.relpath(path, root).replace(os.sep, "/")
-    return f'<a href="{_e(href)}">log</a>'
-
-
-def _row(step: ReportStep, total: float) -> str:
-    left = 100 * step.start / total if total else 0
-    width = 100 * step.duration / total if total else 0
-    status = "allowed" if step.allowed_failure else step.status
-    title = f"{step.label}: {step.status}"
-    if step.message:
-        title += f" - {step.message}"
-    if step.command:
-        title += f"\n{step.command}"
-    timing = f"{step.duration:.1f}s" if step.status in (PASSED, FAILED) else ""
+def owner(report):
+    alias = report.context.get("repository_alias", report.project)
     return (
-        f'<div class="row" title="{_e(title)}"><span class="label">'
-        f'<span class="{_e(step.status)}">●</span> {_e(step.name)}</span>'
-        f'<span class="track"><span class="bar {_e(status)}" '
-        f'style="left:{left:.2f}%;width:{max(width, 0.3):.2f}%"></span></span>'
-        f'<span class="time">{timing}</span></div>'
+        f"[{report.variant or 'default'}][{alias + ':' if alias else ''}{report.job}]"
     )
 
 
-def _cards(values, *, tones=None) -> str:
-    tones = tones or {}
+def version(report):
+    alias = report.context.get("repository_alias", report.project)
     return (
-        '<dl class="cards">'
-        + "".join(
-            f'<div class="card-{_e(tones.get(k, "info"))}"><dt>{_e(k)}</dt><dd>{_e(v)}</dd></div>'
-            for k, v in values.items()
+        report.context.get("versions", {})
+        .get("projects", {})
+        .get(alias, {})
+        .get("value", "Not recorded")
+    )
+
+
+def step_entries(report, root=None, *, scope=""):
+    rows = []
+    for step in report.steps:
+        detail = fields(
+            {
+                "Needs": ", ".join(step.needs) or "None",
+                "Kind": step.kind,
+                "Attempts": step.attempts,
+                "Exit code": step.exit_code if step.exit_code is not None else "—",
+            }
         )
-        + "</dl>"
+        if step.message:
+            detail += f"<p>{e(step.message)}</p>"
+        if step.command:
+            detail += f"<pre>{e(step.command)}</pre>"
+        detail += link(step.log_file, root)
+        rows.append(
+            {
+                "target": anchor("step", scope, step.label),
+                "label": step.label,
+                "owner": owner(report),
+                "kind": "step",
+                "status": step.status,
+                "allowed": step.allowed_failure,
+                "duration": step.duration,
+                "start": step.start,
+                "detail": detail,
+            }
+        )
+    return rows
+
+
+def recorded_graph(report, *, scope=""):
+    graph = copy.deepcopy(report.graph)
+    for node in graph["nodes"]:
+        node["kind"] = "step"
+        if node.get("status") != "hidden":
+            node["target"] = anchor("step", scope, node["id"])
+    return graph
+
+
+def overview(entries, reports, diagnostics_items, *, entity="Steps"):
+    counts = {
+        key: sum(row["status"] == key for row in entries)
+        for key in ("passed", "failed", "skipped", "cancelled")
+    }
+    allowed = sum(
+        row.get("allowed", False) and row["status"] == "failed" for row in entries
     )
-
-
-TEST_CARD_TONES = {"Passed": "passed", "Failed": "failed", "Skipped": "skipped"}
-
-
-def _project_header(report: Report) -> str:
-    context = report.context
-    alias = context.get("repository_alias", report.project)
-    versions = context.get("versions", {}).get("projects", {})
-    version = versions.get(alias, {}).get("value", "Not recorded")
-    variant = context.get("variant", {})
-    content = _cards(
-        {
-            "Project": report.project,
-            "Repository alias": alias,
-            "PTK version": report.ptk_version or "Not recorded",
-            "Project version": version,
-            "Variant": report.variant,
-        }
+    values = {
+        f"{entity} passed": counts["passed"],
+        f"{entity} failed": f"{counts['failed']} ({allowed} allowed)"
+        if allowed
+        else counts["failed"],
+        f"{entity} skipped": counts["skipped"],
+        f"{entity} cancelled": counts["cancelled"],
+    }
+    tones = {
+        f"{entity} passed": "passed",
+        f"{entity} failed": "failed",
+        f"{entity} skipped": "skipped",
+        f"{entity} cancelled": "warning",
+    }
+    targets = dict.fromkeys(values, "execution")
+    cases = [
+        case for report in reports for suite in report.suites for case in suite.cases
+    ]
+    if cases:
+        values["Tests passed"] = (
+            f"{sum(case.status == 'passed' for case in cases)} / {len(cases)}"
+        )
+        values["Tests failed"] = sum(
+            case.status in ("failed", "error") for case in cases
+        )
+        targets.update({"Tests passed": "tests", "Tests failed": "tests"})
+        tones["Tests failed"] = "failed"
+    values["Active log errors"] = sum(
+        item.count
+        for item in diagnostics_items
+        if item.source == "log"
+        and item.severity == "error"
+        and item.disposition == "active"
     )
-    if variant:
-        content += f"<p>{_e(variant.get('description', ''))}</p>"
-        content += f"<p><strong>Components:</strong> {_e(', '.join(variant.get('components', [])) or 'None')}</p>"
-        content += f"<p><strong>Inheritance:</strong> {_e(' → '.join(variant.get('chain', [])) or 'None')}</p>"
-        features = variant.get("features", {})
-        if features:
-            content += '<details><summary>Selected variant features</summary><div class="table-wrap"><table><tr><th>Feature</th><th>Value</th></tr>'
-            content += "".join(
-                f"<tr><td>{_e(k)}</td><td>{_e(json.dumps(v, ensure_ascii=False))}</td></tr>"
-                for k, v in features.items()
+    targets["Active log errors"] = "diagnostics"
+    tones["Active log errors"] = "failed" if values["Active log errors"] else "info"
+    values["Other diagnostics"] = sum(
+        item.source in ("static", "report") and item.disposition == "active"
+        for item in diagnostics_items
+    )
+    targets["Other diagnostics"] = "diagnostics"
+    return ui.cards(values, tones=tones, targets=targets)
+
+
+def tests_section(reports):
+    suites = [(report, suite) for report in reports for suite in report.suites]
+    if not suites:
+        return ""
+    rows = []
+    totals = {"Executed": 0, "Passed": 0, "Skipped": 0, "Failed": 0}
+    for report, suite in suites:
+        for case in suite.cases:
+            totals["Executed"] += case.status != "skipped"
+            totals["Passed"] += case.status == "passed"
+            totals["Skipped"] += case.status == "skipped"
+            totals["Failed"] += case.status in ("failed", "error")
+            rows.append(
+                f'<details class="test-case" data-record data-status="{e(case.status)}"><summary>{badge(case.status)} {e(case.classname + "." if case.classname else "")}{e(case.name)} <span class="duration">{case.time:.2f}s</span></summary><div class="item-detail">{fields({"Owner": owner(report), "Step": suite.step, "Suite": suite.name, "Source": suite.source})}<pre>{e(case.message or "No additional test output.")}</pre></div></details>'
             )
-            content += "</table></div></details>"
+    return (
+        '<section id="tests"><h2>Tests</h2>'
+        + ui.cards(
+            totals, tones={"Passed": "passed", "Failed": "failed", "Skipped": "skipped"}
+        )
+        + '<p class="meta">Executed excludes skipped tests. Failed includes errors. Test counts do not include execution records or log occurrences.</p><div data-filter="tests">'
+        + ui.toolbar(
+            "tests",
+            {
+                "status": (
+                    "Test result",
+                    [
+                        ("", "All results"),
+                        ("passed", "Passed"),
+                        ("failed", "Failed"),
+                        ("error", "Error"),
+                        ("skipped", "Skipped"),
+                    ],
+                    "",
+                )
+            },
+        )
+        + "".join(rows)
+        + '<p data-filter-count aria-live="polite"></p></div></section>'
+    )
+
+
+def configuration(report):
+    context = report.context
+    values = {
+        "Project": report.project,
+        "Repository alias": context.get("repository_alias", report.project),
+        "Project version": version(report),
+        "PTK version": report.ptk_version or "Not recorded",
+        "Variant": report.variant or "default",
+    }
+    content = (
+        '<details><summary>Project information</summary><div class="item-detail">'
+        + fields(values)
+        + "</div></details>"
+    )
+    variant = context.get("variant", {})
+    if variant:
+        features = "".join(
+            f"<tr><td>{e(key)}</td><td><code>{e(json.dumps(value, ensure_ascii=False))}</code></td></tr>"
+            for key, value in variant.get("features", {}).items()
+        )
+        content += (
+            '<details><summary>Selected variant features</summary><div class="item-detail">'
+            + fields(
+                {
+                    "Description": variant.get("description", ""),
+                    "Components": ", ".join(variant.get("components", [])) or "None",
+                    "Inheritance": " → ".join(variant.get("chain", [])) or "None",
+                }
+            )
+            + '<div class="table-wrap"><table><tr><th>Feature</th><th>Value</th></tr>'
+            + features
+            + "</table></div></div></details>"
+        )
     tools = list(context.get("tools", []))
     known = {tool["name"] for tool in tools}
     tools += [
@@ -213,190 +200,111 @@ def _project_header(report: Report) -> str:
         for name in context.get("required_tools", [])
         if name not in known
     ]
-    content += "<h3>Tool dependencies</h3>"
-    if tools:
-        content += '<div class="table-wrap"><table><tr><th>Name</th><th>Version</th><th>Required</th><th>Source (executable)</th></tr>'
-        content += "".join(
-            f"<tr><td>{_e(t['name'])}</td><td>{_e(t.get('version') or 'Not detected')}</td><td>{_e(t.get('required') or 'Any')}</td><td>{_e(t.get('source') or 'Not recorded')}</td></tr>"
-            for t in tools
-        )
-        content += "</table></div>"
-    else:
-        content += (
-            '<p class="meta">No declared tool dependencies.</p>'
-            if context
-            else '<p class="meta">Tool dependencies were not recorded for this run.</p>'
-        )
-    return (
-        '<section aria-label="Project information"><h2>Project information</h2>'
-        + content
-        + "</section>"
+    rows = "".join(
+        f"<tr><td>{e(tool['name'])}</td><td>{e(tool.get('version') or 'Not detected')}</td><td>{e(tool.get('required') or 'Any')}</td><td>{e(tool.get('source') or 'Not recorded')}</td></tr>"
+        for tool in tools
     )
-
-
-def render(report: Report, *, link_root: Path | None = None) -> str:
-    total = max(
-        report.duration,
-        max((s.start + s.duration for s in report.steps), default=0),
-        0.001,
-    )
-    steps = report.steps
-    counts = {
-        k: sum(1 for s in steps if s.status == k) for k in (PASSED, FAILED, SKIPPED)
-    }
-    allowed = sum(1 for s in steps if s.allowed_failure)
-    parts = [
-        (
-            '<header class="status">'
-            f"<h1>Job - {_e(report.job)}</h1>"
-            f'<span class="verdict {_e(report.status)}">{_e(report.status)}</span>'
-            f'<span class="meta">{_e(report.project)}, variant {_e(report.variant)}, '
-            f"run {_e(report.run_id)}, {report.duration:.1f}s</span></header>"
+    content += (
+        '<details><summary>Tool dependencies</summary><div class="item-detail">'
+        + (
+            '<div class="table-wrap"><table><tr><th>Name</th><th>Version</th><th>Required</th><th>Source (executable)</th></tr>'
+            + rows
+            + "</table></div>"
+            if tools
+            else '<p class="meta">No declared tool dependencies.</p>'
         )
-    ]
-    parts.append(_project_header(report))
-    selection = report.context.get("selection", {})
-    if selection.get("only_step"):
-        parts.append(
-            "<section><h2>Single-step execution</h2><p>Only "
-            + _e(selection["only_step"])
-            + " was selected. Prerequisites not run: "
-            + _e(", ".join(selection["omitted_dependencies"]) or "none")
-            + ". Required outputs must already exist; PTK does not restore outputs from previous runs.</p></section>"
-        )
-    parts.append(
-        graph_html.section(report.graph, f"Job {report.job} · {report.variant}")
+        + "</div></details>"
     )
-    figures = [
-        ("Steps passed", counts[PASSED]),
-        (
-            "Steps failed",
-            f"{counts[FAILED]} ({allowed} allowed)" if allowed else counts[FAILED],
-        ),
-        ("Steps skipped", counts[SKIPPED]),
-    ]
-    tests = report.test_totals()
-    if tests:
-        figures.append(("Tests", f"{tests[PASSED]}/{sum(tests.values())} passed"))
-    if report.findings:
-        figures.append(("Findings", len(report.findings)))
-    for cov in report.coverage:
-        figures.append((f"Coverage {cov.step}", f"{cov.percent:.1f}%"))
-    parts.append(
-        _cards(
-            dict(figures),
-            tones={
-                "Steps passed": "passed",
-                "Steps failed": "failed",
-                "Steps skipped": "skipped",
-                "Findings": "failed"
-                if any(f.level == "error" for f in report.findings)
-                else "warning",
-            },
-        )
-    )
-
-    problems = []
-    for step in report.failed_steps():
-        if step.allowed_failure:
-            continue
-        problems.append(
-            f'<div class="problem"><strong>{_e(step.label)}</strong> {_e(step.status)}'
-            f"{(': ' + _e(step.message)) if step.message else ''} {_link(step.log_file, link_root)}"
-            f"{('<pre>' + _e(step.command) + '</pre>') if step.command else ''}</div>"
-        )
-    for suite in report.suites:
-        for case in suite.cases:
-            if case.status in (FAILED, ERROR) and len(problems) < 60:
-                problems.append(
-                    f'<div class="problem"><strong>{_e(case.classname)}.{_e(case.name)}</strong> '
-                    f"{_e(case.status)} <span class=meta>({_e(suite.step)})</span>"
-                    f"{('<pre>' + _e(case.message) + '</pre>') if case.message else ''}</div>"
-                )
-    for text in report.problems:
-        problems.append(f'<div class="problem">{_e(text)}</div>')
-    parts.append(log_html.render(report, link_root, problems=problems))
-
-    legend = "".join(
-        f'<span><i style="background:var(--{c})"></i>{_e(t)}</span>'
-        for c, t in (
-            ("pass", "passed"),
-            ("fail", "failed"),
-            ("skip", "skipped"),
-            ("cancel", "cancelled"),
-        )
-    )
-    parts.append(
-        f'<section><h2>Timeline</h2><div class="timeline">'
-        f"{''.join(_row(s, total) for s in report.steps)}</div>"
-        f'<div class="legend">{legend}<span>hatched: failure allowed</span>'
-        f"</div></section>"
-    )
-
     if report.params:
         rows = "".join(
-            f"<tr><td><code>{_e(k)}</code></td><td><code>{_e(v)}</code></td>"
-            f"<td>{_e(report.param_sources.get(k, ''))}</td></tr>"
-            for k, v in report.params.items()
+            f"<tr><td>{e(name)}</td><td><code>{e(value)}</code></td><td>{e(report.param_sources.get(name, ''))}</td></tr>"
+            for name, value in report.params.items()
         )
-        parts.append(
-            "<section><h2>Parameters</h2><div class=table-wrap><table><tr><th>Name</th>"
-            f"<th>Value</th><th>From</th></tr>{rows}</table></div></section>"
+        content += (
+            '<details><summary>Parameters</summary><div class="item-detail table-wrap"><table><tr><th>Name</th><th>Value</th><th>From</th></tr>'
+            + rows
+            + "</table></div></details>"
         )
+    return content
 
-    if report.suites:
-        blocks = []
-        for suite in report.suites:
-            rows = "".join(
-                f"<tr><td>{_e(c.classname)}</td><td>{_e(c.name)}</td>"
-                f'<td class="{_e(c.status)}">{_e(c.status)}</td><td>{c.time:.2f}s</td></tr>'
-                for c in suite.cases
-            )
-            summary = f"{_e(suite.step)}: {_e(suite.name)} - {suite.count(PASSED)}/{len(suite.cases)} passed"
-            open_attr = " open" if suite.count(FAILED) + suite.count(ERROR) else ""
-            blocks.append(
-                f"<details{open_attr}><summary>{summary}</summary>"
-                + _cards(test_metrics(suite.cases), tones=TEST_CARD_TONES)
-                + "<div class=table-wrap><table>"
-                f"<tr><th>Class</th><th>Test</th><th>Result</th><th>Time</th></tr>{rows}"
-                "</table></div></details>"
-            )
-        parts.append(
-            "<section><h2>Tests</h2>"
-            + _cards(
-                test_metrics(c for suite in report.suites for c in suite.cases),
-                tones=TEST_CARD_TONES,
-            )
-            + '<p class="meta">Executed excludes skipped tests. Failed includes errors.</p>'
-            + "".join(blocks)
-            + "</section>"
-        )
 
-    if report.findings:
-        rows = "".join(
-            f'<tr><td class="{"failed" if f.level == "error" else ""}">{_e(f.level)}</td>'
-            f"<td>{_e(f.tool)}</td><td><code>{_e(f.rule)}</code></td>"
-            f"<td>{_e(f.file)}{(':' + str(f.line)) if f.line else ''}</td><td>{_e(f.message)}</td></tr>"
-            for f in report.findings[:1000]
-        )
-        more = (
-            f"<p class=meta>{len(report.findings) - 1000} more not shown.</p>"
-            if len(report.findings) > 1000
-            else ""
-        )
-        parts.append(
-            "<section><h2>Findings</h2><div class=table-wrap><table><tr><th>Level</th><th>Tool</th>"
-            f"<th>Rule</th><th>Location</th><th>Message</th></tr>{rows}</table></div>{more}</section>"
-        )
-
-    parts.append(
-        f"<footer>ptk {_e(report.ptk_version)} report, started {_e(report.started_at)}. "
-        "Regenerate with <code>ptk report export</code>.</footer>"
+def evidence(report, root=None):
+    links = [
+        link(step.log_file, root, step.label + " log")
+        for step in report.steps
+        if step.log_file
+    ]
+    content = (
+        '<ul class="evidence-links">'
+        + "".join(f"<li>{item}</li>" for item in links)
+        + "</ul>"
+        if links
+        else '<p class="meta">No captured step logs were recorded.</p>'
     )
-    title = f"Job - {report.job} {report.status} - {report.project}"
-    return (
-        '<!doctype html><html lang="en"><head><meta charset="utf-8">'
-        '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        f"<title>{_e(title)}</title><style>{CSS}{log_html.CSS}</style></head><body><main>"
-        f"{''.join(parts)}</main>{FILTER_SCRIPT}{log_html.SCRIPT}{graph_html.assets()}</body></html>"
+    if report.coverage:
+        content += "<h3>Imported line coverage</h3>" + ui.cards(
+            {
+                f"{cov.step} · {cov.source}": f"{cov.percent:.1f}% ({cov.lines_covered}/{cov.lines_valid})"
+                for cov in report.coverage
+            }
+        )
+    return content
+
+
+def render(report, *, link_root=None):
+    entries = step_entries(report, link_root)
+    items = diagnostics.collect(report, owner(report), link_root)
+    summary = overview(entries, [report], items)
+    selection = report.context.get("selection", {})
+    if selection.get("only_step"):
+        summary += (
+            '<p class="notice"><strong>Single-step execution:</strong> '
+            + e(selection["only_step"])
+            + ". Prerequisites not run: "
+            + e(", ".join(selection["omitted_dependencies"]) or "none")
+            + ". Required outputs must already exist; PTK does not restore outputs from previous runs.</p>"
+        )
+    workflow = report.context.get("workflow", {})
+    evidence_html = evidence(report, link_root)
+    if workflow.get("report_file"):
+        evidence_html = (
+            "<p>"
+            + link(
+                workflow["report_file"],
+                link_root,
+                "Back to workflow " + workflow["name"],
+            )
+            + "</p>"
+            + evidence_html
+        )
+    return ui.page(
+        title=f"Job - {report.job} {report.status} - {report.project}",
+        kind="job",
+        name=report.job,
+        status=report.status,
+        metadata={
+            "Owner": owner(report),
+            "Project": report.project,
+            "Project version": version(report),
+            "PTK": report.ptk_version or "Not recorded",
+            "Started": report.started_at or "Not recorded",
+            "Duration": f"{report.duration:.2f}s",
+            "Run": report.run_id,
+        },
+        overview=summary,
+        failures=diagnostics.failures(items),
+        execution_html=ui.execution(
+            entries,
+            "Recorded steps · select a step for command, dependencies and captured output.",
+        ),
+        graph=graph_html.section(
+            recorded_graph(report), f"Job {report.job} · {report.variant}"
+        ),
+        timeline_html=ui.timeline(entries, report.duration),
+        diagnostics=diagnostics.render(
+            items, analysis_enabled=report.log_analysis_enabled
+        ),
+        tests=tests_section([report]),
+        evidence=evidence_html,
+        configuration=configuration(report),
     )

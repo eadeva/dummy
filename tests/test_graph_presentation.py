@@ -192,6 +192,7 @@ def test_job_report_records_all_edges_but_hides_disabled_step_details():
         "needs": ["configure"],
         "status": "hidden",
         "message": "Step details excluded by report: false",
+        "kind": "step",
     }
     assert graph["nodes"][2]["allowed_failure"] is True
     assert "prerequisites not run: configure, build" in graph["notice"]

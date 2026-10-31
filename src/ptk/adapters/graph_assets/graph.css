@@ -39,3 +39,8 @@
 .ptk-graph-inspector dd{margin:0;white-space:pre-wrap}
 .ptk-graph-inspector dd button{margin:0 5px 4px 0;font-size:13px}
 @media(max-width:500px){.ptk-graph-body{padding:0 10px 10px}.ptk-graph>summary{padding:12px}.ptk-graph-toolbar>span{width:100%;margin:0}.ptk-graph>summary>span{margin-left:6px}.ptk-graph-inspector dl{grid-template-columns:75px minmax(0,1fr)}}
+.ptk-graph-container{fill:var(--g-paper);stroke:var(--g-accent);stroke-width:1.5;stroke-dasharray:6 3}
+.ptk-graph-toggle{cursor:pointer}.ptk-graph-toggle rect{fill:var(--g-node);stroke:var(--g-line)}.ptk-graph-toggle text{font:600 12px system-ui;fill:var(--g-accent);pointer-events:none}.ptk-graph-toggle:focus{outline:none}.ptk-graph-toggle:focus rect{stroke:var(--g-accent);stroke-width:3}
+.ptk-graph-inspector>a{display:inline-block;margin:12px;color:var(--g-accent)}
+.ptk-graph-node[data-kind=job] .ptk-graph-title{fill:var(--job,#087588)}.ptk-graph-node[data-kind=step] .ptk-graph-title{fill:var(--step,#2864ac)}
+.ptk-graph-node[data-status=not_run]{--node-fill:var(--g-skip-bg);--node-stroke:var(--g-skip)}

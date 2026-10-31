@@ -46,9 +46,11 @@ def test_test_counts_include_errors_but_not_skips_in_executed():
     )
     assert report.ptk_version == "1.2.3"
     page = html.render(report)
-    assert page.index("Project information") < page.index("Timeline")
-    assert page.count("<dt>Executed</dt><dd>3</dd>") == 2
-    assert page.count("<dt>Failed</dt><dd>2</dd>") == 2
+    assert page.index('<section id="failures">') < page.index(
+        '<section id="configuration">'
+    )
+    assert page.count("<dt>Executed</dt><dd>3</dd>") == 1
+    assert page.count("<dt>Failed</dt><dd>2</dd>") == 1
     assert (
         "&lt;version&gt;" in page
         and "<p><script></p>" not in page

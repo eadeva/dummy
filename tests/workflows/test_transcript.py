@@ -100,8 +100,16 @@ def test_workflow_header_masks_prepared_metadata_before_jobs_start(tmp_path, ver
     assert result.exit_code == 0, result.output
     transcript = next(tmp_path.glob("_reports/workflows/verify/*/workflow.log"))
     aggregate = tmp_path / "_logs/default/build/run.log"
-    for text in [result.output, transcript.read_text(), aggregate.read_text()]:
+    report_texts = [path.read_text() for path in transcript.parent.rglob("*.html")]
+    report_texts += [path.read_text() for path in transcript.parent.rglob("*.json")]
+    for text in [
+        *report_texts,
+        result.output,
+        transcript.read_text(),
+        aggregate.read_text(),
+    ]:
         assert "9.8.7" not in text
+    for text in [result.output, transcript.read_text(), aggregate.read_text()]:
         assert "Project version: ********" in text
         assert "\x00" not in text
         assert ("trace: env TOKEN=********" in text) is bool(verbosity)

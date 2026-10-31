@@ -211,7 +211,8 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False):
     )
     from ...domain.execution.model import Status
     from ...domain.logging import console_level
-    from ...domain.reporting.summary import run_summary
+    from ...domain.reporting.model import from_summary
+    from ...domain.reporting.summary import header, run_summary
     from . import console as present
     from .workflow_output import WorkflowOutput
 
@@ -314,13 +315,16 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False):
             bindings[node.id].app.hooks.execute(project, click.echo)
             checked_repositories.add(project.root)
     run_id = datetime.now(UTC).strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8]
+    started_at = datetime.now(UTC).isoformat()
     target = report_directory(root, name, owner_project) / run_id
     child_openings = {}
+    child_reports = {}
     for node in plan.jobs:
         node.prepared.plan.report_context["workflow"] = {
             "name": name,
             "run_id": run_id,
             "invocation": node.id,
+            "report_file": str(target / "workflow.html"),
         }
     output = WorkflowOutput(
         console, plan, target, run_id, root, owner_project, variants.selected
@@ -345,6 +349,7 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False):
                 cancel,
             )
             output.job_finished(node, result)
+            child_reports[node.id] = from_summary(run_summary(p, result), [])
             opening = write_reports(
                 state,
                 prepared.project,
@@ -358,9 +363,9 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False):
             try:
                 child_target = target / "jobs" / node.id
                 summary = snapshot_logs(run_summary(p, result), child_target)
-                report, files = state.app.reports.write(
-                    prepared.project, summary, ["json", "html"], child_target
-                )
+                report = state.app.reports.build(prepared.project, summary)
+                child_reports[node.id] = report
+                files = state.app.reports.export(report, ["json", "html"], child_target)
                 report_errors = report.has_errors
                 if opening is not None:
                     opening = next(
@@ -404,7 +409,42 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False):
         output.close()
     open_summary = False
     try:
-        path = write_workflow_report(result, target, owner_variant=variants.selected)
+        for node in plan.jobs:
+            if node.id in child_reports:
+                continue
+            job = next((job for job in result.jobs if job.id == node.id), None)
+            if job is None:
+                continue
+            p = node.prepared.plan
+            summary = node.prepared.mask_context(
+                {
+                    **header(p),
+                    "status": "not_run",
+                    "steps": [
+                        {
+                            "step": step.label,
+                            "kind": step.kind,
+                            "needs": list(step.spec.needs),
+                            "report": step.spec.report,
+                            "status": "not_run",
+                            "message": job.message or "No step result recorded",
+                        }
+                        for step in p.steps
+                    ],
+                }
+            )
+            child_reports[node.id] = from_summary(summary, [])
+        path = write_workflow_report(
+            result,
+            target,
+            owner_variant=variants.selected,
+            children=child_reports,
+            context={
+                "run_id": run_id,
+                "started_at": started_at,
+                "workspace": owner_project is None,
+            },
+        )
         print_report(path, identity=output.identity, kind="WORKFLOW")
     except OSError as exc:
         err_console.print(f"[yellow]workflow report not written: {escape(str(exc))}[/]")

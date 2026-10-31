@@ -239,9 +239,13 @@ The workflow also writes an immutable summary and child HTML/JSON reports under:
 
 Repository-owned workflows honor the owner's layout/report directory; workspace
 workflows use the workspace's ``_reports``. Child report snapshots include their
-own log copies so later runs do not redirect earlier report links to newer logs. Workflow reports use colored status cards and per-column filters.
-Their table shows invocation IDs, ``needs``, targets, status and skip reasons.
-The JSON summary exposes the same information in its ``jobs`` list.
+own log copies so later runs do not redirect earlier report links to newer logs. Workflow reports use the same overview, failure recap, execution details,
+diagnostics and configuration sections as job reports. Execution entries show
+invocation IDs, ``needs``, targets, status and skip reasons. Graph jobs expand
+to show their recorded steps and internal edges without changing job dependencies.
+See :doc:`reports` for navigation, filtering and evidence handling.
+The JSON summary retains job results in ``jobs``, child report snapshots in
+``children`` and the nested dependency projection in ``graph``.
 It also records ``owner_variant`` so reopened report links retain the saved
 workflow's variant. Report-link lines use the same owner prefix and entity
 color as the run headers, including qualified child job names.

@@ -197,30 +197,26 @@ network request is involved in deterministic analysis.
 HTML interaction
 -----------------
 
-**What failed** brings execution failures, imported test failures and report
-problems together with a collapsible **Log analysis** view. The existing failure
-details stay visible; log analysis starts collapsed when these details exist,
-and expanded under **Diagnostics** otherwise. Disabling log analysis still leaves
-execution and imported test failures visible.
+**What failed** lists active errors with source and owner, linking to detailed
+execution, test, static-analysis, log or report-collection evidence. The
+**Diagnostics** section provides one expandable presentation with source,
+severity, disposition, owner and step filters plus text search. Disabling log
+analysis never removes execution or imported test failures.
 
-Log analysis has cards for active log errors, active log warnings, justified log
-findings and ignored log findings. These counts cover recognized log occurrences
-only, not failed tests or failed steps. A test failure may also appear in its
-captured log; these are two views of the evidence, not additional test failures.
-Clicking a card sets the severity/disposition filters. Counts describe the whole
-run and do not change when filtering.
+Log cards show active error/warning occurrences and justified/ignored
+occurrences. These are not failed-test counts. Clicking a card selects log
+analysis as the source and applies the corresponding severity/disposition.
+Counts describe the whole run and do not change when filtering. Active is the
+default disposition; reset restores active findings across all sources. Failure
+links reveal their target even when current filters would hide it.
 
-Each diagnostic is an expandable entry showing severity, disposition, step,
-message/details, source-log filename, source location (or log line) and occurrence
-count. Severity and disposition have choice dropdowns. **Active** is the default disposition,
-so justified and ignored findings start hidden. Step filtering and search combine
-with those choices. **Reset filters** restores all severities, active findings,
-all steps and an empty search. Expanded messages show context with the matching
-line highlighted, the full source-log path, diagnostic code, rule and reason.
-Source-log links point to the original captured log or retained historical copy.
-Logs and reports can be moved together while preserving relative links.
-If no diagnostics match, the view says that no active log diagnostics were
-recognized; it does not claim that the execution or test results are clean.
+Expanded log entries show context with matching lines highlighted, source-log
+links, location, tool/rule and disposition reason. Search matches the diagnostic's
+message and metadata rather than unrelated neighboring context lines. Reports
+retain relative links to captured logs or historical copies. An empty log
+analysis means no recognized active diagnostics, not proof that execution or
+imported tests passed. See :doc:`reports` for report navigation and expandable
+workflow graphs.
 
 Assistant support
 ------------------

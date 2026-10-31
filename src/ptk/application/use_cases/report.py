@@ -50,7 +50,11 @@ class ReportService:
             formats if formats is not None else project.config.report_formats
         )
         out = target or self.output_dir(project, report.variant, report.job)
-        return report, self._store.write(report, formats, out)
+        return report, self.export(report, formats, out)
+
+    def export(self, report: Report, formats: list[str], target: Path) -> list[Path]:
+        """Export an already collected snapshot without reading evidence again."""
+        return self._store.write(report, formats, target)
 
     def latest(
         self,

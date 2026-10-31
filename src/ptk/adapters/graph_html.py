@@ -26,6 +26,20 @@ def section(graph, title, *, collapsed=True):
     )
     count = len(graph["nodes"])
     edges = sum(len(node["needs"]) for node in graph["nodes"])
+    expandable = any(node.get("children", {}).get("nodes") for node in graph["nodes"])
+    expansion = (
+        (
+            '<button type="button" data-graph-action="expand">Expand all jobs</button>'
+            '<button type="button" data-graph-action="collapse">Collapse all jobs</button>'
+        )
+        if expandable
+        else ""
+    )
+    hierarchy = (
+        " Expand a job to inspect its recorded steps. Job dependencies connect whole jobs; internal arrows connect steps only."
+        if expandable
+        else ""
+    )
     notice = (
         f'<p class="ptk-graph-notice">{escape(graph["notice"])}</p>'
         if graph.get("notice")
@@ -34,11 +48,12 @@ def section(graph, title, *, collapsed=True):
     return f"""<details class="ptk-graph"{" open" if not collapsed else ""}>
 <summary><strong>Dependency graph</strong><span>{count} nodes · {edges} dependencies</span></summary>
 <div class="ptk-graph-body">
-<p class="ptk-graph-caption">Execution flows top to bottom: prerequisites → dependents. Joins wait for all prerequisites; branches can overlap. Shared nodes appear once.</p>{notice}
+<p class="ptk-graph-caption">Execution flows top to bottom: prerequisites → dependents. Joins wait for all prerequisites; branches can overlap. Shared nodes appear once.{hierarchy}</p>{notice}
 <div class="ptk-graph-toolbar" role="group" aria-label="Graph controls">
 <button type="button" data-graph-action="in" aria-label="Zoom in">+</button>
 <button type="button" data-graph-action="out" aria-label="Zoom out">−</button>
 <button type="button" data-graph-action="fit">Fit to view</button>
+{expansion}
 <output aria-label="Graph zoom"></output><span>Drag to pan · select a node for details</span></div>
 <div class="ptk-graph-viewport" tabindex="0" role="region" aria-label="{escape(title, quote=True)}">
 <svg xmlns="http://www.w3.org/2000/svg" role="group" aria-label="Dependency diagram"></svg></div>

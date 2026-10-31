@@ -99,6 +99,17 @@ class PreparedRun:
                 text = text.replace(value, MASK)
         return text
 
+    def mask_context(self, value):
+        if isinstance(value, str):
+            return self.mask(value)
+        if isinstance(value, dict):
+            return {
+                self.mask_context(k): self.mask_context(v) for k, v in value.items()
+            }
+        if isinstance(value, list):
+            return [self.mask_context(v) for v in value]
+        return value
+
 
 def layout_of(project: Project) -> lay.Layout:
     spec = project.config.layout
@@ -627,7 +638,7 @@ class RunJob:
         if reports.is_dir():
             shutil.rmtree(reports)
         reports.mkdir(parents=True, exist_ok=True)
-        plan.report_context = self._mask_context(plan.report_context)
+        plan.report_context = prepared.mask_context(plan.report_context)
         self._emit("run_started", plan)
         from ..scheduling import schedule
 
@@ -758,7 +769,7 @@ class RunJob:
                         plan.job, command.env, command.cwd
                     )
                     for status in observed or []:
-                        record = self._mask_context(dataclasses.asdict(status))
+                        record = prepared.mask_context(dataclasses.asdict(status))
                         if record not in plan.report_context.setdefault("tools", []):
                             plan.report_context["tools"].append(record)
                 result.command = prepared.mask(command.display())
@@ -952,17 +963,6 @@ class RunJob:
 
     def _log(self, level: Level, text: str, step: PlannedStep | None = None) -> None:
         self._emit("message", level, self._prepared.mask(text), step)
-
-    def _mask_context(self, value):
-        if isinstance(value, str):
-            return self._prepared.mask(value)
-        if isinstance(value, dict):
-            return {
-                self._mask_context(k): self._mask_context(v) for k, v in value.items()
-            }
-        if isinstance(value, list):
-            return [self._mask_context(v) for v in value]
-        return value
 
     def _emit(self, event: str, *args: Any) -> None:
         for observer in self._observers:

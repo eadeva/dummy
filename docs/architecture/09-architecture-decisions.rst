@@ -408,7 +408,8 @@ not imply that every related future capability has been implemented.
    **Consequences:** Importer support bounds structured detail. Historical runs retain their context and evidence; absent findings do not prove success.
 
    **Presentation clarification:** Keep execution and imported test failure details
-   in **What failed**, with expandable log diagnostics in the same section.
+   in **What failed**, linking to expandable entries in the shared diagnostic
+   view (:need:`DD_REPORT_EXPLORATION`).
    Pytest summary lines supply log findings when present; JUnit supplies test
    counts and detailed test results. Log occurrence counts stay separate because
    a test failure can appear in both sources. Suppression or disabling log
@@ -423,7 +424,8 @@ not imply that every related future capability has been implemented.
 
    **Context:** Known diagnostic noise needs explanation without concealing execution failure.
 
-   **Decision:** Retain warning/error severity, with active/ignored/justified disposition and reasons. Show occurrence counts, source log locations and filters on expandable diagnostic entries; exclude ignored and justified findings from the initial view. Keep log analysis collapsible beside the existing failure details.
+   **Decision:** Retain warning/error severity, with active/ignored/justified disposition and reasons. Show occurrence counts, source log locations and filters on expandable diagnostic entries; exclude ignored and justified findings from the initial view. Use expandable evidence entries in the shared diagnostic view, with source
+   labels and a separate failure recap (:need:`DD_REPORT_EXPLORATION`).
 
    **Alternatives considered:** Changing severity or making a failed process pass because its log message was ignored was rejected.
 
@@ -699,6 +701,55 @@ not imply that every related future capability has been implemented.
    artifact validation (:need:`DD_EXECUTION_BOUNDARIES`). Other extension
    category colors remain pending a separate review. No migration or fallback
    presentation mode is introduced. See :need:`REQ_Sw_RUN_HEADERS`.
+
+.. ddec:: Use one report structure and expand workflow jobs into recorded steps
+   :id: DD_REPORT_EXPLORATION
+   :status: accepted
+
+   **Context:** Job reports placed extensive metadata before failures; workflow
+   reports exposed less detail. Separate diagnostic presentations made it harder
+   to trace a failure to its owner and evidence. Users requested a consistent
+   report experience and expandable workflow graphs containing job steps.
+
+   **Decision:** Use a shared offline HTML shell with compact run identity,
+   linked counts, a failure recap, execution records, graph, timeline, diagnostics,
+   tests, evidence and expandable configuration. Sticky navigation and stable
+   anchors connect these views; following an evidence link reveals collapsed or
+   filtered targets. Keep entity colors (purple/cyan/blue) independent from outcome
+   colors. Show zero counts neutrally. Retain source, severity, disposition and
+   ownership in one filterable diagnostic view, with active findings initially
+   selected. Log occurrences never increment test totals or alter execution state.
+
+   Save sanitized canonical child reports in the immutable workflow snapshot.
+   Job containers expand to independent recorded step DAGs. Lay out each internal
+   graph first and then size/layout the outer job DAG; connect inter-job edges to
+   containers and internal edges only to their steps. This preserves scheduler
+   semantics without inventing cross-job dependencies. Namespace presentation
+   identities by invocation; preserve all joins and hidden-step topology. Use
+   prepared topology labelled Not run when a job never reached execution, with
+   its parent reason and masked metadata. Expand/collapse works by keyboard or
+   pointer; each expansion fits the newly laid-out graph. Nodes, timeline rows
+   and execution entries share navigation targets. Child reports link to their
+   aggregate and retain captured evidence links.
+
+   **Alternatives considered:** A test-only dashboard would obscure PTK's build,
+   packaging and documentation jobs. Flattening jobs into a single step graph
+   would misrepresent job readiness and confuse equal step names. Reading current
+   YAML or fetching child reports in the browser would break historical fidelity
+   and offline portability. Separate new reporting plugins would reintroduce the
+   extension/versioning complexity rejected in :need:`DD_NO_PLUGIN_API`.
+
+   **Consequences:** HTML is self-contained for viewing; linked evidence travels
+   with its report directory. Embedding child snapshots increases workflow report
+   size. Very large expanded graphs need zoom/pan; no automatic history comparison
+   or flaky-test interpretation is added. JUnit/JSON/Markdown retain their existing
+   roles; the new presentation does not change execution or artifact-validation
+   contracts. Project implementations retain responsibility for outputs, side
+   effects and isolation for flexibility (:need:`DD_EXECUTION_BOUNDARIES`).
+   No legacy presentation mode or migration layer is introduced.
+
+   **Related requirements:** :need:`REQ_Sw_REPORT_EXPLORATION`,
+   :need:`REQ_Sw_REPORT_GRAPHS`, :need:`REQ_Sw_LOG_HTML`.
 
 Open boundaries
 ---------------

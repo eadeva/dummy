@@ -151,6 +151,11 @@ def test_tagged_build_and_frozen_sdist_rebuild(tmp_path):
             resource = f"ptk/adapters/graph_assets/{name}"
             assert original.read(resource) == rebuilt_wheel.read(resource)
             assert (source / "src" / resource).is_file()
+        for name in ("report.css", "report.js"):
+            resource = f"ptk/adapters/reporting/assets/{name}"
+            assert original.read(resource) == rebuilt_wheel.read(resource)
+            assert (source / "src" / resource).is_file()
+        assert "ptk/adapters/reporting/log_html.py" not in original.namelist()
 
 
 def test_editable_build_does_not_need_node(tmp_path):

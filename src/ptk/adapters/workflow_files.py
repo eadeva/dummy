@@ -1,18 +1,14 @@
 """Workflow-only documents and immutable run summaries."""
 
 import json
-import os
 import shutil
 from dataclasses import asdict
-from html import escape
 from pathlib import Path
 
 from ..application.use_cases.project import validation_problems
 from ..domain.config.tree import to_plain
 from ..domain.errors import ConfigError, Location, Problem
-from ..domain.graphs import describe_graph
 from ..domain.workflows import WorkflowFile, WorkflowSpec
-from . import graph_html
 from .config.discovery import checked_path
 from .config.yaml_loader import YamlConfigReader
 
@@ -44,102 +40,29 @@ def read_workflows(folder: Path) -> WorkflowFile:
     return WorkflowFile(workflows=workflows)
 
 
-def write_workflow_report(result, target: Path, *, owner_variant=None) -> Path:
-    from .reporting.html import CSS, FILTER_SCRIPT, _cards
+def write_workflow_report(
+    result, target: Path, *, owner_variant=None, children=None, context=None
+) -> Path:
+    from .reporting.workflow_html import render
 
+    children, context = children or {}, context or {}
     target.mkdir(parents=True, exist_ok=True)
+    page, graph = render(
+        result, target, owner_variant=owner_variant, children=children, context=context
+    )
     (target / "workflow.json").write_text(
-        json.dumps({**asdict(result), "owner_variant": owner_variant}, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    rows = []
-    counts = {"Passed": 0, "Failed": 0, "Skipped": 0, "Cancelled": 0}
-
-    for job in result.jobs:
-        if job.job:
-            label = job.status.value.capitalize()
-            if label in counts:
-                counts[label] += 1
-        links = []
-        for report in job.reports:
-            if Path(report).suffix.lower() != ".html":
-                continue
-            relative = os.path.relpath(report, target).replace(os.sep, "/")
-            links.append(
-                f'<a href="{escape(relative, quote=True)}">{escape(Path(report).name)}</a>'
-            )
-        cells = [
-            job.id,
-            ", ".join(job.needs) or "—",
-            job.repo,
-            job.job,
-            job.variant or "default",
-            job.status.value + (" (allowed)" if job.allowed_failure else ""),
-            f"{job.duration:.2f}s",
-            job.message
-            or (
-                "Child report contains errors or could not be written"
-                if job.report_errors
-                else ""
-            ),
-        ]
-        rows.append(
-            "<tr>"
-            + "".join(f"<td>{escape(str(c))}</td>" for c in cells)
-            + f"<td>{' · '.join(links)}</td></tr>"
-        )
-
-    titles = (
-        "Invocation",
-        "Needs",
-        "Repository",
-        "Job",
-        "Variant",
-        "Result",
-        "Duration",
-        "Message",
-        "Reports",
-    )
-    status = result.status.value
-    title = escape(f"Workflow - {result.name}")
-    graph = describe_graph({job.id: job for job in result.jobs})
-    for node, job in zip(graph["nodes"], result.jobs, strict=True):
-        node.update(
-            label=f"{job.repo}:{job.job}" if job.repo else job.job,
-            variant=job.variant or "default",
-            status=job.status.value,
-            duration=job.duration,
-            allowed_failure=job.allowed_failure,
-            message=job.message
-            or (
-                "Child report contains errors or could not be written"
-                if job.report_errors
-                else ""
-            ),
-        )
-    page = (
-        '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-        f"<title>{title}</title><style>{CSS}</style></head><body><main>"
-        f'<header class="status"><h1>{title}</h1><span class="verdict {status}">{status}</span></header>'
-        + _cards(
-            counts,
-            tones={
-                "Passed": "passed",
-                "Failed": "failed",
-                "Skipped": "skipped",
-                "Cancelled": "warning",
+        json.dumps(
+            {
+                **asdict(result),
+                "owner_variant": owner_variant,
+                "context": context,
+                "children": {key: asdict(report) for key, report in children.items()},
+                "graph": graph,
             },
+            indent=2,
         )
-        + f'<p class="meta">Job calls only; duration {result.duration:.2f}s. Open a child report for project, tool and test details.</p>'
-        + graph_html.section(graph, f"Workflow {result.name}")
-        + '<div class="table-wrap"><table><tr>'
-        + "".join(f"<th>{t}</th>" for t in titles)
-        + "</tr>"
-        + "".join(rows)
-        + "</table></div></main>"
-        + FILTER_SCRIPT
-        + graph_html.assets()
-        + "</body></html>"
+        + "\n",
+        encoding="utf-8",
     )
     output = target / "workflow.html"
     output.write_text(page, encoding="utf-8")

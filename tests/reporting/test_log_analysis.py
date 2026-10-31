@@ -382,8 +382,9 @@ def test_test_failures_and_log_diagnostics_share_section_without_changing_counts
     section = page.split("<h2>What failed</h2>", 1)[1].split("</section>", 1)[0]
     assert "tests.test_api.test_request" in section
     assert "AssertionError: &lt;expected&gt;" in section
-    assert ("<summary>Log analysis</summary>" in section) == enabled
-    assert 'class="log-analysis" open' not in section
+    assert ("· Log analysis" in section) == enabled
+    assert ('data-source="log"' in page) == enabled
+    assert 'data-source="test"' in page and 'data-source="execution"' in page
     assert "No active errors or warnings" not in page
     assert json.loads(exporters.to_json(report))["totals"]["tests"] == {"failed": 1}
 

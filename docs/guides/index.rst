@@ -16,6 +16,7 @@ and defaults, use :doc:`/reference/configuration-schema`.
    versioning
    artifacts
    log-analysis
+   reports
    packaging
    editor
    agent-guide

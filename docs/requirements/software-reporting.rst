@@ -259,18 +259,19 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_LOGS
    :tags: implemented
 
-   PTK HTML reports shall integrate collapsible log analysis with the existing
-   failure details, showing log occurrence-count cards and expandable diagnostic
-   entries with severity, disposition, step, message, source log/location and
+   PTK HTML reports shall integrate log analysis with execution, test, static
+   analysis and report-collection evidence, showing log occurrence-count cards
+   and expandable diagnostic entries with severity, disposition, step, message, source log/location and
    count, with choice filters for severity and disposition. Log occurrence counts
    shall remain distinct from execution and imported test results. Disabling or
-   filtering log analysis shall not hide those failure details.
+   filtering log analysis shall not hide the failure overview; failure links
+   shall reveal their diagnostic target even when filtered out.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
    **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
 
-   **Evidence:** ``src/ptk/adapters/reporting/log_html.py``; ``scripts/check_report_ui.cjs``.
+   **Evidence:** ``src/ptk/adapters/reporting/diagnostics.py``; ``scripts/check_report_ui.cjs``.
 
 .. req-sw:: Hide ignored and justified findings initially
    :id: REQ_Sw_LOG_ACTIVE_DEFAULT
@@ -290,7 +291,7 @@ Canonical results, retained evidence and diagnostic interpretation.
 
    **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
 
-   **Evidence:** ``src/ptk/adapters/reporting/log_html.py``; ``scripts/check_report_ui.cjs``.
+   **Evidence:** ``src/ptk/adapters/reporting/diagnostics.py``; ``scripts/check_report_ui.cjs``.
 
 .. req-sw:: Apply report-opening policy locally
    :id: REQ_Sw_OPEN_REPORT
@@ -330,7 +331,13 @@ Canonical results, retained evidence and diagnostic interpretation.
    skipped, cancelled and allowed-failure states using text and colour, and expose
    recorded durations, skip/block reasons and concrete workflow target variants.
    A report-disabled step shall retain only its topology with an explicit hidden
-   marker. Diagrams shall work offline and shall not execute commands.
+   marker. Workflow job nodes shall expand and collapse their recorded step
+   graphs, with keyboard controls and distinct identities for equal step names
+   in different invocations. Inter-job edges shall remain attached to whole jobs;
+   expansion shall preserve internal joins and shall not invent cross-job step
+   dependencies. Jobs that never started shall retain planned topology labelled
+   Not run. Graph and timeline selection shall navigate to matching execution
+   details. Diagrams shall work offline and shall not execute commands.
 
    **Origin:** User request to add collapsible graphs to workflow and job reports.
 
@@ -338,3 +345,36 @@ Canonical results, retained evidence and diagnostic interpretation.
 
    **Evidence:** ``tests/test_graph_presentation.py``; ``tests/test_report_context.py``;
    ``extensions/project-toolkit/test/graph-ui.test.js``.
+
+.. req-sw:: Explore reports consistently from overview to evidence
+   :id: REQ_Sw_REPORT_EXPLORATION
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: accepted
+   :verification_criteria: Python and browser checks verify shared job/workflow sections, ownership, independent totals, filtering and permalink reveal, graph/execution/timeline navigation, immutable child data, secret masking, blocked jobs and offline narrow-screen behavior.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_REPORTS
+   :tags: implemented
+
+   PTK shall present job/workflow reports with compact identity, linked overview,
+   a failure recap before configuration, searchable execution records and shared
+   diagnostic controls. Tests, execution records and log occurrences shall remain
+   separate metrics. Selection and evidence links shall reveal the corresponding
+   saved record. Entity and outcome colors shall have independent meanings and
+   text labels shall remain available. Long configuration details shall be
+   expandable. Reports shall work offline and use captured context rather than
+   rereading project configuration. Unavailable evidence shall be visible without
+   changing execution status or implying artifact correctness.
+
+   **Origin:** Accepted report redesign, followed by the request for expandable
+   workflow jobs showing their steps. See :need:`DD_REPORT_EXPLORATION`.
+
+   **Implementation:** Shared HTML presentation and diagnostic components render
+   canonical job data and immutable workflow child snapshots.
+
+   **Evidence:** ``tests/reporting/test_workflow_details.py``;
+   ``extensions/project-toolkit/test/report-ui.test.js``;
+   ``extensions/project-toolkit/test/graph-ui.test.js``;
+   ``scripts/check_report_ui.cjs``.

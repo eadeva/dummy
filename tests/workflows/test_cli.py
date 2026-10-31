@@ -83,7 +83,7 @@ def test_discovery_preview_then_sequential_calls_and_immutable_reports(tmp_path)
     html = next(root.glob("_reports/workflows/verify/*/workflow.html")).read_text(
         encoding="utf-8"
     )
-    assert "report.html</a>" in html and "report.json</a>" not in html
+    assert "report.html</a>" in html and "report.json</a>" in html
     assert "<title>Workflow - verify</title>" in html
     assert "<h1>Workflow - verify</h1>" in html
     assert [s["status"] for s in summary["jobs"]] == ["passed", "passed"]
@@ -547,4 +547,4 @@ def test_skipped_report_explains_dependency_and_independent_branch_runs(tmp_path
     [summary] = summaries(root)
     assert summary["jobs"][1]["message"] == "blocked by needs: failure (failed)"
     html = next(root.glob("_reports/workflows/verify/*/workflow.html")).read_text()
-    assert "<th>Needs</th>" in html and "blocked by needs: failure (failed)" in html
+    assert "<dt>Needs</dt>" in html and "blocked by needs: failure (failed)" in html
