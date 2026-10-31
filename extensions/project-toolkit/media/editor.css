@@ -29,15 +29,15 @@ p { margin: 6px 0; line-height: 1.55; }
 main { padding: 24px 28px 40px; min-width: 0; max-width: 1000px; }
 .crumbs { margin-bottom: 20px; }
 .crumbs span { color: var(--vscode-descriptionForeground); }
-.field { border: 1px solid var(--vscode-panel-border, var(--vscode-widget-border)); border-left: 3px solid var(--vscode-charts-blue, var(--vscode-focusBorder)); border-radius: 5px; padding: 16px; margin: 12px 0; }
-.field[data-type=boolean] { border-left-color: var(--vscode-charts-green, var(--vscode-focusBorder)); }
-.field[data-type=object], .field[data-type=array] { border-left-color: var(--vscode-charts-purple, var(--vscode-focusBorder)); }
+.field { border: 1px solid var(--vscode-panel-border, var(--vscode-widget-border)); border-left: 3px solid var(--vscode-descriptionForeground); border-radius: 5px; padding: 16px; margin: 12px 0; }
 .field[data-entity=workflow] { border-left-color: var(--vscode-charts-purple); }
-.field[data-entity=job] { border-left-color: var(--vscode-terminal-ansiCyan); }
-.field[data-entity=step] { border-left-color: var(--vscode-charts-blue); }
+.field[data-entity=job] { border-left-color: var(--vscode-charts-blue); }
+.field[data-entity=gui] { border-left-color: var(--vscode-terminal-ansiCyan); }
+.field[data-entity=step] { border-left-color: var(--vscode-descriptionForeground); }
 h2[data-entity=workflow] { color: var(--vscode-charts-purple); }
-h2[data-entity=job] { color: var(--vscode-terminal-ansiCyan); }
-h2[data-entity=step] { color: var(--vscode-charts-blue); }
+h2[data-entity=job] { color: var(--vscode-charts-blue); }
+h2[data-entity=gui] { color: var(--vscode-terminal-ansiCyan); }
+h2[data-entity=step] { color: var(--vscode-descriptionForeground); }
 
 .field.needs-value { border-left-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground)); }
 .needs-value input, .needs-value textarea, .needs-value select { border-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground)); }
@@ -154,8 +154,8 @@ footer { position: sticky; bottom: 0; background: var(--vscode-editor-background
 .dependency-needs strong { overflow-wrap: anywhere; }
 .dependency-viewport { height: 380px; overflow: auto; margin-top: 10px; background: var(--vscode-editorWidget-background, var(--vscode-editor-background)); border: 1px solid var(--vscode-panel-border, #777); border-radius: 5px; position: relative; cursor: grab; }
 .dependency-viewport svg { display: block; max-width: none; min-width: 1px; }
-.dependency-editor { --ptk-node-color: var(--vscode-charts-blue, #478bd2); }
-.dependency-editor[data-entity=job] { --ptk-node-color: var(--vscode-terminal-ansiCyan, #168b8b); }
+.dependency-editor { --ptk-node-color: var(--vscode-descriptionForeground, #777); }
+.dependency-editor[data-entity=job] { --ptk-node-color: var(--vscode-charts-blue, #478bd2); }
 .dependency-node { cursor: pointer; }
 .dependency-node rect { fill: var(--vscode-input-background, #eee); stroke: var(--ptk-node-color); stroke-width: 1.5; }
 .dependency-node [aria-pressed=true] rect, .dependency-node :focus-visible rect { stroke: var(--vscode-focusBorder, #8a6df0); stroke-width: 3; }

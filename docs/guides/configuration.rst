@@ -107,6 +107,53 @@ owning file when needed and uses the correct section schema for raw-file forms.
 The root schema from ``ptk maintainer config schema`` describes the assembled model;
 individual file schemas are exposed in the configuration inventory.
 
+.. _gui-jobs:
+
+GUI jobs
+--------
+
+Set ``gui: true`` in a job file, for example ``jobs/viewer.ptk.yml``::
+
+   gui: true
+   help: Open the project viewer
+   steps:
+     open:
+       run: [tools/viewer.py, --project, "${project.root}"]
+       python: {interpreter: cli}
+
+Use an executable argument list for a native program instead of the Python
+command and omit ``python``. Existing Python modes (project, venv, uvx and
+``interpreter: cli``), tool preparation, substitutions, parameters, working
+directories and credentials still apply. Normal commands such as
+``ptk run viewer`` launch GUI jobs; the extension lists them under **GUIs**.
+
+An optional preparation graph must lead through explicit ``needs`` to one final
+``run`` step. All preparation runs normally and can log, fail, time out or retry.
+PTK detaches only that final command. Multiple final steps or a final built-in
+operation are invalid. The launch step cannot set ``timeout`` or ``retries``:
+PTK does not wait for the application's lifetime. Dry runs never launch anything;
+``--to`` and ``--only-step`` retain their usual dependency-selection semantics.
+A workflow depending on a GUI job proceeds after launch, not after GUI exit.
+
+After a successful OS process creation, PTK records a launch PID and completes
+the job/report. This receipt describes the launcher process, which may itself
+spawn a program or Python runtime; it is not a health/readiness check. Missing
+executables and other process-creation failures fail the launch. With a shell
+string, successfully starting the shell does not confirm that its command exists;
+prefer an argument list. Later output and exit codes cannot be collected after
+PTK exits. Standard input/output/error are disconnected from the terminal; use
+the application's own logging if needed. Closing PTK's terminal does not close
+the application. Stop it through its own UI. Close it before cleanup or re-run
+if it still uses job output folders; PTK does not manage already launched GUIs.
+
+On POSIX, PTK creates a new process session. On Windows it detaches the console
+and creates a new process group without hiding the GUI window. GUI jobs retain
+``DISPLAY``, ``WAYLAND_DISPLAY``, ``XAUTHORITY``, ``XDG_RUNTIME_DIR``,
+``DBUS_SESSION_BUS_ADDRESS`` and ``XDG_SESSION_TYPE`` from the host even with
+environment isolation; explicit ``unset``/``set`` and job/step overrides still
+win. Unrelated host variables stay isolated. The program runs on PTK's host;
+remote/headless environments need their own desktop/display setup.
+
 Git substitutions
 -----------------
 

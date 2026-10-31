@@ -11,6 +11,17 @@ function target(kind = "job") {
   return { kind, project, name: "build", spec: kind === "workflow" ? project.workflows[0] : project.jobs[0] };
 }
 
+test("GUI metadata is mandatory in the current inventory and old inventories are rejected", () => {
+  const doc = inventory();
+  doc.projects[0].jobs[0].gui = true;
+  assert.equal(core.parseInventory(JSON.stringify(doc)).projects[0].jobs[0].gui, true);
+  for (const value of [undefined, "true", 1, null]) {
+    doc.projects[0].jobs[0].gui = value;
+    assert.throws(() => core.parseInventory(JSON.stringify(doc)), /Incomplete/);
+  }
+  assert.throws(() => core.parseInventory(JSON.stringify({...inventory(), schema_version: 4})), /Update PTK/);
+});
+
 test("inventory accepts the versioned CLI contract and isolated broken members", () => {
   const doc = inventory();
   doc.projects.push({ configuration: { ...doc.projects[0].configuration, value: null }, invocation: { cwd: doc.root, prefix: [] }, alias: "broken", root: doc.root, entry_file: path.join(doc.root, "bad.yml"), error: "Invalid configuration" });

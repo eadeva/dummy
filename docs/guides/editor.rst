@@ -232,7 +232,7 @@ operations and flags, including validation, reports, initialization,
 ``--variant``, ``--dry-run``, ``--param``, ``--clean`` and ``--re-run``.
 Changing those semantics can break compatibility even if the schema is unchanged.
 
-The extension requires inventory ``schema_version: 4`` and per-project
+The extension requires inventory ``schema_version: 5`` and per-project
 ``configuration.version: 5``. These are interface versions, separate from the
 PTK package version, extension version and project marker's ``schema_version``.
 Unsupported interface versions or malformed inventories are rejected with an
@@ -400,15 +400,26 @@ Zero and false remain filled values. Starter URLs use ``example.invalid`` and
 must be replaced with the intended endpoint before use.
 The form uses the VS Code tree and breadcrumbs for navigation. List rows show
 names or values. There is no duplicate navigation sidebar or destination picker.
-Theme-aware entity colors match the CLI headings: purple workflows, cyan jobs
-and blue steps. They apply to tree entries, configuration entity headings and
-graph nodes; a workflow graph contains cyan jobs and a job graph contains blue
-steps. Built-in commands use neutral gray, including Validate Configuration.
-The extension uses ``charts.purple``, ``terminal.ansiCyan``, ``charts.blue`` and
-``descriptionForeground`` respectively, so exact shades follow the active
-theme. Labels and icon shapes also identify entities. Focus, selection and
-error indicators keep their own semantics; other configuration categories
-retain their existing colors pending a separate color review.
+Theme-aware colors distinguish execution categories: purple workflows
+(``git-merge``), blue jobs (``play-circle``), and teal GUIs (``window``).
+Variants and versions use orange. Repositories, configuration, tools and
+credentials use neutral icons; steps and built-in commands use subdued gray.
+Ordinary scalar fields, including strings, numbers, booleans, nulls and list
+values, use the standard ``symbol-field`` icon. Lists use ``list-unordered``
+and objects use ``symbol-object``. The form and dependency editor share the
+same entity colors. Red/yellow remain reserved for diagnostics; focus,
+selection and result status keep their own semantics. Theme tokens determine
+exact shades, while labels and shapes preserve meaning without color.
+
+A job with ``gui: true`` appears in the **GUIs** branch beside **Jobs** and
+**Workflows**, with no duplicate entry under Jobs. It retains ordinary job
+commands, variant checkboxes, parameter forms, reports and task restoration.
+PTK runs preparation normally, detaches the single final command and exits.
+The application stays open after the task ends; later application output,
+health and exit status are not monitored. Terminate the application through
+its own UI. In a remote workspace it starts on the extension host, which must
+have an appropriate desktop session. See :ref:`gui-jobs`.
+
 Fingerprints reject stale edits, and dirty YAML must be saved first.
 
 Loading errors appear in the tree and Problems panel. Validate Configuration stays

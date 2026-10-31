@@ -90,6 +90,7 @@ class ProcessOutcome:
     cancelled: bool = False
     error: str | None = None  # e.g. program not found
     reporting_duration: float = 0.0  # post-process collection, outside command timeout
+    launched_pid: int | None = None  # detached process accepted by the OS
 
 
 class CancelToken(Protocol):
@@ -97,7 +98,7 @@ class CancelToken(Protocol):
 
 
 class ProcessRunner(Protocol):
-    """Runs one command, streaming its output line by line."""
+    """Run with streamed output, or launch detached when the command requests it."""
 
     def run(
         self,

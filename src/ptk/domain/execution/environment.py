@@ -54,6 +54,17 @@ POSIX_ESSENTIAL = {
     "TZ",
 }
 
+# Desktop connection information, retained only for GUI jobs. Explicit unset/set
+# settings still apply after this allowlist; no wholesale host environment copy.
+GUI_SESSION = {
+    "DISPLAY",
+    "WAYLAND_DISPLAY",
+    "XAUTHORITY",
+    "XDG_RUNTIME_DIR",
+    "DBUS_SESSION_BUS_ADDRESS",
+    "XDG_SESSION_TYPE",
+}
+
 
 def _find_key(env: Mapping[str, str], name: str, windows: bool) -> str | None:
     if name in env:

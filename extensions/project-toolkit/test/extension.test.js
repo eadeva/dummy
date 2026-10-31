@@ -99,6 +99,57 @@ function jobNode(h, label = "Jobs") {
   return h.controller.provider.getChildren()[0].children[0].children.find(node => node.label === label).children[0];
 }
 
+test("GUI jobs have their own branch and keep job variants, parameters and saved tasks", async t => {
+  const doc = inventory();
+  const project = doc.projects[0];
+  project.jobs.push({ ...structuredClone(project.jobs[0]), name: "viewer", gui: true, command: ["run", "viewer"], help_command: ["viewer"] });
+  project.configuration.value.jobs.viewer = { gui: true, help: "Open viewer", steps: { open: {run: ["viewer"]} } };
+  const h = harness(t, [doc]);
+  await h.controller.ready();
+  const root = h.controller.provider.getChildren()[0].children[0];
+  const guis = root.children.find(node => node.label === "GUIs");
+  assert.deepEqual(root.children.find(node => node.label === "Jobs").children.map(node => node.name), ["build"]);
+  assert.deepEqual(guis.children.map(node => node.name), ["viewer"]);
+  const node = guis.children[0];
+  for (const entry of [guis, node]) {
+    const item = h.controller.provider.getTreeItem(entry);
+    assert.equal(item.iconPath.id, "window");
+    assert.equal(item.iconPath.color.id, "terminal.ansiCyan");
+  }
+  assert.equal(node.contextValue, "job-report");
+  await h.command("run", node);
+  assert.deepEqual(h.tasks[0].execution.args, ["--variant", "small", "run", "viewer"]);
+  assert.equal(h.tasks[0].definition.kind, "job");
+  assert.match(h.tasks[0].name, /GUI \/ viewer/);
+  const restored = await h.api.taskProvider.resolveTask(h.tasks[0]);
+  assert.deepEqual(restored.execution.args, h.tasks[0].execution.args);
+  const config = root.children.find(node => node.label === "Configuration");
+  const configured = config.children.find(node => node.label === "jobs").children.find(node => node.label === "viewer");
+  assert.equal(h.controller.provider.getTreeItem(configured).iconPath.id, "window");
+  assert.equal(h.controller.provider.getTreeItem(configured).iconPath.color.id, "terminal.ansiCyan");
+  project.jobs[1].gui = false;
+  await h.controller.refresh();
+  const changed = h.controller.provider.getChildren()[0].children[0];
+  assert.ok(!changed.children.some(node => node.label === "GUIs"));
+  assert.deepEqual(changed.children.find(node => node.label === "Jobs").children.map(node => node.name), ["build", "viewer"]);
+  assert.deepEqual(h.errors, []);
+});
+
+test("configuration scalar fields use a standard neutral field icon", async t => {
+  const doc = inventory();
+  doc.projects[0].configuration.value.vars = { text: "hello", number: 42, flag: false, empty: null, list: ["one"], object: { path: "here" } };
+  const h = harness(t, [doc]); await h.controller.ready();
+  const root = h.controller.provider.getChildren()[0].children[0];
+  const fields = root.children.find(node => node.label === "Configuration").children.find(node => node.label === "vars").children;
+  for (const node of [...fields.slice(0, 4), ...fields.find(node => node.label === "list").children, ...fields.find(node => node.label === "object").children]) {
+    const item = h.controller.provider.getTreeItem(node);
+    assert.equal(item.iconPath.id, "symbol-field");
+    assert.equal(item.iconPath.color.id, "descriptionForeground");
+  }
+  assert.equal(h.controller.provider.getTreeItem(fields.find(node => node.label === "list")).iconPath.id, "list-unordered");
+  assert.equal(h.controller.provider.getTreeItem(fields.find(node => node.label === "object")).iconPath.id, "symbol-object");
+});
+
 async function selectAllJobVariants(h) {
   const node = jobNode(h);
   await h.checkbox(node.children.filter(item => item.variantName).map(item => [item, 1]));
@@ -769,7 +820,7 @@ test("configuration values and named steps have readable labels", async t => {
   const keep = config.children.find(node => node.label === "environment").children[0];
   assert.deepEqual(keep.children.map(node => node.label), ["PATH", "HOME", "PATH"]);
   assert.equal(new Set(keep.children.map(node => node.id)).size, 3);
-  assert.ok(keep.children.every(node => !node.icon && !node.description));
+  assert.ok(keep.children.every(node => node.icon === "symbol-field" && !node.description));
   await h.command("openConfig", steps.children[0]);
   assert.deepEqual(h.opened.at(-1).path, ["jobs", "build", "steps", "compile"]);
 });
@@ -826,13 +877,13 @@ test("tree icons use distinct theme colours for jobs, workflows and configuratio
   const workflows = project.children.find(item => item.label === "Workflows");
   const config = project.children.find(item => item.label === "Configuration");
   const items = [project, jobs, jobs.children[0], workflows, config].map(item => h.controller.provider.getTreeItem(item));
-  assert.deepEqual(items.map(item => item.iconPath.color.id), ["charts.blue", "terminal.ansiCyan", "terminal.ansiCyan", "charts.purple", "charts.yellow"]);
+  assert.deepEqual(items.map(item => item.iconPath.color.id), ["foreground", "charts.blue", "charts.blue", "charts.purple", "foreground"]);
   const builtin = project.children.find(item => item.label === "Built-in commands");
   for (const node of [builtin, ...builtin.children]) assert.equal(h.controller.provider.getTreeItem(node).iconPath.color.id, "descriptionForeground");
   function walk(node) { return [node, ...(node.children || []).flatMap(walk)]; }
   const steps = walk(config).filter(item => item.entityKind === "step");
   assert.ok(steps.length);
-  for (const node of steps) assert.equal(h.controller.provider.getTreeItem(node).iconPath.color.id, "charts.blue");
+  for (const node of steps) assert.equal(h.controller.provider.getTreeItem(node).iconPath.color.id, "descriptionForeground");
 });
 
 test("job run form selects multiple variants and restores the same step range", async t => {

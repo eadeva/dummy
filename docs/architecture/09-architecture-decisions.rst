@@ -938,6 +938,44 @@ not imply that every related future capability has been implemented.
    choices or missing native capabilities leave graphs explicitly unavailable.
    See :need:`REQ_Sw_GN_REPORTS` and :need:`DD_EXECUTION_BOUNDARIES`.
 
+.. ddec:: GUI jobs detach only their final command
+   :id: DD_GUI_JOBS
+   :status: accepted
+
+   **Context:** GUI programs and Python GUI tools must remain open after PTK
+   exits, with their own extension branch and recognizable appearance.
+
+   **Decision:** Add ``gui: true`` to the existing job model, not a parallel
+   command/configuration model. Require one terminal ``run`` step; its needs
+   graph executes normally before detaching this command. Preserve parameters,
+   variants, Python/tool setup and report policies. Return a launch PID and
+   explicitly describe the unmonitored application lifetime. Use a new POSIX
+   session or Windows detached process/group, no captured pipes and no hidden
+   GUI startup flag. A daemon reaper releases the child while PTK is alive but
+   does not delay PTK exit. Retain only desktop session connection variables in
+   an isolated GUI environment; normal override precedence remains in force.
+
+   **Alternatives considered:** Detaching every step would race preparation
+   against launch and invalidate dependencies. Waiting for the GUI would keep
+   PTK alive. A separate GUI command family would duplicate job configuration,
+   permission, parameter and task behavior. Per-value rainbow colors in the
+   editor make ordinary configuration compete with execution/status signals.
+
+   **Consequences:** Detached launch success confirms process creation only.
+   Later application output, health and exit codes are outside PTK's report;
+   workflows continue after launch. The launch step rejects timeout/retries.
+   Closing a terminal does not stop the GUI; cleanup/re-run does not stop it
+   either. A remote/headless host still needs a working desktop setup.
+
+   **Presentation:** GUIs use teal/window, jobs blue/play-circle, workflows
+   purple/git-merge, variants/versions orange. Configuration/categories use
+   neutral icons; scalar fields use symbol-field, lists list-unordered and
+   objects symbol-object. Steps/built-ins are subdued; red/yellow remain
+   diagnostics. Form/graph colors match these meanings and use theme tokens.
+   The required boolean GUI inventory metadata increments the inventory
+   interface to version 5; configuration interface version 5 is unchanged.
+   No legacy inventory fallback is added. See :need:`REQ_Sw_GUI_JOBS`.
+
 Open boundaries
 ---------------
 

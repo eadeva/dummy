@@ -3,6 +3,34 @@ Execution and variants
 
 Preparation, scheduling, isolation, cancellation and output lifecycle.
 
+.. req-sw:: Launch GUI jobs independently of PTK
+   :id: REQ_Sw_GUI_JOBS
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: under review
+   :verification_criteria: Real CLI tests exit while a launched Python/program process remains alive; failed preparation and process creation remain failures, dry runs launch nothing, and extension tests place GUI jobs in a distinct themed branch.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_EXECUTION
+   :tags: implemented
+
+   PTK shall accept a boolean job-level ``gui`` setting, execute prerequisite
+   steps normally and detach the unique final command. The extension shall
+   expose these jobs under GUIs with a distinct icon and color, preserving
+   normal job permissions, variants, parameters and actions. It shall give
+   scalar configuration fields a standard field icon and use semantic,
+   theme-aware colors consistently across tree and form.
+
+   **Origin:** User request for GUI launch jobs and configuration tree color/icon review.
+
+   **Implementation:** Launch receipts record process creation, not application
+   completion. No lifetime timeout/retry, terminal pipes or exit monitoring are
+   attached to the GUI. Desktop connection variables survive isolation while
+   explicit overrides remain authoritative. See :need:`DD_GUI_JOBS`.
+
+   **Evidence:** ``tests/test_gui_jobs.py``; ``extensions/project-toolkit/test/extension.test.js``; ``extensions/project-toolkit/test/presentation.test.js``.
+
 .. req-sw:: Run several job variants in parallel
    :id: REQ_Sw_MULTI_VARIANT
    :req_type: functional

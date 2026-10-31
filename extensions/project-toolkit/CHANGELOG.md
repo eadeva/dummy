@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20.0
+
+- Add a teal window-icon GUIs branch for `gui: true` jobs, retaining job actions, variants and saved tasks. PTK runs preparation normally and detaches the final launch command.
+- Use blue jobs, purple workflows, orange variants/versions and neutral configuration/step icons. Give scalar fields a standard field icon and align form/graph colours.
+- Require inventory version 5 with explicit GUI metadata and configuration interface version 5. Update PTK and the extension together.
+
 ## 0.19.0
 
 - Match CLI entity colors: purple workflows, cyan jobs, blue steps, neutral gray built-in commands.

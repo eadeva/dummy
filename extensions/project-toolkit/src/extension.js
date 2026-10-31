@@ -10,17 +10,17 @@ const { canonicalPath } = require("./file-path");
 
 // Native theme colours keep the tree readable in light, dark and high contrast
 // themes. Labels and icon shapes carry the same meaning without relying on colour.
-const entityColors = { workflow: "charts.purple", job: "terminal.ansiCyan", step: "charts.blue", builtin: "descriptionForeground" };
+const entityColors = { workflow: "charts.purple", job: "charts.blue", gui: "terminal.ansiCyan", step: "descriptionForeground", builtin: "descriptionForeground" };
 const iconColors = {
   error: "errorForeground", warning: "list.warningForeground",
-  repo: "charts.blue", "root-folder": "charts.blue", project: "charts.blue",
-  "play-circle": "terminal.ansiCyan", tasklist: "terminal.ansiCyan", check: "charts.green",
+  repo: "foreground", "root-folder": "foreground", project: "foreground",
+  "play-circle": "charts.blue", tasklist: "charts.blue", window: "terminal.ansiCyan", check: "charts.green",
   "git-merge": "charts.purple", layers: "charts.orange", versions: "charts.orange",
-  "settings-gear": "charts.yellow", folder: "charts.yellow", key: "charts.yellow",
-  package: "charts.orange", tools: "charts.orange", calendar: "charts.purple",
-  terminal: "charts.blue", "symbol-variable": "charts.blue", "symbol-object": "charts.purple",
-  "list-tree": "charts.purple", "list-ordered": "charts.purple", "list-unordered": "charts.purple",
-  output: "charts.blue", graph: "charts.green", question: "charts.blue", sync: "charts.blue",
+  "settings-gear": "foreground", folder: "foreground", key: "foreground",
+  package: "foreground", tools: "foreground", calendar: "charts.purple",
+  terminal: "descriptionForeground", "symbol-variable": "descriptionForeground", "symbol-object": "descriptionForeground",
+  "symbol-field": "descriptionForeground", "list-tree": "descriptionForeground", "list-ordered": "descriptionForeground", "list-unordered": "descriptionForeground",
+  output: "descriptionForeground", graph: "charts.blue", question: "descriptionForeground", sync: "descriptionForeground",
 };
 
 // VS Code is injected so command dispatch and trust boundaries can be tested
@@ -162,7 +162,7 @@ function createController(vscode, context, editorFactory = createEditors) {
   };
   const variantDescription = target => variantsFor(target).join(", ");
   const targetNodes = new Map();
-  const title = target => `${target.project?.alias || path.basename(target.root)} / ${target.kind} / ${target.name}`;
+  const title = target => `${target.project?.alias || path.basename(target.root)} / ${target.spec?.gui ? "GUI" : target.kind} / ${target.name}`;
 
   function variantChildren(target) {
     const variants = target.project.variants.filter(item => !item.abstract);
@@ -258,7 +258,7 @@ function createController(vscode, context, editorFactory = createEditors) {
       const object = value !== null && typeof value === "object";
       const node = { ...common, kind: "configuration", configPath, label,
         id: JSON.stringify([common.folder.uri.fsPath, common.project.entry_file, "configuration", configPath]),
-        collapsed: true, icon: presentation.icon(value, configPath), entityKind: presentation.entity(configPath),
+        collapsed: true, icon: presentation.icon(value, configPath), entityKind: presentation.entity(configPath, { logical: true, value: config.value }),
         tooltip: source ? `${source.file}:${source.line}` : "Not configured",
         description: value === undefined ? "not configured" : object || typeof configPath.at(-1) === "number" ? "" : String(value),
       };
@@ -317,13 +317,14 @@ function createController(vscode, context, editorFactory = createEditors) {
       groups.push(configurationNode(common));
       return { ...common, label: project.alias, description: "configuration error", tooltip: project.error, icon: "error", children: groups };
     }
-    for (const kind of ["job", "workflow"]) {
-      const children = project[`${kind}s`].map(spec => {
+    for (const group of ["job", "gui", "workflow"]) {
+      const kind = group === "gui" ? "job" : group;
+      const children = project[`${kind}s`].filter(spec => kind !== "job" || Boolean(spec.gui) === (group === "gui")).map(spec => {
         const target = { ...common, kind, name: spec.name, spec };
-        const node = { ...target, label: spec.name, tooltip: spec.help,
+        const node = { ...target, entityKind: group, label: spec.name, tooltip: [spec.help, spec.gui ? "Launch GUI: preparation finishes first, then the application runs independently of PTK." : ""].filter(Boolean).join("\n"),
           contextValue: core.canOpenReport(target) ? `${kind}-report` : kind,
           description: [variantDescription(target), kind === "workflow" && common.ci ? "dry-run only on CI" : spec.default ? "default" : ""].filter(Boolean).join(" · "),
-          icon: kind === "job" ? "play-circle" : "git-merge",
+          icon: group === "gui" ? "window" : kind === "job" ? "play-circle" : "git-merge",
           collapsed: true, children: variantChildren(target),
         };
         const nodes = targetNodes.get(variantKey(target)) || [];
@@ -331,7 +332,7 @@ function createController(vscode, context, editorFactory = createEditors) {
         targetNodes.set(variantKey(target), nodes);
         return node;
       });
-      if (children.length) groups.push({ entityKind: kind, label: kind === "job" ? "Jobs" : "Workflows", icon: kind === "job" ? "tasklist" : "git-merge", children });
+      if (children.length) groups.push({ entityKind: group, label: group === "gui" ? "GUIs" : kind === "job" ? "Jobs" : "Workflows", icon: group === "gui" ? "window" : kind === "job" ? "tasklist" : "git-merge", children });
     }
     groups.push(builtinTree(common, project.commands), configurationNode(common));
     return { ...common, label: project.alias, description: project.name, tooltip: project.root,

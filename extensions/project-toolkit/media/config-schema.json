@@ -742,6 +742,12 @@
     "JobSpec": {
       "additionalProperties": false,
       "properties": {
+        "gui": {
+          "default": false,
+          "description": "Show this job under GUIs. Run prerequisites normally, then launch the single final command in a detached process and let PTK exit. Success means the process started, not that the application finished. The final step cannot use timeout or retries.",
+          "title": "Gui",
+          "type": "boolean"
+        },
         "only_cx": {
           "default": false,
           "description": "Expose this job only during CX execution. It is hidden from local command and extension listings.",
@@ -889,6 +895,7 @@
       "title": "JobSpec",
       "type": "object",
       "x-ptk-field-order": [
+        "gui",
         "only_cx",
         "only_variants",
         "omit_variants",

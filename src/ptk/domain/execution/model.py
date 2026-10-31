@@ -29,6 +29,7 @@ class CommandSpec:
     cwd: str = "."
     env: dict[str, str] = field(default_factory=dict)
     timeout: float | None = None
+    detached: bool = False  # launch independently; do not wait for application exit
 
     def display(self) -> str:
         if self.shell is not None:
@@ -91,6 +92,7 @@ class JobPlan:
     dirs: dict[str, str]  # bin_dir, log_dir, reports_dir (job level)
 
     max_workers: int = 4
+    gui_step: str | None = None
     only_step: str | None = None
     omitted_dependencies: list[str] = field(default_factory=list)
     report_context: dict[str, Any] = field(default_factory=dict)
@@ -116,6 +118,7 @@ class StepResult:
     log_file: str | None = None
     allowed_failure: bool = False  # failed, but continue_on_error was set
     needs: list[str] = field(default_factory=list)
+    launched_pid: int | None = None  # launch receipt, not a monitored application
 
     @property
     def label(self) -> str:

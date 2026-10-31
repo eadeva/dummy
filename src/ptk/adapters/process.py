@@ -14,7 +14,7 @@ from collections.abc import Callable
 
 from ..application.ports import CancelToken, ProcessOutcome
 from ..domain.execution.model import CommandSpec
-from .process_options import captured_process_options
+from .process_options import captured_process_options, detached_process_options
 
 WINDOWS = sys.platform.startswith("win")
 GRACE_SECONDS = 5.0
@@ -30,6 +30,8 @@ class SubprocessRunner:
         on_output: Callable[[str], None],
         cancel: CancelToken | None = None,
     ) -> ProcessOutcome:
+        if cancel is not None and cancel.is_set():
+            return ProcessOutcome(1, cancelled=True)
         env = dict(command.env)
         kwargs: dict = {
             "cwd": command.cwd,
@@ -41,7 +43,13 @@ class SubprocessRunner:
         # Keep captured output in the existing PTK/VS Code terminal. A process
         # group alone does not suppress a Windows console when the parent is
         # console-free (for example VS Code discovery or a background helper).
-        kwargs.update(captured_process_options(new_group=True))
+        if command.detached:
+            kwargs.update(detached_process_options())
+            kwargs.update(
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, close_fds=True
+            )
+        else:
+            kwargs.update(captured_process_options(new_group=True))
         if command.shell is not None:
             args: str | list[str] = command.shell
             kwargs["shell"] = True
@@ -63,6 +71,12 @@ class SubprocessRunner:
             return ProcessOutcome(127, error=f"program not found: {name}")
         except OSError as exc:
             return ProcessOutcome(126, error=f"cannot start: {exc}")
+
+        if command.detached:
+            # Reap while PTK is alive, without keeping PTK alive or registering
+            # the GUI for timeout/cancellation cleanup. No terminal pipe survives.
+            threading.Thread(target=proc.wait, daemon=True).start()
+            return ProcessOutcome(0, launched_pid=proc.pid)
 
         reader = threading.Thread(target=_pump, args=(proc, on_output), daemon=True)
         reader.start()

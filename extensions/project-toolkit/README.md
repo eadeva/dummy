@@ -7,11 +7,11 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
 
 1. Install PTK using `install/install.ps1` or `install/install.sh`. Both install
    the extension bundled in the Python package when VS Code is available. The CLI must
-   support `ptk describe --json --configuration` (inventory version 4 and configuration interface version 5).
+   support `ptk describe --json --configuration` (inventory version 5 and configuration interface version 5).
 2. If PTK was installed directly with uv, run `ptk self-service extension` afterwards.
    Alternatively, in VS Code run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.19.0.vsix`. You can also use
-   `code --install-extension project-toolkit-0.19.0.vsix`.
+   `project-toolkit-0.20.0.vsix`. You can also use
+   `code --install-extension project-toolkit-0.20.0.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -75,7 +75,7 @@ Some action paths and flags are known by the extension, including validation,
 reports, initialization, variants, dry runs and cleanup; the schema alone is
 not the full contract.
 
-Extension 0.19.0 requires inventory `schema_version: 4` and
+Extension 0.20.0 requires inventory `schema_version: 5` and
 `configuration.version: 5`. These are independent of package/release numbers
 and the project marker's schema version. Unsupported interfaces are rejected;
 there is no legacy parser or runtime schema fallback. Breaking changes must
@@ -102,13 +102,24 @@ actual checkout separately. Short hashes have 12 characters. No exact tag means
 an empty string/list. Git lookup is lazy, cached per operation and local only;
 tag and dirty checks run only when requested.
 
-Find PTK by its custom wizard icon, with **PTk** on the hat. The project tree
-uses purple for workflows, cyan for jobs and blue for steps, matching PTK's
-console headings. Configuration entity headings and graph nodes use the same
-colours. Built-in commands use neutral gray. Orange variants, gold configuration
-and blue repositories retain their existing colours pending a broader review.
-Colours follow your VS Code theme; labels and icon shapes also identify each
-category. Status, error and focus indicators retain their own meaning.
+Find PTK by its custom wizard icon, with **PTk** on the hat. Colours distinguish
+execution categories: purple workflows (`git-merge`), blue jobs (`play-circle`)
+and teal GUIs (`window`). Variants and versions use orange. Repositories,
+configuration, tools and credentials use neutral icons; ordinary fields use
+`symbol-field`, lists use `list-unordered`, and objects use `symbol-object`.
+Steps and built-in commands use subdued gray. These colours also apply to the
+configuration form and dependency editor. Red/yellow remain diagnostic colours;
+status, selection and focus keep their own meaning. Colours follow the active
+VS Code theme, and labels/icon shapes also distinguish the categories.
+
+Jobs with `gui: true` appear only under **GUIs**, beside **Jobs** and **Workflows**.
+They retain job variants, options, help, cleanup and reports. PTK completes
+preparation, then launches the final command independently and exits. Closing
+its task terminal afterwards does not close the GUI. A successful launch is not
+an application health/completion check; later output and exit codes are not
+collected. Stop the application through its own UI. GUI programs run on the
+workspace/extension host, including remote workspaces, which needs a desktop
+session. See the GUI jobs section in `docs/guides/configuration.rst` for setup.
 
 - Expand **Jobs** and hover over a job to see **Run**, **Dry Run**,
   **Run Job or Workflow with Options** (gear) and **Show Help** (question mark). Each icon
@@ -290,7 +301,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.19.0.vsix`. Use `ptk self-service extension --dry-run`
+`extensions/project-toolkit/project-toolkit-0.20.0.vsix`. Use `ptk self-service extension --dry-run`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:

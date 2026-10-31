@@ -207,6 +207,7 @@ class ReportStep:
     log_file: str = ""
     allowed_failure: bool = False
     needs: list[str] = field(default_factory=list)
+    launched_pid: int | None = None
 
     @property
     def name(self) -> str:
@@ -316,6 +317,7 @@ def from_summary(
             command=s.get("command", ""),
             log_file=s.get("log_file", ""),
             allowed_failure=bool(s.get("allowed_failure", False)),
+            launched_pid=s.get("launched_pid"),
         )
         for s in summary.get("steps", [])
     ]

@@ -46,7 +46,7 @@ def test_inventory_is_read_only_filters_roles_and_omits_secret_values(tmp_path):
         ).invoke(cli, base, cwd=Path(entry).parent)
         assert result.exit_code == 0, result.output
         doc = json.loads(result.output)
-        assert doc["schema_version"] == 4 and doc["mode"] == "repository"
+        assert doc["schema_version"] == 5 and doc["mode"] == "repository"
         project = doc["projects"][0]
         commands = command_paths(project["commands"])
         assert {

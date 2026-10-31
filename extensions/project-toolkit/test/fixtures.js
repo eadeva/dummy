@@ -34,7 +34,7 @@ function builtinCommands() {
 
 function inventory(root = path.resolve("test project")) {
   return {
-    schema_version: 4, mode: "repository", root, ci: false, workflows: [], commands: [],
+    schema_version: 5, mode: "repository", root, ci: false, workflows: [], commands: [],
     projects: [{
       alias: "demo", name: "Demo", root, entry_file: path.join(root, ".main.ptk.yml"),
       invocation: { cwd: root, prefix: [] },
@@ -44,7 +44,7 @@ function inventory(root = path.resolve("test project")) {
       default_variant: "small",
       commands: builtinCommands(),
       variants: [{ name: "base", abstract: true }, { name: "small" }, { name: "large" }],
-      jobs: [{ name: "build", command: ["run", "build"], help_command: ["build"], help: "Build firmware", run_options: [], params: [
+      jobs: [{ name: "build", gui: false, command: ["run", "build"], help_command: ["build"], help: "Build firmware", run_options: [], params: [
         { name: "output_path", type: "path", choices: [], required: false },
         { name: "verbose", type: "bool", choices: [], required: false },
       ] }],

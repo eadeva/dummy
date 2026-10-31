@@ -19,7 +19,7 @@ def step_dict(result: StepResult) -> dict[str, Any]:
         "start": round(result.start, 3),
         "duration": round(result.duration, 3),
     }
-    for key in ("exit_code", "message", "command", "log_file"):
+    for key in ("exit_code", "message", "command", "log_file", "launched_pid"):
         value = getattr(result, key)
         if value not in (None, ""):
             data[key] = value

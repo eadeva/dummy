@@ -189,6 +189,10 @@ def dry_run(
             else "ready"
         )
         details = []
+        if plan.gui_step == step.name:
+            details.append(
+                "GUI launch: detached; PTK exits without waiting for the application"
+            )
         if step.spec.generators:
             folder = prepared.layout.build_dir(plan.variant, plan.job, step.path)
             details.append(f"generators: {', '.join(step.spec.generators)} → {folder}")

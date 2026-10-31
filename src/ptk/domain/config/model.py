@@ -461,6 +461,10 @@ class StepSpec(_Strict):
 
 
 class JobSpec(_Strict):
+    gui: StrictBool = Field(
+        default=False,
+        description="Show this job under GUIs. Run prerequisites normally, then launch the single final command in a detached process and let PTK exit. Success means the process started, not that the application finished. The final step cannot use timeout or retries.",
+    )
     only_cx: bool = Field(
         default=False,
         description="Expose this job only during CX execution. It is hidden from local command and extension listings.",
@@ -538,7 +542,24 @@ class JobSpec(_Strict):
     @model_validator(mode="after")
     def _step_graph(self) -> JobSpec:
         validate_graph(self.steps, "step")
+        if self.gui:
+            final = self.gui_step
+            if final is None or self.steps[final].run is None:
+                raise ValueError(
+                    "a gui job requires one final run step; all preparation steps "
+                    "must lead to it through needs dependencies"
+                )
+            if self.steps[final].timeout is not None or self.steps[final].retries:
+                raise ValueError("a gui launch step cannot use timeout or retries")
         return self
+
+    @property
+    def gui_step(self) -> str | None:
+        if not self.gui:
+            return None
+        prerequisites = {need for step in self.steps.values() for need in step.needs}
+        final = [name for name in self.steps if name not in prerequisites]
+        return final[0] if len(final) == 1 else None
 
     def walk_steps(self):
         return iter(self.steps.values())

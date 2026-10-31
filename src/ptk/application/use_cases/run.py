@@ -349,7 +349,7 @@ class PrepareRun:
                 os_name=os_name,
                 inherit_path=env_spec.inherit_path,
                 isolate=env_spec.isolate,
-                keep=env_spec.keep,
+                keep=[*env_spec.keep, *(envs.GUI_SESSION if job.gui else ())],
                 set_={k: to_text(pre(v)) for k, v in env_spec.set.items()},
                 unset=env_spec.unset,
                 path_prepend=[
@@ -477,6 +477,7 @@ class PrepareRun:
                 "required_tools": list(job.required_tool_names),
             },
             max_workers=job.max_workers,
+            gui_step=job.gui_step,
             only_step=request.only_step,
             omitted_dependencies=sorted(ancestors(job.steps)[request.only_step])
             if request.only_step
@@ -803,7 +804,11 @@ class RunJob:
                         if scope.deadline
                         else None
                     )
-                    if self._reporting_runner and step.spec.report:
+                    if (
+                        self._reporting_runner
+                        and step.spec.report
+                        and not command.detached
+                    ):
                         outcome = self._reporting_runner.run(
                             command,
                             out,
@@ -817,6 +822,12 @@ class RunJob:
                         outcome = self._runner.run(command, out, cancel)
                     exit_code = outcome.exit_code
                     message = outcome.error or ""
+                    if outcome.launched_pid is not None:
+                        result.launched_pid = outcome.launched_pid
+                        message = (
+                            f"GUI launched (PID {outcome.launched_pid}); "
+                            "runs independently of PTK, application exit is not monitored"
+                        )
                     expired = scope.deadline is not None and (
                         time.monotonic() - outcome.reporting_duration >= scope.deadline
                     )
@@ -943,7 +954,7 @@ class RunJob:
         if not cwd.is_absolute():
             cwd = prepared.project.root / cwd
         plain = self._python.runtime(None, prepared.project.root, create=False)
-        return build_command(
+        command = build_command(
             step,
             env=env,
             cwd=str(cwd),
@@ -952,6 +963,8 @@ class RunJob:
             powershell=self._powershell_name(),
             plain_python=plain,
         )
+        command.detached = plan.gui_step == step.name
+        return command
 
     def _powershell_name(self) -> str:
         if self._powershell is None:

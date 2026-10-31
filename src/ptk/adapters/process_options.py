@@ -6,6 +6,16 @@ import sys
 WINDOWS = sys.platform == "win32"
 
 
+def detached_process_options() -> dict:
+    """Detach the console/session without hiding the application's GUI window."""
+    if not WINDOWS:
+        return {"start_new_session": True}
+    return {
+        "creationflags": subprocess.DETACHED_PROCESS
+        | subprocess.CREATE_NEW_PROCESS_GROUP
+    }
+
+
 def captured_process_options(*, new_group: bool = False) -> dict:
     if not WINDOWS:
         return {"start_new_session": True} if new_group else {}

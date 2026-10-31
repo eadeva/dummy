@@ -52,7 +52,7 @@ function parseInventory(text) {
   try { doc = JSON.parse(text); } catch {
     throw new Error("PTK did not return JSON. Update PTK and Project Toolkit together.");
   }
-  if (!object(doc) || doc.schema_version !== 4 || !Array.isArray(doc.projects) ||
+  if (!object(doc) || doc.schema_version !== 5 || !Array.isArray(doc.projects) ||
       !Array.isArray(doc.workflows) || !doc.workflows.every(item => named(item) && commandPath(item.command) && runOptions(item.run_options)) || !absolute(doc.root) || typeof doc.ci !== "boolean") {
     throw new Error("Unsupported PTK inventory. Update PTK and Project Toolkit together.");
   }
@@ -75,7 +75,7 @@ function parseInventory(text) {
         !object(project.capabilities) || !["validate", "variants", "reports"].every(key => typeof project.capabilities[key] === "boolean") ||
         !Array.isArray(project.config_files) || !project.config_files.every(absolute) ||
         !project.workflows.every(item => commandPath(item.command) && runOptions(item.run_options)) ||
-        !project.jobs.every(job => runOptions(job.run_options) && commandPath(job.command) && commandPath(job.help_command) && Array.isArray(job.params) && job.params.every(param => named(param) &&
+        !project.jobs.every(job => typeof job.gui === "boolean" && runOptions(job.run_options) && commandPath(job.command) && commandPath(job.help_command) && Array.isArray(job.params) && job.params.every(param => named(param) &&
           ["str", "int", "float", "bool", "path", "choice", "list"].includes(param.type) &&
           typeof param.required === "boolean" && Array.isArray(param.choices) && param.choices.every(c => typeof c === "string")))) {
       throw new Error("Incomplete PTK project inventory.");
