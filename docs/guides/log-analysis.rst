@@ -178,7 +178,7 @@ validation. ``ignore`` marks expected noise; ``justify`` records an accepted
 finding. Both retain the original severity, source log, line and reason. Neither
 modifies raw logs or changes execution/test failures. Active errors automatically open the dedicated diagnostics report locally;
 suppressed imported diagnostics do not trigger it on their own. These same
-rules also apply to CMake, SARIF, JUnit failure/error messages and Sphinx-Needs
+rules also apply to CMake, Bazel, SARIF, JUnit failure/error messages and Sphinx-Needs
 violations, even when console log analysis is disabled. Imported test statuses
 and totals remain factual; suppression changes diagnostic disposition only.
 Execution failures and report-collection problems remain visible.

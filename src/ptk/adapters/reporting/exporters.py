@@ -25,6 +25,27 @@ def to_json(report: Report) -> str:
         "tests": dict(report.test_totals()),
         "test_cases": test_metrics(c for suite in report.suites for c in suite.cases),
         "findings": dict(report.finding_totals()),
+        "bazel": {
+            "invocations": len(report.bazel),
+            "active": dict(
+                Counter(
+                    f.level
+                    for b in report.bazel
+                    for f in b.diagnostics
+                    if f.disposition == "active"
+                )
+            ),
+            "dispositions": dict(
+                Counter(f.disposition for b in report.bazel for f in b.diagnostics)
+            ),
+            "targets": dict(
+                Counter(t["status"] for b in report.bazel for t in b.targets)
+            ),
+            "test_targets": dict(
+                Counter(t["status"] for b in report.bazel for t in b.tests)
+            ),
+            "test_attempts": sum(len(b.test_attempts) for b in report.bazel),
+        },
         "cmake": {
             "invocations": len(report.cmake),
             "active": dict(
@@ -318,6 +339,36 @@ def to_markdown(report: Report) -> str:
                 "|---|---|---|---|---|",
             ]
             for finding in cmake.diagnostics:
+                lines.append(
+                    "| "
+                    + " | ".join(
+                        _cell(v)
+                        for v in (
+                            finding.level,
+                            finding.disposition,
+                            finding.message,
+                            "; ".join(finding.context),
+                            finding.reason,
+                        )
+                    )
+                    + " |"
+                )
+            lines.append("")
+    if report.bazel:
+        lines += [
+            "## Bazel",
+            "",
+            "Test-target summaries and attempts are separate from JUnit case totals.",
+            "",
+        ]
+        for bazel in report.bazel:
+            lines += [
+                f"**{_cell(bazel.step)} · Bazel {_cell(bazel.version or 'version unavailable')}:** {_cell(bazel.status)}; {len(bazel.targets)} target results; {len(bazel.tests)} test-target summaries; BEP {'complete' if bazel.complete else 'incomplete/unavailable'}",
+                "",
+                "| Severity | Disposition | Message | Sources | Reason |",
+                "|---|---|---|---|---|",
+            ]
+            for finding in bazel.diagnostics:
                 lines.append(
                     "| "
                     + " | ".join(

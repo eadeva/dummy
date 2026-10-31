@@ -134,6 +134,32 @@ class CMakeReport:
 
 
 @dataclass
+class BazelReport:
+    step: str
+    source: str
+    version: str = ""
+    importer: str = "bazel-bep-json"
+    executable: str = ""
+    invocation_id: str = ""
+    command: str = ""
+    workspace: str = ""
+    status: str = ""
+    duration: float = 0.0
+    exit_code: int | None = None
+    exit_name: str = ""
+    complete: bool = False
+    diagnostics: list[LogFinding] = field(default_factory=list)
+    targets: list[dict[str, Any]] = field(default_factory=list)
+    tests: list[dict[str, Any]] = field(default_factory=list)
+    test_attempts: list[dict[str, Any]] = field(default_factory=list)
+    actions: list[dict[str, Any]] = field(default_factory=list)
+    configurations: list[dict[str, Any]] = field(default_factory=list)
+    metrics: dict[str, Any] = field(default_factory=dict)
+    artifacts: list[dict[str, Any]] = field(default_factory=list)
+    availability: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
 class Contribution:
     step: str
     suites: list[TestSuite] = field(default_factory=list)
@@ -143,6 +169,7 @@ class Contribution:
     problems: list[str] = field(default_factory=list)  # unreadable files
     sphinx: list[SphinxReport] = field(default_factory=list)
     cmake: list[CMakeReport] = field(default_factory=list)
+    bazel: list[BazelReport] = field(default_factory=list)
 
 
 @dataclass
@@ -188,6 +215,7 @@ class Report:
     graph: dict[str, Any] = field(default_factory=lambda: describe_graph({}))
     sphinx: list[SphinxReport] = field(default_factory=list)
     cmake: list[CMakeReport] = field(default_factory=list)
+    bazel: list[BazelReport] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -222,6 +250,11 @@ class Report:
                 f.level == ERROR and f.disposition == "active"
                 for cmake in self.cmake
                 for f in cmake.diagnostics
+            )
+            or any(
+                f.level == ERROR and f.disposition == "active"
+                for bazel in self.bazel
+                for f in bazel.diagnostics
             )
         )
 
@@ -308,6 +341,7 @@ def from_summary(
         report.problems += contribution.problems
         report.sphinx += contribution.sphinx
         report.cmake += contribution.cmake
+        report.bazel += contribution.bazel
     return report
 
 

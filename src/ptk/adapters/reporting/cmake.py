@@ -34,6 +34,7 @@ from .cmake_importers.common import (
     text_file,
     version_tuple,
 )
+from .evidence import mask_data
 
 SNAPSHOT = ".ptk-cmake"
 
@@ -340,16 +341,6 @@ class CMakeReportingRunner:
             except OSError as exc:
                 on_problem(f"cannot save CMake evidence: {exc}")
         return outcome
-
-
-def mask_data(value, mask):
-    if isinstance(value, str):
-        return mask(value)
-    if isinstance(value, dict):
-        return {mask(str(key)): mask_data(item, mask) for key, item in value.items()}
-    if isinstance(value, list):
-        return [mask_data(item, mask) for item in value]
-    return value
 
 
 def merge_diagnostics(sarif, console, *, source_root=""):

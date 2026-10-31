@@ -289,6 +289,96 @@ with their original severity, rule and reason. Rules are taken from the saved
 run, not from current configuration. See :need:`DD_CMAKE_REPORTS` and
 :need:`REQ_Sw_CMAKE_REPORTS`.
 
+Bazel build and test evidence
+-----------------------------
+
+PTK imports Bazel's newline-delimited JSON Build Event Protocol (BEP) with one
+shipped ``bazel-bep-json`` importer. The producing stream records the actual
+``buildToolVersion`` and invocation UUID, including the version selected by
+Bazelisk. Report regeneration never probes the current PATH. BEP uses optional
+fields across Bazel releases; PTK consumes the documented event contract,
+ignores unknown event kinds and displays missing evidence as unavailable. It
+does not invent major-version parser boundaries or fall back to an older report.
+
+Direct ``bazel`` and ``bazelisk`` commands for ``build``, ``test``, ``coverage``
+and ``run`` automatically receive a temporary ``--build_event_json_file`` path.
+Startup options, working directory, environment, target arguments and the
+arguments after ``bazel run ... --`` retain their meaning. An explicit JSON
+output path on the command line is reused; an explicitly empty path disables
+structured capture. When PTK supplies the path it takes precedence over a JSON
+output destination from ``.bazelrc``; pass that destination explicitly to retain
+it. PTK does not edit ``.bazelrc`` or alter output bases, caches, execution
+strategies, warning settings or test retries. Other Bazel commands are not
+instrumented. A separate version probe is unnecessary and does not start another
+server or trigger another Bazelisk download.
+
+For example::
+
+   steps:
+     test:
+       run: [bazel, test, //...]
+
+List commands and simple quoted shell commands are supported. Compound shell
+commands, scripts, ambiguous startup options and unknown wrappers are not
+rewritten. They can write a
+``*.bep.json`` or ``*.bep.jsonl`` below ``${run.build_dir}`` or the producing
+step's reports directory. Only changed files are captured for an executed step;
+unchanged build-tree files are not assigned to another invocation. Alternatively,
+use ``report.import`` to copy a BEP file with either suffix directly into the
+step's reports folder. Each file must contain one invocation, one JSON event per
+line; binary/text-protobuf BEP files and JSON arrays are not accepted. Console
+output from a wrapper is not assigned to an arbitrary stream; BEP progress
+events carry that invocation's output, and ordinary PTK log analysis remains
+available.
+
+The full HTML report adds a Bazel section containing:
+
+* Producing version, invocation UUID, workspace, command result, Bazel's build
+  exit result and stream completeness. For ``bazel run``, a successful build
+  does not imply the launched program succeeded; PTK preserves the process result.
+* Searchable target/configuration/aspect results, reported actions, test-target
+  summaries, attempts, shards, runs and local/remote test-cache indicators.
+* Build metrics with exact recorded counters. ``actionsExecuted`` includes remote
+  cache hits and excludes local action-cache hits; it is not a cache-hit ratio.
+  Bazel normally emits action events for failures, so their count is not the
+  total number of executed actions. Missing optional metrics are not zero.
+* Artifact references, with links to available local files. Remote/bytestream
+  URIs are displayed without fetching them. Artifact contents, profiles and
+  binary blobs are not imported. Local links can expire after a later build.
+
+Test-target outcomes are separate from individual JUnit cases. Failed attempts
+followed by a successful retry do not become permanent test errors: the final
+``FLAKY`` target summary is a warning and the individual attempts remain visible.
+An imported JUnit case failure and its Bazel test-target summary have different
+granularity and retain their source labels. BEP targets/attempts do not increase
+JUnit totals. BEP event relationships are not a target dependency graph; PTK
+does not present them as build dependencies.
+
+Bazel warnings, errors and test warnings share the existing Diagnostics section
+and ``diagnostics.html``. Matching structured, BEP-progress, console and PTK-log
+findings are merged conservatively by step, severity, source location and message,
+with contributing sources and occurrence counts retained. Ambiguous matches keep
+separate source labels. Saved first-match ignore/justify rules and reasons apply
+even when console log analysis is disabled. Dispositions do not change actual
+process or test-target outcomes. Local active errors open diagnostics; CX never
+opens a browser.
+
+PTK retains masked normalized evidence per execution attempt. Later builds and
+workflow snapshots cannot rewrite earlier evidence; temporary raw BEP files are
+removed after capture. Explicit project-owned files are left intact. Inputs and
+each normalized snapshot are bounded to 100 MiB (104,857,600 bytes); exactly the
+boundary is accepted. This is a per-file/console limit, not an aggregate memory
+budget. Malformed, conflicting, truncated or incomplete event streams produce
+collection diagnostics while retaining readable evidence and preserving command
+exit codes. A startup failure may have no BEP/version; captured console errors
+remain useful and the missing evidence is explicit. The same step visibility,
+retry and history rules apply as for other importers.
+
+See :need:`DD_BAZEL_REPORTS`, :need:`REQ_Sw_BAZEL_REPORTS`, the
+`Bazel BEP documentation <https://bazel.build/remote/bep>`_ and its
+`event glossary <https://bazel.build/remote/bep-glossary>`_. No Bazel runtime,
+protobuf package, Build Event Service or additional plugin is required by PTK.
+
 Dedicated diagnostics reports
 -----------------------------
 
@@ -296,7 +386,7 @@ Every job report export also writes ``diagnostics.html``, including exports with
 an empty full-format list. Workflows write one aggregate diagnostics report and
 retain each child's dedicated report. These use the same diagnostics and filters
 as the full reports: execution, JUnit failures/errors, SARIF, log analysis,
-Sphinx-Needs, CMake and collection problems. Cobertura contributes coverage to
+Sphinx-Needs, CMake, Bazel and collection problems. Cobertura contributes coverage to
 the full report, not invented diagnostics; malformed coverage is a collection
 problem. Warnings remain visible. Active error/warning counts and ignored/justified
 counts describe diagnostic records, not numbers of tests.

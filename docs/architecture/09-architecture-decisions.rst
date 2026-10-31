@@ -852,6 +852,47 @@ not imply that every related future capability has been implemented.
    diagnostic disposition is a separate interpretation. No browser failure changes
    a run's exit code. See :need:`REQ_Sw_DEDICATED_DIAGNOSTICS`.
 
+.. ddec:: Import producing Bazel evidence through JSON BEP
+   :id: DD_BAZEL_REPORTS
+   :status: accepted
+
+   **Context:** Bazel provides invocation, target, action and test evidence through
+   BEP. Console output alone loses configuration identity, cache indicators and
+   test-attempt relationships. Reading current tool versions or old build artifacts
+   can misattribute a saved run; repeating test-target summaries as JUnit cases
+   would inflate totals.
+
+   **Decision:** Use one shipped JSON BEP importer and obtain the producing version
+   from BuildStarted, including Bazelisk's selected version. Consume documented
+   optional event fields rather than imposing unrelated major-version boundaries.
+   Instrument supported direct build/test/coverage/run commands with a temporary
+   JSON destination, preserving startup and forwarded arguments. Reuse explicit
+   command-line destinations; an explicit empty path disables BEP. Document that
+   the automatic destination overrides an implicit .bazelrc JSON destination.
+   Capture changed conventionally named streams from wrappers without rewriting
+   them, and accept report.import inputs. Never read stale build-tree evidence into
+   a new invocation. Retain masked normalized snapshots per attempt and remove
+   temporary raw files. Bound each artifact, captured console and normalized
+   snapshot to 100 MiB, consistent with the other structured importers.
+
+   Preserve configuration/aspect identity, test attempts/shards/runs, final target
+   status, cache indicators and available metrics. Keep test-target totals separate
+   from JUnit case totals. Merge exact diagnostic evidence with source labels and
+   saved dispositions; retain uncertain matches explicitly. Full and dedicated
+   job/workflow reports share diagnostics and local-only error opening. Preserve
+   command exit codes, including a failing program after a successful bazel run
+   build. Broken/incomplete streams are collection problems, not silent successes.
+
+   **Consequences:** No Bazel/protobuf runtime dependency or BES service is added.
+   JSON arrays, binary/text-protobuf BEP, arbitrary wrapper argument rewriting,
+   remote artifact downloads, profile import and target dependency discovery are
+   outside this importer. Artifact URIs remain references; local file links may
+   expire. Action-event counts are not execution totals, and BEP event graphs are
+   not target dependency graphs. Unknown optional events are ignored and missing
+   metrics remain unavailable. The 100 MiB cap is not an aggregate memory budget.
+   Projects retain artifact correctness and execution responsibilities under
+   :need:`DD_EXECUTION_BOUNDARIES`. See :need:`REQ_Sw_BAZEL_REPORTS`.
+
 Open boundaries
 ---------------
 

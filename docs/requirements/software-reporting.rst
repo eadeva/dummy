@@ -120,7 +120,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :tags: implemented
 
    PTK shall import JUnit, aggregate Cobertura line coverage, SARIF, log diagnostics
-   and Sphinx-Needs documentation evidence into its canonical report model.
+   and Sphinx-Needs, CMake and Bazel evidence into its canonical report model.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -457,6 +457,46 @@ Canonical results, retained evidence and diagnostic interpretation.
    job/workflow exporters implement :need:`DD_CMAKE_REPORTS`.
 
    **Evidence:** ``tests/reporting/test_cmake.py``.
+
+.. req-sw:: Import Bazel invocation and test evidence
+   :id: REQ_Sw_BAZEL_REPORTS
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: accepted
+   :verification_criteria: BEP fixtures, native Bazel runs and CLI tests verify producing-version provenance, command preservation, target/configuration identity, test attempts and cache indicators, warnings, source merging, saved rules, stream completeness, bounded inputs, masking, immutable workflows and local/CX opening.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_REPORTS
+   :tags: implemented
+
+   PTK shall import newline-delimited JSON BEP with version and invocation identity
+   supplied by the producing stream. It shall instrument supported direct Bazel and
+   Bazelisk build/test/coverage/run commands without changing execution semantics,
+   reuse explicit JSON destinations, and capture changed conventionally named BEP
+   files supplied by wrappers. Missing evidence shall remain explicit.
+
+   Reports shall retain targets, configurations, reported actions, test-target
+   summaries, attempts, cache indicators, supported metrics and artifact references.
+   Test-target results shall not inflate JUnit case totals. Unknown event kinds
+   shall be ignored; incomplete or malformed streams shall retain readable evidence
+   and produce collection diagnostics without changing process outcomes. Inputs
+   and normalized snapshots shall be bounded to 100 MiB each and retained snapshots
+   shall be masked and immutable per attempt.
+
+   Warnings and errors shall use the shared full and dedicated diagnostics views,
+   recorded ignore/justify rules and source identities. Matching findings shall be
+   merged conservatively. Local active errors shall open diagnostics, including
+   the workflow aggregate; CX shall never open a browser. Artifact references shall
+   not trigger content reads or remote downloads.
+
+   **Origin:** User request to apply the CMake importer/reporting principles to Bazel.
+
+   **Implementation:** Shipped BEP reader, invocation collector, canonical model and
+   shared exporters implement :need:`DD_BAZEL_REPORTS`.
+
+   **Evidence:** ``tests/reporting/test_bazel.py``;
+   ``extensions/project-toolkit/test/report-ui.test.js``.
 
 .. req-sw:: Produce dedicated diagnostics for every report source
    :id: REQ_Sw_DEDICATED_DIAGNOSTICS

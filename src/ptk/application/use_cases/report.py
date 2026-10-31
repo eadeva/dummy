@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from ...domain.config.model import LogAnalysisSpec
+from ...domain.reporting.bazel import merge_log_evidence as merge_bazel_logs
 from ...domain.reporting.cmake import merge_log_evidence, merge_sarif_evidence
 from ...domain.reporting.log_analysis import disposition
 from ...domain.reporting.model import Finding, Report, from_summary
@@ -41,6 +42,10 @@ class ReportService:
         for finding in report.findings:
             disposition(finding, rules)
         log_files = {step["step"]: step.get("log_file", "") for step in visible}
+        for bazel in report.bazel:
+            for finding in bazel.diagnostics:
+                finding.source_log = log_files.get(bazel.step, "")
+                disposition(finding, rules)
         for cmake in report.cmake:
             for finding in cmake.diagnostics:
                 finding.source_log = log_files.get(cmake.step, "")
@@ -83,6 +88,7 @@ class ReportService:
             report.problems.extend(analysis.problems)
         merge_sarif_evidence(report)
         merge_log_evidence(report)
+        merge_bazel_logs(report)
         return report
 
     def write(

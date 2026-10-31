@@ -2,7 +2,7 @@
 
 from ...domain.graphs import describe_graph
 from .. import graph_html
-from . import cmake_html, diagnostics, html, needs_html, ui
+from . import bazel_html, cmake_html, diagnostics, html, needs_html, ui
 from .diagnostics import Diagnostic
 from .ui import anchor, e, fields, link
 
@@ -153,6 +153,7 @@ def render(result, target, *, owner_variant, children, context, diagnostics_only
         tests=html.tests_section(reports),
         needs=needs_html.section(reports, target),
         cmake=cmake_html.section(reports),
+        bazel=bazel_html.section(reports, target),
         evidence=evidence_html or "<p>No report attachments recorded.</p>",
         configuration="".join(configuration)
         or '<p class="meta">No child project metadata recorded.</p>',

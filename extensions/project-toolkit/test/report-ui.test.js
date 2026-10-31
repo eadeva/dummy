@@ -108,6 +108,63 @@ test("Sphinx needs charts, table, diagnostics and build links share the offline 
   assert.deepEqual(errors, []); assert.deepEqual(requests, []);
 });
 
+test("Bazel evidence shares offline diagnostics and searchable target/attempt views", { skip: !python || !chromium ? "Requires PTK_TEST_PYTHON and Playwright" : false }, async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk bazel report "));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const code = `
+import sys
+from pathlib import Path
+from ptk.domain.reporting.model import Report, BazelReport, LogFinding
+from ptk.adapters.reporting.store import FileReportStore
+root=Path(sys.argv[1]); (root/'test.log').write_text('Local test evidence')
+r=Report('demo','build','debug','run','passed','',1,{}, {}, [])
+b=BazelReport('test','build/events.bep.json',version='9.1.0',command='test',complete=True,status='passed')
+b.diagnostics=[LogFinding('Bazel','R','error','<script>window.injected=true</script>',step='test',context=['Source: Bazel BEP action','Source: Bazel console']),LogFinding('Bazel','W','warning','Active warning',step='test'),LogFinding('Bazel','W','warning','Accepted warning',step='test',disposition='justified',reason='Reviewed upstream')]
+b.targets=[{'label':'//:core','configuration':'cfg','status':'passed'},{'label':'//:app','configuration':'cfg','status':'failed'}]
+b.tests=[{'label':'//:unit','configuration':'cfg','status':'FLAKY'}]
+b.test_attempts=[{'label':'//:unit','configuration':'cfg','status':'PASSED','run':1,'shard':2,'attempt':3,'cached_locally':True}]
+b.metrics={'actionSummary':{'actionsExecuted':'7'},'timingMetrics':{'wallTimeInMs':'1234'}}
+b.artifacts=[{'name':'test.log','uri':(root/'test.log').as_uri()}]
+r.bazel=[b]
+FileReportStore({}).write(r,['html','json'],root)
+`;
+  const result = spawnSync(python, ["-c", code, root], { cwd: repo, encoding: "utf8", env: { ...process.env, PYTHONPATH: path.join(repo, "src") }, timeout: 30000 });
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.PTK_TEST_CHROMIUM, args: ["--no-sandbox"] });
+  t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const errors = [], requests = [];
+  page.on("pageerror", error => errors.push(error.message));
+  await page.route(/^https?:/, route => { requests.push(route.request().url()); return route.abort(); });
+  await page.goto(require("node:url").pathToFileURL(path.join(root, "diagnostics.html")).href);
+  const section = page.locator("#diagnostics");
+  await section.getByLabel("Source", { exact: true }).selectOption("bazel");
+  assert.equal(await section.locator(".diagnostic:visible").count(), 2);
+  await section.getByLabel("Disposition", { exact: true }).selectOption("justified");
+  assert.equal(await section.locator(".diagnostic:visible").count(), 1);
+  await page.locator("#failures a").first().click();
+  const selected = page.locator(await page.evaluate(() => location.hash));
+  assert.equal(await selected.evaluate(node => node.open), true);
+  assert.match(await selected.innerText(), /Bazel BEP action.*Bazel console/);
+  assert.equal(await page.evaluate(() => window.injected), undefined);
+  await page.getByRole("link", { name: "Open full report", exact: true }).first().click();
+  const bazel = page.locator("#bazel");
+  assert.equal(await bazel.locator(":scope > details").evaluate(node => node.open), false);
+  await bazel.locator(":scope > details > summary").click();
+  const targets = bazel.locator('[data-filter="Bazel Targets"]');
+  await targets.getByRole("searchbox").fill("//:app");
+  assert.equal(await targets.locator("[data-record]:visible").count(), 1);
+  assert.match(await bazel.locator('[data-filter="Bazel Test attempts, shards and runs"] summary').innerText(), /run 1 \/ shard 2 \/ attempt 3/);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ colorScheme: "dark" });
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  const artifact = bazel.locator('[data-filter="Bazel Artifact references"]');
+  await artifact.locator("summary").click();
+  await artifact.getByRole("link", { name: "Open local artifact" }).click();
+  assert.match(await page.locator("body").innerText(), /Local test evidence/);
+  assert.deepEqual(errors, []); assert.deepEqual(requests, []);
+});
+
 test("Dedicated diagnostics share sources, warning/disposition filters, escaped text and CMake graphs", { skip: !python || !chromium ? "Requires PTK_TEST_PYTHON and Playwright" : false }, async t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk diagnostics report "));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

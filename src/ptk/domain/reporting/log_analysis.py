@@ -10,6 +10,9 @@ PYTEST_RESULT = re.compile(
 # Deliberately anchored: command echoes and summaries such as '0 errors' are not diagnostics.
 PATTERNS = [
     re.compile(
+        r"^(?P<level>ERROR|WARNING):\s+(?P<file>.+?):(?P<line>\d+)(?::\d+)?:\s*(?P<message>.+)$",
+    ),
+    re.compile(
         r"^(?P<file>.+?):(?P<line>\d+)(?::\d+)?:\s*(?:fatal )?(?P<level>error|warning):\s*(?P<message>.+)$",
         re.IGNORECASE,
     ),

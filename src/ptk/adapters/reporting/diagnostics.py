@@ -13,6 +13,7 @@ SOURCES = {
     "report": "Report collection",
     "sphinx": "Sphinx-Needs",
     "cmake": "CMake",
+    "bazel": "Bazel",
 }
 
 
@@ -126,6 +127,36 @@ def collect(report, owner, root=None, *, scope="", allowed=False):
                     + link(finding.source_log, root),
                     disposition=finding.disposition,
                     search=f"{cmake.version} {finding.rule} {finding.file} {finding.reason} {' '.join(finding.context)}",
+                )
+            )
+    for bazel in report.bazel:
+        for finding in bazel.diagnostics:
+            result.append(
+                Diagnostic(
+                    owner,
+                    finding.step,
+                    "bazel",
+                    finding.level,
+                    finding.message,
+                    fields(
+                        {
+                            "Bazel version": bazel.version or "Not recorded",
+                            "Invocation": bazel.invocation_id,
+                            "Importer": bazel.importer,
+                            "Evidence": bazel.source,
+                            "Rule": finding.rule,
+                            "Location": f"{finding.file}:{finding.line}"
+                            if finding.line
+                            else finding.file,
+                            "Sources": "; ".join(finding.context),
+                            "Occurrences": finding.occurrences,
+                            "Disposition rule": finding.suppression_rule,
+                            "Reason": finding.reason,
+                        }
+                    )
+                    + link(finding.source_log, root),
+                    disposition=finding.disposition,
+                    search=f"{bazel.version} {bazel.invocation_id} {finding.rule} {finding.file} {finding.reason} {' '.join(finding.context)}",
                 )
             )
     for finding in report.log_findings:
