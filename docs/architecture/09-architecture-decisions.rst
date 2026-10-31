@@ -906,6 +906,38 @@ not imply that every related future capability has been implemented.
    Projects retain artifact correctness and execution responsibilities under
    :need:`DD_EXECUTION_BOUNDARIES`. See :need:`REQ_Sw_BAZEL_REPORTS`.
 
+.. ddec:: Use GN's native generation JSON for target reporting
+   :id: DD_GN_REPORTS
+   :status: accepted
+
+   **Context:** GN generates Ninja files and already exports resolved dependencies
+   through its JSON IDE writer. Reconstructing BUILD.gn/Ninja graphs would add
+   avoidable effort and file-level detail. Useful generation error explanations
+   often follow the diagnostic header and quoted source line.
+
+   **Decision:** Probe the selected executable's revision and JSON capability in
+   the step environment. Add JSON to otherwise unconfigured direct gen invocations,
+   preserving explicit IDE/script/output choices. Use a stable build-tree output:
+   GN saves the switches for Ninja regeneration. Retain separately masked,
+   immutable report snapshots. Reuse unchanged JSON only after successful direct
+   generation with JSON enabled; failed generation cannot reuse previous graphs.
+   Wrappers provide changed named exports; offline imports do not infer versions.
+
+   Render target dependencies with shared nodes and toolchain identity, omitting
+   files and toolchain commands. Keep filtered dependencies as unavailable
+   boundary nodes. States describe configuration, never compilation/test results.
+   Retain multiline error/warning explanations for suppression rules, merge
+   matching log evidence and reuse full/dedicated diagnostics with local-only
+   active-error opening.
+
+   **Consequences:** No build-language parser, Ninja executor, graph-discovery
+   fallback or second generation is added. Probes are bounded separately from
+   execution. Native JSON remains a build artifact; report snapshots are masked.
+   Inputs/console/snapshots use the 100 MiB per-input limit. Graph rendering stops
+   above 2,000 nodes while retaining target records. Existing incompatible IDE
+   choices or missing native capabilities leave graphs explicitly unavailable.
+   See :need:`REQ_Sw_GN_REPORTS` and :need:`DD_EXECUTION_BOUNDARIES`.
+
 Open boundaries
 ---------------
 

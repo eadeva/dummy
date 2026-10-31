@@ -14,6 +14,7 @@ from typing import Any
 from ...domain.config.model import LogAnalysisSpec
 from ...domain.reporting.bazel import merge_log_evidence as merge_bazel_logs
 from ...domain.reporting.cmake import merge_log_evidence, merge_sarif_evidence
+from ...domain.reporting.gn import merge_log_evidence as merge_gn_logs
 from ...domain.reporting.log_analysis import disposition
 from ...domain.reporting.model import Finding, Report, from_summary
 from ..ports import ReportStore
@@ -42,6 +43,10 @@ class ReportService:
         for finding in report.findings:
             disposition(finding, rules)
         log_files = {step["step"]: step.get("log_file", "") for step in visible}
+        for gn in report.gn:
+            for finding in gn.diagnostics:
+                finding.source_log = log_files.get(gn.step, "")
+                disposition(finding, rules)
         for bazel in report.bazel:
             for finding in bazel.diagnostics:
                 finding.source_log = log_files.get(bazel.step, "")
@@ -89,6 +94,7 @@ class ReportService:
         merge_sarif_evidence(report)
         merge_log_evidence(report)
         merge_bazel_logs(report)
+        merge_gn_logs(report)
         return report
 
     def write(

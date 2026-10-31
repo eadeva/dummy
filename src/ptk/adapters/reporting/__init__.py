@@ -1,1 +1,1 @@
-"""Report importers (JUnit, SARIF, Cobertura, Sphinx-Needs) and exporters."""
+"""Structured test, analysis, documentation and build-tool report import/export."""

@@ -49,9 +49,10 @@
       };
       field("State", stateLabel(node));
       if (node.parent !== null) field("Job", byId.get(node.parent).label || node.parent);
-      if (node.label) field(node.kind === "bazel-target" ? "Rule kind" : "Target", node.label);
+      if (node.label) field(node.kind === "bazel-target" ? "Rule kind" : node.kind === "gn-target" ? "Target type" : "Target", node.label);
       if (node.variant) field("Variant", node.variant);
       if (node.configuration) field("Bazel configuration", node.configuration);
+      if (node.toolchain) field("Toolchain", node.toolchain);
       if (node.duration !== undefined) field("Duration", ["skipped", "not_run", "hidden"].includes(node.status) ? "Not executed" : `${node.duration.toFixed(2)}s`);
       links("Needs", node.needs);
       const peers = node.parent === null ? data.nodes : byId.get(node.parent).children.nodes;

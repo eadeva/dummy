@@ -4,7 +4,7 @@ import copy
 import json
 
 from .. import graph_html
-from . import bazel_html, cmake_html, diagnostics, needs_html, ui
+from . import bazel_html, cmake_html, diagnostics, gn_html, needs_html, ui
 from .ui import anchor, badge, e, fields, link
 
 
@@ -111,7 +111,7 @@ def overview(entries, reports, diagnostics_items, *, entity="Steps"):
     targets["Active log errors"] = "diagnostics"
     tones["Active log errors"] = "failed" if values["Active log errors"] else "info"
     values["Other diagnostics"] = sum(
-        item.source in ("static", "report", "sphinx", "cmake", "bazel")
+        item.source in ("static", "report", "sphinx", "cmake", "bazel", "gn")
         and item.disposition == "active"
         for item in diagnostics_items
     )
@@ -314,6 +314,7 @@ def render(report, *, link_root=None):
         needs=needs_html.section([report], link_root),
         cmake=cmake_html.section([report]),
         bazel=bazel_html.section([report], link_root),
+        gn=gn_html.section([report]),
         evidence=evidence_html,
         configuration=configuration(report),
     )

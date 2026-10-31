@@ -177,6 +177,55 @@ FileReportStore({}).write(r,['html','json'],root)
   assert.deepEqual(errors, []); assert.deepEqual(requests, []);
 });
 
+test("GN reports expose native target graphs, toolchains and dedicated diagnostics", { skip: !python || !chromium ? "Requires PTK_TEST_PYTHON and Playwright" : false }, async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk gn report "));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const code = `
+import json,sys
+from pathlib import Path
+from ptk.domain.reporting.model import Report, GNReport, LogFinding
+from ptk.adapters.reporting.gn import parse_project
+from ptk.adapters.reporting.store import FileReportStore
+root=Path(sys.argv[1]); path=root/'native.gn-project.json'
+path.write_text(json.dumps({'build_settings':{'root_path':str(root),'build_dir':'//out/','default_toolchain':'//:tc'},'targets':{'//:core':{'type':'static_library','toolchain':'//:tc','deps':[]},'//:app':{'type':'executable','toolchain':'//:tc','deps':['//:core'],'sources':['file.cc']}}}))
+g=GNReport('generate',str(path),version='2614',status='passed')
+parse_project(g,path,root)
+g.diagnostics=[LogFinding('GN','','warning','<script>window.injected=true</script>',step='generate'),LogFinding('GN','','error','Accepted defect',step='generate',disposition='justified',reason='Reviewed exception')]
+r=Report('demo','generate','debug','run','passed','',1,{}, {}, [],gn=[g])
+FileReportStore({}).write(r,['html','json'],root)
+`;
+  const result = spawnSync(python, ["-c", code, root], { cwd: repo, encoding: "utf8", env: { ...process.env, PYTHONPATH: path.join(repo, "src") }, timeout: 30000 });
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  const browser = await chromium.launch({ headless: true, executablePath: process.env.PTK_TEST_CHROMIUM, args: ["--no-sandbox"] });
+  t.after(() => browser.close());
+  const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  const errors = []; page.on("pageerror", error => errors.push(error.message));
+  await page.goto(require("node:url").pathToFileURL(path.join(root, "diagnostics.html")).href);
+  const diagnostics = page.locator("#diagnostics");
+  await diagnostics.getByLabel("Source", { exact: true }).selectOption("gn");
+  assert.equal(await diagnostics.locator(".diagnostic:visible").count(), 1);
+  await diagnostics.getByLabel("Disposition", { exact: true }).selectOption("justified");
+  await diagnostics.locator(".diagnostic:visible > summary").click();
+  assert.match(await diagnostics.locator(".diagnostic:visible").innerText(), /Reviewed exception/);
+  assert.equal(await page.evaluate(() => window.injected), undefined);
+  await page.getByRole("link", { name: "Open full report", exact: true }).first().click();
+  const gn = page.locator("#gn");
+  await gn.locator(":scope > details > summary").click();
+  const graph = gn.locator(".ptk-graph");
+  assert.equal(await graph.evaluate(node => node.open), false);
+  await graph.locator(":scope > summary").click();
+  assert.equal(await graph.locator(".ptk-graph-node").count(), 2);
+  assert.equal(await graph.locator(".ptk-graph-edge").count(), 1);
+  await graph.locator('[data-node-id="//:app"]').click();
+  assert.match(await graph.locator(".ptk-graph-inspector").innerText(), /Target type.*executable.*Toolchain.*\/\/:tc/s);
+  assert(!await graph.innerText().then(text => text.includes("file.cc")));
+  await gn.getByRole("searchbox").fill("//:app");
+  assert.equal(await gn.locator("[data-record]:visible").count(), 1);
+  await page.setViewportSize({ width: 390, height: 844 });
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  assert.deepEqual(errors, []);
+});
+
 test("Dedicated diagnostics share sources, warning/disposition filters, escaped text and CMake graphs", { skip: !python || !chromium ? "Requires PTK_TEST_PYTHON and Playwright" : false }, async t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk diagnostics report "));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

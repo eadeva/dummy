@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 from ...domain.config.model import LogAnalysisSpec
+from ...domain.reporting.gn import message as gn_message
 from ...domain.reporting.log_analysis import ANSI, diagnostic, disposition
 from ...domain.reporting.model import Contribution, LogFinding
 
@@ -47,6 +48,7 @@ def analyze(summary):
                 parsed = diagnostic(line)
                 if parsed is None:
                     continue
+                parsed["message"] = gn_message(lines, index, parsed["message"])
                 # CMake and other diagnostic headers may put the message on following lines.
                 if not parsed["message"] or parsed["message"].endswith(":"):
                     continuation = []

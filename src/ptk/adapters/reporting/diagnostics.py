@@ -14,6 +14,7 @@ SOURCES = {
     "sphinx": "Sphinx-Needs",
     "cmake": "CMake",
     "bazel": "Bazel",
+    "gn": "GN",
 }
 
 
@@ -157,6 +158,35 @@ def collect(report, owner, root=None, *, scope="", allowed=False):
                     + link(finding.source_log, root),
                     disposition=finding.disposition,
                     search=f"{bazel.version} {bazel.invocation_id} {finding.rule} {finding.file} {finding.reason} {' '.join(finding.context)}",
+                )
+            )
+    for gn in report.gn:
+        for finding in gn.diagnostics:
+            result.append(
+                Diagnostic(
+                    owner,
+                    finding.step,
+                    "gn",
+                    finding.level,
+                    finding.message,
+                    fields(
+                        {
+                            "GN version": gn.version or "Not recorded",
+                            "Importer": gn.importer,
+                            "Evidence": gn.source,
+                            "Build directory": gn.build_dir,
+                            "Location": f"{finding.file}:{finding.line}"
+                            if finding.line
+                            else finding.file,
+                            "Sources and context": "; ".join(finding.context),
+                            "Occurrences": finding.occurrences,
+                            "Disposition rule": finding.suppression_rule,
+                            "Reason": finding.reason,
+                        }
+                    )
+                    + link(finding.source_log, root),
+                    disposition=finding.disposition,
+                    search=f"{gn.version} {finding.file} {finding.reason} {' '.join(finding.context)}",
                 )
             )
     for finding in report.log_findings:

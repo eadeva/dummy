@@ -419,6 +419,71 @@ protobuf package, Build Event Service or additional plugin is required to read
 saved evidence. Target graph capture uses the project's existing Bazel; see
 `configured query <https://bazel.build/query/cquery>`_.
 
+GN generation reports
+---------------------
+
+GN generates Ninja build files; it does not compile the targets. PTK uses GN's
+built-in JSON project export for target information and dependencies. It does not
+parse BUILD.gn files, reconstruct Ninja graphs, run Ninja, or launch a second
+generation to collect reporting data.
+
+For a direct ``gn gen`` list command or simple shell command, PTK resolves the
+executable using the step's PATH and records its ``--version`` output. GN uses
+revision identifiers, so JSON support is checked with ``gn help gen`` rather
+than a semantic-version boundary. These probes have separate 10-second timeouts
+outside the command's timeout. Unsupported GN builds retain console diagnostics
+and explicit missing-graph information. For example::
+
+   steps:
+     generate:
+       run: [gn, gen, "${run.build_dir}"]
+
+When no IDE or JSON-script/output options are already configured, PTK adds
+``--ide=json --json-file-name=.ptk.gn-project.json``. This stable build-directory
+file is intentional: GN saves those options in Ninja's regeneration rule. Later
+regeneration can refresh it without referencing an old report directory or a
+deleted temporary file. It remains native, unmasked build output; PTK retains a
+separate masked snapshot in the report directory.
+
+Existing IDE choices, JSON destinations, scripts, filters and other arguments
+are preserved. A different IDE or dormant JSON script/output option prevents
+automatic instrumentation; select ``--ide=json`` explicitly to supply target
+evidence. PTK never enables a dormant JSON post-processing script. Successful
+direct JSON generations may retain identical bytes because GN only rewrites
+changed exports. Failed/cancelled generations never reuse the old target model.
+Reporting parse failures preserve the actual process outcome.
+
+Full job/workflow reports show the generation result, executable and version,
+source/build directories, default toolchain and searchable configured targets.
+The collapsed offline graph supports zoom, pan and node details. It shows target
+types, shared dependencies and toolchain identity; source files and toolchain
+commands are omitted. GN's exported dependencies combine linked and data
+dependencies. Target states remain ``configured``; generation success does not
+establish compilation or test success. Filtered-out dependencies become explicit
+unavailable boundary nodes. Above 2,000 graph nodes, target records remain
+available and the report explains why it omitted the interactive graph.
+
+Errors and warnings include source locations, bounded multiline explanations and
+context. Saved first-match ignore/justify rules apply even when generic log
+analysis is disabled. Matching GN and PTK-log findings merge with source labels;
+ambiguous matches remain separate. Full and dedicated diagnostics share local
+active-error opening and CX browser exclusion. GN does not inflate JUnit totals.
+
+Wrappers can emit changed ``*.gn-project.json`` files below ``run.build_dir`` or
+the step report directory. For offline ``report.import``, copy ``project.json`` or
+``name.gn-project.json`` to the step report directory. A corresponding
+``name.gn.log`` supplies diagnostics; standalone ``*.gn.log`` files are accepted.
+Native project JSON does not record the producing GN version or process result,
+so these remain unknown for offline/wrapper inputs. Regenerating a saved report
+never probes the current PATH or invokes GN.
+
+Inputs, console capture and each normalized snapshot are bounded to 100 MiB
+(104,857,600 bytes), with the boundary accepted. Unknown JSON fields are ignored;
+malformed/cyclic evidence and unsafe input paths produce collection diagnostics.
+Snapshots are immutable per attempt and reused by saved workflow reports. See
+:need:`DD_GN_REPORTS`, :need:`REQ_Sw_GN_REPORTS` and the
+`GN reference <https://gn.googlesource.com/gn/+/main/docs/reference.md>`_.
+
 Dedicated diagnostics reports
 -----------------------------
 
@@ -426,7 +491,7 @@ Every job report export also writes ``diagnostics.html``, including exports with
 an empty full-format list. Workflows write one aggregate diagnostics report and
 retain each child's dedicated report. These use the same diagnostics and filters
 as the full reports: execution, JUnit failures/errors, SARIF, log analysis,
-Sphinx-Needs, CMake, Bazel and collection problems. Cobertura contributes coverage to
+Sphinx-Needs, CMake, Bazel, GN and collection problems. Cobertura contributes coverage to
 the full report, not invented diagnostics; malformed coverage is a collection
 problem. Warnings remain visible. Active error/warning counts and ignored/justified
 counts describe diagnostic records, not numbers of tests.

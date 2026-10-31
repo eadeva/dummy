@@ -60,6 +60,21 @@ def to_json(report: Report) -> str:
                 Counter(f.disposition for c in report.cmake for f in c.diagnostics)
             ),
         },
+        "gn": {
+            "invocations": len(report.gn),
+            "targets": sum(len(g.targets) for g in report.gn),
+            "active": dict(
+                Counter(
+                    f.level
+                    for g in report.gn
+                    for f in g.diagnostics
+                    if f.disposition == "active"
+                )
+            ),
+            "dispositions": dict(
+                Counter(f.disposition for g in report.gn for f in g.diagnostics)
+            ),
+        },
         "needs": {
             "records": sum(len(doc.needs) for doc in report.sphinx),
             "types": dict(
@@ -354,6 +369,42 @@ def to_markdown(report: Report) -> str:
                     + " |"
                 )
             lines.append("")
+    if report.gn:
+        lines += [
+            "## GN",
+            "",
+            "Generation results describe configured targets, not compilation or test results.",
+            "",
+        ]
+        for gn in report.gn:
+            lines += [
+                f"**{_cell(gn.step)} · GN {_cell(gn.version or 'version unavailable')}:** {_cell(gn.status)}; {len(gn.targets)} configured targets",
+                "",
+                "| Severity | Disposition | Message | Sources | Reason |",
+                "|---|---|---|---|---|",
+            ]
+            for finding in gn.diagnostics:
+                lines.append(
+                    "| "
+                    + " | ".join(
+                        _cell(v)
+                        for v in (
+                            finding.level,
+                            finding.disposition,
+                            finding.message,
+                            "; ".join(finding.context),
+                            finding.reason,
+                        )
+                    )
+                    + " |"
+                )
+            lines += [
+                "",
+                "Target graph: "
+                + _cell(gn.availability.get("target graph", "Unavailable"))
+                + ". Interactive view in the full HTML report.",
+                "",
+            ]
     if report.bazel:
         lines += [
             "## Bazel",

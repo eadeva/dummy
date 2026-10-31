@@ -855,7 +855,7 @@ class LogAnalysisSpec(_Strict):
     )
     rules: list[LogRuleSpec] = Field(
         default_factory=list,
-        description="Ordered suppression rules for log and imported diagnostics (CMake, Bazel, SARIF, JUnit and Sphinx). The first matching rule wins; raw logs and execution/test outcomes remain unchanged.",
+        description="Ordered suppression rules for log and imported diagnostics (CMake, Bazel, GN, SARIF, JUnit and Sphinx). The first matching rule wins; raw logs and execution/test outcomes remain unchanged.",
     )
 
     @field_validator("rules")

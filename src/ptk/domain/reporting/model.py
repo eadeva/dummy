@@ -161,6 +161,25 @@ class BazelReport:
 
 
 @dataclass
+class GNReport:
+    step: str
+    source: str
+    version: str = ""
+    importer: str = "gn-project-json"
+    executable: str = ""
+    root: str = ""
+    build_dir: str = ""
+    status: str = "unknown"
+    duration: float = 0.0
+    exit_code: int | None = None
+    diagnostics: list[LogFinding] = field(default_factory=list)
+    targets: list[dict[str, Any]] = field(default_factory=list)
+    configuration: dict[str, Any] = field(default_factory=dict)
+    availability: dict[str, str] = field(default_factory=dict)
+    graph: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
 class Contribution:
     step: str
     suites: list[TestSuite] = field(default_factory=list)
@@ -171,6 +190,7 @@ class Contribution:
     sphinx: list[SphinxReport] = field(default_factory=list)
     cmake: list[CMakeReport] = field(default_factory=list)
     bazel: list[BazelReport] = field(default_factory=list)
+    gn: list[GNReport] = field(default_factory=list)
 
 
 @dataclass
@@ -217,6 +237,7 @@ class Report:
     sphinx: list[SphinxReport] = field(default_factory=list)
     cmake: list[CMakeReport] = field(default_factory=list)
     bazel: list[BazelReport] = field(default_factory=list)
+    gn: list[GNReport] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -256,6 +277,11 @@ class Report:
                 f.level == ERROR and f.disposition == "active"
                 for bazel in self.bazel
                 for f in bazel.diagnostics
+            )
+            or any(
+                f.level == ERROR and f.disposition == "active"
+                for gn in self.gn
+                for f in gn.diagnostics
             )
         )
 
@@ -343,6 +369,7 @@ def from_summary(
         report.sphinx += contribution.sphinx
         report.cmake += contribution.cmake
         report.bazel += contribution.bazel
+        report.gn += contribution.gn
     return report
 
 

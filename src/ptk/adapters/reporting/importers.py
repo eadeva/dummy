@@ -24,7 +24,7 @@ from ...domain.reporting.model import (
     TestCase,
     TestSuite,
 )
-from . import bazel, cmake, sphinx
+from . import bazel, cmake, gn, sphinx
 
 
 def _float(value: str | None) -> float:
@@ -130,6 +130,11 @@ def scan(reports_dir: Path, steps: Mapping[str, str]) -> list[Contribution]:
         ) as exc:
             contribution.problems.append(f"{step}: cannot read {file.name}: {exc}")
     for folder, step in steps.items():
+        gn_result = gn.read(reports_dir / folder, step)
+        if gn_result.gn or gn_result.problems:
+            contribution = contributions.setdefault(step, Contribution(step))
+            contribution.gn.extend(gn_result.gn)
+            contribution.problems.extend(gn_result.problems)
         bazel_result = bazel.read(reports_dir / folder, step)
         if bazel_result.bazel or bazel_result.problems:
             contribution = contributions.setdefault(step, Contribution(step))

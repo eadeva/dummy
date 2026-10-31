@@ -120,7 +120,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :tags: implemented
 
    PTK shall import JUnit, aggregate Cobertura line coverage, SARIF, log diagnostics
-   and Sphinx-Needs, CMake and Bazel evidence into its canonical report model.
+   and Sphinx-Needs, CMake, Bazel and GN evidence into its canonical report model.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -508,6 +508,46 @@ Canonical results, retained evidence and diagnostic interpretation.
 
    **Evidence:** ``tests/reporting/test_bazel.py``;
    ``extensions/project-toolkit/test/report-ui.test.js``.
+
+.. req-sw:: GN generation diagnostics and native target graphs
+   :id: REQ_Sw_GN_REPORTS
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: accepted
+   :verification_criteria: Fixtures and native GN runs verify executable/capability selection, stable regeneration outputs, preserved IDE/script arguments, warnings/errors, shared/toolchain target identity, malformed and bounded evidence, masking, immutable workflows, saved dispositions, deduplication and local/CX opening.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_REPORTS
+   :tags: implemented
+
+   PTK shall collect GN generation diagnostics and native JSON target models.
+   Direct gen commands shall use the step's executable and environment, record
+   the producing revision, and enable JSON only when capability detection and
+   existing IDE/script/output options permit it. Added output paths shall remain
+   valid for Ninja regeneration. Explicit exports shall be preserved and failed
+   generation shall not reuse old graphs.
+
+   Graphs shall use native dependencies, preserve shared target and toolchain
+   identity, omit individual files and toolchain commands, and distinguish
+   configuration from compilation/test success. Missing filtered dependencies and
+   unavailable graphs shall be explicit. Inputs, console and snapshots shall be
+   bounded to 100 MiB each; displayed graphs to 2,000 nodes.
+
+   Full and dedicated job/workflow reports shall apply saved ignore/justify rules
+   and reasons, retain multiline explanations, merge matching sources and preserve
+   process outcomes. Active errors shall open diagnostics locally, never in CX.
+   Hidden steps and dry runs shall not be instrumented. Masked snapshots shall be
+   retained per attempt; saved-report regeneration shall not invoke GN. Offline
+   imports shall not invent producing versions or results.
+
+   **Origin:** User request to apply importer/reporting principles to Generate
+   Ninja (GN), using built-in graphs at target level.
+
+   **Implementation:** Native JSON/console importer, generation collector and
+   shared exporters implement :need:`DD_GN_REPORTS`.
+
+   **Evidence:** ``tests/reporting/test_gn.py``.
 
 .. req-sw:: Produce dedicated diagnostics for every report source
    :id: REQ_Sw_DEDICATED_DIAGNOSTICS
