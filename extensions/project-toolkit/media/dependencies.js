@@ -77,5 +77,30 @@
       if (kind && object(current?.[key])) return { path: [...selected, key], kind, value: current[key] };
     }
   }
-  return { nodes, validate, update, context, targetKey, availableJobs, validateTargets };
+  function describe(item) {
+    if (typeof item.job === "string") return { kind: "job", label: "Job", command: item.job };
+    if (item.uses) return { kind: "builtin", label: "Built-in", command: item.uses };
+    const command = Array.isArray(item.run) ? item.run.map(value => /\s/.test(String(value)) ? JSON.stringify(value) : String(value)).join(" ") : String(item.run || "");
+    if (item.python) {
+      const mode = item.python.project !== undefined ? "Python project" : item.python.venv !== undefined ? "Python environment" : item.python.uvx !== undefined ? "Python tool" : "PTK Python";
+      return { kind: "python", label: mode, command };
+    }
+    if (!item.run && Array.isArray(item.generators) && item.generators.length) return { kind: "generator", label: "Generate files", command: item.generators.join(", ") };
+    const first = Array.isArray(item.run) ? item.run[0] : String(item.run || "").split(/\s/)[0];
+    if (typeof first === "string" && first.endsWith(".py")) return { kind: "python", label: "Python script", command };
+    return { kind: "command", label: Array.isArray(item.run) ? "Command / script" : "Command string", command };
+  }
+  function related(entries, selected) {
+    const ancestors = new Set(), descendants = new Set(), byId = new Map(entries.map(entry => [entry.id, entry]));
+    function walk(set, start, next) {
+      const pending = [...next(start)];
+      while (pending.length) { const id = pending.pop(); if (id === selected || set.has(id)) continue; set.add(id); pending.push(...next(id)); }
+    }
+    walk(ancestors, selected, id => byId.get(id)?.needs || []);
+    const downstream = new Map(entries.map(entry => [entry.id, []]));
+    entries.forEach(entry => entry.needs.forEach(id => downstream.get(id)?.push(entry.id)));
+    walk(descendants, selected, id => downstream.get(id) || []);
+    return { ancestors, descendants };
+  }
+  return { nodes, validate, update, context, targetKey, availableJobs, validateTargets, describe, related };
 });

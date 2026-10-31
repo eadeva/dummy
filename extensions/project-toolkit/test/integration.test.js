@@ -441,6 +441,25 @@ test("new configuration items from the installed schema validate with their requ
   assert.equal(config.value.workflows["new-workflow"].jobs.job.job, "build");
 });
 
+test("creation modes from the installed CLI write ordinary valid job files", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
+  const S = require("../media/schema"), { plan } = require("../src/project-edits");
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk creation modes "));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  project(root, "creation");
+  let config = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"])).projects[0].configuration;
+  const spec = config.schema.$defs.JobSpec;
+  const operations = S.stepModes(spec, config.schema).map(mode => ({op: "add", path: ["jobs", `example-${mode.id}`], value: S.stepInitial(spec, config.schema, mode.id)}));
+  const docs = new Map(config.files.map(file => [file, fs.readFileSync(file, "utf8")]));
+  for (const [file, text] of plan(config, docs, operations)) { fs.mkdirSync(path.dirname(file), {recursive: true}); fs.writeFileSync(file, text); }
+  invoke(root, ["validate"]);
+  config = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"])).projects[0].configuration;
+  assert.equal(config.error, null);
+  for (const mode of S.stepModes(spec, config.schema)) {
+    assert.deepEqual(config.value.jobs[`example-${mode.id}`].steps.step, mode.initial.steps.step);
+    assert(!fs.readFileSync(path.join(root, `jobs/example-${mode.id}.ptk.yml`), "utf8").includes("x-ptk"));
+  }
+});
+
 test("real maintainer jobs and workflows execute through the discovered namespace", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk maintenance extension "));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));

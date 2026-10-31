@@ -470,6 +470,14 @@ class ExportSchema:
     """JSON Schema of the configuration, with steps in their written form."""
 
     def execute(self) -> dict[str, Any]:
+        from ...domain.config.model import (
+            JOB_RE,
+            PARAM_RE,
+            RESERVED_JOBS,
+            RESERVED_PARAMS,
+        )
+        from ...domain.config.step_modes import creation_modes
+
         schema = PtkConfig.model_json_schema(by_alias=True)
         # Form creation hints belong to the installed PTK schema. They describe
         # a valid starting shape without changing runtime configuration defaults.
@@ -501,6 +509,36 @@ class ExportSchema:
         definitions["JobSpec"]["properties"]["steps"]["x-ptk-entry-name"] = "step"
         definitions["WorkflowSpec"]["properties"]["jobs"]["x-ptk-entry-name"] = "job"
         definitions["JobSpec"]["properties"]["steps"]["x-ptk-graph"] = "step"
+        modes = creation_modes()
+        definitions["StepSpec"]["x-ptk-creation-modes"] = modes
+        definitions["JobSpec"]["x-ptk-creation-modes"] = [
+            {**mode, "initial": {"steps": {"step": mode["initial"]}}} for mode in modes
+        ]
+        definitions["PythonSpec"]["x-ptk-creation-modes"] = [
+            {**mode, "initial": mode["initial"]["python"]}
+            for mode in modes
+            if mode["id"]
+            in {
+                "python-project",
+                "python-editable",
+                "python-venv",
+                "python-tool",
+                "python-cli",
+            }
+        ]
+        schema["properties"]["jobs"]["propertyNames"] = {
+            "pattern": JOB_RE.pattern,
+            "not": {"enum": sorted(RESERVED_JOBS)},
+            "description": "Start with a lowercase letter; use lowercase letters, digits, underscores or hyphens. Built-in command names are reserved.",
+        }
+        definitions["JobSpec"]["properties"]["params"]["propertyNames"] = {
+            "pattern": PARAM_RE.pattern,
+            "not": {"enum": sorted(RESERVED_PARAMS)},
+            "description": "Start with a lowercase letter; use lowercase letters, digits or underscores. PTK run-option names are reserved.",
+        }
+        definitions["JobSpec"]["properties"]["steps"]["propertyNames"][
+            "description"
+        ] = "Start with a letter or digit; use letters, digits, underscores, dots or hyphens. Step names must be unique within their job."
         definitions["WorkflowSpec"]["properties"]["jobs"]["x-ptk-graph"] = "job"
         definitions["WorkflowJob"]["properties"]["job"]["x-ptk-reference"] = {
             "path": ["jobs"],

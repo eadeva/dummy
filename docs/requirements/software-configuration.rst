@@ -163,6 +163,35 @@ Discovery, file ownership, schema authority and workspace routing.
 
    **Evidence:** ``src/ptk/application/use_cases/editor.py``; ``tests/test_editor_inventory.py``.
 
+.. req-sw:: Export guided configuration creation metadata
+   :id: REQ_Sw_CREATION_METADATA
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: under review
+   :verification_criteria: Every exported step/job/Python template validates with its domain model; command templates resolve through the real command builder; bundled schema parity and editor integration verify ordinary YAML edits; draft/review tests cover cancellation, field constraints, stale writes and graph-driven dependency defaults.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_CONFIG
+   :tags: implemented
+
+   PTK shall export creation templates and contextual explanations for supported
+   command-line and Python execution choices, including editable packages,
+   built-in operations and generation-only steps. Templates shall use existing
+   configuration fields. The schema shall retain descriptions, required values,
+   types, limits and applicable name restrictions for guided creation of arbitrary
+   configuration elements. Clients shall not need to invent runtime mode fields.
+
+   **Origin:** User request for intuitive step-wise setup of all new configuration
+   elements and improved configuration-graph interaction.
+
+   **Implementation:** Implemented. The extension's Choose/Configure/Review flow
+   holds drafts in memory and writes only after Create. Client checks assist
+   entry; complete project validation remains PTK's responsibility. Setup does
+   not execute commands, install dependencies or verify tool availability.
+
+   **Evidence:** ``src/ptk/domain/config/step_modes.py``; ``tests/test_creation_modes.py``; ``extensions/project-toolkit/test/creation.test.js``; ``extensions/project-toolkit/test/webview.test.js``; ``extensions/project-toolkit/test/integration.test.js``.
+
 .. req-sw:: Initialize without replacing existing files
    :id: REQ_Sw_INIT
    :req_type: functional

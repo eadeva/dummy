@@ -851,7 +851,32 @@
           },
           "description": "Named parameters accepted by this job. Define their types, help, choices and defaults.",
           "title": "Params",
-          "type": "object"
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^[a-z][a-z0-9_]*$",
+            "not": {
+              "enum": [
+                "all_variants",
+                "args_for",
+                "clean",
+                "dry_run",
+                "env",
+                "feature",
+                "graph",
+                "help",
+                "no_cache_ptk",
+                "only_step",
+                "params",
+                "quiet",
+                "re_run",
+                "set",
+                "setup",
+                "to",
+                "variant"
+              ]
+            },
+            "description": "Start with a lowercase letter; use lowercase letters, digits or underscores. PTK run-option names are reserved."
+          }
         },
         "requires_tools": {
           "description": "Tools required before the job runs. Reference a registered tool, disable it with false, or supply an inline tool definition.",
@@ -903,7 +928,8 @@
           "description": "Named steps with explicit needs dependencies. YAML order only controls presentation.",
           "minProperties": 1,
           "propertyNames": {
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$"
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+            "description": "Start with a letter or digit; use letters, digits, underscores, dots or hyphens. Step names must be unique within their job."
           },
           "title": "Steps",
           "type": "object",
@@ -916,6 +942,367 @@
       ],
       "title": "JobSpec",
       "type": "object",
+      "x-ptk-creation-modes": [
+        {
+          "id": "command",
+          "group": "Command line",
+          "label": "Executable + arguments",
+          "description": "Run a program directly. Each list item is one argument, including paths with spaces.",
+          "requirements": "The executable must be on the step's PATH or specified by a full path.",
+          "constraints": "No shell expansion, pipes or redirection. Leading script paths select PTK's script handling. Replace tool and its arguments before running.",
+          "initial": {
+            "steps": {
+              "step": {
+                "run": [
+                  "tool",
+                  "--help"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "shell",
+          "group": "Command line",
+          "label": "Platform-shell command",
+          "description": "Run a command string through /bin/sh on POSIX or cmd.exe on Windows. Supports that shell's pipes, redirection and expansion.",
+          "requirements": "Use syntax for the machine executing PTK; this is not automatically Bash or PowerShell.",
+          "constraints": "Quoting and commands differ between platforms. A string starting with a recognized script and without shell operators uses script handling instead.",
+          "initial": {
+            "steps": {
+              "step": {
+                "run": "echo Hello"
+              }
+            }
+          }
+        },
+        {
+          "id": "bash-script",
+          "group": "Command line",
+          "label": "Bash script (.sh)",
+          "description": "Run a shell script with Bash; subsequent list items are script arguments.",
+          "requirements": "Bash must be available on PATH, including on Windows. Replace the example script path.",
+          "constraints": "PTK invokes bash explicitly. For another shell, name that interpreter as the executable.",
+          "initial": {
+            "steps": {
+              "step": {
+                "run": [
+                  "tools/script.sh"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "powershell-script",
+          "group": "Command line",
+          "label": "PowerShell script (.ps1)",
+          "description": "Run a PowerShell file with -NoProfile -ExecutionPolicy Bypass -File.",
+          "requirements": "PTK selects available pwsh, otherwise powershell. Replace the example script path.",
+          "constraints": "PowerShell must be installed; scripts must suit its version and the host OS. A successful launch does not establish script portability.",
+          "initial": {
+            "steps": {
+              "step": {
+                "run": [
+                  "tools/script.ps1"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "batch-script",
+          "group": "Command line",
+          "label": "Windows batch script (.cmd / .bat)",
+          "description": "Run a Windows batch file using cmd /c. Add script arguments as separate list items.",
+          "requirements": "A Windows host with cmd and the specified script.",
+          "constraints": "Batch syntax and cmd quoting apply; this is not a portable POSIX script.",
+          "initial": {
+            "steps": {
+              "step": {
+                "run": [
+                  "tools/script.cmd"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "bash-command",
+          "group": "Command line",
+          "label": "Explicit Bash command",
+          "description": "Run Bash syntax explicitly with bash -c, independently of PTK's default platform shell.",
+          "requirements": "Bash must be on the step's PATH.",
+          "constraints": "Keep the complete shell expression in one argument after -c. Bash quoting and expansion apply.",
+          "initial": {
+            "steps": {
+              "step": {
+                "run": [
+                  "bash",
+                  "-c",
+                  "echo Hello"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "powershell-command",
+          "group": "Command line",
+          "label": "Explicit PowerShell command",
+          "description": "Run PowerShell syntax explicitly using pwsh -NoProfile -Command.",
+          "requirements": "pwsh must be installed. Change the executable to powershell if deliberately using Windows PowerShell.",
+          "constraints": "Keep the PowerShell expression in one argument after -Command. An explicit executable is not automatically substituted.",
+          "initial": {
+            "steps": {
+              "step": {
+                "run": [
+                  "pwsh",
+                  "-NoProfile",
+                  "-Command",
+                  "Write-Output 'Hello'"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "cmd-command",
+          "group": "Command line",
+          "label": "Explicit Windows cmd command",
+          "description": "Run Windows shell syntax explicitly using cmd /c.",
+          "requirements": "A Windows host with cmd on PATH.",
+          "constraints": "cmd quoting and expansion apply. This command will not become a POSIX shell command on another host.",
+          "initial": {
+            "steps": {
+              "step": {
+                "run": [
+                  "cmd",
+                  "/c",
+                  "echo Hello"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "python-script",
+          "group": "Python",
+          "label": "Standalone Python script / inline dependencies",
+          "description": "Run a .py file with uv run --no-project. A PEP 723 header can declare its dependencies and Python requirement.",
+          "requirements": "uv and the script must be available; packages or Python may need downloading.",
+          "constraints": "Repository project dependencies are not selected automatically. Without inline metadata, do not assume an isolated environment.",
+          "initial": {
+            "steps": {
+              "step": {
+                "run": [
+                  "tools/script.py"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "python-project",
+          "group": "Python",
+          "label": "Python project (pyproject.toml / uv.lock)",
+          "description": "Use a uv project's dependencies. Add groups under python to include named dependency groups.",
+          "requirements": "uv and a pyproject.toml in the selected project directory, relative to the repository root.",
+          "constraints": "uv can synchronize the environment and update uv.lock. Order steps sharing an environment or assign distinct UV_PROJECT_ENVIRONMENT paths.",
+          "initial": {
+            "steps": {
+              "step": {
+                "python": {
+                  "project": "."
+                },
+                "run": [
+                  "tools/script.py"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "python-editable",
+          "group": "Python",
+          "label": "Local Python package (editable / dev mode)",
+          "description": "Use python.project for a local package. uv normally installs it editable, so subsequent execution sees Python source edits.",
+          "requirements": "uv, a local packaged project with an editable-capable build system, and its declared command entry point. Replace both example names.",
+          "constraints": "Compiled code may need rebuilding. Source edits do not automatically invalidate PTK's output cache; use --no-cache-ptk during development or declare source dependencies.",
+          "initial": {
+            "steps": {
+              "step": {
+                "python": {
+                  "project": "tools/my-tool"
+                },
+                "run": [
+                  "my-tool"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "python-venv",
+          "group": "Python",
+          "label": "Python environment (requirements / packages)",
+          "description": "Create and reuse a repository-local environment with uv. Add requirements files, packages and optionally a Python version under python.venv.",
+          "requirements": "uv; dependency installation uses the launcher's index/authentication environment. Requirement file paths are repository-relative.",
+          "constraints": "The environment key hashes declared requirement file contents and package/version requests, not transitive files or local package sources. It is separate from PTK's output cache.",
+          "initial": {
+            "steps": {
+              "step": {
+                "python": {
+                  "venv": {
+                    "requirements": [],
+                    "packages": []
+                  }
+                },
+                "run": [
+                  "tools/script.py"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "python-tool",
+          "group": "Python",
+          "label": "Packaged Python tool (uvx)",
+          "description": "Run a package's executable using uv tool run --from. Add extra packages with python.with.",
+          "requirements": "uv and access to the package/index or a built local wheel. Replace the example package, version and executable.",
+          "constraints": "A pinned top-level package does not lock every dependency. A wheel is not an editable link to local sources.",
+          "initial": {
+            "steps": {
+              "step": {
+                "python": {
+                  "uvx": "your-package==1.0.0"
+                },
+                "run": [
+                  "your-command"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "python-cli",
+          "group": "Python",
+          "label": "Python using PTK's interpreter",
+          "description": "Run a .py file with the exact Python interpreter running PTK.",
+          "requirements": "The script's dependencies must already be installed in PTK's environment.",
+          "constraints": "No script dependencies are installed. Use a project or requirements environment to keep separate dependencies.",
+          "initial": {
+            "steps": {
+              "step": {
+                "python": {
+                  "interpreter": "cli"
+                },
+                "run": [
+                  "tools/script.py"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "python-interpreter",
+          "group": "Python",
+          "label": "Python with an explicit interpreter",
+          "description": "Run python as an ordinary executable. Replace it with a full interpreter path when selecting a specific installation.",
+          "requirements": "The chosen interpreter and dependencies must already exist on the host.",
+          "constraints": "Without a python setting, PTK adds no uv command or dependency setup. PATH and absolute executable paths are host-specific.",
+          "initial": {
+            "steps": {
+              "step": {
+                "run": [
+                  "python",
+                  "tools/script.py"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "python-module",
+          "group": "Python",
+          "label": "Python module (-m)",
+          "description": "Run an importable module with python -m. Replace the module name and add arguments as list items.",
+          "requirements": "This starter uses the selected uv project's environment; configure its project directory and dependencies.",
+          "constraints": "Modules require an executable module or package __main__.py. A script's PEP 723 header is not processed.",
+          "initial": {
+            "steps": {
+              "step": {
+                "python": {
+                  "project": "."
+                },
+                "run": [
+                  "python",
+                  "-m",
+                  "my_package"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "python-inline",
+          "group": "Python",
+          "label": "Inline Python (-c)",
+          "description": "Run a short Python expression supplied as one argument to python -c.",
+          "requirements": "This starter uses PTK's interpreter environment and its existing packages.",
+          "constraints": "Keep longer code in a script. No dependency installation or PEP 723 processing is performed.",
+          "initial": {
+            "steps": {
+              "step": {
+                "python": {
+                  "interpreter": "cli"
+                },
+                "run": [
+                  "python",
+                  "-c",
+                  "print('Hello')"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "builtin",
+          "group": "PTK operations",
+          "label": "Built-in operation",
+          "description": "Use a shipped PTK operation instead of a command. Choose uses and supply operation-specific fields in with.",
+          "requirements": "The selected operation's inputs; the starter prints a message with echo.",
+          "constraints": "run and python are not used for built-in operations. Available operations come from PTK's schema.",
+          "initial": {
+            "steps": {
+              "step": {
+                "uses": "echo",
+                "with": {
+                  "message": "Hello"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "generators",
+          "group": "PTK operations",
+          "label": "Generate variant files only",
+          "description": "Generate variant configuration files without a following command. Choose formats in generators.",
+          "requirements": "A selected project variant and supported generator formats; the starter selects cmake.",
+          "constraints": "Files go to this step's build directory. This does not configure or build the native project.",
+          "initial": {
+            "steps": {
+              "step": {
+                "generators": [
+                  "cmake"
+                ]
+              }
+            }
+          }
+        }
+      ],
       "x-ptk-field-order": [
         "outputs",
         "cache",
@@ -1419,6 +1806,66 @@
       "x-ptk-initial": {
         "interpreter": "cli"
       },
+      "x-ptk-creation-modes": [
+        {
+          "id": "python-project",
+          "group": "Python",
+          "label": "Python project (pyproject.toml / uv.lock)",
+          "description": "Use a uv project's dependencies. Add groups under python to include named dependency groups.",
+          "requirements": "uv and a pyproject.toml in the selected project directory, relative to the repository root.",
+          "constraints": "uv can synchronize the environment and update uv.lock. Order steps sharing an environment or assign distinct UV_PROJECT_ENVIRONMENT paths.",
+          "initial": {
+            "project": "."
+          }
+        },
+        {
+          "id": "python-editable",
+          "group": "Python",
+          "label": "Local Python package (editable / dev mode)",
+          "description": "Use python.project for a local package. uv normally installs it editable, so subsequent execution sees Python source edits.",
+          "requirements": "uv, a local packaged project with an editable-capable build system, and its declared command entry point. Replace both example names.",
+          "constraints": "Compiled code may need rebuilding. Source edits do not automatically invalidate PTK's output cache; use --no-cache-ptk during development or declare source dependencies.",
+          "initial": {
+            "project": "tools/my-tool"
+          }
+        },
+        {
+          "id": "python-venv",
+          "group": "Python",
+          "label": "Python environment (requirements / packages)",
+          "description": "Create and reuse a repository-local environment with uv. Add requirements files, packages and optionally a Python version under python.venv.",
+          "requirements": "uv; dependency installation uses the launcher's index/authentication environment. Requirement file paths are repository-relative.",
+          "constraints": "The environment key hashes declared requirement file contents and package/version requests, not transitive files or local package sources. It is separate from PTK's output cache.",
+          "initial": {
+            "venv": {
+              "requirements": [],
+              "packages": []
+            }
+          }
+        },
+        {
+          "id": "python-tool",
+          "group": "Python",
+          "label": "Packaged Python tool (uvx)",
+          "description": "Run a package's executable using uv tool run --from. Add extra packages with python.with.",
+          "requirements": "uv and access to the package/index or a built local wheel. Replace the example package, version and executable.",
+          "constraints": "A pinned top-level package does not lock every dependency. A wheel is not an editable link to local sources.",
+          "initial": {
+            "uvx": "your-package==1.0.0"
+          }
+        },
+        {
+          "id": "python-cli",
+          "group": "Python",
+          "label": "Python using PTK's interpreter",
+          "description": "Run a .py file with the exact Python interpreter running PTK.",
+          "requirements": "The script's dependencies must already be installed in PTK's environment.",
+          "constraints": "No script dependencies are installed. Use a project or requirements environment to keep separate dependencies.",
+          "initial": {
+            "interpreter": "cli"
+          }
+        }
+      ],
       "x-ptk-field-order": [
         "uvx",
         "with",
@@ -1745,6 +2192,291 @@
       "x-ptk-initial": {
         "run": "echo Hello"
       },
+      "x-ptk-creation-modes": [
+        {
+          "id": "command",
+          "group": "Command line",
+          "label": "Executable + arguments",
+          "description": "Run a program directly. Each list item is one argument, including paths with spaces.",
+          "requirements": "The executable must be on the step's PATH or specified by a full path.",
+          "constraints": "No shell expansion, pipes or redirection. Leading script paths select PTK's script handling. Replace tool and its arguments before running.",
+          "initial": {
+            "run": [
+              "tool",
+              "--help"
+            ]
+          }
+        },
+        {
+          "id": "shell",
+          "group": "Command line",
+          "label": "Platform-shell command",
+          "description": "Run a command string through /bin/sh on POSIX or cmd.exe on Windows. Supports that shell's pipes, redirection and expansion.",
+          "requirements": "Use syntax for the machine executing PTK; this is not automatically Bash or PowerShell.",
+          "constraints": "Quoting and commands differ between platforms. A string starting with a recognized script and without shell operators uses script handling instead.",
+          "initial": {
+            "run": "echo Hello"
+          }
+        },
+        {
+          "id": "bash-script",
+          "group": "Command line",
+          "label": "Bash script (.sh)",
+          "description": "Run a shell script with Bash; subsequent list items are script arguments.",
+          "requirements": "Bash must be available on PATH, including on Windows. Replace the example script path.",
+          "constraints": "PTK invokes bash explicitly. For another shell, name that interpreter as the executable.",
+          "initial": {
+            "run": [
+              "tools/script.sh"
+            ]
+          }
+        },
+        {
+          "id": "powershell-script",
+          "group": "Command line",
+          "label": "PowerShell script (.ps1)",
+          "description": "Run a PowerShell file with -NoProfile -ExecutionPolicy Bypass -File.",
+          "requirements": "PTK selects available pwsh, otherwise powershell. Replace the example script path.",
+          "constraints": "PowerShell must be installed; scripts must suit its version and the host OS. A successful launch does not establish script portability.",
+          "initial": {
+            "run": [
+              "tools/script.ps1"
+            ]
+          }
+        },
+        {
+          "id": "batch-script",
+          "group": "Command line",
+          "label": "Windows batch script (.cmd / .bat)",
+          "description": "Run a Windows batch file using cmd /c. Add script arguments as separate list items.",
+          "requirements": "A Windows host with cmd and the specified script.",
+          "constraints": "Batch syntax and cmd quoting apply; this is not a portable POSIX script.",
+          "initial": {
+            "run": [
+              "tools/script.cmd"
+            ]
+          }
+        },
+        {
+          "id": "bash-command",
+          "group": "Command line",
+          "label": "Explicit Bash command",
+          "description": "Run Bash syntax explicitly with bash -c, independently of PTK's default platform shell.",
+          "requirements": "Bash must be on the step's PATH.",
+          "constraints": "Keep the complete shell expression in one argument after -c. Bash quoting and expansion apply.",
+          "initial": {
+            "run": [
+              "bash",
+              "-c",
+              "echo Hello"
+            ]
+          }
+        },
+        {
+          "id": "powershell-command",
+          "group": "Command line",
+          "label": "Explicit PowerShell command",
+          "description": "Run PowerShell syntax explicitly using pwsh -NoProfile -Command.",
+          "requirements": "pwsh must be installed. Change the executable to powershell if deliberately using Windows PowerShell.",
+          "constraints": "Keep the PowerShell expression in one argument after -Command. An explicit executable is not automatically substituted.",
+          "initial": {
+            "run": [
+              "pwsh",
+              "-NoProfile",
+              "-Command",
+              "Write-Output 'Hello'"
+            ]
+          }
+        },
+        {
+          "id": "cmd-command",
+          "group": "Command line",
+          "label": "Explicit Windows cmd command",
+          "description": "Run Windows shell syntax explicitly using cmd /c.",
+          "requirements": "A Windows host with cmd on PATH.",
+          "constraints": "cmd quoting and expansion apply. This command will not become a POSIX shell command on another host.",
+          "initial": {
+            "run": [
+              "cmd",
+              "/c",
+              "echo Hello"
+            ]
+          }
+        },
+        {
+          "id": "python-script",
+          "group": "Python",
+          "label": "Standalone Python script / inline dependencies",
+          "description": "Run a .py file with uv run --no-project. A PEP 723 header can declare its dependencies and Python requirement.",
+          "requirements": "uv and the script must be available; packages or Python may need downloading.",
+          "constraints": "Repository project dependencies are not selected automatically. Without inline metadata, do not assume an isolated environment.",
+          "initial": {
+            "run": [
+              "tools/script.py"
+            ]
+          }
+        },
+        {
+          "id": "python-project",
+          "group": "Python",
+          "label": "Python project (pyproject.toml / uv.lock)",
+          "description": "Use a uv project's dependencies. Add groups under python to include named dependency groups.",
+          "requirements": "uv and a pyproject.toml in the selected project directory, relative to the repository root.",
+          "constraints": "uv can synchronize the environment and update uv.lock. Order steps sharing an environment or assign distinct UV_PROJECT_ENVIRONMENT paths.",
+          "initial": {
+            "python": {
+              "project": "."
+            },
+            "run": [
+              "tools/script.py"
+            ]
+          }
+        },
+        {
+          "id": "python-editable",
+          "group": "Python",
+          "label": "Local Python package (editable / dev mode)",
+          "description": "Use python.project for a local package. uv normally installs it editable, so subsequent execution sees Python source edits.",
+          "requirements": "uv, a local packaged project with an editable-capable build system, and its declared command entry point. Replace both example names.",
+          "constraints": "Compiled code may need rebuilding. Source edits do not automatically invalidate PTK's output cache; use --no-cache-ptk during development or declare source dependencies.",
+          "initial": {
+            "python": {
+              "project": "tools/my-tool"
+            },
+            "run": [
+              "my-tool"
+            ]
+          }
+        },
+        {
+          "id": "python-venv",
+          "group": "Python",
+          "label": "Python environment (requirements / packages)",
+          "description": "Create and reuse a repository-local environment with uv. Add requirements files, packages and optionally a Python version under python.venv.",
+          "requirements": "uv; dependency installation uses the launcher's index/authentication environment. Requirement file paths are repository-relative.",
+          "constraints": "The environment key hashes declared requirement file contents and package/version requests, not transitive files or local package sources. It is separate from PTK's output cache.",
+          "initial": {
+            "python": {
+              "venv": {
+                "requirements": [],
+                "packages": []
+              }
+            },
+            "run": [
+              "tools/script.py"
+            ]
+          }
+        },
+        {
+          "id": "python-tool",
+          "group": "Python",
+          "label": "Packaged Python tool (uvx)",
+          "description": "Run a package's executable using uv tool run --from. Add extra packages with python.with.",
+          "requirements": "uv and access to the package/index or a built local wheel. Replace the example package, version and executable.",
+          "constraints": "A pinned top-level package does not lock every dependency. A wheel is not an editable link to local sources.",
+          "initial": {
+            "python": {
+              "uvx": "your-package==1.0.0"
+            },
+            "run": [
+              "your-command"
+            ]
+          }
+        },
+        {
+          "id": "python-cli",
+          "group": "Python",
+          "label": "Python using PTK's interpreter",
+          "description": "Run a .py file with the exact Python interpreter running PTK.",
+          "requirements": "The script's dependencies must already be installed in PTK's environment.",
+          "constraints": "No script dependencies are installed. Use a project or requirements environment to keep separate dependencies.",
+          "initial": {
+            "python": {
+              "interpreter": "cli"
+            },
+            "run": [
+              "tools/script.py"
+            ]
+          }
+        },
+        {
+          "id": "python-interpreter",
+          "group": "Python",
+          "label": "Python with an explicit interpreter",
+          "description": "Run python as an ordinary executable. Replace it with a full interpreter path when selecting a specific installation.",
+          "requirements": "The chosen interpreter and dependencies must already exist on the host.",
+          "constraints": "Without a python setting, PTK adds no uv command or dependency setup. PATH and absolute executable paths are host-specific.",
+          "initial": {
+            "run": [
+              "python",
+              "tools/script.py"
+            ]
+          }
+        },
+        {
+          "id": "python-module",
+          "group": "Python",
+          "label": "Python module (-m)",
+          "description": "Run an importable module with python -m. Replace the module name and add arguments as list items.",
+          "requirements": "This starter uses the selected uv project's environment; configure its project directory and dependencies.",
+          "constraints": "Modules require an executable module or package __main__.py. A script's PEP 723 header is not processed.",
+          "initial": {
+            "python": {
+              "project": "."
+            },
+            "run": [
+              "python",
+              "-m",
+              "my_package"
+            ]
+          }
+        },
+        {
+          "id": "python-inline",
+          "group": "Python",
+          "label": "Inline Python (-c)",
+          "description": "Run a short Python expression supplied as one argument to python -c.",
+          "requirements": "This starter uses PTK's interpreter environment and its existing packages.",
+          "constraints": "Keep longer code in a script. No dependency installation or PEP 723 processing is performed.",
+          "initial": {
+            "python": {
+              "interpreter": "cli"
+            },
+            "run": [
+              "python",
+              "-c",
+              "print('Hello')"
+            ]
+          }
+        },
+        {
+          "id": "builtin",
+          "group": "PTK operations",
+          "label": "Built-in operation",
+          "description": "Use a shipped PTK operation instead of a command. Choose uses and supply operation-specific fields in with.",
+          "requirements": "The selected operation's inputs; the starter prints a message with echo.",
+          "constraints": "run and python are not used for built-in operations. Available operations come from PTK's schema.",
+          "initial": {
+            "uses": "echo",
+            "with": {
+              "message": "Hello"
+            }
+          }
+        },
+        {
+          "id": "generators",
+          "group": "PTK operations",
+          "label": "Generate variant files only",
+          "description": "Generate variant configuration files without a following command. Choose formats in generators.",
+          "requirements": "A selected project variant and supported generator formats; the starter selects cmake.",
+          "constraints": "Files go to this step's build directory. This does not configure or build the native project.",
+          "initial": {
+            "generators": [
+              "cmake"
+            ]
+          }
+        }
+      ],
       "x-ptk-field-order": [
         "outputs",
         "cache",
@@ -2708,7 +3440,32 @@
       },
       "description": "Named executable jobs, including their steps, parameters and required tools.",
       "title": "Jobs",
-      "type": "object"
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_-]*$",
+        "not": {
+          "enum": [
+            "artifacts",
+            "clean-all",
+            "config",
+            "describe",
+            "help",
+            "init",
+            "maintainer",
+            "pre-commit",
+            "report",
+            "run",
+            "self-service",
+            "sync",
+            "validate",
+            "variant",
+            "version",
+            "vmr-clean-all",
+            "workflow"
+          ]
+        },
+        "description": "Start with a lowercase letter; use lowercase letters, digits, underscores or hyphens. Built-in command names are reserved."
+      }
     },
     "configs": {
       "additionalProperties": {

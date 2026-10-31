@@ -1,4 +1,4 @@
-/* global acquireVsCodeApi, PtkSchema, PtkPresentation, PtkVariables, PtkDependencies, PtkGraphEditor */
+/* global acquireVsCodeApi, PtkSchema, PtkPresentation, PtkVariables, PtkDependencies, PtkGraphEditor, PtkCreation */
 "use strict";
 (() => {
   const vscode = acquireVsCodeApi();
@@ -12,6 +12,8 @@
   let pointerActive = false, renderPending = false;
   let variablePicker;
   let disposeGraph;
+  let creation;
+  const graphViews = new Map();
   let parameterDraft = {};
   const stored = vscode.getState() || {};
   const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -50,7 +52,7 @@
     const node = document.getElementById("status");
     const validation = document.getElementById("validation-error");
     if (validation) { validation.textContent = state.validationError || ""; validation.hidden = !state.validationError; }
-    if (node) node.textContent = inflight || deferred.length ? "Saving…" : queue.size ? "Editing · Leave the field or press Ctrl/Cmd+S to save" : state.dirty ? "Unsaved changes · Ctrl/Cmd+S to save" : "Saved";
+    if (node) node.textContent = creation ? creation.submitting ? "Creating…" : "Setup draft · Review and Create to add this element" : inflight || deferred.length ? "Saving…" : queue.size ? "Editing · Leave the field or press Ctrl/Cmd+S to save" : state.dirty ? "Unsaved changes · Ctrl/Cmd+S to save" : "Saved";
   }
   function flush(request = true) {
     if (request) commitRequested = true;
@@ -89,6 +91,7 @@
     if (immediate) flush();
   }
   function navigate(path) {
+    if (creation) { showIssue("Finish or cancel setup before opening another field."); return; }
     afterEdits(() => {
       selected = path;
       if (valueAt(selected) === null || typeof valueAt(selected) !== "object") selected = selected.slice(0, -1);
@@ -110,7 +113,7 @@
         input.value = value;
         const list = el("datalist", undefined, { id: `${id}-choices` });
         names.forEach(name => list.append(el("option", name, { value: name })));
-        app.append(list);
+        (creation?.api.node || app).append(list);
         input.addEventListener("input", () => onValue(input.value));
         input.addEventListener("blur", () => { if (!rendering) flush(); });
       } else {
@@ -175,17 +178,29 @@
       const heading = el("div");
       heading.append(el("div", "PTk / Configuration", { className: "brand" }), el("h1", state.filename));
       const actions = el("div", undefined, { className: "actions" });
-      actions.append(button("Raw YAML", () => afterEdits(() => vscode.postMessage({ type: "raw" }))),
+      if (!creation) actions.append(button("Raw YAML", () => afterEdits(() => vscode.postMessage({ type: "raw" }))),
         button("Save & validate", () => afterEdits(() => vscode.postMessage({ type: "validate" }))),
         button("Save", () => afterEdits(() => vscode.postMessage({ type: "save" })), ""));
       toolbar.append(heading, actions);
       header.append(toolbar, el("p", "", { className: "status", id: "status", role: "status" }));
       app.append(header);
       status();
-      if (state.error) {
+      if (state.error && !creation) {
         const main = el("main"); notice(main);
         main.append(el("h2", "This YAML needs attention"), el("p", state.error, { className: "notice error" }), el("p", "Open Raw YAML to fix syntax errors, then switch back using Open PTK Form in the editor title bar."));
         app.append(main); return;
+      }
+      if (creation) {
+        const main = el("main"); notice(main);
+        if (state.error) main.append(el("p", `The source YAML needs repair: ${state.error}. Cancel setup to open Raw YAML.`, { className: "notice error", role: "alert" }));
+        main.append(creation.api.node); app.append(main);
+        if (focus) {
+          const input = document.getElementById(focus.id);
+          input?.focus({ preventScroll: true });
+          if (input?.setSelectionRange && focus.start !== null) { try { input.setSelectionRange(focus.start, focus.end); } catch {} }
+        }
+        if (creation.needsFocus) { creation.needsFocus = false; creation.api.node.querySelector("input, select, button")?.focus(); }
+        return;
       }
       const layout = el("div", undefined, { className: "layout" });
       const main = el("main");
@@ -214,6 +229,9 @@
           disposeGraph = PtkGraphEditor.mount(canvas, graph, {
             navigate,
             locked,
+            create: defaults => startCreation(graph.path, defaults),
+            refresh: renderConfiguration,
+            view: graphViews.get(JSON.stringify(graph.path)) || (() => { const view = {}; graphViews.set(JSON.stringify(graph.path), view); return view; })(),
             connect: (from, to, remove) => afterEdits(() => {
               // Recheck after any queued field save before applying the edge edit.
               PtkDependencies.update(valueAt(graph.path), from, to, remove);
@@ -302,7 +320,7 @@
       body.append(el("span", summary, { className: "field-summary", title: summary }), open);
     } else {
       const graphContext = PtkDependencies.context(schema, state.value, path, S);
-      const graphChange = graphContext && ["job", "title", "needs"].includes(path[graphContext.path.length + 1]);
+      const graphChange = graphContext && ["job", "title", "needs", "run", "python", "uses", "generators"].includes(path[graphContext.path.length + 1]);
       const input = control(value, spec, next => change({ op: "set", path, value: next, ...(graphChange ? { render: true } : {}) }), id, path);
       const hint = el("p", required ? "Required — enter a value." : "Empty — enter a value.", { className: "empty-field-message", id: `${id}-empty` });
       const markEmpty = () => {
@@ -447,73 +465,55 @@
     field.append(tools, popup);
   }
   function addField(main, value, spec, resolved) {
-    const containerPath = [...selected];
+    const missing = S.orderedEntries(spec, {}, schema, { includeMissing: true }).filter(([key]) => !Object.hasOwn(value, key));
+    if (!Array.isArray(value) && resolved.additionalProperties === false && !missing.length) return;
+    const isJob = selected.length === 1 && selected[0] === "jobs";
+    const label = isJob ? "New job" : resolved["x-ptk-graph"] === "step" ? "New step" : resolved["x-ptk-graph"] === "job" ? "New workflow job" : Array.isArray(value) ? "New item" : "New field";
     const box = el("fieldset", undefined, { className: "add" });
-    const isList = Array.isArray(value);
-    const isJobs = selected.length === 1 && selected[0] === "jobs";
-    box.append(el("legend", isJobs ? "Add a job" : isList ? "Add an item" : "Add a field"));
-    const row = el("div", undefined, { className: "row" });
-    let name, options = S.orderedEntries(spec, {}, schema, { includeMissing: true }).map(([key]) => key).filter(key => !Object.hasOwn(value, key));
-    if (!isList && resolved.additionalProperties === false) {
-      if (!options.length) return;
-      name = el("select", undefined, { "aria-label": "Optional field" });
-      for (const key of options) name.append(el("option", key, { value: key }));
-    } else if (!isList) name = el("input", undefined, { placeholder: isJobs ? "e.g. build" : "Field name", "aria-label": isJobs ? "New job name" : "New field name" });
-    const help = el("p", "", { className: "help" });
-    let jobTarget;
-    const configuration = state.logical ? state.value : state.configurationValue;
-    if (resolved["x-ptk-graph"] === "job") {
-      jobTarget = el("input", undefined, { id: `add-job-${JSON.stringify(containerPath)}`, "data-ui-draft": "true", "aria-label": "Job to add", placeholder: "Job or repository:job", list: "workflow-job-choices" });
-      const list = el("datalist", undefined, { id: "workflow-job-choices" });
-      const choices = PtkDependencies.availableJobs(configuration, value);
-      choices.forEach(job => list.append(el("option", job, { value: job })));
-      jobTarget.value = uiDrafts.get(jobTarget.id) ?? choices[0] ?? "";
-      jobTarget.addEventListener("input", () => uiDrafts.set(jobTarget.id, jobTarget.value));
-      row.append(jobTarget, list);
-    }
-    if (name) {
-      name.id = `add-name-${JSON.stringify(containerPath)}`;
-      name.setAttribute("data-ui-draft", "true");
-      const draft = uiDrafts.get(name.id);
-      if (draft !== undefined && (name.tagName !== "SELECT" || options.includes(draft))) name.value = draft;
-      const rememberName = () => uiDrafts.set(name.id, name.value);
-      name.addEventListener("input", rememberName); name.addEventListener("change", rememberName);
-      row.append(name);
-      const describe = () => {
-        const field = resolved.properties?.[name.value] || {};
-        help.textContent = S.help(field, undefined, schema);
-      };
-      name.addEventListener("change", describe); describe();
-    }
-    row.append(button(isJobs ? "Add job" : isList ? "Add item" : "Add field", () => {
-      const key = isList ? undefined : name.value.trim();
-      if (!isList && (!key || ["__proto__", "constructor", "prototype"].includes(key))) { showIssue("Enter a valid field name."); return; }
-      if (isJobs && !/^[a-z][a-z0-9_-]*$/.test(key)) { showIssue("Job names must start with a lowercase letter and contain only lowercase letters, digits, underscores or hyphens."); return; }
-      afterEdits(() => {
-        const current = valueAt(containerPath);
-        if (current === null || typeof current !== "object") throw new Error("The parent field no longer exists.");
-        const index = isList ? current.length : key;
-        if (!isList && Object.hasOwn(current, key)) throw new Error(`Field ${key} already exists.`);
-        const currentSpec = S.at(schema, state.value, containerPath, schema);
-        const child = S.child(currentSpec, current, index, schema);
-        const next = S.initial(child, schema, { name: key, existing: isList ? current : [], configuration: state.configurationValue || state.value });
-        if (jobTarget) {
-          if (!jobTarget.value.trim()) throw new Error("Choose an unused job or enter a repository:job target.");
-          next.job = jobTarget.value.trim();
-          PtkDependencies.validateTargets({ ...current, [key]: next }, configuration?.repository?.alias);
-          uiDrafts.delete(jobTarget.id);
-        }
-        const directory = S.resolve(child, schema)["x-ptk-directory-template"];
-        if (directory) next.path = directory.replace("{name}", key);
-        if (name?.tagName === "INPUT" && uiDrafts.get(name.id)?.trim() === key) {
-          uiDrafts.delete(name.id);
-          const visible = document.getElementById(name.id);
-          if (visible) visible.value = "";
-        }
-        change({ op: "add", path: [...containerPath, index], value: next }, true);
+    box.append(el("legend", label), el("p", "Choose → Configure → Review. Setup explains each field and prepares a draft before adding it.", { className: "help" }), button(`Set up ${label.toLowerCase()}`, () => startCreation([...selected]), ""));
+    main.append(box);
+  }
+  function startCreation(path, defaults = {}) {
+    afterEdits(() => {
+      if (creation) { showIssue("Finish or cancel the current setup first."); return; }
+      const parent = valueAt(path);
+      if (!parent || typeof parent !== "object") throw new Error("The parent field no longer exists.");
+      if (state.locked.some(prefix => prefix.length <= path.length && prefix.every((key, i) => key === path[i]))) throw new Error("Use Raw YAML to edit this locked field.");
+      const spec = S.at(schema, state.value, path, schema);
+      const holder = el("div");
+      const draft = { path, submitting: false, needsFocus: true };
+      draft.api = PtkCreation.mount(holder, {
+        S, schema, parent: structuredClone(parent), spec, path, defaults,
+        jobChoices: S.resolve(spec, schema)["x-ptk-graph"] === "job" ? PtkDependencies.availableJobs(state.logical ? state.value : state.configurationValue, parent) : undefined,
+        configuration: state.logical ? state.value : state.configurationValue,
+        label: Array.isArray(parent) ? "new item" : "new element",
+        input: control, variables: variableControl,
+        onCancel: () => { if (!draft.submitting) { variablePicker?.close(); creation = undefined; renderConfiguration(); } },
+        onCreate: (key, value) => {
+          const current = valueAt(path);
+          if (!current || typeof current !== "object") throw new Error("The parent field no longer exists. Cancel and reopen setup.");
+          const currentSpec = S.at(schema, state.value, path, schema);
+          const resolved = S.effective(currentSpec, current, schema);
+          const index = PtkCreation.fieldName(current, String(key), resolved);
+          const child = S.child(currentSpec, current, index, schema);
+          const errors = PtkCreation.problems(S, child, schema, value);
+          if (errors.length) throw new Error(errors.slice(0, 8).join("\n"));
+          if (resolved["x-ptk-graph"]) PtkDependencies.validate(PtkDependencies.nodes({ ...current, [index]: value }));
+          if (resolved["x-ptk-graph"] === "job") PtkDependencies.validateTargets({ ...current, [index]: value }, (state.logical ? state.value : state.configurationValue)?.repository?.alias);
+          variablePicker?.close();
+          draft.submitting = true; draft.api.setBusy(true);
+          deferred.push(() => {
+            creation = undefined;
+            selected = value !== null && typeof value === "object" ? [...path, index] : path;
+            remember(); renderConfiguration();
+          });
+          change({ op: "add", path: [...path, index], value }, true);
+          draft.editId = inflight?.id;
+        },
       });
-    }, ""));
-    box.append(row, help); main.append(box);
+      creation = draft;
+      renderConfiguration();
+    });
   }
   function variantControls(container, selected, onChange) {
     const choices = state.variantChoices || [];
@@ -696,6 +696,7 @@
     const own = inflight && message.ack === inflight.id || ["saved", "validated"].includes(message.reason);
     const structural = inflight?.structural;
     const submitted = inflight?.operations || [];
+    const creationAck = creation?.submitting && message.ack === creation.editId;
     if (!own && inflight && message.version === state.version) return;
     if (!own && (queue.size || inflight) || message.issue) {
       if (own && message.issue) {
@@ -703,11 +704,15 @@
         queue.clear();
         // A rejected connection is an action, not a text draft. Do not replay
         // it ahead of the user's repair or next selection after a stale save.
-        for (const operation of [...submitted.filter(op => op.op !== "dependency"), ...drafts]) queue.set(JSON.stringify(operation.path), operation);
+        for (const operation of [...submitted.filter(op => op.op !== "dependency" && !creationAck), ...drafts]) queue.set(JSON.stringify(operation.path), operation);
       }
       commitRequested = false; deferred.length = 0;
       issue = message.issue || "The document changed outside this form. Review the refreshed fields before editing again.";
     } else if (message.issue === undefined) issue = "";
+    if (creation?.submitting && (message.issue || !own && message.version !== state.version)) {
+      creation.submitting = false;
+      creation.api.issue(message.issue || "The configuration changed. Review your draft before creating it again.");
+    }
     inflight = undefined;
     state = message;
     // A structural acknowledgement can arrive while a different field is being
@@ -737,7 +742,9 @@
   document.addEventListener("pointercancel", finishPointer);
   document.addEventListener("keydown", event => {
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s" && state?.mode === "configuration") {
-      event.preventDefault(); afterEdits(() => vscode.postMessage({ type: "save" }));
+      event.preventDefault();
+      if (creation) { showIssue("This setup draft is not saved yet. Finish with Review and Create, or cancel setup."); return; }
+      afterEdits(() => vscode.postMessage({ type: "save" }));
     }
   });
   vscode.postMessage({ type: "ready" });

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.22.0
+
+- Guide creation of configuration fields, list items and named entities through Choose, Configure, Review and Create. Show required fields, descriptions, defaults, limits, optional-field help and variable insertion; retain a memory-only draft until creation and support cancellation.
+- Offer CLI-owned command-line and Python mode choices, including editable local packages, for new steps and the first step of new jobs. Write ordinary configuration without a new runtime mode field. Update PTK to supply the new metadata; inventory/configuration interfaces remain version 5.
+- Improve configuration graphs with command/type previews, dependent navigation, search, transitive relationship highlighting, direction selection, focus/fit/zoom and an expandable canvas. Retain view settings during the live form session and create nodes/dependents through the same setup flow.
+
+## 0.21.1
+
+- Support typed output declarations with optional artifact types. Keep variable completion on output paths and artifact types literal, matching completed-job output summaries and upload manifests.
+
 ## 0.21.0
 
 - Add project-owned `outputs` and opt-in built-in `cache` configuration for steps and jobs, with no implicit build directory. Explain that outputs primarily describe workflow upload/download artifacts and cache correctness belongs to the project.

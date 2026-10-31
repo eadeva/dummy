@@ -31,6 +31,59 @@ IDs must also produce distinct output folder names across supported platforms
 letters, digits, underscores, dots or hyphens. Duplicate YAML keys are errors.
 There are no nested step groups, background mode or implicit ordering.
 
+.. _command-line-forms:
+
+Command-line execution forms
+----------------------------
+
+The extension's step choices produce these ordinary configurations:
+
+.. list-table:: Command and script forms
+   :header-rows: 1
+   :widths: 25 40 35
+
+   * - Choice
+     - Example ``run`` value
+     - Behavior
+   * - Executable and arguments
+     - ``[tool, --flag, "argument with spaces"]``
+     - Direct executable lookup in the step's PATH; no shell expansion.
+   * - Platform shell
+     - ``"echo Hello > output.txt"``
+     - Platform shell syntax: normally ``/bin/sh`` on POSIX or ``cmd.exe`` on Windows.
+   * - Bash file
+     - ``[tools/check.sh, --verbose]``
+     - PTK invokes ``bash``; Bash must be available on the host.
+   * - PowerShell file
+     - ``[tools/check.ps1, -Verbose]``
+     - Available ``pwsh``, otherwise ``powershell``, with ``-NoProfile -ExecutionPolicy Bypass -File``.
+   * - Windows batch file
+     - ``[tools/check.cmd]`` or ``[tools/check.bat]``
+     - PTK invokes ``cmd /c``; requires a Windows host.
+   * - Explicit Bash expression
+     - ``[bash, -c, "echo Hello"]``
+     - The expression is one argument interpreted by Bash.
+   * - Explicit PowerShell expression
+     - ``[pwsh, -NoProfile, -Command, "Write-Output 'Hello'"]``
+     - Uses exactly the named PowerShell executable.
+   * - Explicit Windows shell expression
+     - ``[cmd, /c, "echo Hello"]``
+     - Uses Windows cmd syntax explicitly.
+
+These are creation choices, not new runtime ``mode`` properties. Arguments in
+a list preserve their boundaries, but a selected interpreter still parses its
+own command expression and Windows batch syntax still follows cmd rules. Native
+tools and scripts are responsible for supporting the host OS. Naming a shell
+does not install it or translate its syntax.
+
+A command string starting with a recognized script path and containing no shell
+operators is split into arguments and uses PTK's script dispatch. Adding a
+``python`` setting also selects argument execution rather than the platform
+shell. For explicit shell semantics, name the interpreter as shown above and
+omit ``python``. See :doc:`/guides/python-tools` for Python script, package,
+module and inline-code choices. Use a dry run to inspect the resolved command
+before execution.
+
 Failure, conditions and cancellation
 ------------------------------------
 

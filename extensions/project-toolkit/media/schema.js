@@ -112,5 +112,20 @@
     }
     return create(schema, undefined);
   }
-  return { type, resolve, choices, effective, help, child, at, orderedEntries, initial };
+  function stepModes(spec, root) {
+    const modes = resolve(spec, root)["x-ptk-creation-modes"];
+    if (!Array.isArray(modes) || !modes.length) throw new Error("Update PTK and refresh the configuration to use the step mode picker. The installed schema does not provide step modes.");
+    const ids = new Set();
+    for (const mode of modes) {
+      if (!mode || ["id", "group", "label", "description", "requirements", "constraints"].some(key => typeof mode[key] !== "string" || !mode[key].trim()) || !mode.initial || typeof mode.initial !== "object" || Array.isArray(mode.initial) || ids.has(mode.id)) throw new Error("PTK supplied invalid step mode metadata. Refresh or update PTK.");
+      ids.add(mode.id);
+    }
+    return modes;
+  }
+  function stepInitial(spec, root, id) {
+    const mode = stepModes(spec, root).find(mode => mode.id === id);
+    if (!mode) throw new Error("Choose a step mode before adding the step.");
+    return structuredClone(mode.initial);
+  }
+  return { type, resolve, choices, effective, help, child, at, orderedEntries, initial, stepModes, stepInitial };
 });

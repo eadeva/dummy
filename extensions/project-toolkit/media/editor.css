@@ -106,6 +106,25 @@ footer { position: sticky; bottom: 0; background: var(--vscode-editor-background
 .configuration .field.needs-value { border-left-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground)); }
 .configuration .add { padding: 8px 10px; margin: 16px 0 0; border-color: var(--vscode-panel-border, var(--vscode-widget-border)); }
 .configuration .add .help { margin: 5px 0 0; }
+.creation-wizard { max-width: 1000px; margin: 0 auto; }
+.creation-progress { list-style: none; display: flex; gap: 12px; padding: 0; margin: 4px 0 18px; flex-wrap: wrap; }
+.creation-progress li { padding: 5px 9px; color: var(--vscode-descriptionForeground); border-bottom: 2px solid var(--vscode-panel-border); }
+.creation-progress [aria-current=step] { color: var(--vscode-textLink-foreground); border-color: var(--vscode-focusBorder); font-weight: 600; }
+.creation-wizard > label { display: block; font-weight: 600; margin: 12px 0 6px; }
+.creation-wizard > select, .creation-wizard > input { margin-bottom: 10px; }
+.creation-field { padding: 10px 0; min-width: 0; }
+.creation-field > .row { justify-content: space-between; margin-bottom: 5px; }
+.creation-field label { font-weight: 600; overflow-wrap: anywhere; }
+.creation-field .row > select { max-width: 190px; }
+.creation-field > input, .creation-field > select, .creation-field > textarea { margin: 6px 0; }
+.creation-entry { padding-left: 12px; border-left: 2px solid var(--vscode-panel-border); margin: 8px 0; }
+.creation-help { margin: 5px 0; }
+.creation-help summary { cursor: pointer; color: var(--vscode-textLink-foreground); }
+.creation-help p { padding: 6px 10px; background: var(--vscode-textBlockQuote-background); }
+.creation-add { padding: 8px 0; }
+.creation-add > input, .creation-add > select { flex: 1; width: auto; min-width: 120px; }
+.creation-preview { white-space: pre-wrap; overflow-wrap: anywhere; background: var(--vscode-textCodeBlock-background); padding: 14px; border: 1px solid var(--vscode-panel-border); }
+.creation-actions { position: sticky; bottom: 0; padding: 12px 0; margin-top: 16px; background: var(--vscode-editor-background); border-top: 1px solid var(--vscode-panel-border); }
 .configuration .variable-tools { margin: 0; }
 .configuration .variable-tools button { font-family: var(--vscode-editor-font-family, monospace); }
 .configuration .variable-picker { flex-basis: 100%; order: 3; min-width: 0; margin-top: 4px; }
@@ -168,5 +187,18 @@ footer { position: sticky; bottom: 0; background: var(--vscode-editor-background
 .dependency-edge[data-active=true] { stroke: var(--vscode-focusBorder, #8a6df0); stroke-width: 2.5; }
 .dependency-preview { stroke: var(--vscode-focusBorder, #8a6df0); stroke-dasharray: 5 4; pointer-events: none; }
 .dependency-editor marker path { fill: var(--vscode-descriptionForeground, #777); }
+.dependency-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; }
+.configuration .dependency-tools > input { flex: 1; min-width: 140px; width: auto; }
+.configuration .dependency-tools > select { width: auto; max-width: 100%; }
+.dependency-tools output { font-size: 12px; color: var(--vscode-descriptionForeground); }
+.dependency-detail { padding: 10px; border-left: 3px solid var(--vscode-focusBorder); background: var(--vscode-textBlockQuote-background); margin: 8px 0; }
+.dependency-detail code { display: block; margin: 5px 0 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.dependency-kind { font-size: 11px !important; font-weight: 600 !important; }
+.dependency-node[data-kind=python] { --ptk-node-color: var(--vscode-charts-purple, #9b6ed6); }
+.dependency-node[data-kind=builtin] { --ptk-node-color: var(--vscode-charts-orange, #c87500); }
+.dependency-node[data-kind=generator] { --ptk-node-color: var(--vscode-terminal-ansiCyan, #008b8b); }
+.dependency-node[data-match=false] { opacity: .25; }
+.dependency-editor[data-highlight=true] .dependency-node[data-related=false], .dependency-editor[data-highlight=true] .dependency-edge[data-related=false] { opacity: .35; }
+.dependency-editor[data-expanded=true] .dependency-viewport { height: 72vh; min-height: 380px; }
 @media (max-width: 480px) { .dependency-editor { padding: 8px; } .dependency-viewport { height: 320px; } }
 @media (forced-colors: active) { .dependency-node rect, .dependency-node circle { fill: Canvas; stroke: CanvasText; } .dependency-node text { fill: CanvasText; } .dependency-edge, .dependency-preview { stroke: CanvasText; } }

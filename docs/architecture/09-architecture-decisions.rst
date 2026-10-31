@@ -314,7 +314,7 @@ not imply that every related future capability has been implemented.
    job/workflow configuration forms. Reuse the pinned Dagre engine and license
    notices through a build-time copy from the report assets. Show one node per
    authored step or workflow invocation. Click a node or use the job/step
-   dropdown to edit its fields. Drag from a prerequisite's bottom connector onto
+   dropdown to edit its fields. Drag from a prerequisite's output connector onto
    its dependent, or choose a prerequisite from a dropdown. Both actions add
    one explicit needs edge; named removal buttons remove one connection.
    Layout remains automatic, with prerequisite-to-dependent direction.
@@ -351,9 +351,50 @@ not imply that every related future capability has been implemented.
    dropdowns/buttons provide the same operations as dragging. No connection
    runs commands, transfers artifacts or changes project responsibility under
    :need:`DD_EXECUTION_BOUNDARIES`. The schema graph hint is an additive change;
-   inventory version 4 and configuration version 5 retain their meaning.
+   inventory version 5 and configuration version 5 retain their meaning.
 
    **Related requirement:** :need:`REQ_Sw_SCHEMA_AUTHORITY`.
+
+.. ddec:: Guide new configuration through a schema-owned setup draft
+   :id: DD_GUIDED_CREATION
+   :status: accepted
+
+   **Context:** A generic Add field operation exposes structure without helping
+   users choose execution environments or understand required setup. The user
+   requested guided creation for every new configuration element and a more
+   usable configuration graph.
+
+   **Decision:** Use Choose, Configure, Review and Create for new fields, list
+   items and named entities. Keep the draft in webview memory until explicit
+   creation. Render nested values and optional-field help from the installed
+   schema. Export command/Python mode templates with explanations, prerequisites
+   and constraints; new jobs choose their first step and Python objects expose
+   environment choices. Save ordinary configuration, with no new runtime mode
+   field. Missing mode metadata gives an update instruction rather than a
+   client-maintained template fallback.
+
+   **Graph interaction:** Reuse the same setup from New step/workflow job and
+   New dependent, which seeds an explicit needs edge. Show execution summaries,
+   prerequisites/dependents and transitive related paths. Add search that dims
+   rather than hides nodes, layout direction, focus, zoom/fit and canvas expansion.
+   Preserve view settings through live form redraws without writing layout to YAML.
+   Graph editing retains cycle checks, duplicate-target checks and keyboard
+   alternatives. Declared command text is displayed literally without resolving
+   variables or credentials.
+
+   **Consequences:** Cancel discards the draft; closing/reloading the webview also
+   loses it. Back preserves values unless the user changes the initial field,
+   mode or type. Creation uses normal ownership, version and duplicate guards;
+   a rejected edit remains reviewable. Schema checks are entry assistance, not
+   a second implementation of complete PTK validation. Placeholder paths and
+   commands need project customization. No setup action executes tools or installs
+   dependencies. Existing fields remain editable in forms and Raw YAML. Large
+   graphs still depend on browser layout capacity; manual node positioning and
+   tool/file-level graphs are outside this editor change. Interface 5 retains
+   its meaning; extension 0.22.0 consumes the additional authoring metadata.
+
+   See :need:`REQ_Sw_CREATION_METADATA`, :need:`REQ_Sw_SCHEMA_AUTHORITY` and
+   :doc:`/guides/editor`.
 
 .. ddec:: Collapsible report graphs preserve recorded evidence
    :id: DD_REPORT_GRAPHS

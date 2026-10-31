@@ -77,6 +77,53 @@ descriptions. The optional-field selector shows the same help before insertion.
 Open help survives save replies, and typing retains the existing deferred-save
 behavior. Compatible additions to PTK's field descriptions appear after refresh.
 
+Guided creation
+~~~~~~~~~~~~~~~
+
+Use **Set up new field**, **Set up new item**, **Set up new job** or
+**Set up new step** in a collection. The same setup flow handles every new
+configuration element, including tools, variants, workflow calls, parameters,
+objects, list entries and scalar fields:
+
+#. **Choose** the field/name and, where applicable, its value type or execution
+   mode. Mode descriptions explain behavior, prerequisites and constraints.
+#. **Configure** the draft. Required fields are marked with an asterisk. Field
+   descriptions are visible; expand the details for types, defaults and limits.
+   Edit nested objects/lists and add optional fields with help before insertion.
+   Variable insertion remains available on template-capable string inputs.
+#. **Review** the complete proposed value, then **Create**. Creation writes
+   ordinary configuration; it does not execute commands or install dependencies.
+
+**Back** keeps the draft. Selecting a different field, mode or value type starts
+a new draft when continuing. **Cancel setup** writes nothing from the draft.
+Draft values remain in the live editor only and are not saved as workspace
+state; closing or reloading the webview discards them. Existing pending field
+edits are saved before opening setup. Creation uses the current document revision
+and checks for duplicate names or changed parent fields; rejected writes retain
+the draft for repair. Required/type/range checks assist entry, while PTK remains
+responsible for complete project validation on reload or **Save & validate**.
+File-based forms may leave the document unsaved; **Save & validate** saves it
+and checks the project. Placeholder commands
+and paths must be adapted before execution; setup does not check installed tools.
+
+New jobs also choose their first step's mode. Choices cover direct executable
+arguments, platform-shell strings, Bash/PowerShell/batch files, explicit shell
+commands, all Python environments and editable local packages, module/inline
+Python forms, built-in operations and generation-only steps. These are starting
+configurations, not a new saved ``mode`` field. Python configuration fields also
+offer environment choices. See :doc:`python-tools` and
+:ref:`command-line-forms` for execution semantics.
+
+Mode templates and explanations come from the installed PTK schema. If that
+metadata is unavailable, update PTK and refresh; the extension does not invent
+templates or substitute its bundled schema. Raw YAML remains available outside
+setup. The addition is compatible with inventory/configuration interface 5;
+the wizard requires extension 0.22.0 and a PTK schema exporting creation modes.
+See :need:`DD_GUIDED_CREATION` and :need:`REQ_Sw_CREATION_METADATA`.
+
+Configuration trees and graphs
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 Tree and form place scalar fields before objects and lists. At the root, scalar
 metadata is followed by repository/project identity, variants and components,
 jobs and workflows, execution settings, tools and credentials, artifacts and
@@ -109,7 +156,7 @@ are unique within their job, and a prerequisite can be selected only once.
 These rules do not restrict reuse of a job in a different workflow or of a step
 name in a different job.
 
-Drag a node's bottom connector onto a dependent to add that node to the
+Drag a node's output connector onto a dependent to add that node to the
 dependent's ``needs``. Alternatively select the dependent, choose **Add
 prerequisite**, and press **Connect**. This dropdown excludes self-links,
 existing connections and edges that would create a cycle. Remove a connection
@@ -118,6 +165,26 @@ or Space and edit every connection through the dropdown/buttons. Escape cancels
 a drag. Zoom, fit and background dragging help with larger graphs. Workflow
 ``job`` fields suggest configured local jobs and accept explicit repository:job
 targets.
+
+The graph also provides **New step** / **New workflow job** and, for a selected
+node, **New dependent**. These open the same setup wizard; a new dependent starts
+with the selected node in ``needs`` and is only written after review. Selected
+node details show the declared command/target and direct dependents. Node labels
+include execution kind, root/prerequisite count and a bounded command preview;
+hover for the full declared text. No command, variable or secret is resolved
+for graph previews.
+
+Search names, titles, commands or job targets and use **Find next** or Enter to
+focus matches. Unmatched nodes are dimmed, not removed; connections remain visible.
+Related-node highlighting includes all transitive prerequisites and dependents.
+Choose top-to-bottom or left-to-right layout, **Focus selected**, **100%**, **Fit**,
+or **Expand canvas**. Zoom, pan, direction, search and highlighting are retained
+within the live form for that graph, including ordinary field-save redraws.
+They do not change YAML or scheduling and reset when the webview is closed.
+With focus on the canvas, ``+`` / ``-`` zoom, ``0`` fits all, ``F`` focuses the
+selected node, and Escape cancels connection dragging. Ctrl/Cmd + wheel zooms.
+Automatic layout remains bounded by the size of the authored graph; this is an
+editor overview, not a tool/file-level build graph or a free-position drawing.
 
 Connection edits preserve other prerequisites, YAML order and unrelated fields.
 They pass through the existing version/fingerprint checks and write the owning
@@ -160,7 +227,7 @@ refreshes the tree. Click **PTK unavailable** to see the exact discovery error.
 
 Build from the repository root with ``ptk extension`` or ``uv run ptk extension``.
 The job checks Node.js 22+ and npm, installs the build dependencies, runs the
-checks and writes ``extensions/project-toolkit/project-toolkit-0.16.0.vsix``.
+checks and writes ``extensions/project-toolkit/project-toolkit-0.22.0.vsix``.
 Use ``ptk self-service extension --dry-run`` to preview it. Node.js and npm must be on PATH.
 Set ``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
 integration tests. CX builds downloadable VSIX artifacts on Linux and Windows;
@@ -283,7 +350,7 @@ JavaScript, run ``npm run build`` and reload the development window.
 To install a development build into your normal VS Code instead::
 
    uv run ptk extension
-   uv run ptk self-service extension --vsix extensions/project-toolkit/project-toolkit-0.16.0.vsix --force
+   uv run ptk self-service extension --vsix extensions/project-toolkit/project-toolkit-0.22.0.vsix --force
 
 Editable installs intentionally contain no built-in VSIX; supply ``--vsix`` for
 this workflow. Full ``uv run ptk package`` builds the release artifacts containing

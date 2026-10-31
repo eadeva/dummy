@@ -10,8 +10,8 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
    support `ptk describe --json --configuration` (inventory version 5 and configuration interface version 5).
 2. If PTK was installed directly with uv, run `ptk self-service extension` afterwards.
    Alternatively, in VS Code run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.21.1.vsix`. You can also use
-   `code --install-extension project-toolkit-0.21.1.vsix`.
+   `project-toolkit-0.22.0.vsix`. You can also use
+   `code --install-extension project-toolkit-0.22.0.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -75,7 +75,7 @@ Some action paths and flags are known by the extension, including validation,
 reports, initialization, variants, dry runs and cleanup; the schema alone is
 not the full contract.
 
-Extension 0.21.1 requires inventory `schema_version: 5` and
+Extension 0.22.0 requires inventory `schema_version: 5` and
 `configuration.version: 5`. These are independent of package/release numbers
 and the project marker's schema version. Unsupported interfaces are rejected;
 there is no legacy parser or runtime schema fallback. Breaking changes must
@@ -84,6 +84,30 @@ The bundled VSIX provides a tested pair without requiring matching release numbe
 See the full [compatibility contract](../../docs/guides/editor.rst#ptk-and-extension-compatibility).
 
 ## Use
+
+Configuration collections offer **Set up new field/item/job/step**. Setup walks
+through **Choose → Configure → Review → Create** for new elements, including
+tools, variants, workflow calls, parameters and nested objects/lists. It shows
+field descriptions, required values, defaults and limits, with optional-field
+help and variable insertion. Back retains the draft; Cancel writes nothing.
+Create edits configuration only. Full project validation remains PTK's responsibility.
+Drafts are held only in the live webview and are discarded when it closes.
+
+New steps, and the first step of a new job, choose an execution mode with detailed
+requirements and constraints: direct commands, platform or explicit shells,
+Bash/PowerShell/batch scripts, Python scripts/environments/projects, editable
+local packages, uvx tools, modules/inline Python, built-ins or generators.
+Replace example commands and paths before running. Modes and help come from the
+installed PTK schema; missing metadata produces an update instruction, with no
+bundled-schema substitute. Inventory and configuration interface versions stay 5.
+
+Configuration graphs offer **New step/workflow job** and **New dependent** through
+the same setup. Search names/commands, inspect execution summaries and direct
+dependents, highlight upstream/downstream paths, change layout direction, focus
+selection, fit or expand the canvas. Zoom/pan/search are retained during the live
+form session. Keyboard canvas controls: **+/-** zoom, **0** fit, **F** focus,
+**Escape** cancel a connection; **Ctrl/Cmd + wheel** zooms. Search dims unmatched
+nodes without hiding dependencies. Graph appearance does not change execution.
 
 Template-capable configuration inputs have a **${}** button (**Insert variable…**) and autocomplete
 after `${`. Search names, groups and descriptions; use arrow keys and Enter to
@@ -301,7 +325,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.21.1.vsix`. Use `ptk self-service extension --dry-run`
+`extensions/project-toolkit/project-toolkit-0.22.0.vsix`. Use `ptk self-service extension --dry-run`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:

@@ -19,7 +19,7 @@ async function form(t, value = { vars: { first: "original", second: "other", unu
     window.acquireVsCodeApi = () => ({ getState: () => ({}), setState() {}, postMessage(message) { window.messages.push(message); } });
   });
   await page.addStyleTag({ path: path.join(media, "editor.css") });
-  for (const file of ["schema.js", "presentation.js", "variables.js", "dependencies.js", "graph-engine/dagre.min.js", "graph-editor.js", "editor.js"]) await page.addScriptTag({ path: path.join(media, file) });
+  for (const file of ["schema.js", "presentation.js", "variables.js", "dependencies.js", "graph-engine/dagre.min.js", "graph-editor.js", "creation.js", "editor.js"]) await page.addScriptTag({ path: path.join(media, file) });
   let version = 1;
   async function state(extra = {}) {
     await page.evaluate(message => window.dispatchEvent(new MessageEvent("message", { data: message })), {
@@ -61,7 +61,7 @@ test("compact rows fit more fields and schema help is accessible without editing
   const h = await form(t, { jobs: { build: { help: "Build the project", only_cx: false, audience: "all", open_report: "on_errors", env: {}, params: {}, requires_tools: {}, steps: {compile: { run: "make" }} } } }, ["jobs", "build"]);
   const rows = await h.page.locator(".field").evaluateAll(rows => rows.map(row => row.getBoundingClientRect().height));
   assert.ok(rows.every(height => height <= 55), JSON.stringify(rows));
-  assert.equal(await h.page.getByRole("button", { name: "Add field", exact: true }).isVisible(), true);
+  assert.equal(await h.page.getByRole("button", { name: "Set up new field", exact: true }).isVisible(), true);
   const toggle = h.page.getByRole("button", { name: "Help for only_cx", exact: true });
   assert.equal(await toggle.getAttribute("aria-expanded"), "false");
   await toggle.focus(); await toggle.press("Enter");
@@ -169,13 +169,18 @@ test("workflow job selection excludes duplicates and adding a reused target make
   await h.state({ ack: edit.id });
   assert.equal(await h.page.locator(".dependency-node").count(), 2);
   await h.page.evaluate(() => window.dispatchEvent(new MessageEvent("message", { data: { type: "navigate", selection: ["workflows", "verify", "jobs"] } })));
-  await h.page.getByLabel("New field name", { exact: true }).fill("third");
-  await h.page.getByLabel("Job to add", { exact: true }).fill("app:check");
-  await h.page.getByRole("button", { name: "Add field", exact: true }).click();
-  assert.match(await h.page.locator("#issue").innerText(), /only be chosen once/);
+  await h.page.getByRole("button", { name: "Set up new workflow job", exact: true }).click();
+  await h.page.getByLabel("New element name", { exact: true }).fill("third");
+  await h.page.getByRole("button", { name: "Configure", exact: true }).click();
+  await h.page.getByLabel("job", { exact: true }).fill("app:check");
+  await h.page.getByRole("button", { name: "Review", exact: true }).click();
+  await h.page.getByRole("button", { name: "Create", exact: true }).click();
+  assert.match(await h.page.locator(".creation-wizard [role=alert]").innerText(), /only be chosen once/);
   assert.equal((await h.edits()).length, 1);
-  await h.page.getByLabel("Job to add", { exact: true }).fill("other:check");
-  await h.page.getByRole("button", { name: "Add field", exact: true }).click();
+  await h.page.getByRole("button", { name: "Back", exact: true }).click();
+  await h.page.getByLabel("job", { exact: true }).fill("other:check");
+  await h.page.getByRole("button", { name: "Review", exact: true }).click();
+  await h.page.getByRole("button", { name: "Create", exact: true }).click();
   assert.equal((await h.edits()).length, 2);
   assert.equal((await h.edits())[1].operations[0].value.job, "other:check");
 });
@@ -263,57 +268,66 @@ test("an unfinished numeric value survives a structural acknowledgement", option
   assert.equal((await h.edits()).length, 1);
 });
 
-test("adding a second named step during a save retains its name and required fields", options, async t => {
+test("new steps choose a mode and cannot double-submit while creation is pending", options, async t => {
   const h = await form(t, {jobs: {build: {steps: {}}}}, ["jobs", "build", "steps"]);
-  const name = h.page.getByRole("textbox", {name: "New field name", exact: true});
-  await name.fill("first"); await h.page.getByRole("button", {name: "Add field", exact: true}).click();
-  const [first] = await h.edits();
-  await name.fill("second"); await h.page.getByRole("button", {name: "Add field", exact: true}).click();
-  h.value.jobs.build.steps.first = first.operations[0].value;
-  await h.state({ack: first.id});
-  const second = (await h.edits())[1];
-  assert.equal(second.operations[0].path.at(-1), "second");
-  assert.deepEqual(first.operations[0].value, {run: "echo Hello"});
-  assert.deepEqual(second.operations[0].value, {run: "echo Hello"});
-});
-
-test("a structural reply retains the next add-field name and caret", options, async t => {
-  const h = await form(t);
-  const name = h.page.getByRole("textbox", { name: "New field name", exact: true });
-  await name.fill("third");
-  await h.page.getByRole("button", { name: "Add field", exact: true }).click();
+  await h.page.getByRole("button", { name: "New step", exact: true }).click();
+  await h.page.getByLabel("New element name").fill("first");
+  await h.page.getByLabel("Execution mode", { exact: true }).selectOption("python-editable");
+  assert.match(await h.page.locator("#creation-mode-help").innerText(), /output cache/);
+  assert.equal((await h.edits()).length, 0);
+  await h.page.getByRole("button", { name: "Configure", exact: true }).click();
+  await h.page.getByLabel("project", { exact: true }).fill("tools/local");
+  await h.page.getByRole("button", { name: "Review", exact: true }).click();
+  assert.equal((await h.edits()).length, 0);
+  await h.page.getByRole("button", { name: "Create", exact: true }).click();
+  assert.equal(await h.page.getByRole("button", { name: "Create", exact: true }).isDisabled(), true);
   const [edit] = await h.edits();
-  await name.fill("fourth");
-  await name.evaluate(input => input.setSelectionRange(3, 3));
-  h.value.vars.third = "";
-  await h.state({ ack: edit.id });
-  assert.deepEqual(await name.evaluate(input => [input.value, document.activeElement === input, input.selectionStart]), ["fourth", true, 3]);
+  assert.equal(edit.operations[0].value.python.project, "tools/local");
+  h.value.jobs.build.steps.first = edit.operations[0].value;
+  await h.state({ack: edit.id});
+  assert.equal(await h.page.locator(".creation-wizard").count(), 0);
+  assert.equal((await h.edits()).length, 1);
 });
 
-test("tree navigation does not discard an add action queued behind a scalar save", options, async t => {
+test("external replies preserve wizard values and caret until the user cancels", options, async t => {
+  const h = await form(t);
+  await h.page.getByRole("button", { name: "Set up new field", exact: true }).click();
+  const name = h.page.getByLabel("New element name");
+  await name.fill("fourth"); await name.evaluate(input => input.setSelectionRange(3, 3));
+  h.value.vars.external = "new";
+  await h.state();
+  assert.deepEqual(await name.evaluate(input => [input.value, document.activeElement === input, input.selectionStart]), ["fourth", true, 3]);
+  await h.page.getByRole("button", { name: "Cancel setup", exact: true }).click();
+  assert.equal((await h.edits()).length, 0);
+});
+
+test("setup waits for a pending scalar save and keeps its parent after tree navigation", options, async t => {
   const h = await form(t);
   await h.field("first").fill("changed");
-  await h.page.getByRole("textbox", { name: "New field name", exact: true }).fill("third");
+  await h.page.getByRole("button", { name: "Set up new field", exact: true }).click();
   const [edit] = await h.edits();
-  await h.page.getByRole("button", { name: "Add field", exact: true }).click();
-  await h.page.evaluate(() => window.dispatchEvent(new MessageEvent("message", { data: { type: "navigate", selection: [] } })));
+  assert.equal(await h.page.locator(".creation-wizard").count(), 0);
   h.value.vars.first = "changed";
   await h.state({ ack: edit.id });
-  assert.deepEqual((await h.edits())[1]?.operations[0].path, ["vars", "third"]);
+  await h.page.getByLabel("New element name").fill("third");
+  await h.page.evaluate(() => window.dispatchEvent(new MessageEvent("message", { data: { type: "navigate", selection: [] } })));
+  assert.match(await h.page.locator("#issue").innerText(), /Finish or cancel/);
+  assert.equal(await h.page.getByLabel("New element name").inputValue(), "third");
+  assert.equal((await h.edits()).length, 1);
 });
 
-test("a reply between pointer down and click cannot eat an Add field click", options, async t => {
+test("a reply between pointer down and click cannot eat a setup action", options, async t => {
   const h = await form(t);
   await h.page.locator(".field").filter({ has: h.field("unused") }).getByRole("button", { name: "Remove", exact: true }).click();
   const [edit] = await h.edits();
-  await h.page.getByRole("textbox", { name: "New field name", exact: true }).fill("third");
-  const box = await h.page.getByRole("button", { name: "Add field", exact: true }).boundingBox();
+  const box = await h.page.getByRole("button", { name: "Set up new field", exact: true }).boundingBox();
   await h.page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await h.page.mouse.down();
   delete h.value.vars.unused;
   await h.state({ ack: edit.id });
   await h.page.mouse.up();
-  assert.deepEqual((await h.edits())[1]?.operations[0].path, ["vars", "third"]);
+  await h.page.getByLabel("New element name").waitFor();
+  assert.equal((await h.edits()).length, 1);
 });
 
 test("empty text fields show a red fill-in cue that clears immediately on input", options, async t => {
@@ -486,4 +500,30 @@ test("job and step configuration explain outputs and optional cache before opt-i
   assert.match(await guidance.innerText(), /optional aid/);
   assert.match(await guidance.innerText(), /--no-cache-ptk/);
   assert.deepEqual(await h.edits(), []);
+});
+
+
+test("graph search, direction and dependent setup preserve the authored graph", options, async t => {
+  const h = await form(t, {jobs: {build: {steps: {prepare: {run: "prepare"}, compile: {run: ["compiler", "main.c"], needs: "prepare"}, docs: {run: "docs"}}}}}, ["jobs", "build", "steps", "compile"]);
+  await h.page.getByLabel("Find graph nodes").fill("compiler");
+  assert.equal(await h.page.locator('.dependency-node[data-match="true"]').count(), 1);
+  assert.equal(await h.page.locator(".dependency-node").count(), 3);
+  await h.page.getByLabel("Graph direction").selectOption("LR");
+  assert.equal(await h.page.getByLabel("Find graph nodes").inputValue(), "compiler");
+  await h.page.getByRole("button", {name: "Actual size", exact: true}).click();
+  const zoom = await h.page.getByLabel("Graph zoom").textContent();
+  await h.field("needs").fill("prepare"); await h.field("needs").blur();
+  const edits = await h.edits();
+  if (edits.length) await h.state({ack: edits.at(-1).id});
+  assert.equal(await h.page.getByLabel("Graph zoom").textContent(), zoom);
+  await h.page.getByRole("button", {name: "New dependent", exact: true}).click();
+  await h.page.getByLabel("New element name").fill("package");
+  await h.page.getByLabel("Execution mode").selectOption("builtin");
+  await h.page.getByRole("button", {name: "Configure", exact: true}).click();
+  await h.page.getByRole("button", {name: "Review", exact: true}).click();
+  assert.match(await h.page.getByLabel("Configuration preview").innerText(), /"compile"/);
+  await h.page.getByRole("button", {name: "Cancel setup", exact: true}).click();
+  assert.equal(await h.page.locator(".dependency-node").count(), 3);
+  await h.page.setViewportSize({width: 390, height: 850});
+  assert(await h.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
 });
