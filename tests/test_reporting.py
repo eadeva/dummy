@@ -243,6 +243,7 @@ def test_reports_after_run(project):
         "report.xml",
         "report.html",
         "report.md",
+        "diagnostics.html",
     }
     data = json.loads((out / "report.json").read_text())
     assert data["totals"]["tests"]["failed"] == 1

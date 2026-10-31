@@ -184,8 +184,7 @@ their parent finding and are not counted again. Suppressed console messages can
 still be present in the JSON export. Related log findings retain their separate
 source; PTK does not infer that matching-looking records have the same cause.
 Neither needs nor violations are additional tests, and importing them does not
-change the process exit result. Active errors can trigger ``open_report:
-on_errors`` under the existing report policy.
+change the process exit result. Active errors automatically open the dedicated diagnostics report locally.
 
 When the producing step **passed** and an HTML ``index.html`` exists, the report
 offers **Open docs**. PTK checks the export directory, its ``html`` subdirectory,
@@ -211,3 +210,110 @@ project's requirements itself. A successful build is not proof of requirement
 completeness, traceability or implementation correctness.
 
 See :need:`DD_SPHINX_EVIDENCE` and :need:`REQ_Sw_SPHINX_REPORTS`.
+
+CMake configuration evidence
+----------------------------
+
+PTK selects one of two shipped importers automatically, using the CMake
+executable in the actual command environment, including its step-specific PATH.
+It runs that executable's ``--version`` before a direct configure command and
+records the version and executable with the evidence. Exporting historical
+reports never probes the current machine. Unsupported versions below 3.2 and
+unreadable evidence produce collection diagnostics without changing exit codes.
+
+.. list-table:: Importer selection and available information
+   :header-rows: 1
+   :widths: 22 22 56
+
+   * - Detected version
+     - Importer
+     - Evidence
+   * - 3.2 through 4.0.x
+     - ``cmake-3.2``
+     - CMake console errors/warnings and selected cache metadata. Before 3.26,
+       retain changed CMakeOutput.log/CMakeError.log probe output as unclassified
+       information. From 3.20, request targets and toolchains through the File API;
+       from 3.26, import structured configure checks; from 4.0, also capture SARIF.
+   * - 4.1 and newer
+     - ``cmake-4.1``
+     - SARIF errors/warnings, current File API targets/toolchains, versioned
+       configure events, package/file discovery, requested/discovered versions,
+       search candidates and source call stacks. Failed configure runs can use
+       the File API error reply without reusing a previous successful target model.
+
+For automatic preparation, use a direct CMake executable in a list command or
+a simple shell command without shell expansion/operators. An explicit build
+directory is recommended::
+
+   configure:
+     run: [cmake, -S, ., -B, "${run.build_dir}"]
+
+The actual ``-B`` directory is used; PTK does not change cwd or overwrite the
+project's build directory selection. Older positional source/existing-build
+invocations are supported. A configure preset needs an explicit ``-B`` for
+automatic instrumentation. PTK creates its own File API client queries, preserving
+other clients, and captures SARIF where supported. It respects an explicit
+``--sarif-output`` path. It does not enable suppressed CMake warnings or change
+warning-as-error settings. Only diagnostics actually emitted by CMake are imported.
+
+Scripts, wrappers, compound shell commands and presets without ``-B`` are not
+rewritten. Their changed caches beneath ``run.build_dir`` can identify the CMake
+version that wrote them, and already-produced evidence can be imported. They
+must prepare structured outputs themselves for complete reporting. Unchanged
+caches are not assigned to unrelated commands. CMake build/install/script/tool
+modes are not instrumented as configure commands. Compiler/linker diagnostics
+remain the responsibility of their own report formats and PTK log analysis.
+
+The HTML CMake section shows configuration metadata, toolchains, searchable
+checks/packages/targets and collapsed target dependency graphs. Targets are
+configured targets, not claims of successful compilation. Negative compiler
+feature probes and absent optional packages are informational, not errors or
+JUnit tests. CMake errors and warnings appear in shared Diagnostics; developer
+and deprecation warnings retain their categories. Profiling is not collected.
+
+Only new configure events and current File API replies are used. Each attempt,
+including retries, retains its own normalized snapshot with the run's report
+inputs; later build changes cannot alter it. CMake artifacts and captured console
+text have a 100 MiB input limit each; this is not an aggregate or memory budget.
+Malformed/oversized inputs are reported, with other available evidence retained.
+Unknown event versions are ignored as required by CMake's versioned protocol.
+Missing evidence is labelled unavailable rather than successful. Imported text
+is masked before persistence, and HTML escapes project-supplied content.
+
+Matching CMake findings from SARIF and console output are merged, then matched
+against PTK log analysis using owner/step, severity, source location and normalized
+message. Their details list contributing sources. Ambiguous matches remain
+separate with explicit source labels. The existing ordered ``log_analysis.rules``
+apply to these findings; ignored/justified warnings and errors remain available
+with their original severity, rule and reason. Rules are taken from the saved
+run, not from current configuration. See :need:`DD_CMAKE_REPORTS` and
+:need:`REQ_Sw_CMAKE_REPORTS`.
+
+Dedicated diagnostics reports
+-----------------------------
+
+Every job report export also writes ``diagnostics.html``, including exports with
+an empty full-format list. Workflows write one aggregate diagnostics report and
+retain each child's dedicated report. These use the same diagnostics and filters
+as the full reports: execution, JUnit failures/errors, SARIF, log analysis,
+Sphinx-Needs, CMake and collection problems. Cobertura contributes coverage to
+the full report, not invented diagnostics; malformed coverage is a collection
+problem. Warnings remain visible. Active error/warning counts and ignored/justified
+counts describe diagnostic records, not numbers of tests.
+
+Local active errors always open the dedicated report, independent of the full
+report's ``open_report`` preference. The workflow aggregate takes precedence
+over child tabs. Warning-only and suppressed-only findings do not trigger
+opening. Actual process failures, including allowed failures, still do.
+CX and dry runs never open a browser; CX still writes the report. The full report
+continues to follow configured export formats and is linked when generated.
+Failure to write a new report never opens a stale one.
+
+The existing first-match ignore/justify rules apply to all imported error/warning
+findings, using their producing step, severity and message. For JUnit, match the
+failure/error message (or case name if empty). For Sphinx, match the violation
+message. Original test results, coverage, process outcomes and raw logs are never
+rewritten. Suppression changes diagnostic disposition, active-error handling and
+presentation only; execution failures and collection errors are not suppressible
+through imported-diagnostic rules. See :need:`DD_DEDICATED_DIAGNOSTICS` and
+:need:`REQ_Sw_DEDICATED_DIAGNOSTICS`.

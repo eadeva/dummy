@@ -75,7 +75,7 @@ def invoke(write, monkeypatch):
     "policy,fail,ci,dry,expected",
     [
         (None, False, False, False, False),
-        (None, True, False, False, False),
+        (None, True, False, False, True),
         ("always", False, False, False, True),
         ("always", True, False, False, True),
         ("on_errors", False, False, False, False),
@@ -90,6 +90,8 @@ def test_open_policy(invoke, policy, fail, ci, dry, expected):
     result, opened, root = invoke(policy, fail=fail, ci=ci, dry=dry)
     assert result.exit_code == (1 if fail and not dry else 0), result.output
     assert bool(opened) == expected
+    if opened:
+        assert opened[0].name == ("diagnostics.html" if fail else "report.html")
     if not dry:
         assert "[default][check] report: " in result.output
     if ci or dry or policy is None:

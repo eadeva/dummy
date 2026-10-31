@@ -278,6 +278,7 @@ class App:
             files_copy,
             report_import,
         )
+        from .adapters.reporting.cmake import CMakeReportingRunner
         from .adapters.variant_files import variant_writer
         from .adapters.versioning import version_generator
         from .application.use_cases.run import BUILTINS, RunJob, layout_of
@@ -345,6 +346,7 @@ class App:
             environment_check=verify_tools,
             version_writer=self.versions().write,
             variant_writer=variant_writer(GENERATORS),
+            reporting_runner=CMakeReportingRunner(self.runner, self.host.os_name()),
         )
 
     def role(self, project: Project | None) -> Role:

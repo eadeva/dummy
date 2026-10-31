@@ -7,10 +7,14 @@ build folders. Retained inputs allow regeneration without current build outputs.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
-from ...domain.reporting.model import Report, from_summary
+from ...domain.config.model import LogAnalysisSpec
+from ...domain.reporting.cmake import merge_log_evidence, merge_sarif_evidence
+from ...domain.reporting.log_analysis import disposition
+from ...domain.reporting.model import Finding, Report, from_summary
 from ..ports import ReportStore
 from .project import Project
 from .run import layout_of
@@ -32,11 +36,53 @@ class ReportService:
         labels = [s["step"] for s in visible]
         contributions = self._store.contributions(reports_dir, labels)
         report = from_summary(summary, contributions, self._version)
+        policy = LogAnalysisSpec.model_validate(summary.get("log_analysis", {}))
+        rules = [(rule, re.compile(rule.match.message_regex)) for rule in policy.rules]
+        for finding in report.findings:
+            disposition(finding, rules)
+        log_files = {step["step"]: step.get("log_file", "") for step in visible}
+        for cmake in report.cmake:
+            for finding in cmake.diagnostics:
+                finding.source_log = log_files.get(cmake.step, "")
+                disposition(finding, rules)
+        for suite in report.suites:
+            for case in suite.cases:
+                if case.status in ("failed", "error"):
+                    match = Finding(
+                        "JUnit",
+                        suite.name,
+                        "error",
+                        case.message or case.name,
+                        step=suite.step,
+                    )
+                    disposition(match, rules)
+                    case.disposition, case.suppression_rule, case.reason = (
+                        match.disposition,
+                        match.suppression_rule,
+                        match.reason,
+                    )
+        for doc in report.sphinx:
+            for violation in doc.violations:
+                match = Finding(
+                    "Sphinx-Needs",
+                    violation.rule,
+                    violation.level,
+                    violation.message,
+                    step=doc.step,
+                )
+                disposition(match, rules)
+                violation.disposition, violation.suppression_rule, violation.reason = (
+                    match.disposition,
+                    match.suppression_rule,
+                    match.reason,
+                )
         if summary.get("log_analysis", {}).get("enabled", False):
             analysis = self._store.analyze_logs({**summary, "steps": visible})
             report.log_analysis_enabled = True
             report.log_findings.extend(analysis.log_findings)
             report.problems.extend(analysis.problems)
+        merge_sarif_evidence(report)
+        merge_log_evidence(report)
         return report
 
     def write(

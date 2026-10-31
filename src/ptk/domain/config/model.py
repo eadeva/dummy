@@ -475,7 +475,7 @@ class JobSpec(_Strict):
     )
     open_report: Literal["always", "on_errors"] | None = Field(
         default=None,
-        description="Open the report after every run (always), only after failures (on_errors), or leave automatic opening disabled (null).",
+        description="Open the full report on successful local runs with always. Active errors always open the dedicated diagnostics report locally, including with on_errors or null; CX never opens a browser.",
     )
     version_dependencies: dict[str, VersionDependency] = Field(
         description="Other repositories whose versions this job needs, with optional variant selections.",
@@ -855,7 +855,7 @@ class LogAnalysisSpec(_Strict):
     )
     rules: list[LogRuleSpec] = Field(
         default_factory=list,
-        description="Ordered suppression rules. The first matching rule wins; logs remain unchanged.",
+        description="Ordered suppression rules for log and imported diagnostics (CMake, SARIF, JUnit and Sphinx). The first matching rule wins; raw logs and execution/test outcomes remain unchanged.",
     )
 
     @field_validator("rules")
@@ -986,7 +986,7 @@ class PtkConfig(_Strict):
     report_formats: list[Literal["html", "json", "junit", "markdown", "github"]] = (
         Field(
             default_factory=lambda: ["html"],
-            description="Report exporters: html, json, junit, markdown or github. An empty list disables automatic export unless open_report requires HTML.",
+            description="Full report exporters: html, json, junit, markdown or github. An empty list disables full exports unless open_report requires HTML. A dedicated diagnostics.html is always generated.",
         )
     )
     log_analysis: LogAnalysisSpec = Field(

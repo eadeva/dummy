@@ -287,11 +287,14 @@ Set the policy on the workflow, independently of each job's report policy::
        job: test
        needs: check
 
-``on-errors`` includes failed job calls, tolerated failures,
-failed steps or tests, error findings and child report/import problems. It does
-not change the workflow exit status. Warnings, skips and cancellation alone do
-not count as errors. ``always`` also opens a successfully written cancellation
-report. Set ``open_report: null`` to disable workflow report opening.
+Every workflow also writes ``diagnostics.html`` with findings from all children.
+Local workflows with active errors always open that aggregate diagnostics report,
+including with ``open_report: null``. Active errors include failed job calls,
+tolerated failures, unsuppressed imported errors and collection problems.
+Warnings, ignored/justified imported findings, skips and cancellation alone do not
+trigger it. ``always`` opens the full workflow report when there are no active
+errors. ``on-errors`` and null leave successful runs closed. Process/test outcomes
+are unchanged. One aggregate opening suppresses child openings.
 
 Opening is disabled in CX and dry runs; workflow execution itself remains
 local-only. Preflight failures have no report to open. A failed summary write

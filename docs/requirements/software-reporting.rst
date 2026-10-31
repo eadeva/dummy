@@ -353,7 +353,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_REPORTS
    :tags: implemented
 
-   PTK shall apply configured job/workflow report-opening policy for local runs and account for active log errors without treating suppressed diagnostics alone as an error trigger.
+   PTK shall open the dedicated diagnostics report for local active errors, independently of the full report opening preference, and shall never open a browser automatically in CX. Suppressed imported diagnostics alone shall not trigger opening. Full reports on runs without active errors shall follow the configured always policy.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -426,3 +426,64 @@ Canonical results, retained evidence and diagnostic interpretation.
    ``extensions/project-toolkit/test/report-ui.test.js``;
    ``extensions/project-toolkit/test/graph-ui.test.js``;
    ``scripts/check_report_ui.cjs``.
+
+.. req-sw:: Import CMake evidence with producing-version selection
+   :id: REQ_Sw_CMAKE_REPORTS
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: accepted
+   :verification_criteria: Boundary fixtures and native 3.x/4.1 runs verify executable selection, supported outputs, warnings/errors, negative probes, current events, failed reconfiguration, source merging, saved rules, masking and immutable workflow evidence.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_REPORTS
+   :tags: implemented
+
+   PTK shall select cmake-3.2 for CMake versions from 3.2 up to but excluding 4.1,
+   and cmake-4.1 from 4.1 onward, using the producing executable or changed-cache
+   provenance rather than today's unrelated PATH. It shall capture supported
+   configuration metadata, checks, toolchains, targets, diagnostics and package
+   discovery; unavailable data shall be explicit. Warnings shall be imported.
+   Negative probes shall not be treated as execution or test failures. Findings
+   shall respect recorded ignore/justify rules and retain source identity.
+   Matching CMake SARIF/console/log diagnostics shall be merged conservatively.
+   Current evidence shall be retained with the run and bounded to 100 MiB per
+   artifact/console input; malformed evidence shall not change process outcomes.
+
+   **Origin:** User request for two automatically selected CMake importers, including
+   warnings, configured dispositions and nonduplicated/source-labelled diagnostics.
+
+   **Implementation:** Two shipped importers, command-environment capture and shared
+   job/workflow exporters implement :need:`DD_CMAKE_REPORTS`.
+
+   **Evidence:** ``tests/reporting/test_cmake.py``.
+
+.. req-sw:: Produce dedicated diagnostics for every report source
+   :id: REQ_Sw_DEDICATED_DIAGNOSTICS
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: accepted
+   :verification_criteria: Importer and browser tests verify dedicated job/workflow files, source/severity/disposition filters, warnings, reasons, local active-error opening, suppressed-only/no-error behavior, CX exclusion and unchanged execution/test outcomes.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_REPORTS
+   :tags: implemented
+
+   PTK shall write diagnostics.html for all job exports and workflow aggregates,
+   including when no full report format is requested. It shall include findings
+   from all importers and collection problems, preserve original severity and
+   reasons, and apply saved first-match ignore/justify rules to imported findings.
+   Local runs with active errors shall automatically open the dedicated report;
+   workflows shall prefer the aggregate over child tabs. CX and dry runs shall
+   never automatically open it. Warning-only or suppressed-only findings shall
+   not trigger opening. Actual execution and test outcomes shall remain unchanged.
+
+   **Origin:** User request for a separate diagnostics report for all importers and
+   automatic local opening on errors. See :need:`DD_DEDICATED_DIAGNOSTICS`.
+
+   **Implementation:** Shared diagnostics projection, report writers and CLI opening
+   rules generate and select the dedicated view.
+
+   **Evidence:** ``tests/reporting/test_dedicated_diagnostics.py``;
+   ``tests/test_report_open.py``; ``tests/workflows/test_report_open.py``.

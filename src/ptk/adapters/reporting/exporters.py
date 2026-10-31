@@ -25,6 +25,20 @@ def to_json(report: Report) -> str:
         "tests": dict(report.test_totals()),
         "test_cases": test_metrics(c for suite in report.suites for c in suite.cases),
         "findings": dict(report.finding_totals()),
+        "cmake": {
+            "invocations": len(report.cmake),
+            "active": dict(
+                Counter(
+                    f.level
+                    for c in report.cmake
+                    for f in c.diagnostics
+                    if f.disposition == "active"
+                )
+            ),
+            "dispositions": dict(
+                Counter(f.disposition for c in report.cmake for f in c.diagnostics)
+            ),
+        },
         "needs": {
             "records": sum(len(doc.needs) for doc in report.sphinx),
             "types": dict(
@@ -287,6 +301,36 @@ def to_markdown(report: Report) -> str:
             if len(doc.violations) > 20:
                 lines.append(
                     f"- … and {len(doc.violations) - 20} more; see the HTML or JSON report."
+                )
+            lines.append("")
+    if report.cmake:
+        lines += [
+            "## CMake",
+            "",
+            "Probe outcomes are not test failures. Diagnostic dispositions do not change process outcomes.",
+            "",
+        ]
+        for cmake in report.cmake:
+            lines += [
+                f"**{_cell(cmake.step)} · CMake {_cell(cmake.version)} · {_cell(cmake.importer)}:** {_cell(cmake.status)}; {len(cmake.targets)} targets",
+                "",
+                "| Severity | Disposition | Message | Sources | Reason |",
+                "|---|---|---|---|---|",
+            ]
+            for finding in cmake.diagnostics:
+                lines.append(
+                    "| "
+                    + " | ".join(
+                        _cell(v)
+                        for v in (
+                            finding.level,
+                            finding.disposition,
+                            finding.message,
+                            "; ".join(finding.context),
+                            finding.reason,
+                        )
+                    )
+                    + " |"
                 )
             lines.append("")
     return "\n".join(lines).rstrip() + "\n"

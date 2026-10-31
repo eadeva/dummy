@@ -18,6 +18,9 @@ class TestCase:
     status: str = PASSED  # passed | failed | error | skipped
     time: float = 0.0
     message: str = ""
+    disposition: str = "active"
+    suppression_rule: str = ""
+    reason: str = ""
 
 
 @dataclass
@@ -40,18 +43,18 @@ class Finding:
     file: str = ""
     line: int | None = None
     step: str = ""
+    disposition: str = "active"
+    suppression_rule: str = ""
+    reason: str = ""
 
 
 @dataclass
 class LogFinding(Finding):
-    disposition: str = "active"
     source_log: str = ""
     log_line: int = 0
     occurrences: int = 1
     log_lines: list[int] = field(default_factory=list)
     context: list[str] = field(default_factory=list)
-    suppression_rule: str = ""
-    reason: str = ""
 
 
 @dataclass
@@ -90,6 +93,9 @@ class NeedsViolation:
     message: str
     details: dict[str, Any] = field(default_factory=dict)
     children: list[dict[str, Any]] = field(default_factory=list)
+    disposition: str = "active"
+    suppression_rule: str = ""
+    reason: str = ""
 
 
 @dataclass
@@ -110,6 +116,24 @@ class SphinxReport:
 
 
 @dataclass
+class CMakeReport:
+    step: str
+    source: str
+    version: str
+    importer: str
+    executable: str = ""
+    status: str = ""
+    duration: float = 0.0
+    diagnostics: list[LogFinding] = field(default_factory=list)
+    configuration: dict[str, str] = field(default_factory=dict)
+    toolchains: list[dict[str, Any]] = field(default_factory=list)
+    checks: list[dict[str, Any]] = field(default_factory=list)
+    packages: list[dict[str, Any]] = field(default_factory=list)
+    targets: list[dict[str, Any]] = field(default_factory=list)
+    availability: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
 class Contribution:
     step: str
     suites: list[TestSuite] = field(default_factory=list)
@@ -118,6 +142,7 @@ class Contribution:
     log_findings: list[LogFinding] = field(default_factory=list)
     problems: list[str] = field(default_factory=list)  # unreadable files
     sphinx: list[SphinxReport] = field(default_factory=list)
+    cmake: list[CMakeReport] = field(default_factory=list)
 
 
 @dataclass
@@ -162,6 +187,7 @@ class Report:
     context: dict[str, Any] = field(default_factory=dict)
     graph: dict[str, Any] = field(default_factory=lambda: describe_graph({}))
     sphinx: list[SphinxReport] = field(default_factory=list)
+    cmake: list[CMakeReport] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -174,17 +200,29 @@ class Report:
             self.status in (FAILED, ERROR)
             or any(step.status in (FAILED, ERROR) for step in self.steps)
             or any(
-                case.status in (FAILED, ERROR)
+                case.status in (FAILED, ERROR) and case.disposition == "active"
                 for suite in self.suites
                 for case in suite.cases
             )
-            or any(finding.level == ERROR for finding in self.findings)
+            or any(
+                finding.level == ERROR and finding.disposition == "active"
+                for finding in self.findings
+            )
             or any(
                 f.level == ERROR and f.disposition == "active"
                 for f in self.log_findings
             )
             or bool(self.problems)
-            or any(v.level == ERROR for doc in self.sphinx for v in doc.violations)
+            or any(
+                v.level == ERROR and v.disposition == "active"
+                for doc in self.sphinx
+                for v in doc.violations
+            )
+            or any(
+                f.level == ERROR and f.disposition == "active"
+                for cmake in self.cmake
+                for f in cmake.diagnostics
+            )
         )
 
     def test_totals(self) -> Counter[str]:
@@ -269,6 +307,7 @@ def from_summary(
         report.coverage += contribution.coverage
         report.problems += contribution.problems
         report.sphinx += contribution.sphinx
+        report.cmake += contribution.cmake
     return report
 
 

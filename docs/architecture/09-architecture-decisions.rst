@@ -801,6 +801,57 @@ not imply that every related future capability has been implemented.
    correctness, validation rules and traceability, preserving tool flexibility
    (:need:`DD_EXECUTION_BOUNDARIES`). See :need:`REQ_Sw_SPHINX_REPORTS`.
 
+.. ddec:: Select two CMake importers using the producing executable
+   :id: DD_CMAKE_REPORTS
+   :status: accepted
+
+   **Context:** Projects use different CMake generations. The report needs
+   configuration evidence and warnings without treating negative feature probes
+   as failed builds or using a previous successful configure after a failure.
+
+   **Decision:** Use cmake-3.2 for 3.2 <= version < 4.1 and cmake-4.1 for >= 4.1.
+   Detect a direct configure command's executable in the actual command environment
+   and probe that executable. Prepare only its supported outputs. Use explicit
+   capability gates inside the older importer, not a parser fallback selected by
+   missing files. Changed caches provide producing-version provenance for indirect
+   commands with artifacts beneath the step build directory. Document the supported
+   invocation forms and unavailable evidence. Preserve process outcomes, bound inputs
+   at 100 MiB each, mask retained data, capture current events/replies and keep immutable
+   normalized snapshots. Reuse HTML/JSON/Markdown and the offline target graph viewer.
+   Errors, developer/deprecation warnings and ordinary warnings share recorded
+   diagnostic dispositions. Exact matching SARIF/console/log findings merge with
+   contributing sources; uncertain matches remain source-labelled.
+
+   **Consequences:** CMake 3.2 has less structured information. PTK requests its
+   complete File API metadata set from 3.20. Wrappers and presets without explicit
+   build paths must prepare structured outputs themselves. Probe negatives and
+   optional packages never become failed tests. Profiling and compiler-specific
+   build diagnostics are outside these configure importers. Project responsibilities
+   in :need:`DD_EXECUTION_BOUNDARIES` remain. See :need:`REQ_Sw_CMAKE_REPORTS`.
+
+.. ddec:: Generate dedicated diagnostics and open active errors locally
+   :id: DD_DEDICATED_DIAGNOSTICS
+   :status: accepted
+
+   **Context:** A full execution report is useful evidence, but diagnosing a
+   failure should immediately show findings from every importer in one focused view.
+
+   **Decision:** Always generate a separate diagnostics.html alongside job exports
+   and workflow aggregates, including when full report formats are empty. Share the
+   full report's diagnostic projection and filters. Reuse ordered ignore/justify
+   rules for all imported findings; retain severity/reason/source and factual
+   process/test results. Local active errors always select the dedicated report,
+   independent of open_report; CX and dry runs never open it. Workflow aggregate
+   diagnostics suppress child openings. Warnings or suppressed findings alone do
+   not trigger opening. Report-collection and actual execution errors remain visible.
+
+   **Consequences:** This replaces the earlier policy that null disabled all local
+   error-report opening. Full report export choices remain; always opens a full
+   report on runs without active errors. Even an empty full-format list now produces
+   diagnostics.html. Existing consumers keep original test outcomes and totals;
+   diagnostic disposition is a separate interpretation. No browser failure changes
+   a run's exit code. See :need:`REQ_Sw_DEDICATED_DIAGNOSTICS`.
+
 Open boundaries
 ---------------
 

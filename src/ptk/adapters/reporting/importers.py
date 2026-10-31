@@ -24,7 +24,7 @@ from ...domain.reporting.model import (
     TestCase,
     TestSuite,
 )
-from . import sphinx
+from . import cmake, sphinx
 
 
 def _float(value: str | None) -> float:
@@ -120,9 +120,21 @@ def scan(reports_dir: Path, steps: Mapping[str, str]) -> list[Contribution]:
                     contribution.suites += parse_junit(root, step, file.name)
                 elif root.tag == "coverage":
                     contribution.coverage += parse_cobertura(root, step, file.name)
-        except (ET.ParseError, ValueError, OSError) as exc:
+        except (
+            ET.ParseError,
+            ValueError,
+            OSError,
+            TypeError,
+            AttributeError,
+            KeyError,
+        ) as exc:
             contribution.problems.append(f"{step}: cannot read {file.name}: {exc}")
     for folder, step in steps.items():
+        cmake_result = cmake.read(reports_dir / folder, step)
+        if cmake_result.cmake or cmake_result.problems:
+            contribution = contributions.setdefault(step, Contribution(step))
+            contribution.cmake.extend(cmake_result.cmake)
+            contribution.problems.extend(cmake_result.problems)
         imported = sphinx.read(reports_dir / folder, step)
         if imported.sphinx or imported.problems:
             contribution = contributions.setdefault(step, Contribution(step))

@@ -12,6 +12,7 @@ SOURCES = {
     "static": "Static analysis",
     "report": "Report collection",
     "sphinx": "Sphinx-Needs",
+    "cmake": "CMake",
 }
 
 
@@ -64,11 +65,14 @@ def collect(report, owner, root=None, *, scope="", allowed=False):
                         {
                             "Suite": suite.name,
                             "Source": suite.source,
+                            "Disposition rule": case.suppression_rule,
+                            "Reason": case.reason,
                             "Result": case.status,
                             "Duration": f"{case.time:.2f}s",
                         }
                     )
                     + f"<pre>{e(case.message)}</pre>",
+                    disposition=case.disposition,
                     preview=case.message.splitlines()[0][:240] if case.message else "",
                     search=f"{suite.name} {suite.source} {case.message}",
                 )
@@ -84,15 +88,46 @@ def collect(report, owner, root=None, *, scope="", allowed=False):
                 fields(
                     {
                         "Tool": finding.tool,
+                        "Disposition rule": finding.suppression_rule,
+                        "Reason": finding.reason,
                         "Rule": finding.rule,
                         "Location": f"{finding.file}:{finding.line}"
                         if finding.line
                         else finding.file,
                     }
                 ),
-                search=f"{finding.tool} {finding.rule} {finding.file}",
+                disposition=finding.disposition,
+                search=f"{finding.tool} {finding.rule} {finding.file} {finding.reason}",
             )
         )
+    for cmake in report.cmake:
+        for finding in cmake.diagnostics:
+            result.append(
+                Diagnostic(
+                    owner,
+                    finding.step,
+                    "cmake",
+                    finding.level,
+                    finding.message,
+                    fields(
+                        {
+                            "CMake version": cmake.version,
+                            "Importer": cmake.importer,
+                            "Build directory": cmake.source,
+                            "Rule": finding.rule,
+                            "Location": f"{finding.file}:{finding.line}"
+                            if finding.line
+                            else finding.file,
+                            "Sources": "; ".join(finding.context),
+                            "Disposition rule": finding.suppression_rule,
+                            "Reason": finding.reason,
+                        }
+                    )
+                    + link(finding.source_log, root),
+                    disposition=finding.disposition,
+                    search=f"{cmake.version} {finding.rule} {finding.file} {finding.reason} {' '.join(finding.context)}",
+                )
+            )
     for finding in report.log_findings:
         evidence = fields(
             {
@@ -137,6 +172,8 @@ def collect(report, owner, root=None, *, scope="", allowed=False):
             detail = fields(
                 {
                     "Need": violation.need_id,
+                    "Disposition rule": violation.suppression_rule,
+                    "Reason": violation.reason,
                     "Source": doc.source,
                     "Rule": violation.rule,
                     **violation.details,
@@ -157,6 +194,7 @@ def collect(report, owner, root=None, *, scope="", allowed=False):
                     violation.level,
                     f"{violation.need_id}: {violation.message}",
                     detail,
+                    disposition=violation.disposition,
                     search=json.dumps(
                         {
                             "rule": violation.rule,
@@ -235,6 +273,8 @@ def render(items, *, analysis_enabled=True):
         + "</div>"
         if analysis_enabled
         else '<p class="meta">Log analysis was not enabled for this run.</p>'
+        if analysis_enabled is not None
+        else ""
     )
     choices = {
         "source": ("Source", [("", "All sources"), *SOURCES.items()], ""),
@@ -307,3 +347,41 @@ def render(items, *, analysis_enabled=True):
         + "".join(rows)
         + '<p data-filter-count aria-live="polite"></p></div></section>'
     )
+
+
+def page(items, *, name, identity, status, full_report=None, root=None):
+    """Dedicated evidence view for every importer; same rows and filter semantics."""
+    from . import ui
+
+    css, script = ui.assets()
+    active = [item for item in items if item.disposition == "active"]
+    overview = ui.cards(
+        {
+            "Active errors": sum(item.severity == "error" for item in active),
+            "Active warnings": sum(item.severity == "warning" for item in active),
+            "Ignored": sum(item.disposition == "ignored" for item in items),
+            "Justified": sum(item.disposition == "justified" for item in items),
+        },
+        tones={"Active errors": "failed", "Active warnings": "warning"},
+    )
+    # Execution targets live in the full report. Do not leave broken internal links.
+    from dataclasses import replace
+
+    dedicated = [
+        replace(
+            item,
+            target="",
+            detail=item.detail
+            + (
+                "<p>" + link(full_report, root, "Open full report") + "</p>"
+                if full_report
+                else ""
+            ),
+        )
+        for item in items
+    ]
+    backlink = link(full_report, root, "Open full report") if full_report else ""
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(name)} diagnostics</title><style>{css}</style></head>
+<body><main><header class="run-header"><p class="eyebrow">PTK · Diagnostics report</p><h1>{e(name)} — diagnostics</h1><p>{e(identity)} · Execution {badge(status)}</p>{backlink}</header>
+<section id="overview"><h2>Overview</h2>{overview}<p class="meta">Counts are diagnostic records, not failed tests. Sources identify imported evidence and execution failures. Ignored and justified findings retain their original severity and reason.</p></section>
+{failures(dedicated)}{render(dedicated, analysis_enabled=None)}</main><script>{script}</script></body></html>"""

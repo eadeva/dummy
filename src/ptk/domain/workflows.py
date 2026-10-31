@@ -63,7 +63,7 @@ class WorkflowSpec(BaseModel):
     )
     open_report: Literal["always", "on-errors"] | None = Field(
         default="always",
-        description="Open the aggregate report after every run (always), only on failures (on-errors), or disable automatic opening (null).",
+        description="Open the full aggregate report on successful local runs with always. Active errors always open aggregate diagnostics locally, including with on-errors or null; CX never opens a browser.",
     )
     max_workers: int = Field(
         description="Maximum number of concurrent workflow jobs. Dependencies, not YAML order, determine when jobs become eligible.",

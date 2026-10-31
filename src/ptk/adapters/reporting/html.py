@@ -4,7 +4,7 @@ import copy
 import json
 
 from .. import graph_html
-from . import diagnostics, needs_html, ui
+from . import cmake_html, diagnostics, needs_html, ui
 from .ui import anchor, badge, e, fields, link
 
 
@@ -111,7 +111,8 @@ def overview(entries, reports, diagnostics_items, *, entity="Steps"):
     targets["Active log errors"] = "diagnostics"
     tones["Active log errors"] = "failed" if values["Active log errors"] else "info"
     values["Other diagnostics"] = sum(
-        item.source in ("static", "report", "sphinx") and item.disposition == "active"
+        item.source in ("static", "report", "sphinx", "cmake")
+        and item.disposition == "active"
         for item in diagnostics_items
     )
     targets["Other diagnostics"] = "diagnostics"
@@ -311,6 +312,7 @@ def render(report, *, link_root=None):
         ),
         tests=tests_section([report]),
         needs=needs_html.section([report], link_root),
+        cmake=cmake_html.section([report]),
         evidence=evidence_html,
         configuration=configuration(report),
     )

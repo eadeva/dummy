@@ -66,6 +66,15 @@ def write_workflow_report(
     )
     output = target / "workflow.html"
     output.write_text(page, encoding="utf-8")
+    diagnostic_page, _ = render(
+        result,
+        target,
+        owner_variant=owner_variant,
+        children=children,
+        context=context,
+        diagnostics_only=True,
+    )
+    (target / "diagnostics.html").write_text(diagnostic_page, encoding="utf-8")
     return output
 
 

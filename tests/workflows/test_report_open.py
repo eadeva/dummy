@@ -96,7 +96,7 @@ def invoke(write):
         ("on-errors", "failed", True),
         ("on-errors", "tolerated", True),
         ("on-errors", "imported", True),
-        (None, "failed", False),
+        (None, "failed", True),
     ],
 )
 def test_workflow_opens_its_aggregate_report(
@@ -105,7 +105,10 @@ def test_workflow_opens_its_aggregate_report(
     result, _ = invoke(policy, outcome=outcome)
     assert result.exit_code == (1 if outcome == "failed" else 0), result.output
     assert len(opened_reports) == int(expected)
-    assert all(path.name == "workflow.html" for path in opened_reports)
+    assert all(
+        path.name == ("workflow.html" if outcome == "passed" else "diagnostics.html")
+        for path in opened_reports
+    )
     assert "[default][verify] report: " in result.output
     assert "[default][check] report: " in result.output
 
@@ -176,7 +179,7 @@ def test_invalid_workflow_report_policy_is_rejected():
     "policy,outcome,expected",
     [
         ("always", "passed", "workflow.html"),
-        ("on-errors", "failed", "workflow.html"),
+        ("on-errors", "failed", "diagnostics.html"),
         ("on-errors", "passed", "report.html"),
         (None, "passed", "report.html"),
     ],

@@ -423,13 +423,16 @@ Jobs can open their HTML report automatically after a local run::
        - -m
        - pytest
 
-``always`` opens after every executed run. ``on_errors`` opens for failed jobs
-or steps (including tolerated failures), failed/error test cases, error-level
-findings, or report import problems. Warnings, skipped results and cancellation
-alone do not trigger ``on_errors``. This does not change the job's exit code.
-When enabled locally, HTML is added to the configured report formats, even when
-``report_formats`` is empty. A missing browser prints a hint and keeps the
-report available on disk. Failed report generation never opens an old report.
+``always`` opens the full report for runs without active errors. Local runs
+with active errors always open ``diagnostics.html``, including when
+``open_report`` is ``on_errors`` or unset/null. The full report remains available
+according to ``report_formats``. Diagnostics include failed processes, active
+imported test/error findings and collection problems. Warnings, ignored or
+justified imported findings, skips and cancellation alone do not trigger opening.
+A real failed process remains an execution error even if its diagnostic is
+justified. This does not change execution or test outcomes. The dedicated report
+is generated even with an empty ``report_formats`` list. A missing browser prints
+a hint; failed report generation never opens an old report.
 
 Automatic opening is disabled in CX mode (including ``--ci``), and dry runs
 neither generate nor open reports. Multi-variant runs apply the policy separately

@@ -446,8 +446,6 @@ def write_reports(
     formats = list(project.config.report_formats)
     if policy and "html" not in formats:
         formats.append("html")
-    if not formats:
-        return
     try:
         report, files = state.app.reports.write(
             project, run_summary(plan, result), formats
@@ -455,7 +453,8 @@ def write_reports(
     except (PtkError, OSError, ValueError) as exc:
         err_console.print(f"[yellow]report not written: {escape(str(exc))}[/]")
         return
-    html = next((f for f in files if f.suffix == ".html"), None)
+    html = next((f for f in files if f.name == "report.html"), None)
+    diagnostic = next((f for f in files if f.name == "diagnostics.html"), None)
     shown = html or (files[0] if files else None)
     if shown is not None:
         print_report(
@@ -465,20 +464,31 @@ def write_reports(
         )
     for problem in report.problems:
         err_console.print(f"[yellow]report: {escape(problem)}[/]")
-    if html is not None and (
-        policy == "always" or (policy == "on_errors" and report.has_errors)
-    ):
+    if diagnostic is not None and diagnostic != shown:
+        print_report(
+            diagnostic,
+            identity=display.prefix(job_label or plan.job, plan.variant),
+            kind="JOB",
+        )
+    opening = (
+        diagnostic
+        if not project.ci and report.has_errors
+        else html
+        if policy == "always"
+        else None
+    )
+    if opening is not None:
         if not open_browser:
-            return html
+            return opening
         try:
-            opened = state.app.open_in_browser(html)
+            opened = state.app.open_in_browser(opening)
         except (OSError, ValueError):
             opened = False
         if not opened:
             console.print(
                 "[dim]no browser available here - open the report file above[/]"
             )
-        return html
+        return opening
     return None
 
 

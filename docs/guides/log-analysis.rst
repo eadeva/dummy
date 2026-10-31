@@ -22,9 +22,10 @@ HTML is the only default exported format. PTK still writes internal ``run.json``
 and captured logs for history and later exports. Available exporters are
 ``html``, ``json``, ``junit``, ``markdown`` and ``github`` (appends Markdown to
 ``GITHUB_STEP_SUMMARY`` when available).
-An empty ``report_formats`` disables automatic export unless a local
-``open_report`` policy requests HTML. Existing job/workflow opening policies
-remain unchanged. Dry runs do not analyze logs or write reports.
+An empty ``report_formats`` disables full export unless a local
+``open_report`` policy requests HTML. The dedicated ``diagnostics.html`` is
+always generated and opens for active errors locally, never in CX. Dry runs
+do not analyze logs or write reports.
 
 JUnit XML, Cobertura XML (aggregate line coverage), SARIF
 supply tool results. Log analysis imports captured step diagnostics. These inputs
@@ -175,9 +176,12 @@ and the regular expression searches the diagnostic message without its severity
 prefix. First matching rule wins. Invalid expressions fail configuration
 validation. ``ignore`` marks expected noise; ``justify`` records an accepted
 finding. Both retain the original severity, source log, line and reason. Neither
-modifies raw logs or changes execution/test failures. Active log errors can
-trigger existing ``open_report: on_errors`` behavior; suppressed diagnostics do
-not trigger it on their own.
+modifies raw logs or changes execution/test failures. Active errors automatically open the dedicated diagnostics report locally;
+suppressed imported diagnostics do not trigger it on their own. These same
+rules also apply to CMake, SARIF, JUnit failure/error messages and Sphinx-Needs
+violations, even when console log analysis is disabled. Imported test statuses
+and totals remain factual; suppression changes diagnostic disposition only.
+Execution failures and report-collection problems remain visible.
 
 The rule policy is captured when the run is prepared and saved in ``run.json``.
 Changing configuration does not reinterpret archived runs with today's rules.

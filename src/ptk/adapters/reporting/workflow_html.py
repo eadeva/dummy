@@ -2,12 +2,12 @@
 
 from ...domain.graphs import describe_graph
 from .. import graph_html
-from . import diagnostics, html, needs_html, ui
+from . import cmake_html, diagnostics, html, needs_html, ui
 from .diagnostics import Diagnostic
 from .ui import anchor, e, fields, link
 
 
-def render(result, target, *, owner_variant, children, context):
+def render(result, target, *, owner_variant, children, context, diagnostics_only=False):
     graph = describe_graph({job.id: job for job in result.jobs})
     entries, items, configuration, evidence = [], [], [], []
     for node, job in zip(graph["nodes"], result.jobs, strict=True):
@@ -118,6 +118,15 @@ def render(result, target, *, owner_variant, children, context):
         + "".join(evidence)
         + "</ul>"
     )
+    if diagnostics_only:
+        return diagnostics.page(
+            items,
+            name=result.name,
+            identity=f"[{scope}][{result.name}]",
+            status=result.status.value,
+            full_report=target / "workflow.html",
+            root=target,
+        ), graph
     return ui.page(
         title=f"Workflow - {result.name}",
         kind="workflow",
@@ -143,6 +152,7 @@ def render(result, target, *, owner_variant, children, context):
         ),
         tests=html.tests_section(reports),
         needs=needs_html.section(reports, target),
+        cmake=cmake_html.section(reports),
         evidence=evidence_html or "<p>No report attachments recorded.</p>",
         configuration="".join(configuration)
         or '<p class="meta">No child project metadata recorded.</p>',

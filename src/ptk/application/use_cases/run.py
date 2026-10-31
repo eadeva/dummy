@@ -601,6 +601,7 @@ class RunJob:
         environment_check=None,
         version_writer=None,
         variant_writer=None,
+        reporting_runner=None,
     ):
         self._host = host
         self._runner = runner
@@ -611,6 +612,7 @@ class RunJob:
         self._environment_check = environment_check
         self._version_writer = version_writer
         self._variant_writer = variant_writer
+        self._reporting_runner = reporting_runner
         self._powershell: str | None = None
         self._python_lock = threading.Lock()
 
@@ -629,6 +631,7 @@ class RunJob:
         self._prepared = prepared
         self._observers = list(observers)
         self._cancel = cancel
+        self._report_problems = []
         started_at = datetime.now().astimezone().isoformat(timespec="seconds")
         start = time.monotonic()
         self._run_start = start
@@ -668,6 +671,7 @@ class RunJob:
             param_sources=plan.param_sources,
             steps=results,
             log_file=str(prepared.layout.run_log(plan.variant, plan.job)),
+            report_problems=self._report_problems,
         )
         self._emit("run_finished", result)
         return result
@@ -799,7 +803,18 @@ class RunJob:
                         if scope.deadline
                         else None
                     )
-                    outcome = self._runner.run(command, out, cancel)
+                    if self._reporting_runner and step.spec.report:
+                        outcome = self._reporting_runner.run(
+                            command,
+                            out,
+                            cancel,
+                            mask=prepared.mask,
+                            on_problem=lambda problem: self._report_problems.append(
+                                prepared.mask(f"{step.label}: {problem}")
+                            ),
+                        )
+                    else:
+                        outcome = self._runner.run(command, out, cancel)
                     exit_code = outcome.exit_code
                     message = outcome.error or ""
                     if outcome.timed_out or scope.expired:

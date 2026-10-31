@@ -369,7 +369,7 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False):
                 report_errors = report.has_errors
                 if opening is not None:
                     opening = next(
-                        (file for file in files if file.suffix == ".html"), opening
+                        (file for file in files if file.name == opening.name), opening
                     )
             except (PtkError, OSError, ValueError) as exc:
                 report_errors = True
@@ -446,17 +446,17 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False):
             },
         )
         print_report(path, identity=output.identity, kind="WORKFLOW")
+        print_report(
+            target / "diagnostics.html", identity=output.identity, kind="WORKFLOW"
+        )
     except OSError as exc:
         err_console.print(f"[yellow]workflow report not written: {escape(str(exc))}[/]")
     else:
-        if not is_ci and (
-            spec.open_report == "always"
-            or spec.open_report == "on-errors"
-            and result.has_errors
-        ):
+        if not is_ci and (result.has_errors or spec.open_report == "always"):
             open_summary = True
+            opening = target / "diagnostics.html" if result.has_errors else path
             try:
-                opened = parent.app.open_in_browser(path)
+                opened = parent.app.open_in_browser(opening)
             except (OSError, ValueError):
                 opened = False
             if not opened:

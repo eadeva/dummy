@@ -9,7 +9,7 @@ from pathlib import Path
 
 from ...domain.errors import PtkError, RunNotFoundError
 from ...domain.reporting.model import Contribution, Report
-from . import exporters, html, importers
+from . import diagnostics, exporters, html, importers
 
 FILES = {
     "json": "report.json",
@@ -74,4 +74,18 @@ class FileReportStore:
             tmp.write_text(text, encoding="utf-8")
             os.replace(tmp, file)
             written.append(file)
+        dedicated = target / "diagnostics.html"
+        full = target / "report.html" if "html" in formats else None
+        text = diagnostics.page(
+            diagnostics.collect(report, html.owner(report), target),
+            name=report.job,
+            identity=html.owner(report),
+            status=report.status,
+            full_report=full,
+            root=target,
+        )
+        temporary = dedicated.with_suffix(".html.tmp")
+        temporary.write_text(text, encoding="utf-8")
+        os.replace(temporary, dedicated)
+        written.append(dedicated)
         return written
