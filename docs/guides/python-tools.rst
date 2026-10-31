@@ -1,5 +1,5 @@
-Reusable Python tools
-=====================
+Python scripts, environments and reusable tools
+===============================================
 
 Projects extend their behavior with ordinary commands and Python packages.
 PTK supplies configuration, scheduling, logging and reporting; project tools
@@ -12,6 +12,194 @@ in :need:`DD_NO_PLUGIN_API`, implemented by :need:`REQ_Sw_EXTERNAL_TOOLS`.
 Built-in operations, generators, credential providers, installers and report
 formats remain available. The VS Code extension and Git hooks are separate
 features and are unaffected by this decision.
+
+Choose an execution mode
+------------------------
+
+The following examples are alternative step configurations. A step may omit
+``python`` or select exactly one of ``project``, ``venv``, ``uvx`` and
+``interpreter: cli``. ``python`` applies only to ``run`` steps. This contract is
+recorded in :need:`DD_PYTHON_RUNTIME` and :need:`REQ_Sw_PYTHON_RUNTIME`.
+
+.. list-table:: Python execution choices
+   :header-rows: 1
+   :widths: 22 36 42
+
+   * - Choice
+     - Step configuration
+     - Execution
+   * - Standalone script
+     - ``run: [tools/check.py]``; omit ``python``
+     - ``uv run --no-project tools/check.py``; supports PEP 723 metadata.
+   * - PTK's interpreter
+     - ``run: [tools/check.py]`` with ``python: {interpreter: cli}``
+     - PTK's exact interpreter executes the script, with its existing packages.
+   * - Requirements environment
+     - ``run: [tools/check.py]`` with ``python: {venv: {...}}``
+     - A reusable environment under the repository's ``.ptk/venvs``.
+   * - uv project
+     - ``run: [tools/check.py]`` with ``python: {project: .}``
+     - ``uv run --project <resolved directory> python tools/check.py``.
+   * - Packaged tool
+     - ``run: [company-quality, check]`` with
+       ``python: {uvx: company-quality==1.4.0}``
+     - ``uv tool run --from company-quality==1.4.0 company-quality check``.
+   * - Explicit interpreter
+     - ``run: [python, tools/check.py]``; omit ``python``
+     - Ordinary command lookup on the step's PATH, with no PTK Python setup.
+
+Use argument lists to preserve paths containing spaces and argument boundaries.
+The default working directory is the repository root; ``cwd`` changes it.
+Script paths are relative to that working directory. In contrast,
+``python.project`` and ``python.venv.requirements`` paths resolve from the
+repository root. Selecting a project does not change the step's working directory.
+PTK substitutions work in command arguments, for example
+``run: [tools/check.py, --variant, "${vh.variant}"]``.
+
+Plain command strings normally use the platform shell. Strings starting with a
+recognized script, without shell operators, and all commands with ``python``
+configured are split into arguments and run without a shell. Do not rely on
+pipes, redirection or shell expansion inside a Python-mode command.
+
+Standalone scripts and inline dependencies
+------------------------------------------
+
+In a job file::
+
+   steps:
+     check:
+       run: [tools/check.py, --verbose]
+
+PTK detects the leading ``.py`` path and invokes uv with ``--no-project``.
+It does not automatically select the repository's Python project dependencies.
+A script can declare its own Python requirement and dependencies using a PEP 723
+header; uv handles those when running the file::
+
+   # tools/check.py
+   # /// script
+   # requires-python = ">=3.12"
+   # dependencies = ["rich==13.9.4"]
+   # ///
+   from rich import print
+
+   print("Checking the project")
+
+PTK does not create a separate requirements-based environment for this mode.
+uv controls interpreter selection and any script dependency environment. Without
+inline dependency metadata, do not assume that the script receives an isolated
+environment. See `uv script execution <https://docs.astral.sh/uv/guides/scripts/>`_.
+
+Use PTK's interpreter
+---------------------
+
+Choose this explicitly for scripts that should use the same interpreter and
+installed dependencies as PTK::
+
+   steps:
+     check:
+       python: {interpreter: cli}
+       run: [tools/check.py]
+
+PTK does not install script dependencies in this mode. A leading ``.py`` path
+uses PTK's exact executable. For commands such as ``python -m package``, PTK
+prepends its interpreter directory to PATH; an explicitly named absolute
+interpreter still selects that executable.
+
+Requirements and package environments
+-------------------------------------
+
+Declare requirement files, extra packages and an optional Python interpreter or
+version request::
+
+   steps:
+     check:
+       run: [tools/check.py]
+       python:
+         venv:
+           python: "3.12"
+           requirements: [requirements-tools.txt]
+           packages: [rich==13.9.4]
+
+The fields are optional; ``venv: {}`` requests an environment without additional
+packages. PTK creates it with ``uv venv`` and installs declared dependencies with
+``uv pip install``. Scripts use that environment's interpreter; ordinary commands
+find its executables first on PATH. No shell activation is needed.
+
+Environments live under ``.ptk/venvs/<hash>``. The hash covers the Python request,
+declared package requirements, and the paths and bytes of the listed requirements
+files. Changing only a file timestamp does not create another environment. Steps
+with matching declarations share it. A completed environment is reused without
+reinstalling dependencies on every invocation.
+
+This is not a transitive dependency lock or an automatic upgrade mechanism.
+Nested requirement/constraint files and local package source trees are not
+recursively included in PTK's environment hash. Updating an unpinned package on
+an index does not invalidate an existing environment. Projects must manage
+dependency changes; use a uv project for local package development and lockfile
+management. Index/authentication settings for environment creation are described
+below.
+
+uv projects and dependency groups
+---------------------------------
+
+Use the project's ``pyproject.toml`` and ``uv.lock``::
+
+   steps:
+     check:
+       run: [tools/check.py]
+       python:
+         project: .
+         groups: [quality]
+
+``quality`` must be a dependency group declared by that project. PTK passes each
+group as ``--group NAME``; uv's normal default groups still apply. ``groups`` is
+valid only with ``project``. Omit it when no additional groups are needed.
+
+PTK invokes ordinary ``uv run --project``. It does not add ``--locked``,
+``--frozen`` or ``--no-sync``: uv may update the lockfile and synchronize the
+environment before execution. A project that requires these flags can invoke
+uv explicitly as an ordinary ``run`` command, without a ``python`` setting.
+
+For a standalone project, the normal environment is its ``.venv`` directory.
+An explicit step environment value can select another location::
+
+   env:
+     UV_PROJECT_ENVIRONMENT: ${project.root}/.ptk/venvs/quality
+
+This is project configuration, not an automatic per-step environment. PTK rejects
+unordered project-mode steps or workflow jobs that resolve to the same environment.
+Declare a dependency or separate their environments; see :doc:`workflows` and
+:doc:`/reference/execution`. Use absolute environment paths for uv workspace
+members to account for uv's workspace-root discovery. Avoid pointing
+synchronization at the environment running PTK. Dry runs show runtime selection
+without creating environments.
+
+Explicit interpreters, modules and inline code
+----------------------------------------------
+
+Omit ``python`` to use an existing interpreter as an ordinary command::
+
+   steps:
+     check:
+       run: [python, tools/check.py]
+
+This differs from ``run: [tools/check.py]``: the first executable is ``python``,
+so PTK does not add uv. Lookup uses the resolved step PATH, which may differ from
+the caller's PATH. Use an absolute executable path to select a particular
+installation; paths are platform-specific.
+
+Modules and small inline commands also use ordinary command arguments::
+
+   run: [python, -m, my_package.check, --verbose]
+
+or::
+
+   run: [python, -c, "print('Hello')"]
+
+They can also be combined with ``python.project`` or ``python.venv`` to use that
+environment. These forms invoke Python rather than uv's direct script runner,
+so they do not process a script's PEP 723 header. Script headers likewise do not
+install dependencies in PTK's interpreter or a requirements-based environment.
 
 Define a normal command
 -----------------------
@@ -42,6 +230,35 @@ file; ``tests/test_python_tool_package.py`` builds its real wheel and runs it
 through PTK and uv in an offline temporary project, checking both success and
 failure. This does not require any PTK Python API dependency in the tool package.
 
+Editable local packages
+-----------------------
+
+``python.project`` also supports local development without building and
+publishing a wheel for each source edit. For a packaged project in
+``tools/company-quality``::
+
+   steps:
+     quality:
+       python: {project: tools/company-quality}
+       run: [company-quality, check]
+
+The directory must contain the package and a ``pyproject.toml`` with a build
+system supporting editable installs, such as the example above. Its
+``project.scripts`` entry defines the executable. Alternatively use
+``run: [python, -m, company_quality]`` if the package provides ``__main__.py``.
+
+uv normally installs the project in editable mode, so changes to Python source
+are picked up on subsequent execution. PTK does not add an ``editable`` flag or
+perform a manual ``pip install -e`` step. A project without a build system is not
+installed as a package by default; standalone script files can still be run
+directly. See `uv editable installation
+<https://docs.astral.sh/uv/concepts/projects/sync/#editable-installation>`_.
+
+Dependency, entry-point or build-metadata changes can require environment
+synchronization; compiled extensions may require rebuilding. Editable mode is
+not a live reload facility for an already running application. ``uvx`` with a
+local wheel uses that built artifact, not an editable link to its sources.
+
 Run a published package
 -----------------------
 
@@ -58,6 +275,22 @@ uv manages the tool's dependencies in its own environment/cache. No permanent
 ``uv tool install`` is required for this step. The package and executable may have
 different names, as shown in the starter. For local development, the ``uvx``
 requirement can also identify a built wheel.
+
+Use ``python.with`` to add packages to the uv tool environment::
+
+   python:
+     uvx: company-quality==1.4.0
+     with: [rich==13.9.4]
+   run: [company-quality, check]
+
+``with`` is only valid with ``uvx``. A leading script path is also supported::
+
+   python: {uvx: rich==13.9.4}
+   run: [tools/check.py]
+
+For this form PTK runs ``uv run --no-project --with rich==13.9.4 python
+tools/check.py``, adding any ``with`` packages. The script's inline dependency
+header is not used to install dependencies in this form.
 
 Use ``python.project`` for a uv-managed project whose dependency groups and lock
 file should govern execution, or ``python.venv`` for configured requirement
@@ -145,6 +378,28 @@ access to the source YAML and diagnostics.
 
 Execution responsibility
 ------------------------
+
+uv must be available for standalone script, project, venv and uvx execution.
+PTK checks the launcher's ``PTK_UV`` override, PATH and common user uv installation
+directories. It does not install uv automatically in this adapter. uv may need
+network access for Python, packages or build dependencies; offline execution
+requires those resources to be available already. PTK's interpreter and explicit
+interpreter commands do not need uv for their Python execution.
+
+All modes run separate processes. Normal steps use the common arguments,
+environment/secrets, output capture, exit status, timeout and reporting behavior.
+For a Python GUI, set job-level ``gui: true``; only its final launch command is
+detached. PTK exits without waiting for the GUI or collecting its later output.
+See :ref:`gui-jobs` for preparation and lifecycle constraints.
+
+Python dependency environments and the optional PTK output cache are separate.
+The output cache does not automatically hash script/package source files or all
+installed dependencies. Editable source changes alone can therefore leave an
+otherwise matching dependent step reusable. During development, use
+``--no-cache-ptk`` to force execution, leave that step's cache disabled, or have
+an always-running prerequisite declare the relevant sources as outputs for
+fingerprinting. ``--no-cache-ptk`` does not rebuild Python environments or clear
+uv's caches. Projects own input coverage; see :doc:`output-reuse`.
 
 A separate Python dependency environment is not a filesystem or network sandbox.
 Project commands retain the user's permissions and own artifact correctness,

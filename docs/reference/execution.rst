@@ -55,6 +55,10 @@ command needs another directory. Each step receives separate build, report and
 log paths. These are storage conventions, **not a filesystem sandbox**: project
 scripts and commands can write outside those paths.
 
+For Python command forms, environment selection and editable local packages,
+see :doc:`/guides/python-tools`. A leading script path and an explicit
+``python script.py`` command select different default runtime behavior.
+
 Inside a step, ``${run.build_dir}``, ``${run.reports_dir}`` and
 ``${run.log_file}`` refer to that step's directories/file. To consume another
 step's files, use ``${steps.ID.build_dir}``, ``${steps.ID.reports_dir}`` or

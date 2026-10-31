@@ -192,6 +192,13 @@ the key. Files containing scripts, undeclared inputs and remote state are not
 implicitly hashed. A changed producer command that emits identical declared
 contents need not invalidate its dependent.
 
+This also applies to editable local Python packages: modifying their sources
+does not automatically invalidate a dependent's output receipt. Force execution
+with ``--no-cache-ptk`` while developing, disable that consumer's cache, or
+include those sources in an always-running prerequisite's declared outputs.
+The bypass flag does not clear uv caches or recreate Python environments. See
+:doc:`python-tools` for Python execution and environment ownership.
+
 Only successful attempts can populate receipts; a new attempt invalidates its
 old receipt before execution. Failed or cancelled work cannot fall back to its
 old outputs as a cache hit. Cache storage errors warn and fall back to execution.

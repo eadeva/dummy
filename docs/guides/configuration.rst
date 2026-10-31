@@ -295,6 +295,9 @@ project configurations. ``python: {project: ., groups: [docs]}`` adds dependency
 groups from that project's ``pyproject.toml`` to the uv run. ``groups`` is only
 valid with ``project`` mode; the normal uv default groups still apply.
 Dry runs describe runtimes without creating them.
+See :doc:`python-tools` for every execution mode, standalone PEP 723 scripts,
+explicit interpreters, modules, inline code and editable local packages, with
+environment, lockfile and output-cache constraints.
 
 Substitution and conditions
 ---------------------------

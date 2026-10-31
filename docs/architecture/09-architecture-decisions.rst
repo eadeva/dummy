@@ -615,6 +615,36 @@ not imply that every related future capability has been implemented.
    :need:`REQ_Sw_SCHEMA_AUTHORITY` govern removal and editor recovery.
    See :doc:`/guides/python-tools`.
 
+.. ddec:: Select explicit Python environments and delegate editable builds to uv
+   :id: DD_PYTHON_RUNTIME
+   :status: accepted
+
+   **Context:** Projects need to execute local scripts, develop reusable packages
+   and run published tools with different dependencies. Requiring those packages
+   in PTK's own environment would couple their dependencies and release cycles.
+   This record describes the existing execution modes; it adds no new runtime API.
+
+   **Decision:** Route a standalone leading Python script through uv without
+   project discovery. Offer mutually exclusive project, requirements-environment,
+   uvx and PTK-interpreter modes, while preserving ordinary explicit-interpreter
+   commands. Use uv's existing editable-project installation for local development
+   rather than introducing a separate PTK editable-install operation. Keep package
+   entry points and module execution ordinary process commands.
+
+   **Consequences:** Projects own dependency declarations, build metadata and
+   environment paths. Project mode uses normal uv synchronization rather than
+   enforcing frozen lockfiles. Requirements-environment hashes cover declared
+   requirement file bytes, package strings and the Python request, not transitive
+   source or dependency state. Matching declarations share environments. uv
+   availability, downloads, index/authentication and shared-environment ordering
+   remain explicit constraints. Editable Python source changes are visible when
+   the command executes, but do not automatically invalidate PTK's output cache;
+   the cache bypass does not recreate Python environments. Documentation covers
+   these boundaries alongside examples for every mode.
+
+   See :need:`REQ_Sw_PYTHON_RUNTIME`, :need:`DD_NO_PLUGIN_API`,
+   :need:`DD_OUTPUT_REUSE` and :doc:`/guides/python-tools`.
+
 .. ddec:: Keep console step identity explicit and tool indentation local
    :id: DD_CONSOLE_CONTEXT
    :status: accepted

@@ -166,18 +166,36 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :security: false
    :legal: false
    :status: under review
-   :verification_criteria: Python runtime tests show the configured interpreter and environment are used without redirecting synchronization into PTK installation.
+   :verification_criteria: Runtime/schema tests verify standalone script execution, requirements-environment creation/reuse and invalidation, project/group command construction, mutually exclusive settings, and the repository's separate job environments; a packaged-tool integration test verifies actual uv execution and exit status. Review the guide against runtime command construction and uv's editable-project contract.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall resolve declared Python job runtimes independently of the environment running PTK and apply their selected project/group requirements.
+   PTK shall support standalone Python scripts through uv and explicit selection
+   of exactly one Python runtime: a uv project with optional dependency groups,
+   a requirements/packages environment with an optional Python request, a uvx
+   package with optional extra packages, or PTK's own interpreter. Ordinary
+   interpreter commands shall remain executable without Python-mode configuration.
+   The selected runtime shall apply to command steps without activating or
+   replacing PTK's parent process environment.
+
+   The user guide shall describe script, module and inline-code forms, editable
+   local project execution, working-directory rules and environment/cache
+   ownership. It shall distinguish dependency installation from output reuse.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
    **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
 
-   **Evidence:** ``src/ptk/adapters/python_env.py``; ``tests/test_run.py``.
+   **Constraints:** uv controls project synchronization and editable installation;
+   the project must provide suitable package/build metadata. PTK does not add a
+   frozen-lockfile policy, an editable toggle or implicit source-file invalidation
+   for output caching. Requirements-environment reuse is not a transitive lock.
+   See :need:`DD_PYTHON_RUNTIME` and :doc:`/guides/python-tools`.
+
+   **Evidence:** ``src/ptk/adapters/python_env.py``;
+   ``src/ptk/domain/execution/commands.py``; ``tests/test_run.py``;
+   ``tests/test_repository_config.py``; ``tests/test_python_tool_package.py``.
 
 .. req-sw:: Preview without executing jobs
    :id: REQ_Sw_DRY_RUN
