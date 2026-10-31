@@ -145,6 +145,7 @@ class RunResult:
     param_sources: dict[str, str]
     steps: list[StepResult]
     log_file: str | None = None
+    report_problems: list[str] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:

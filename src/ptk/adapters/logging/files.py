@@ -181,9 +181,35 @@ class FileLogObserver:
         assert self._folder is not None
         snapshot = self._folder / "report-inputs"
         source = Path(self._plan.dirs["reports_dir"])
+        from ..reporting import sphinx
+
+        summary = run_summary(self._plan, result)
+        executed = {step.label for step in result.walk() if step.attempts > 0}
+        for step in summary["steps"]:
+            if step["report"] and step["step"] in executed:
+                path = tuple(step["step"].split("/"))
+                try:
+                    sphinx.capture(
+                        Path(
+                            self._layout.build_dir(
+                                self._plan.variant, self._plan.job, path
+                            )
+                        ),
+                        Path(
+                            self._layout.reports_dir(
+                                self._plan.variant, self._plan.job, path
+                            )
+                        ),
+                        step["step"],
+                        step["status"],
+                    )
+                except (OSError, ValueError, RuntimeError) as exc:
+                    result.report_problems.append(
+                        f"{step['step']}: cannot capture Sphinx evidence: {exc}"
+                    )
         if source.is_dir():
             shutil.copytree(source, snapshot, dirs_exist_ok=True)
-        summary = run_summary(self._plan, result)
+        summary["report_problems"] = list(result.report_problems)
         summary["reports_dir"] = str(snapshot)
         self._write_summary(summary)
         with self._lock:

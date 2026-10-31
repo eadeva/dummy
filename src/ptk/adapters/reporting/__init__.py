@@ -1,1 +1,1 @@
-"""Report importers (JUnit, SARIF, Cobertura) and exporters."""
+"""Report importers (JUnit, SARIF, Cobertura, Sphinx-Needs) and exporters."""

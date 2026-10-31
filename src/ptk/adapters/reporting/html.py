@@ -4,7 +4,7 @@ import copy
 import json
 
 from .. import graph_html
-from . import diagnostics, ui
+from . import diagnostics, needs_html, ui
 from .ui import anchor, badge, e, fields, link
 
 
@@ -111,10 +111,15 @@ def overview(entries, reports, diagnostics_items, *, entity="Steps"):
     targets["Active log errors"] = "diagnostics"
     tones["Active log errors"] = "failed" if values["Active log errors"] else "info"
     values["Other diagnostics"] = sum(
-        item.source in ("static", "report") and item.disposition == "active"
+        item.source in ("static", "report", "sphinx") and item.disposition == "active"
         for item in diagnostics_items
     )
     targets["Other diagnostics"] = "diagnostics"
+    if any(report.sphinx for report in reports):
+        values["Needs"] = sum(
+            len(doc.needs) for report in reports for doc in report.sphinx
+        )
+        targets["Needs"] = "needs"
     return ui.cards(values, tones=tones, targets=targets)
 
 
@@ -305,6 +310,7 @@ def render(report, *, link_root=None):
             items, analysis_enabled=report.log_analysis_enabled
         ),
         tests=tests_section([report]),
+        needs=needs_html.section([report], link_root),
         evidence=evidence_html,
         configuration=configuration(report),
     )

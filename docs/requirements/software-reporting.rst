@@ -119,13 +119,55 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_REPORTS
    :tags: implemented
 
-   PTK shall import JUnit, aggregate Cobertura line coverage, SARIF, log diagnostics and selected contributor output into its canonical report model.
+   PTK shall import JUnit, aggregate Cobertura line coverage, SARIF, log diagnostics
+   and Sphinx-Needs documentation evidence into its canonical report model.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
    **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
 
    **Evidence:** ``src/ptk/adapters/reporting/importers.py``; ``tests/test_reporting.py``.
+
+.. req-sw:: Import and present retained Sphinx documentation evidence
+   :id: REQ_Sw_SPHINX_REPORTS
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: accepted
+   :verification_criteria: Real Sphinx 9.1.0/Sphinx-Needs 8.5.0 output, malformed fixtures, workflow/history tests and browser checks verify discovery, version/default handling, ownership, severity mapping, retained data, charts, filtering and conditional documentation links.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_REPORTS
+   :tags: implemented
+
+   PTK shall discover needs.json and schema_violations.json in executed,
+   report-visible step build directories and retain their evidence with the run.
+   It shall import the declared current version, restore exported defaults when
+   omitted, preserve custom fields and nested violations, and distinguish an
+   unavailable export from an empty imported export. It shall report unreadable
+   or malformed evidence without rewriting execution outcomes.
+
+   Job and workflow HTML reports shall present descriptive distributions and a
+   filterable needs table with explicit owner/source identity. Schema findings
+   shall use the shared diagnostic presentation and severity mapping, without
+   increasing test totals or counting nested details as separate violations.
+   JSON and Markdown shall carry their corresponding structured or summary
+   evidence. Documentation index links shall require a passed producing step
+   and an existing local HTML index at capture time. Retained data shall not
+   require re-reading current build outputs or configuration.
+
+   **Origin:** User request for Sphinx import/export from run.build_dir, needs
+   charts/tables and links to successfully built documentation. See
+   :need:`DD_SPHINX_EVIDENCE` and :doc:`../guides/reports`.
+
+   **Implementation:** Built-in build-output capture and canonical report data
+   feed the shared HTML, JSON and Markdown exporters. The importer has no
+   runtime dependency on Sphinx and does not evaluate project configuration.
+
+   **Evidence:** ``tests/reporting/test_sphinx.py``;
+   ``extensions/project-toolkit/test/report-ui.test.js``;
+   ``src/ptk/adapters/reporting/sphinx.py``;
+   ``src/ptk/adapters/reporting/needs_html.py``.
 
 .. req-sw:: Export supported report formats
    :id: REQ_Sw_EXPORTERS

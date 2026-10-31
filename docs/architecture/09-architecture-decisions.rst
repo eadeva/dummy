@@ -751,6 +751,51 @@ not imply that every related future capability has been implemented.
    **Related requirements:** :need:`REQ_Sw_REPORT_EXPLORATION`,
    :need:`REQ_Sw_REPORT_GRAPHS`, :need:`REQ_Sw_LOG_HTML`.
 
+.. ddec:: Capture Sphinx evidence from build outputs and reuse report exporters
+   :id: DD_SPHINX_EVIDENCE
+   :status: accepted
+
+   **Context:** Sphinx 9.1.0 and Sphinx-Needs 8.5.0 produce needs.json and
+   schema_violations.json in documentation build outputs, outside PTK's log
+   directories. Users need charts, tables and violations within the established
+   job/workflow reports, plus access to successfully built documentation.
+
+   **Decision:** Discover named JSON exports inside executed, report-visible
+   step build directories after execution. Capture them and normalized data
+   alongside the step's other report inputs so ordinary history retention and
+   workflow snapshots preserve them. Read only the selected current_version,
+   restore exported defaults when requested by the export, and preserve custom
+   fields and nested validation reasons. Parse data without importing Sphinx,
+   executing conf.py or adding runtime plugin hooks. Bound individual JSON files
+   to 32 MiB and report collection problems without changing execution status.
+
+   Add a collapsible charts/table view to the existing offline HTML report,
+   structured JSON and compact Markdown summaries. Use descriptive type and
+   lifecycle-status distributions, with exact text counts and filtering; do not
+   infer implementation completion. Qualify records by job, variant, step and
+   source directory rather than merging equal need IDs. Present top-level schema
+   findings in shared Diagnostics, using schema severity rather than console log
+   level; errors also appear in What failed. Nested reasons remain part of one
+   finding. Keep execution, imported tests, logs and schema findings distinct.
+
+   Link to a recorded local documentation index only if the producing step
+   passed and the index exists. Preserve structured evidence even when its step failed,
+   but do not label that build successful. The documentation site itself stays
+   in the project build output; PTK copies JSON evidence, not an entire website.
+
+   **Alternatives considered:** Reading live build folders when opening old
+   reports would replace historical evidence. Parsing only console logs would
+   lose structured need fields and suppressed violations. Treating needs as test
+   cases would distort JUnit and test totals. A new exporter plugin or Sphinx
+   runtime dependency would add an unnecessary extension/versioning contract.
+
+   **Consequences:** Report size grows with captured need fields and sources.
+   Missing exports mean unreported evidence, not successful validation. Site
+   links can expire or point to a later rebuild; other builders and external URLs
+   are not inferred. Projects retain ownership of stale-output cleanup,
+   correctness, validation rules and traceability, preserving tool flexibility
+   (:need:`DD_EXECUTION_BOUNDARIES`). See :need:`REQ_Sw_SPHINX_REPORTS`.
+
 Open boundaries
 ---------------
 

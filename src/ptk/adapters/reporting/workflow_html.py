@@ -2,7 +2,7 @@
 
 from ...domain.graphs import describe_graph
 from .. import graph_html
-from . import diagnostics, html, ui
+from . import diagnostics, html, needs_html, ui
 from .diagnostics import Diagnostic
 from .ui import anchor, e, fields, link
 
@@ -106,7 +106,7 @@ def render(result, target, *, owner_variant, children, context):
             target=destination,
         )
     scope = "workspace" if context.get("workspace") else owner_variant or "default"
-    reports = list(children.values())
+    reports = [children[job.id] for job in result.jobs if job.id in children]
     transcript = target / "workflow.log"
     evidence_html = (
         (
@@ -142,6 +142,7 @@ def render(result, target, *, owner_variant, children, context):
             analysis_enabled=any(report.log_analysis_enabled for report in reports),
         ),
         tests=html.tests_section(reports),
+        needs=needs_html.section(reports, target),
         evidence=evidence_html or "<p>No report attachments recorded.</p>",
         configuration="".join(configuration)
         or '<p class="meta">No child project metadata recorded.</p>',

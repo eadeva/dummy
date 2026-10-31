@@ -71,8 +71,24 @@ def write_workflow_report(
 
 def snapshot_logs(summary: dict, target: Path) -> dict:
     """Keep child report links valid when the same job is called again."""
+    from .reporting.importers import step_folders
+
+    inputs = target / "inputs"
+    source_reports = summary.get("reports_dir")
+    if source_reports:
+        for folder in step_folders(
+            [
+                step["step"]
+                for step in summary.get("steps", [])
+                if step.get("report", True)
+            ]
+        ):
+            source = Path(source_reports) / folder
+            if source.is_dir():
+                shutil.copytree(source, inputs / folder, dirs_exist_ok=True)
     summary = {
         **summary,
+        "reports_dir": str(inputs),
         "log_dir": str(target / "logs"),
         "steps": [dict(step) for step in summary.get("steps", [])],
     }

@@ -1,7 +1,8 @@
 """Build and write reports (use case ``ReportService``).
 
 A report is built from the canonical run summary plus the tool results the
-steps left in their reports folders, so it can be regenerated at any time.
+steps left in their reports folders, including Sphinx evidence captured from
+build folders. Retained inputs allow regeneration without current build outputs.
 """
 
 from __future__ import annotations

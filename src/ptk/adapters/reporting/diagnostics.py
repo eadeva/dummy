@@ -1,5 +1,6 @@
 """One diagnostic presentation with explicit source, ownership and evidence."""
 
+import json
 from dataclasses import dataclass
 
 from .ui import anchor, badge, e, fields, link, toolbar
@@ -10,6 +11,7 @@ SOURCES = {
     "log": "Log analysis",
     "static": "Static analysis",
     "report": "Report collection",
+    "sphinx": "Sphinx-Needs",
 }
 
 
@@ -130,6 +132,42 @@ def collect(report, owner, root=None, *, scope="", allowed=False):
     result.extend(
         Diagnostic(owner, "", "report", "error", problem) for problem in report.problems
     )
+    for doc in report.sphinx:
+        for violation in doc.violations:
+            detail = fields(
+                {
+                    "Need": violation.need_id,
+                    "Source": doc.source,
+                    "Rule": violation.rule,
+                    **violation.details,
+                }
+            )
+            if violation.children:
+                detail += (
+                    '<details><summary>Nested validation details</summary><div class="item-detail"><pre>'
+                    + e(json.dumps(violation.children, indent=2, ensure_ascii=False))
+                    + "</pre></div></details>"
+                )
+            detail += link(doc.violations_file, root, "Captured schema_violations.json")
+            result.append(
+                Diagnostic(
+                    owner,
+                    doc.step,
+                    "sphinx",
+                    violation.level,
+                    f"{violation.need_id}: {violation.message}",
+                    detail,
+                    search=json.dumps(
+                        {
+                            "rule": violation.rule,
+                            "source": doc.source,
+                            "details": violation.details,
+                            "children": violation.children,
+                        },
+                        ensure_ascii=False,
+                    ),
+                )
+            )
     if report.status == "failed" and not any(
         item.source == "execution" and item.severity == "error" for item in result
     ):

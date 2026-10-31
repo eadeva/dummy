@@ -24,6 +24,7 @@ from ...domain.reporting.model import (
     TestCase,
     TestSuite,
 )
+from . import sphinx
 
 
 def _float(value: str | None) -> float:
@@ -121,6 +122,12 @@ def scan(reports_dir: Path, steps: Mapping[str, str]) -> list[Contribution]:
                     contribution.coverage += parse_cobertura(root, step, file.name)
         except (ET.ParseError, ValueError, OSError) as exc:
             contribution.problems.append(f"{step}: cannot read {file.name}: {exc}")
+    for folder, step in steps.items():
+        imported = sphinx.read(reports_dir / folder, step)
+        if imported.sphinx or imported.problems:
+            contribution = contributions.setdefault(step, Contribution(step))
+            contribution.sphinx.extend(imported.sphinx)
+            contribution.problems.extend(imported.problems)
     return list(contributions.values())
 
 

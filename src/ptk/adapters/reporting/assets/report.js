@@ -4,7 +4,7 @@
   const filters = new Map();
   document.querySelectorAll("[data-filter]").forEach(root => {
     const inputs = [...root.querySelectorAll(":scope > .filter-toolbar [name]")];
-    const records = [...root.querySelectorAll(":scope > [data-record]")];
+    const records = [...(root.querySelector("[data-records]") || root).querySelectorAll(":scope > [data-record]")];
     const defaults = new Map(inputs.map(input => [input, input.value]));
     const apply = () => {
       let visible = 0, occurrences = 0;
@@ -25,6 +25,12 @@
       apply();
     });
     filters.set(root, { inputs, apply }); apply();
+  });
+  for (const button of document.querySelectorAll("[data-need-field]")) button.addEventListener("click", () => {
+    const root = document.querySelector('[data-filter="needs"]'), filter = filters.get(root);
+    for (const input of filter.inputs) input.value = "";
+    root.querySelector(`[name="${button.dataset.needField}"]`).value = button.dataset.needValue;
+    filter.apply(); reveal(root.id);
   });
   function reveal(id, scroll = true) {
     const target = document.getElementById(id);

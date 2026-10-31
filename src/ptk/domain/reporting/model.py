@@ -69,6 +69,47 @@ class Coverage:
 
 
 @dataclass
+class Need:
+    id: str
+    title: str = ""
+    type: str = ""
+    type_name: str = ""
+    status: str = ""
+    tags: list[str] = field(default_factory=list)
+    docname: str = ""
+    line: int | None = None
+    page: str = ""
+    fields: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class NeedsViolation:
+    need_id: str
+    level: str
+    rule: str
+    message: str
+    details: dict[str, Any] = field(default_factory=dict)
+    children: list[dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass
+class SphinxReport:
+    step: str
+    source: str  # directory relative to the producing step's build directory
+    project: str = ""
+    version: str = ""
+    needs: list[Need] = field(default_factory=list)
+    violations: list[NeedsViolation] = field(default_factory=list)
+    needs_file: str = ""
+    violations_file: str = ""
+    docs_index: str = ""
+    needs_imported: bool = False
+    violations_imported: bool = False
+    validated_needs: int | None = None
+    validation_summary: str = ""
+
+
+@dataclass
 class Contribution:
     step: str
     suites: list[TestSuite] = field(default_factory=list)
@@ -76,6 +117,7 @@ class Contribution:
     coverage: list[Coverage] = field(default_factory=list)
     log_findings: list[LogFinding] = field(default_factory=list)
     problems: list[str] = field(default_factory=list)  # unreadable files
+    sphinx: list[SphinxReport] = field(default_factory=list)
 
 
 @dataclass
@@ -119,6 +161,7 @@ class Report:
     ptk_version: str = ""
     context: dict[str, Any] = field(default_factory=dict)
     graph: dict[str, Any] = field(default_factory=lambda: describe_graph({}))
+    sphinx: list[SphinxReport] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -141,6 +184,7 @@ class Report:
                 for f in self.log_findings
             )
             or bool(self.problems)
+            or any(v.level == ERROR for doc in self.sphinx for v in doc.violations)
         )
 
     def test_totals(self) -> Counter[str]:
@@ -216,6 +260,7 @@ def from_summary(
         graph=graph,
         ptk_version=summary.get("context", {}).get("ptk_version") or ptk_version,
         context=summary.get("context", {}),
+        problems=list(summary.get("report_problems", [])),
     )
     for contribution in contributions:
         report.suites += contribution.suites
@@ -223,6 +268,7 @@ def from_summary(
         report.log_findings += contribution.log_findings
         report.coverage += contribution.coverage
         report.problems += contribution.problems
+        report.sphinx += contribution.sphinx
     return report
 
 

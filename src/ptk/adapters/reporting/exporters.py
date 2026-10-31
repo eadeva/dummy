@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import xml.etree.ElementTree as ET
+from collections import Counter
 from dataclasses import asdict
 
 from ...domain.reporting.model import (
@@ -24,6 +25,26 @@ def to_json(report: Report) -> str:
         "tests": dict(report.test_totals()),
         "test_cases": test_metrics(c for suite in report.suites for c in suite.cases),
         "findings": dict(report.finding_totals()),
+        "needs": {
+            "records": sum(len(doc.needs) for doc in report.sphinx),
+            "types": dict(
+                Counter(
+                    need.type or "Unspecified"
+                    for doc in report.sphinx
+                    for need in doc.needs
+                )
+            ),
+            "statuses": dict(
+                Counter(
+                    need.status or "Unspecified"
+                    for doc in report.sphinx
+                    for need in doc.needs
+                )
+            ),
+            "violations": dict(
+                Counter(v.level for doc in report.sphinx for v in doc.violations)
+            ),
+        },
     }
     return json.dumps(data, indent=2, default=str) + "\n"
 
@@ -218,4 +239,54 @@ def to_markdown(report: Report) -> str:
         ]
     for cov in report.coverage:
         lines += [f"**Coverage** ({_cell(cov.step)}): {cov.percent:.1f}% of lines", ""]
+    if report.sphinx:
+        lines += [
+            "## Sphinx documentation",
+            "",
+            "Needs and schema findings are separate from test totals and execution status.",
+            "",
+        ]
+        for doc in report.sphinx:
+            levels = Counter(v.level for v in doc.violations)
+            lines += [
+                f"**{_cell(doc.step)} · {_cell(doc.source)}:** {len(doc.needs)} needs; "
+                + (
+                    ", ".join(f"{n} {level}" for level, n in sorted(levels.items()))
+                    or (
+                        "no schema findings"
+                        if doc.violations_imported
+                        else "validation not reported"
+                    )
+                ),
+                "",
+            ]
+            if doc.docs_index:
+                from pathlib import Path
+
+                lines += [
+                    f"[Open built documentation](<{Path(doc.docs_index).as_uri()}>)",
+                    "",
+                ]
+            lines += ["| Need type | Count |", "|---|---|"]
+            lines += [
+                f"| {_cell(kind or 'Unspecified')} | {count} |"
+                for kind, count in sorted(Counter(n.type for n in doc.needs).items())
+            ]
+            lines += ["", "| Lifecycle status | Count |", "|---|---|"]
+            lines += [
+                f"| {_cell(status or 'Unspecified')} | {count} |"
+                for status, count in sorted(
+                    Counter(n.status for n in doc.needs).items()
+                )
+            ]
+            lines.append("")
+            for violation in doc.violations[:20]:
+                lines.append(
+                    f"- **{_cell(violation.level)}** `{_cell(violation.need_id)}`: {_cell(violation.message)}"
+                )
+            if len(doc.violations) > 20:
+                lines.append(
+                    f"- … and {len(doc.violations) - 20} more; see the HTML or JSON report."
+                )
+            lines.append("")
     return "\n".join(lines).rstrip() + "\n"
