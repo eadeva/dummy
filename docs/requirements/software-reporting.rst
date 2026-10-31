@@ -135,7 +135,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :security: false
    :legal: false
    :status: accepted
-   :verification_criteria: Real Sphinx 9.1.0/Sphinx-Needs 8.5.0 output, malformed fixtures, workflow/history tests and browser checks verify discovery, version/default handling, ownership, severity mapping, retained data, charts, filtering and conditional documentation links.
+   :verification_criteria: Real Sphinx 9.1.0/Sphinx-Needs 8.5.0 output, malformed fixtures, 100-MiB size-boundary checks, workflow/history tests and browser checks verify discovery, version/default handling, ownership, severity mapping, retained data, charts, filtering and conditional documentation links.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_REPORTS
    :tags: implemented
@@ -147,6 +147,11 @@ Canonical results, retained evidence and diagnostic interpretation.
    unavailable export from an empty imported export. It shall report unreadable
    or malformed evidence without rewriting execution outcomes.
 
+   The fixed per-file size limit shall be 100 MiB (104,857,600 bytes), applied
+   independently to needs.json and schema_violations.json. A file exactly at
+   the limit shall pass the size check. A larger file shall be excluded with a
+   report-collection diagnostic, without changing the job's execution result.
+
    Job and workflow HTML reports shall present descriptive distributions and a
    filterable needs table with explicit owner/source identity. Schema findings
    shall use the shared diagnostic presentation and severity mapping, without
@@ -157,7 +162,8 @@ Canonical results, retained evidence and diagnostic interpretation.
    require re-reading current build outputs or configuration.
 
    **Origin:** User request for Sphinx import/export from run.build_dir, needs
-   charts/tables and links to successfully built documentation. See
+   charts/tables and links to successfully built documentation, with an explicit
+   user-selected 100-MiB per-file limit. See
    :need:`DD_SPHINX_EVIDENCE` and :doc:`../guides/reports`.
 
    **Implementation:** Built-in build-output capture and canonical report data

@@ -145,8 +145,14 @@ After execution, PTK discovers ``needs.json`` and ``schema_violations.json``
 recursively inside each executed, report-visible step's **build directory**.
 It does not look for these exports in ``run.log_dir``. Configured layout roots
 are respected. Symbolic-link directories are not traversed and artifacts must
-remain inside the step build directory. Each JSON file is limited to 32 MiB;
-unreadable, oversized or malformed exports produce report-collection diagnostics.
+remain inside the step build directory. Each JSON file has a fixed limit of
+**100 MiB (104,857,600 bytes)**, applied separately to ``needs.json`` and
+``schema_violations.json``. Files exactly at the limit pass the size check;
+larger files are excluded with a report-collection diagnostic, without changing
+the job's execution result. Unreadable or malformed exports also produce
+report-collection diagnostics. The limit accommodates larger needs catalogs
+while retaining a finite input-size guard. It is not a process-memory budget:
+parsed objects, retained data and rendered reports can require more memory.
 Skipped, blocked, never-started and ``report: false`` steps are not imported.
 
 The selected ``current_version`` is imported, including an empty version string

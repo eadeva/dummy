@@ -766,8 +766,11 @@ not imply that every related future capability has been implemented.
    workflow snapshots preserve them. Read only the selected current_version,
    restore exported defaults when requested by the export, and preserve custom
    fields and nested validation reasons. Parse data without importing Sphinx,
-   executing conf.py or adding runtime plugin hooks. Bound individual JSON files
-   to 32 MiB and report collection problems without changing execution status.
+   executing conf.py or adding runtime plugin hooks. Use the user-selected fixed
+   limit of 100 MiB (104,857,600 bytes) per JSON file, independently for needs and
+   violations exports. Accept the size boundary inclusively and report larger
+   files as collection problems without changing execution status. This limit
+   accommodates larger needs catalogs while retaining a finite input-size guard.
 
    Add a collapsible charts/table view to the existing offline HTML report,
    structured JSON and compact Markdown summaries. Use descriptive type and
@@ -790,6 +793,8 @@ not imply that every related future capability has been implemented.
    runtime dependency would add an unnecessary extension/versioning contract.
 
    **Consequences:** Report size grows with captured need fields and sources.
+   The per-file limit is not an aggregate or process-memory budget: parsing,
+   retained data and rendering can require more memory than the input file size.
    Missing exports mean unreported evidence, not successful validation. Site
    links can expire or point to a later rebuild; other builders and external URLs
    are not inferred. Projects retain ownership of stale-output cleanup,

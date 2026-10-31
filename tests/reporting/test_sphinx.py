@@ -218,6 +218,48 @@ def test_limits_and_unsafe_doc_paths(tmp_path, monkeypatch):
     assert len(result.problems) == 2 and not result.sphinx[0].needs_imported
 
 
+@pytest.mark.parametrize("artifact", ["needs.json", "schema_violations.json"])
+@pytest.mark.parametrize(
+    ("size", "accepted"),
+    [
+        (32 * 1024 * 1024 + 1, True),
+        (100 * 1024 * 1024, True),
+        (100 * 1024 * 1024 + 1, False),
+    ],
+)
+def test_100_mib_limit_is_inclusive_and_per_artifact(
+    tmp_path, monkeypatch, artifact, size, accepted
+):
+    folder = write_exports(tmp_path / "build")
+    source = folder / artifact
+    original_stat = Path.stat
+
+    def declared_size(path, *args, **kwargs):
+        stat = original_stat(path, *args, **kwargs)
+        if path == source:
+            # Exercise the size gate with small valid JSON, without allocating
+            # hundreds of MiB of irrelevant padding in every test run.
+            values = list(stat)
+            values[6] = size
+            return os.stat_result(values)
+        return stat
+
+    monkeypatch.setattr(Path, "stat", declared_size)
+    sphinx.capture(tmp_path / "build", tmp_path / "reports", "docs", "passed")
+    result = sphinx.read(tmp_path / "reports", "docs")
+    [doc] = result.sphinx
+    assert doc.needs_imported is (accepted if artifact == "needs.json" else True)
+    assert doc.violations_imported is (
+        accepted if artifact == "schema_violations.json" else True
+    )
+    if accepted:
+        assert not result.problems
+    else:
+        assert len(result.problems) == 1
+        assert f"{artifact}: JSON artifact exceeds 100 MiB" in result.problems[0]
+        assert not (tmp_path / "reports" / sphinx.SNAPSHOT / "0" / artifact).exists()
+
+
 def test_workflow_build_discovery_hidden_steps_and_retained_history(tmp_path):
     writer = "from pathlib import Path; import os, shutil; target=Path(os.environ['PTK_BUILD_DIR'])/'html'; shutil.copytree('fixture/html', target, dirs_exist_ok=True)"
     root = repository(
