@@ -1,0 +1,4 @@
+interface:
+  display_name: "PTK GitHub Workflows"
+  short_description: "Generate callable workflows with PTK artifact Actions"
+  default_prompt: "Use $ptk-github-workflows to create or review a callable GitHub workflow from this project's PTK jobs, needs, variants and declared outputs."

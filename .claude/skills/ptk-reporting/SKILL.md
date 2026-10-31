@@ -1,41 +1,19 @@
 ---
 name: ptk-reporting
-description: Add ptk report formats, import tool results or troubleshoot report generation.
+description: Configure PTK full and dedicated diagnostics reports, import test/static-analysis/Sphinx/build-system evidence, or troubleshoot report generation and historical exports.
 ---
 
-# ptk-reporting
+# PTK reporting
 
-First follow the [project discovery and execution guide](../../../docs/guides/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
+First follow the [project discovery and execution guide](../../../docs/guides/agent-guide.rst). Use the selected runtime and recorded run identity; do not rerun a job merely to explain or export existing results.
 
-1. Read the report commands in [docs/reference/cli.rst](../../../docs/reference/cli.rst) and supported result formats in [log analysis](../../../docs/guides/log-analysis.rst).
-
-2. Write tool results to PTK_STEP_REPORTS_DIR or `${run.reports_dir}` for the producing step.
-
-3. Use `report.import` with file globs to copy results from other folders; set optional only when absence is acceptable.
-
-4. Recognized inputs are JUnit XML, Cobertura XML and SARIF; select output formats under report_formats.
-
-5. Use existing recorded files first. For an export request, select the discovered repository/job/variant and `--run RUN_ID` for history; use `ptk report export JOB -f json` and inspect the printed output path. HTML is the default, so JSON need not exist. Exports write files; use a separate output directory when preserving existing evidence. Do not rerun jobs just to change report format.
-
-6. Keep report problems separate from the job exit status and preserve skipped/allowed-failure semantics.
-
-7. Test malformed files, escaping, totals and relative log links when changing exporters/importers.
-
-8. Convert custom tool results into supported input formats, or process exported report JSON with an ordinary command. See [reusable Python tools](../../../docs/guides/python-tools.rst). PTK does not load third-party report importers or exporters.
-
-9. `report: false` excludes a step subtree from reports and imports, but does not hide audit logs or change failure status.
-
-10. Never include secrets in imported results; masking engine logs does not sanitize arbitrary third-party files.
-
-Historical input snapshots travel with run summaries. Reproduce with two runs producing different input files; historical export must not import the newer results.
-
-
-Read [report summaries](../../../docs/guides/configuration.rst) for recorded project/PTK versions, variant details and declared tool sources. Test cards count executed (excluding skipped), passed, skipped and failed (including errors); green/red/gray convey status and text retains the meaning. Per-column filters combine without changing recorded totals. `needs.json` is not a supported importer.
-
-Set a job's `open_report` to `always` or `on_errors` only when automatic local opening is wanted; omission disables it and CX/dry-run suppress it. Errors include failed steps/tests, error findings and report import problems. Browser availability must not alter the run's exit status.
-
-For local orchestration, inspect the workflow summary and immutable child reports under the workflow run directory. Read [workflows](../../../docs/guides/workflows.rst); do not merge test cases from unrelated repositories without preserving their context.
-
-Workflow `open_report` defaults to `always`. Use `on-errors` (hyphen) to include tolerated execution failures and imported report errors, or `null` to disable opening. When the summary is selected for opening, suppress child openings; otherwise apply child policies after completion using retained snapshots. CX/dry-run never open the summary; browser or summary-write failures must not change execution exit codes. Summary links are HTML-only; retain internal run summaries and captured inputs for regeneration. Print report file paths without starting a localhost server; preserve configured automatic opening and explicit `ptk report open`.
-
-Use [log analysis](../../../docs/guides/log-analysis.rst) and [the log-analyzer skill](../ptk-log-analyzer/SKILL.md) for captured warnings/errors, disposition rules and source-log evidence. Keep severity and disposition separate; never change job exit codes to match suppressed findings.
+1. Read [reports](../../../docs/guides/reports.rst), [log analysis](../../../docs/guides/log-analysis.rst) and the installed schema. Discover report inputs, build paths and output policy from the producing step and saved run. HTML is the default full format; JSON need not exist. Dedicated `diagnostics.html` is generated separately for all supported importers.
+2. Recognized evidence includes JUnit, Cobertura, SARIF, Sphinx `needs.json` and violations, CMake, Bazel BEP and GN project JSON. Follow each importer's exact capture contract in the report guide. Standard test/static-analysis results belong in the step reports directory; Sphinx/build-system evidence can come from the producing build directory. Use `report.import` for supported files elsewhere; mark optional only when absence is acceptable. Do not invent a new `uses` handler or third-party importer API.
+3. For CMake, preserve automatic producing-version selection of the 3.2+ or 4.1+ importer and emitted warnings/errors. For Bazel, inspect recorded BEP inputs and built-in target graph capture. For GN, distinguish Ninja-file generation from compilation. Use only supported built-in graph sources for CMake/Bazel/GN, at meaningful target level. Make retains log analysis; do not add a custom file-level graph scraper.
+4. For Sphinx-Needs, inspect both needs and violation evidence. Missing violations means validation was not recorded, not a clean result. Respect the documented 100 MiB per-input bound and bounded snapshots; a limit/parse failure is a collection diagnostic. Do not infer documentation build success solely from a needs export. Offer the docs index only when recorded build evidence supports it.
+5. Preserve severity, source, producer, source location and disposition. Apply the project's recorded ignore/justification rules without erasing process/test failures. Avoid duplicate diagnostic entries when importers and log analysis describe the same occurrence; retain source labels for merged evidence and separate genuinely different execution/test/import failures. Use [log analysis](../ptk-log-analyzer/SKILL.md) for diagnosis and narrowly scoped rule changes.
+6. For exports, select the discovered repository/job/variant and `--run RUN_ID` for history. Use `ptk report export JOB -f json` when appropriate; follow printed paths and choose a separate destination when preserving evidence. Historical export uses saved input snapshots and topology, not newer files, current PATH probes or regenerated graphs.
+7. Keep job `open_report` spelling `on_errors` distinct from workflow `on-errors`. Job opening defaults to `null`, workflow opening to `always`; `null` omits successful full-report opening. Active errors still open dedicated diagnostics locally, including with either on-errors policy or null. CX and dry runs never launch a browser. A workflow summary selected for opening suppresses child openings; otherwise child policies use retained snapshots. Browser/export problems must not turn a process failure into success.
+8. Treat `report: false` as exclusion from report presentation/imports, not deletion of audit logs or alteration of execution status. Never assume log masking sanitizes arbitrary third-party files. Keep test totals separate from diagnostic occurrences, probe events and target graph nodes.
+9. For a requested artifact handoff, declare actual output files/directories explicitly; reports are not automatically upload artifacts. Read [GitHub workflows](../ptk-github-workflows/SKILL.md). Preserve relative evidence links and distinguish a report-only directory from all logs and other referenced files.
+10. When changing report implementation in PTK itself, read the checkout-only `ptk-development` skill and its development guide, test malformed inputs, escaping, deduplication/dispositions, historical snapshots and links. Consumer projects should use supported formats or process exported JSON with ordinary tools; they do not need PTK source or internal APIs.

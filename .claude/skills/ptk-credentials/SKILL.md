@@ -24,8 +24,10 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 8. Review masking using synthetic values. Do not print or retrieve real secrets to test masking; short secrets have masking limitations.
 
-9. In CX, provide the declared env variables and avoid interactive prompt providers. Store only through a provider that supports writes.
+9. For native GitHub artifact Actions, pass technical-user and token through workflow secret references. Their curl runtime uses stdin for credentials; do not replace it with interpolated command-line authentication. Keep `additional_properties` free of secrets. See [GitHub workflows](../ptk-github-workflows/SKILL.md).
 
-10. Use `ptk self-service creds test NAME` only after inspecting the configured test command and its external effects.
+10. In CX, provide the declared env variables and avoid interactive prompt providers. Store only through a provider that supports writes.
+
+11. Use `ptk self-service creds test NAME` only after inspecting the configured test command and its external effects.
 
 In VMR mode, use `ptk self-service creds list` for shared names and repository-qualified conflicts. Listing must never unlock a store. Use the storage namespace when implementing providers; logical credential references alone are not unique across VMR definitions.

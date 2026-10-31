@@ -127,6 +127,19 @@ def test_tagged_build_and_frozen_sdist_rebuild(tmp_path):
         zipfile.ZipFile(next(dist.glob("*.whl"))) as original,
         zipfile.ZipFile(next(rebuilt.glob("*.whl"))) as rebuilt_wheel,
     ):
+        for name in (
+            "skills/ptk-github-workflows/SKILL.md",
+            "skills/ptk-github-workflows/agents/openai.yaml",
+            "docs/guides/github-actions.rst",
+            "docs/guides/cx-matrix.rst",
+            "docs/guides/output-reuse.rst",
+            "docs/guides/reports.rst",
+        ):
+            asset = f"ptk/resources/authoring/{name}"
+            assert original.read(asset) == rebuilt_wheel.read(asset)
+            from ptk.authoring_bundle import source_files
+
+            assert source_files(source)[name].read_bytes() == original.read(asset)
         resource = "ptk/resources/extension/project-toolkit.vsix"
         assert original.read(resource) == rebuilt_wheel.read(resource)
         with zipfile.ZipFile(io.BytesIO(original.read(resource))) as extension:

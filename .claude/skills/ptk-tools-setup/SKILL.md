@@ -37,4 +37,6 @@ Only when the project uses Toolbase, declare an exact package/version and relati
 
 Only when the project uses Artifactory, configure the HTTPS base URL, repository and exact path/name or AQL properties. The adapter uses curl, not JFrog CLI. Require a checksum (explicit or from AQL), default to unique selection, and provide bearer credentials through `token_env`, never YAML values. ZIP/tar and standalone files are supported; legacy 7z bundles require conversion.
 
+For generated GitHub workflows, supply a Linux container image with matching PTK, Python 3.12+, Bash, curl and project tools already installed. The shipped artifact/run Actions do not install PTK. See [GitHub workflows](../ptk-github-workflows/SKILL.md).
+
 `docker: false` is the default and disables installation only inside Docker. Keep version checks, report entries and existing tool activation. Use `docker: true` only when installation inside the image is intended. `PTK_DOCKER=1|0` overrides best-effort runtime detection.

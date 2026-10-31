@@ -30,7 +30,9 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 11. Put `generators: [cmake]` (or other selected formats) directly on the consuming command, Python or built-in step. A generation-only step is also valid. Files belong to that step’s `${run.build_dir}`; use explicit dependencies when another step consumes them. See [variant generation](../../../docs/guides/variant-generation.rst) for Make/CMake/Bazel/GN integration and the project-owned Bazel helper. Do not introduce plain Ninja generation or the removed `variant.generate` form.
 
-Temporary feature overrides on jobs do not change files. Workflows retain their
-per-job variant selections; global `-V` does not override them. Maintainers alone
+Temporary feature overrides on jobs do not change files. A local workflow selects one owner variant with global `-V`; its `repo_variants`
+mapping selects variants in other repositories. Steps only filter eligibility,
+not variant selection. GitHub setup can expand multiple concrete owner variants;
+see [GitHub workflows](../ptk-github-workflows/SKILL.md). Maintainers alone
 can force `--ci`/`--no-ci`; all users retain automatic CX detection. See
 [configuration](../../../docs/guides/configuration.rst).

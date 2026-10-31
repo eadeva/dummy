@@ -382,7 +382,7 @@ listed by login ID in the configuration folder's ``maintainers.ptk.yml``; see
 :doc:`/guides/configuration`. Generate shared tasks with ``--users-only`` so they exclude
 maintainer jobs and workflows. Running existing tasks remains available to users.
 
-Fourteen project skills are installed under ``.github/skills/ptk-*/SKILL.md``.
+Fifteen project skills are installed under ``.github/skills/ptk-*/SKILL.md``.
 Version-matched documentation, examples and the generated configuration schema
 live under ``.github/ptk``. Skill links are relative to their own SKILL.md files;
 the consuming repository needs neither PTK's source tree nor network access.

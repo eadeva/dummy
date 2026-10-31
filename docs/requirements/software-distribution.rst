@@ -116,7 +116,7 @@ items are explicitly marked and must not be presented as supported commands.
    :req_satisfies: REQ_Sys_AUTHORING
    :tags: implemented
 
-   PTK maintainer sync agent shall distribute the expert agent, project-facing skills including log analysis, offline references and examples from the installed package.
+   PTK maintainer sync agent shall distribute the expert agent, project-facing skills including log analysis and native GitHub workflow authoring, offline references and examples from the installed package.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 

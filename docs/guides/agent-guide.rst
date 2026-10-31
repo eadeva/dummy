@@ -53,6 +53,17 @@ outputs. Do not assume ``config/ptk``, ``_logs``, ``_reports``, ``debug``, ``bui
 or ``package`` exists. HTML is the default export; ``report.json`` is optional.
 Keep repository, job, variant and run ID together when correlating evidence.
 
+Choose local or native workflows
+--------------------------------
+
+Use ``ptk-workflow-authoring`` to create the local PTK dependency graph. Use
+``ptk-github-workflows`` when the request concerns GitHub execution: generate a
+callable workflow whose setup matrix job is a dependency of every execution job.
+Do not run a PTK workflow in CX. Discover actual producer outputs and variants;
+do not infer outputs from build folders, enable cache implicitly or introduce a
+separate inputs mapping. Preserve project-owned Docker/runner/event and VMR
+checkout TODOs. Follow the selected release's :doc:`github-actions` contract.
+
 Make and verify the requested change
 ------------------------------------
 

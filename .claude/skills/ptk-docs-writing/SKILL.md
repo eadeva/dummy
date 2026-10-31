@@ -28,4 +28,4 @@ Use this skill only in PTK's own source checkout. Confirm the checkout, project 
 
 10. Keep credentials fictional, use project-relative paths, and describe platform-specific requirements.
 
-11. Update the relevant .claude/skills instructions when changing an authoring workflow.
+11. Update the relevant .claude/skills instructions and expert routing when changing an authoring workflow. Keep local execution distinct from native GitHub generation; document explicit outputs, cache opt-in, matrix setup and Docker/VMR TODOs. Verify that linked references are included in the installed authoring bundle.

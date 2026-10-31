@@ -18,6 +18,7 @@ SKILLS = (
     "ptk-variant-model",
     "ptk-vmr",
     "ptk-workflow-authoring",
+    "ptk-github-workflows",
     "ptk-versioning",
     "ptk-package-preparation",
 )
@@ -38,6 +39,10 @@ DOCS = (
     "guides/artifacts",
     "guides/performance",
     "guides/log-analysis",
+    "guides/reports",
+    "guides/output-reuse",
+    "guides/cx-matrix",
+    "guides/github-actions",
 )
 
 EXAMPLES = ("authoring", "python-tool", "quickstart", "workflows", "artifacts")

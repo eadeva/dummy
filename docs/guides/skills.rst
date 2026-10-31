@@ -1,7 +1,7 @@
 Authoring skills
 ================
 
-Canonical assistant instructions live in ``.claude/skills``. Fourteen project-facing
+Canonical assistant instructions live in ``.claude/skills``. Fifteen project-facing
 skills use links relative to their SKILL.md files and are bundled with the wheel.
 Two maintainer skills operate on PTK's own source checkout.
 
@@ -139,3 +139,15 @@ read-only reviewer can be useful for independent validation of substantial
 changes; parallel readers can help with unrelated repositories or logs. Neither
 is required, and links do not automatically launch agents. Keep one edit owner
 and final verifier. This avoids duplicating PTK rules across specialist agents.
+
+ptk-github-workflows
+--------------------
+
+.. literalinclude:: ../../.claude/skills/ptk-github-workflows/SKILL.md
+   :language: markdown
+
+The local workflow skill authors the PTK graph; the GitHub skill generates and
+reviews callable native pipelines, matrix setup, Docker/VMR checkout TODOs and
+artifact Actions. It includes output declarations and never assumes a consumer
+project has PTK's own verify jobs or packaging scripts. Synchronization includes
+the matching GitHub, matrix, output-reuse and reporting reference guides.

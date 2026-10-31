@@ -21,9 +21,9 @@ Use this skill only in PTK's own source checkout. Confirm the checkout, project 
 
 7. Exercise Windows-specific paths in Windows CX; do not claim cross-platform success from Linux alone.
 
-8. Update docs, examples and relevant authoring skills with behavior changes. Keep secrets and generated workspace outputs out of git.
+8. Update docs, examples and relevant authoring skills with behavior changes. Review all skill links and the expert routing table; add new project-facing resources to the authoring bundle and test installed-wheel synchronization, not just source paths. Keep secrets and generated workspace outputs out of git.
 
-9. Review CX results before marking a milestone complete; record explicit remaining limitations in PLAN.md.
+9. Review CX results before marking a milestone complete; record explicit remaining limitations in the relevant requirements, decisions and guides. Do not assume a PLAN.md exists.
 
 10. Keep PTK Python interfaces internal. Use `docs/reference/builtins.rst` for built-in operations and [reusable Python tools](../../../docs/guides/python-tools.rst) for external commands. Do not introduce plugin discovery or callback registration.
 

@@ -14,3 +14,5 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 5. Use `PTK_VERSION_ALIAS` for a project and `PTK_VERSION_ALIAS_COMPONENT_NAME` for a component. Prefer documented `${version.projects.alias...}` fields or `version.generate` for headers/build-system values. Read the supported generator fields from the versioning reference; do not infer names.
 6. Verify the generated version file and the consuming build command against the same run snapshot. Record fallback use and dirty/shallow status. Never add a version bump, commit or tag operation to discovery.
 7. For Python distribution metadata, follow [package preparation](../../../docs/guides/packaging.rst) and validate PEP 440 compatibility. Preserve the version frozen into an sdist when rebuilding it elsewhere.
+
+For native GitHub pipelines, matrix setup freezes producer version/commit and artifact destinations before execution. Ensure checkout supplies the needed tags/history and preserve that identity through upload/download; do not recompute dated destinations independently in consumers. See [GitHub workflows](../ptk-github-workflows/SKILL.md).

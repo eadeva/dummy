@@ -1,6 +1,6 @@
 ---
 name: ptk-job-authoring
-description: Add, change or explain PTK jobs, typed parameters, step dependency graphs, conditions, runtime variables and maintainer visibility in an existing or new project.
+description: Add, change or explain PTK jobs, typed parameters, step dependency graphs, GUI launchers, declared outputs, optional caching, conditions and maintainer visibility in an existing or new project.
 ---
 
 # ptk-job-authoring
@@ -28,6 +28,10 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 10. If the requested change affects maintained VS Code tasks, update them with `ptk maintainer sync tasks`, preserving the project's user/maintainer task policy; use `--users-only` when explicitly wanted.
 
 11. Inspect with `--graph`; dry-runs include graphs automatically. Keep repository-root default cwd. Step folders are conventions, not enforced sandboxes: declare dependencies for shared writes and use `${steps.ID.build_dir}` for known paths. `--only-step` requires existing prerequisite artifacts; never assume stored runtime outputs. Retries affect one step; Python handlers must cooperate with deadlines. Use `files.clean` only within generated workspace folders.
+
+Declare `outputs` explicitly as paths or `{path, artifact_type}` objects on the producing step/job. Their principal purpose is workflow artifact transfer; output validity is project responsibility. Opt into reuse only with declared outputs and `cache: true`; content hashes, not timestamps, decide reuse. Root steps/calls still execute, and `--no-cache-ptk` disables reuse throughout execution. Read [output reuse](../../../docs/guides/output-reuse.rst) and [artifact manifests](../../../docs/guides/artifacts.rst).
+
+For GUI launchers, inspect the installed job `gui` field and its constraints in [execution](../../../docs/reference/execution.rst). The launched process outlives PTK; successful launch is not proof the application completed. Do not treat detached GUI jobs as completed artifact producers. Use the editor's creation wizard and runtime mode descriptions for Python, direct-command and shell choices; do not embed shell syntax in argv lists.
 
 Read [versioning](../ptk-versioning/SKILL.md) only for version sources or generated version files, and [workflow authoring](../ptk-workflow-authoring/SKILL.md) to compose existing jobs.
 

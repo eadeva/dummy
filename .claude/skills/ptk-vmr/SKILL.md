@@ -18,6 +18,8 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 For a manual VMR, create a workspace-root `.main.ptk.yml` containing `virtual_monorepo: true`, optionally `members: [nested/repo, other]`. It marks its containing directory, not its parent. Without `members`, inspect direct child directories only. Invoke grouped commands from that marked workspace; ordinary manual members remain standalone when invoked directly. A project's entry-level `virtual_monorepo: false` opts out of automatic membership and workspace listings. Omit it for automatic detection; do not add it to starter files by default. Discovery fields are literal entry metadata and cannot come from section files or `--set`.
 
+For native GitHub templates, use [GitHub workflows](../ptk-github-workflows/SKILL.md). Preserve VMR checkout TODOs in setup and all execution jobs until the project supplies its checkout mechanism; the same member layout and revisions are required everywhere.
+
 Use [versioning](../ptk-versioning/SKILL.md) for cross-repository version dependencies and [workflow authoring](../ptk-workflow-authoring/SKILL.md) for orchestration. Keep each call's configuration and identity in its owning repository.
 
 Maintainer lists are independent: each repository's configured folder contains

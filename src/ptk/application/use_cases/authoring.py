@@ -53,6 +53,8 @@ class SetupAuthoring:
             "- [CLI](docs/reference/cli.rst)\n"
             "- [Log analysis](docs/guides/log-analysis.rst)\n"
             "- [PTK expert agent](../agents/ptk-expert.agent.md)\n"
+            "- [GitHub workflows and artifact Actions](docs/guides/github-actions.rst)\n"
+            "- [Output reuse](docs/guides/output-reuse.rst)\n"
             "- [Versioning](docs/guides/versioning.rst)\n"
             "- [Reusable Python tools](docs/guides/python-tools.rst)\n"
             "- [Built-in operations](docs/reference/builtins.rst)\n"

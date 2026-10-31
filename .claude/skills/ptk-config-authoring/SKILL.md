@@ -20,7 +20,8 @@ For a new configuration, consult the tested [authoring example](../../../example
 See [versioning](../../../docs/guides/versioning.rst), [workflow authoring](../../../docs/guides/workflows.rst)
 and [artifact destinations](../../../docs/guides/artifacts.rst) for their section contracts.
 The [artifact example](../../../examples/artifacts/config/artifactory_paths.ptk.yml)
-contains destination rules only; uploads and credentials belong to job steps.
+contains destination rules only. Native GitHub transfers use the shipped Actions
+and workflow secret references; see [GitHub workflows](../ptk-github-workflows/SKILL.md).
 
 Maintainers are plain login IDs in `maintainers.ptk.yml`: `maintainers: [alice, bob]`.
 Match local OS usernames or triggering GitHub actors. `PTK_ROLE=maintainer` does not
