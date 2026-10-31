@@ -9,7 +9,9 @@ purpose is to describe artifacts for **uploads and downloads in workflows**.
 Keep this declaration useful independently of caching. Your workflow commands
 and chosen transfer tools perform the uploads and downloads: declaring paths
 neither transfers files nor generates a CX pipeline. Destination routing is
-covered in :doc:`artifacts`.
+covered in :doc:`artifacts`. Use :doc:`cx-matrix` to export execution metadata and
+destinations for a GitHub workflow's setup job. Output paths are obtained after
+producer execution; GitHub ``needs`` identifies the producer jobs to download.
 
 PTK's built-in cache is an **optional aid** that can also use these declarations.
 The project owns the cache configuration, the completeness and validity of its

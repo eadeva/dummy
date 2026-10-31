@@ -135,7 +135,7 @@ def relative_path(value):
     return value
 
 
-def destination(spec, scope, *, event, ref_type, job):
+def destination(spec, scope, *, event, ref_type, job, include_base=False):
     route = spec.events.get(event)
     if route is None:
         raise ValueError(f"no Artifactory destination configured for event {event!r}")
@@ -172,12 +172,19 @@ def destination(spec, scope, *, event, ref_type, job):
     parts = [
         relative_path(scope(value)) for value in (spec.base_path, selected.path, suffix)
     ]
-    path = "/".join(part for part in parts if part)
-    encoded = "/".join(
-        quote(part, safe="") for part in (repository, *path.split("/")) if part
-    )
-    return {
-        "url": base_url.rstrip("/") + "/" + encoded + "/",
-        "repository": repository,
-        "path": path,
-    }
+
+    def compose(selected_parts):
+        path = "/".join(part for part in selected_parts if part)
+        encoded = "/".join(
+            quote(part, safe="") for part in (repository, *path.split("/")) if part
+        )
+        return {
+            "url": base_url.rstrip("/") + "/" + encoded + "/",
+            "repository": repository,
+            "path": path,
+        }
+
+    result = compose(parts)
+    if include_base:
+        result["base"] = compose(parts[:2])
+    return result

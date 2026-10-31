@@ -111,3 +111,7 @@ They do not replace the destination rules above or automatically transfer files.
 PTK's optional built-in cache can also use explicit outputs when ``cache: true``.
 Cache configuration and correctness remain the project's responsibility. See
 :doc:`output-reuse` for paths, ownership, workflow reuse and ``--no-cache-ptk``.
+
+Use :doc:`cx-matrix` in a GitHub setup job to export eligible variant/job pairs,
+version/source commit, per-job destinations and the shared upload base
+in one invocation. It is available in CX without human maintainer identity.

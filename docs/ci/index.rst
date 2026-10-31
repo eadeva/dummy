@@ -10,6 +10,12 @@ It runs PTK's configured jobs; PTK's local workflow executor is not a CX service
 Local workflows reject CX execution. CX orchestration remains in the host's
 pipeline definition.
 
+Consuming projects can optionally run ``ptk maintainer matrix --format github``
+in their first workflow job. It exposes execution arguments, version/source commit and upload destinations
+for eligible variant/job pairs. GitHub ``needs`` identifies artifact producers;
+completed jobs supply output paths and artifact properties.
+See :doc:`/guides/cx-matrix` for setup, upload and download examples.
+
 Verification pipeline
 ---------------------
 
@@ -80,3 +86,4 @@ Future pipeline generation
 Generating GitHub workflow files from PTK configuration is a draft roadmap item,
 not a supported command. It is recorded as :need:`REQ_Sw_CI_GENERATION` rather
 than described as part of the current release pipeline.
+The implemented matrix export supplies metadata; it does not generate a workflow.

@@ -79,6 +79,14 @@ def allowed(ctx, name):
             role = "user"  # Invalid identity lists never expose mutation commands.
         return command_allowed(".".join(parts), role, {})
     project = state.try_project()
+    # CX can read the matrix without a human maintainer login. This grants no
+    # mutation capability or access to restricted jobs/other maintenance commands.
+    if (
+        project is not None
+        and project.ci
+        and ".".join(parts) in {"maintainer", "maintainer.matrix"}
+    ):
+        return True
     return command_allowed(
         ".".join(parts),
         state.role(),

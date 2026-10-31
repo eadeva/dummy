@@ -401,3 +401,36 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
 
    **Evidence:** ``src/ptk/application/use_cases/run.py``;
    ``src/ptk/adapters/variant_files.py``; ``tests/test_step_generators.py``.
+
+.. req-sw:: Export a minimal CX setup matrix
+   :id: REQ_Sw_CX_MATRIX
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: under review
+   :verification_criteria: CLI tests verify eligible concrete variant/job pairs, aliases, executable argv, version/source commit, common/per-job destination bases, GitHub output lines, empty matrices, runtime-dependent output declarations left untouched, VMR ownership and CX access without maintenance elevation.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_EXECUTION
+   :tags: implemented
+
+   PTK shall provide a hidden built-in maintainer matrix command usable locally
+   by maintainers and in CX without requiring a human maintainer identity.
+   It shall expose only variant/repository/job identifiers, invocation arguments,
+   version/source commit and configured upload destinations, including the shared
+   base before job suffixes. It shall honor job eligibility and role restrictions.
+   GitHub needs identifies producer jobs for downloads. Actual output paths and
+   step/artifact_type properties belong to the completed producer job; setup
+   shall neither predict those paths nor introduce a separate input mapping.
+
+   **Origin:** User request for a variant-matrix command in the first GitHub
+   workflow job, with minimal execution/upload/download information and a common
+   upload base; optional assistance for initial workflow setup.
+
+   **Implementation:** Implemented. The export does not execute jobs, install
+   tools, transfer artifacts or generate pipeline files. Configured version
+   discovery may run when resolving artifact routes. Project workflows retain
+   responsibility for parameters, runner selection, dependencies and transfers.
+
+   **Evidence:** ``src/ptk/application/use_cases/matrix.py``;
+   ``src/ptk/drivers/cli/matrix.py``; ``tests/test_matrix_export.py``.

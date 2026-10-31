@@ -15,6 +15,7 @@ and defaults, use :doc:`/reference/configuration-schema`.
    workflows
    versioning
    artifacts
+   cx-matrix
    output-reuse
    log-analysis
    reports

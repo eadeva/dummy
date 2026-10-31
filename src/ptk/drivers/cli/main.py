@@ -1297,6 +1297,7 @@ def maintainer_group(ctx):
 
 
 from .hooks import hooks_group
+from .matrix import matrix_command
 
 for command in (
     setup_command,
@@ -1308,6 +1309,7 @@ for command in (
 ):
     self_service.add_command(command)
 for command in (
+    matrix_command,
     config_group,
     sync_command,
     version_group,

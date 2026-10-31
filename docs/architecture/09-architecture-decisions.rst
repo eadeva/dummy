@@ -1009,6 +1009,28 @@ not imply that every related future capability has been implemented.
    without promising a general build system. See :need:`REQ_Sw_OUTPUT_REUSE` and
    :doc:`/guides/output-reuse`.
 
+.. ddec:: Minimal metadata for a native CX workflow setup job
+   :id: DD_CX_MATRIX
+   :status: accepted
+
+   **Context:** A first GitHub job needs variant/job selections and enough
+   information to execute jobs and transfer their declared artifacts. Native
+   pipeline generation remains outside the current implementation.
+
+   **Decision:** Export a hidden built-in maintainer matrix command with a
+   narrow CX read exception. Filter concrete variants and eligible jobs using
+   existing role/context rules. Emit argv, version/source commit and Artifactory
+   routes, with a common base before job suffixes. Use one invocation timestamp. Offer JSON and three
+   GitHub output lines: matrix, upload_base and has_jobs.
+
+   **Consequences:** No environment/tool catalogue, credentials, parameter
+   inventory, inferred outputs or automatic transfers enter the payload.
+   GitHub needs supplies the producer job name; no separate inputs mapping is
+   introduced. Actual output paths and step/artifact_type properties are supplied
+   by completed producer jobs. CX access grants no maintenance privileges; local workflows remain local-only. Projects supply execution
+   parameters, runner selection, dependencies, packaging and transfer steps.
+   See :need:`REQ_Sw_CX_MATRIX` and :doc:`/guides/cx-matrix`.
+
 Open boundaries
 ---------------
 

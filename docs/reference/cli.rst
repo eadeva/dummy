@@ -9,8 +9,10 @@ with ``run NAME`` or ``workflow run NAME`` within the same namespace.
 
 Help shows Jobs, Workflows, everyday Commands, Self-service and Maintenance in
 that order. At a VMR root, Repositories replaces Jobs. Maintenance is visible
-only to maintainers listed by the owning project or workspace. Group help and
-Tab completion follow the same permissions and ordering.
+to maintainers listed by the owning project or workspace. CX also permits
+entry to the maintenance namespace for the hidden, read-only matrix export;
+other maintenance commands retain their role checks. Group help and Tab
+completion follow the same permissions and ordering.
 
 .. list-table::
    :header-rows: 1
@@ -54,6 +56,8 @@ Tab completion follow the same permissions and ordering.
      - Inspect discovered versions or generate a version snapshot
    * - ``ptk maintainer artifacts destination --job JOB``
      - Resolve an artifact destination for external upload automation
+   * - ``ptk maintainer matrix [--job JOB] [--format json|github]``
+     - Hidden setup export of eligible variants/jobs, argv, version/source commit and upload bases; available to maintainers and CX, see :doc:`/guides/cx-matrix`
    * - ``ptk maintainer NAME [--dry-run]``
      - Run or preview a maintainer job or workflow
 
@@ -194,7 +198,9 @@ Examples (``<Tab>`` means press the key)::
 Job names also complete after ``run``, report commands and ``--job`` options.
 VMR completion includes repository aliases and repository-qualified workflows.
 Suggestions respect command visibility and the current project configuration;
-integration commands and the maintainer namespace remain hidden from ordinary users.
+integration commands remain hidden from ordinary help. The maintainer namespace
+is unavailable to ordinary local users; CX has the narrow matrix-export exception
+described above.
 Type ``-`` to request option names. Choice and path parameters use native shell
 completion; free-text and secret values are not guessed.
 

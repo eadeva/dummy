@@ -6,6 +6,9 @@ require neither GitHub nor a CX runner. Run one from the terminal or a generated
 VS Code task. Each job keeps its repository, variant, tool requirements,
 credentials, environment, maintainers and ordinary logs/reports.
 
+For native GitHub workflows, :doc:`cx-matrix` exports execution and artifact
+metadata for the setup job. GitHub owns CX orchestration.
+
 Workflow, job and step
 ----------------------
 

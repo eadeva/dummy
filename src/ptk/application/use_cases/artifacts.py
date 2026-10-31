@@ -18,7 +18,32 @@ class ResolveDestination:
         self.environment = environment
         self.git = git
 
-    def execute(self, project, *, job, variant=None, event=None, role="user", at=None):
+    def identity(self, project, *, job, variant=None):
+        """Only the version and source commit needed to identify workflow artifacts."""
+        snapshot = self.versions.resolve(project, variant, job)
+        return self._identity(project, snapshot)
+
+    def _identity(self, project, snapshot):
+        version = snapshot.get("projects", {}).get(project.config.repository.alias, {})
+        if self.git is None:
+            raise PtkError("matrix artifact identity requires Git metadata")
+        return {
+            "version": version.get("value"),
+            "commit": self.git.discover(project.root)["commit"],
+        }
+
+    def execute(
+        self,
+        project,
+        *,
+        job,
+        variant=None,
+        event=None,
+        role="user",
+        at=None,
+        include_base=False,
+        include_identity=False,
+    ):
         config = project.config
         if config.artifactory is None:
             raise PtkError("no artifactory_paths.ptk.yml configuration found")
@@ -70,12 +95,16 @@ class ResolveDestination:
             },
         )
         try:
-            return destination(
+            result = destination(
                 config.artifactory,
                 scope,
                 event=event,
                 ref_type=github.get("ref_type"),
                 job=job,
+                include_base=include_base,
             )
+            if include_identity:
+                result["identity"] = self._identity(project, versions)
+            return result
         except (ValueError, TypeError) as exc:
             raise PtkError(str(exc)) from None
