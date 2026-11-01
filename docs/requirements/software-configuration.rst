@@ -299,3 +299,30 @@ Discovery, file ownership, schema authority and workspace routing.
    **Evidence:** ``src/ptk/domain/variants/model.py``;
    ``src/ptk/domain/variants/rules.py``; ``tests/unit/test_variants.py``;
    ``tests/test_variant_commands.py``; ``tests/test_step_generators.py``.
+
+.. req-sw:: Preserve external configuration ownership
+   :id: REQ_Sw_EXTERNAL_CONFIGS
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: under review
+   :verification_criteria: Local Git integration tests cover pinned revisions, unchanged bases, separate merges, provenance, local-edit conflicts, path constraints, offline checks and maintainer authorization.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_CONFIG
+   :tags: implemented
+
+   PTK shall synchronize explicit per-group mappings from one pinned external
+   repository only through maintainer commands. It shall ship no base files,
+   preserve external copies unchanged, record provenance and content hashes,
+   protect local modifications, and keep project overlays and Ruff configuration
+   project-owned. Pre-commit/clang merging shall produce separate generated files.
+   Ordinary validation shall check freshness without network access or writes.
+
+   **Origin:** User requests external base ownership, maintainer-only sync,
+   removal of shipped bases and preservation of pre-commit/clang generation.
+
+   **Implementation:** ``shared_configs.py`` adapter/domain and ``configs.py`` use
+   case; tests provide candidate verification evidence, not acceptance.
+
+   **Evidence:** ``src/ptk/application/use_cases/configs.py``; ``src/ptk/adapters/shared_configs.py``; ``tests/test_shared_configs.py``.

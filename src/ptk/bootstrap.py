@@ -126,10 +126,10 @@ class App:
 
     @cached_property
     def shared_configs(self) -> SharedConfigs:
-        from .adapters.shared_configs import PackageConfigFiles
+        from .adapters.shared_configs import GitConfigFiles
         from .application.use_cases.configs import SharedConfigs
 
-        return SharedConfigs(PackageConfigFiles())
+        return SharedConfigs(GitConfigFiles())
 
     @cached_property
     def _environment(self) -> Environment:
@@ -287,14 +287,6 @@ class App:
 
         layout = layout_of(project)
 
-        def sync(step, out, ctx):
-            names = step.with_.get("names")
-            if isinstance(names, str):
-                names = [names]
-            for item in self.shared_configs.sync(project, names):
-                out(f"{item.path}: {item.status}")
-            return 0
-
         def ensure(step, out, ctx):
             names = step.with_.get("tools", list(project.config.tools))
             if isinstance(names, str):
@@ -314,7 +306,6 @@ class App:
         builtins = {
             **BUILTINS,
             "report.import": report_import,
-            "configs.sync": sync,
             "tools.ensure": ensure,
             "files.copy": files_copy,
             "files.clean": file_cleaner(

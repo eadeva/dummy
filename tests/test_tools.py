@@ -230,7 +230,7 @@ def test_doctor_reports_tool_problems(project):
 
 
 @posix_only
-def test_maintainer_syncs_shared_config(project):
+def test_maintainer_does_not_generate_implicit_base_config(project):
     write_project(
         project.root / ".main.ptk.yml",
         {
@@ -240,9 +240,8 @@ def test_maintainer_syncs_shared_config(project):
     )
     grant_maintainer(project.root)
     result = project("maintainer", "sync", "configs", role="")
-    assert (
-        "clang-format" in result.output and (project.root / ".clang-format").is_file()
-    )
+    assert "no external files configured" in result.output
+    assert not (project.root / ".clang-format").exists()
 
 
 def test_per_os_download_is_validated(write, load):

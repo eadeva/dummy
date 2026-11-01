@@ -118,7 +118,7 @@ Configured external dependencies, ordinary Python tools and maintenance.
    :req_satisfies: REQ_Sys_TOOLS
    :tags: implemented
 
-   PTK shall compose supported shared tool defaults and explicit repository overlays into generated files and expose drift validation.
+   PTK shall compose explicitly mapped external pre-commit/clang bases and project-owned overlays into separate generated files and expose offline drift validation. It shall not ship base policy.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 

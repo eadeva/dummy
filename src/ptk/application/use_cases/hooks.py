@@ -17,7 +17,7 @@ class EnsureHooks:
         spec = project.config.configs.get("pre-commit")
         if spec is None or not spec.enabled:
             return None
-        return project.root / (spec.output or ".pre-commit-config.yaml")
+        return project.root / (spec.hook_config or ".pre-commit-config.yaml")
 
     def status(self, project: Project) -> HookStatus | None:
         config = self.config(project)
@@ -33,7 +33,7 @@ class EnsureHooks:
         """Explicit commands also work when automatic installation is disabled."""
         spec = project.config.configs.get("pre-commit")
         return project.root / (
-            spec.output if spec and spec.output else ".pre-commit-config.yaml"
+            spec.hook_config if spec and spec.hook_config else ".pre-commit-config.yaml"
         )
 
     def inspect(self, project: Project) -> HookStatus:

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import inspect
 import types
-from typing import Any, Literal, Union, get_args, get_origin
+from typing import Any, Literal, Union, get_args, get_origin, get_type_hints
 
 from pydantic import BaseModel
 
@@ -75,6 +75,12 @@ def _walk(
         allowed = _allowed_keys(annotation)
         for key, child in node.value.items():
             if key not in allowed:
+                if annotation.model_config.get("extra") == "allow":
+                    extra = get_type_hints(annotation).get(
+                        "__pydantic_extra__", dict[str, Any]
+                    )
+                    _walk(get_args(extra)[1], child, path + (key,), problems)
+                    continue
                 visible = [k for k in allowed if k != "with_"]
                 problems.append(
                     Problem(

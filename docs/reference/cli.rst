@@ -294,7 +294,7 @@ inside it. File selection, ``--all-files`` and a ref pair are mutually exclusive
 checks retain pre-commit's nonzero exit code. Hooks may format or otherwise modify
 files; ``run --all-files`` is not a dry run.
 
-Explicit commands honor ``configs.pre-commit.output`` even when automatic
+Explicit commands honor ``configs.pre-commit.hook_config`` even when automatic
 installation is disabled. Without an entry, they use ``.pre-commit-config.yaml``.
 Checks and validation may prepare the managed pre-commit runtime, but do not
 install Git hook scripts. Checks work on CX and with a custom ``core.hooksPath``;

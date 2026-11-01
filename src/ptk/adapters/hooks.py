@@ -158,7 +158,7 @@ class GitHooks:
         if not config.is_file():
             raise PtkError(
                 f"pre-commit configuration missing: {config}; ask a maintainer to run "
-                "'ptk maintainer sync configs pre-commit' and commit the result"
+                "'ptk maintainer sync configs pre-commit' for declared external mappings, or provide a project-owned configuration; commit the result"
             )
         try:
             data = yaml.safe_load(config.read_text(encoding="utf-8"))

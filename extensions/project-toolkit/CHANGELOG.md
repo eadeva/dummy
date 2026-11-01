@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.23.0
+
+- Describe external Git sources, pinned revisions and per-group file mappings in configuration forms. Distinguish unchanged external bases, project-owned overlays and separate generated outputs; remove the configs.sync job step.
+
 ## 0.22.0
 
 - Guide creation of configuration fields, list items and named entities through Choose, Configure, Review and Create. Show required fields, descriptions, defaults, limits, optional-field help and variable insertion; retain a memory-only draft until creation and support cancellation.

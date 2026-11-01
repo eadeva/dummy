@@ -710,7 +710,7 @@ def _show_config_results(items: list[Any], root: Path) -> None:
 @click.pass_context
 @guarded
 def configs_sync(ctx: click.Context, names: tuple[str, ...], diff: bool) -> None:
-    """Write the effective config files: ptk's base merged with your overlay."""
+    """Copy declared external base files; overlays and Ruff settings stay project-owned."""
     project = _state(ctx).project()
     service = _state(ctx).app.shared_configs
     if diff:
@@ -725,7 +725,7 @@ def configs_sync(ctx: click.Context, names: tuple[str, ...], diff: bool) -> None
     items = service.sync(project, list(names) or None)
     if not items:
         console.print(
-            "no shared configs configured (add them under 'configs:' in .main.ptk.yml)"
+            "no external files configured (declare source and file mappings in configs.ptk.yml)"
         )
     _show_config_results(items, project.root)
 
@@ -737,7 +737,7 @@ def configs_sync(ctx: click.Context, names: tuple[str, ...], diff: bool) -> None
 def configs_check(ctx: click.Context, names: tuple[str, ...]) -> None:
     """Fail (exit code 1) if an effective config file is missing or out of date - for CI."""
     project = _state(ctx).project()
-    items = _state(ctx).app.shared_configs.plan(project, list(names) or None)
+    items = _state(ctx).app.shared_configs.check(project, list(names) or None)
     _show_config_results(items, project.root)
     if any(item.status != "up to date" for item in items):
         console.print("run 'ptk maintainer sync configs' and commit the result")

@@ -117,21 +117,14 @@ visible through `ptk validate` and do not block installation.
 
 ## Shared configs
 
-```yaml
-# config/ptk/configs.ptk.yml
-pre-commit:
-  overlay: ptk/configs/pre-commit.overlay.yaml
-ruff: {}
-clang-format:
-  overlay: ptk/configs/clang-format.overlay.yaml
-clang-tidy:
-  overlay: ptk/configs/clang-tidy.overlay.yaml
-clangd: {}
-```
+PTK copies explicitly mapped files from a pinned external Git repository. It ships
+no base configurations. External copies remain unchanged and read-only; projects
+own overlays and Ruff's `ruff.toml`. Pre-commit and clang overlays generate a
+separate output. See [external configuration ownership and synchronization](docs/guides/shared-configs.rst).
 
-`ptk maintainer sync configs` merges ptk's base configs with your overlays into `.pre-commit-config.yaml`,
-`.clang-format`, `.clang-tidy`, `.clangd` and `ruff-base.toml` (your `ruff.toml` extends it).
-Commit them; `ptk validate --generated` in CI catches stale files.
+`ptk maintainer sync configs --diff` previews changes; `ptk maintainer sync configs`
+applies them. Commit the copied bases, generated files and `.ptk-configs.lock.json`.
+`ptk validate --generated` checks contents and provenance offline in CX.
 
 When pre-commit is enabled, local jobs automatically install or repair its Git
 hooks for every developer. Workflows check each participating VMR repository

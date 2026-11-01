@@ -43,6 +43,7 @@ DOCS = (
     "guides/output-reuse",
     "guides/cx-matrix",
     "guides/github-actions",
+    "guides/shared-configs",
 )
 
 EXAMPLES = ("authoring", "python-tool", "quickstart", "workflows", "artifacts")

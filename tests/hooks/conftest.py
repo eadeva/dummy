@@ -38,7 +38,7 @@ def repository(root, *, alias="app", enabled=True, output=None):
     root.mkdir(parents=True, exist_ok=True)
     spec = {"enabled": enabled}
     if output:
-        spec["output"] = output
+        spec["hook_config"] = output
     write_project(
         root / ".main.ptk.yml",
         {

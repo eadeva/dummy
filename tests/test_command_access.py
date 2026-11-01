@@ -155,7 +155,7 @@ def test_listed_user_can_edit_but_downgrade_cannot(tmp_path):
         cli, [*base, "maintainer", "sync", "configs"], cwd=Path(config).parent
     )
     assert result.exit_code == 0, result.output
-    assert (tmp_path / "ruff-base.toml").exists()
+    assert not (tmp_path / "ruff-base.toml").exists()  # No implicit shipped base.
     before = snapshot(tmp_path)
     result = runner.invoke(
         cli,

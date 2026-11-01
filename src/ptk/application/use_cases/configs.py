@@ -1,133 +1,290 @@
-"""Shared base configs with project overlays (use case ``SharedConfigs``).
-
-Only the configs listed under ``configs:`` are managed. The effective files
-are committed; ``ptk validate --generated`` checks them without writing in CI.
-"""
+"""Explicit external config copies, pinned identities and local-edit protection."""
 
 from __future__ import annotations
 
 import difflib
-import re
+import hashlib
+import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from ...domain import shared_configs as sc
-from ...domain.errors import PtkError
-from ...domain.suggest import did_you_mean
-from ..ports import SharedConfigFiles
-from .project import Project
+import yaml
 
-RUFF_EXTEND = 'extend = "{base}"'
+from ...domain.errors import PtkError
+from ...domain.shared_configs import MERGERS
+from ..ports import SharedConfigFiles
+
+LOCK = ".ptk-configs.lock.json"
+
+
+def digest(value):
+    return hashlib.sha256(value).hexdigest() if value is not None else None
 
 
 @dataclass
 class ConfigFile:
     name: str
     path: Path
-    new_text: str
-    old_text: str | None
+    new_text: bytes | None
+    old_text: bytes | None
+    mode: int = 0o644
+    old_mode: int | None = None
+    expected: str | None = None
+    stale: bool = False
     notes: list[str] = field(default_factory=list)
 
     @property
-    def status(self) -> str:
+    def status(self):
         if self.old_text is None:
             return "new"
-        return "up to date" if self.old_text == self.new_text else "out of date"
-
-    def diff(self, root: Path) -> str:
-        rel = (
-            self.path.relative_to(root) if self.path.is_relative_to(root) else self.path
+        wanted = self.expected if self.expected is not None else digest(self.new_text)
+        return (
+            "up to date"
+            if not self.stale
+            and digest(self.old_text) == wanted
+            and self.old_mode == self.mode
+            else "out of date"
         )
-        return "".join(
+
+    def diff(self, root):
+        rel = self.path.relative_to(root).as_posix()
+        try:
+            old = (self.old_text or b"").decode("utf-8")
+            new = (self.new_text or b"").decode("utf-8")
+        except UnicodeDecodeError:
+            return f"Binary configuration changed: {rel}\n"
+        text = "".join(
             difflib.unified_diff(
-                (self.old_text or "").splitlines(keepends=True),
-                self.new_text.splitlines(keepends=True),
-                fromfile=f"a/{rel}",
-                tofile=f"b/{rel}",
+                old.splitlines(keepends=True),
+                new.splitlines(keepends=True),
+                fromfile="a/" + rel,
+                tofile="b/" + rel,
             )
         )
+        if self.old_mode != self.mode:
+            text += f"Mode {rel}: {self.old_mode!s} -> {self.mode:o}\n"
+        return text
 
 
 class SharedConfigs:
     def __init__(self, files: SharedConfigFiles):
         self._files = files
 
-    def plan(
-        self, project: Project, names: list[str] | None = None
-    ) -> list[ConfigFile]:
-        configured = {n: s for n, s in project.config.configs.items() if s.enabled}
+    def _lock(self, root):
+        content, mode = self._files.read(root, LOCK)
+        if content is None:
+            return {}, content, mode
+        try:
+            data = json.loads(content)
+            if data.get("schema_version") != 1 or not isinstance(
+                data.get("files"), dict
+            ):
+                raise ValueError("invalid fields")
+            for record in data["files"].values():
+                if (
+                    not isinstance(record, dict)
+                    or not isinstance(record.get("sha256"), str)
+                    or record.get("mode") not in (0o444, 0o555)
+                ):
+                    raise ValueError("invalid file record")
+            return data, content, mode
+        except (ValueError, TypeError, AttributeError) as exc:
+            raise PtkError(f"invalid {LOCK}: {exc}") from None
+
+    @staticmethod
+    def _selection(project, names):
+        groups = {
+            name: spec for name, spec in project.config.configs.items() if spec.enabled
+        }
         for name in names or []:
-            if name not in configured:
-                known = list(project.config.configs) or list(sc.CONFIG_FILES)
-                raise PtkError(
-                    f"config '{name}' is not managed by this project{did_you_mean(name, known)}"
-                    " (list it under 'configs:' in .main.ptk.yml)"
-                )
+            if name not in groups:
+                raise PtkError(f"configuration group {name!r} is not enabled")
+        return {
+            name: spec for name, spec in groups.items() if not names or name in names
+        }
+
+    def _overlay(self, project, item):
+        if not item.overlay:
+            return None
+        content, _ = self._files.read(project.root, item.overlay)
+        if content is None:
+            raise PtkError(f"overlay file not found: {item.overlay}")
+        return content
+
+    @staticmethod
+    def _merge(name, base, overlay):
+        if overlay is None:
+            return base
+        try:
+            data, override = yaml.safe_load(base), yaml.safe_load(overlay)
+            if not isinstance(data, dict) or not isinstance(override, dict):
+                raise TypeError("base and overlay must be YAML mappings")
+            return yaml.safe_dump(
+                MERGERS[name](data, override), sort_keys=False, allow_unicode=True
+            ).encode()
+        except (yaml.YAMLError, ValueError, TypeError, KeyError, AttributeError) as exc:
+            raise PtkError(f"cannot merge {name} configuration: {exc}") from None
+
+    @staticmethod
+    def _entries(groups):
+        for name, spec in groups.items():
+            for item in spec.files:
+                yield name, item, item.destination, None
+                if item.output:
+                    yield name, item, item.output, item.overlay
+
+    def check(self, project, names=None):
+        """Read-only offline validation; no cache creation, fetch or tag lookup."""
+        groups = self._selection(project, names)
+        previous, raw, mode = self._lock(project.root)
+        source = project.config.configs.source
+        identity = source.model_dump() if source else None
+        same_source = previous.get("source") == identity
         result = []
-        for name, spec in configured.items():
-            if names and name not in names:
-                continue
-            output = project.root / (spec.output or sc.CONFIG_FILES[name])
-            if name == "ruff":
-                result += self._ruff(project, output)
-                continue
-            base_text, version = self._files.base(name)
-            data = self._files.parse(base_text, f"ptk base {name}")
-            if spec.overlay:
-                overlay_path = project.root / spec.overlay
-                overlay_text = self._files.read(overlay_path)
-                if overlay_text is None:
-                    raise PtkError(
-                        f"configs.{name}.overlay: file not found: {spec.overlay}"
-                    )
-                overlay = self._files.parse(overlay_text, spec.overlay) or {}
-                data = sc.MERGERS[name](data, overlay)
-            text = sc.header(name, version, spec.overlay) + self._files.render(
-                name, data
+        desired = set()
+        for name, item, destination, overlay_path in self._entries(groups):
+            desired.add(destination)
+            old, old_mode = self._files.read(project.root, destination)
+            record = previous.get("files", {}).get(destination, {})
+            overlay = self._overlay(project, item) if overlay_path else None
+            result.append(
+                ConfigFile(
+                    name,
+                    project.root / destination,
+                    None,
+                    old,
+                    mode=record.get("mode", 0o444) if os.name != "nt" else 0o444,
+                    old_mode=old_mode & ~0o222 if old_mode is not None else None,
+                    expected=record.get("sha256"),
+                    stale=not same_source
+                    or record.get("source") != item.source
+                    or record.get("group") != name
+                    or record.get("overlay") != overlay_path
+                    or record.get("overlay_sha256") != digest(overlay),
+                )
             )
-            result.append(ConfigFile(name, output, text, self._files.read(output)))
+        recorded = {
+            path
+            for path, record in previous.get("files", {}).items()
+            if not names or record.get("group") in names
+        }
+        if desired != recorded or result and not same_source:
+            result.append(
+                ConfigFile(
+                    "lock", project.root / LOCK, raw, raw, old_mode=mode, stale=True
+                )
+            )
         return result
 
-    def sync(
-        self, project: Project, names: list[str] | None = None
-    ) -> list[ConfigFile]:
-        planned = self.plan(project, names)
-        for item in planned:
-            if item.status != "up to date":
-                self._files.write(item.path, item.new_text)
-        return planned
+    def plan(self, project, names=None):
+        with self._files.transaction(project.root):
+            return self._plan(project, names)
 
-    # -- ruff: native 'extend', the project's ruff.toml is the overlay --------------------
-
-    def _ruff(self, project: Project, base_path: Path) -> list[ConfigFile]:
-        base_text, version = self._files.base("ruff")
-        text = sc.header("ruff", version, "ruff.toml") + _strip_base_header(base_text)
-        items = [ConfigFile("ruff", base_path, text, self._files.read(base_path))]
-        rel = base_path.relative_to(project.root).as_posix()
-        own = project.root / "ruff.toml"
-        own_text = self._files.read(own)
-        pyproject = self._files.read(project.root / "pyproject.toml") or ""
-        line = RUFF_EXTEND.format(base=rel)
-        if own_text is None and "[tool.ruff" not in pyproject:
-            starter = (
-                "# Project ruff settings - extends ptk's base (ruff defaults + I, B, UP, SIM)\n"
-                f"{line}\n"
+    def _plan(self, project, names=None):
+        groups = self._selection(project, names)
+        previous, raw, old_mode = self._lock(project.root)
+        source = project.config.configs.source
+        identity = source.model_dump() if source else None
+        if names and previous and previous.get("source") != identity:
+            raise PtkError(
+                "source/revision changed; synchronize all configuration groups together"
             )
-            items.append(ConfigFile("ruff", own, starter, None))
-        elif own_text is not None and not re.search(
-            r"^\s*extend\s*=", own_text, re.MULTILINE
-        ):
-            items[0].notes.append(f"add {line} at the top of ruff.toml")
-        elif (
-            own_text is None
-            and "extend" not in pyproject.split("[tool.ruff", 1)[1][:400]
-        ):
-            items[0].notes.append(f"add {line} under [tool.ruff] in pyproject.toml")
-        return items
+        paths = [item.source for spec in groups.values() for item in spec.files]
+        pinned = previous.get("commit") if previous.get("source") == identity else None
+        if paths:
+            commit, blobs = self._files.snapshot(project.root, source, pinned, paths)
+        else:
+            commit, blobs = pinned, {}
+        records = {
+            path: record
+            for path, record in previous.get("files", {}).items()
+            if names and record.get("group") not in names
+        }
+        changes = []
+        for name, item, destination, overlay_path in self._entries(groups):
+            content, mode = blobs[item.source]
+            overlay = self._overlay(project, item) if overlay_path else None
+            content = self._merge(name, content, overlay)
+            if overlay is not None:
+                provenance = json.dumps(
+                    {
+                        "repository": source.repository,
+                        "revision": source.revision,
+                        "commit": commit,
+                        "source": item.source,
+                        "overlay": overlay_path,
+                    }
+                )
+                content = (
+                    "# Generated by PTK; do not edit. Edit the project overlay instead.\n# "
+                    + provenance
+                    + "\n"
+                ).encode() + content
+            mode = (mode if os.name != "nt" else 0o644) & ~0o222
+            old, current_mode = self._files.read(project.root, destination)
+            owned = previous.get("files", {}).get(destination)
+            wanted = (digest(content), mode)
+            # Equal bytes may be adopted and made read-only on initial sync.
+            if (
+                old is not None
+                and digest(old) != wanted[0]
+                and (not owned or digest(old) != owned["sha256"])
+            ):
+                raise PtkError(
+                    f"preserving locally modified or unowned configuration: {destination}; reconcile it before synchronization"
+                )
+            records[destination] = {
+                "group": name,
+                "source": item.source,
+                "sha256": wanted[0],
+                "mode": mode,
+                "overlay": overlay_path,
+                "overlay_sha256": digest(overlay),
+                "kind": "generated" if overlay_path else "external-base",
+            }
+            changes.append(
+                ConfigFile(
+                    name,
+                    project.root / destination,
+                    content,
+                    old,
+                    mode=mode,
+                    old_mode=current_mode,
+                    notes=[
+                        f"{records[destination]['kind']}: {source.repository}@{commit}:{item.source}"
+                        + (
+                            f" + overlay {overlay_path}"
+                            if overlay_path
+                            else " (read-only; do not edit)"
+                        )
+                    ],
+                )
+            )
+        if not paths and not previous:
+            return []
+        document = {
+            "schema_version": 1,
+            "source": identity,
+            "commit": commit,
+            "files": records,
+        }
+        content = (json.dumps(document, sort_keys=True, indent=2) + "\n").encode()
+        changes.append(
+            ConfigFile("lock", project.root / LOCK, content, raw, old_mode=old_mode)
+        )
+        return changes
 
-
-def _strip_base_header(text: str) -> str:
-    lines = text.splitlines(keepends=True)
-    while lines and lines[0].startswith("# ptk-base:"):
-        lines.pop(0)
-    return "".join(lines)
+    def sync(self, project, names=None):
+        with self._files.transaction(project.root):
+            planned = self._plan(project, names)
+            # All sources, destinations and conflicts are checked before any project write.
+            for item in planned:
+                if item.status != "up to date":
+                    self._files.write(
+                        project.root,
+                        item.path.relative_to(project.root).as_posix(),
+                        item.new_text,
+                        item.mode,
+                    )
+            return planned

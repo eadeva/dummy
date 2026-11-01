@@ -1,4 +1,4 @@
-# PTK configuration: this file owns its section or named entity.
+# Hook installation uses the project-owned .pre-commit-config.yaml.
+# External bases require an explicit source and per-group file mappings.
 pre-commit:
   enabled: true
-  overlay: config/ptk/configs/pre-commit.overlay.yaml

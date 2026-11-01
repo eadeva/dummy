@@ -267,6 +267,84 @@
         "features"
       ]
     },
+    "ConfigFileMapping": {
+      "additionalProperties": false,
+      "properties": {
+        "output": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Separate generated merged file for a pre-commit/clang overlay. The destination remains an unchanged external base.",
+          "title": "Output"
+        },
+        "overlay": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Optional project-owned YAML overlay for pre-commit or clang groups. Ruff uses its project-owned native extend configuration.",
+          "title": "Overlay"
+        },
+        "source": {
+          "description": "Literal file path in the source repository, relative to its root.",
+          "title": "Source",
+          "type": "string"
+        },
+        "destination": {
+          "description": "Literal destination relative to this repository. Read-only byte-for-byte copy of the external base; never edit it. An overlay produces a separate output.",
+          "title": "Destination",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "destination"
+      ],
+      "title": "ConfigFileMapping",
+      "type": "object",
+      "x-ptk-field-order": [
+        "output",
+        "overlay",
+        "source",
+        "destination"
+      ]
+    },
+    "ConfigSource": {
+      "additionalProperties": false,
+      "properties": {
+        "repository": {
+          "description": "Git repository URL or local mirror path. Uses existing Git authentication; never embed credentials.",
+          "title": "Repository",
+          "type": "string"
+        },
+        "revision": {
+          "description": "Full commit hash or version tag, for example v2.4.0. Tags are pinned by the committed lock file.",
+          "title": "Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "repository",
+        "revision"
+      ],
+      "title": "ConfigSource",
+      "type": "object",
+      "x-ptk-field-order": [
+        "repository",
+        "revision"
+      ]
+    },
     "Constraint": {
       "additionalProperties": false,
       "properties": {
@@ -1907,24 +1985,19 @@
       "properties": {
         "enabled": {
           "default": true,
-          "description": "Enable this shared tool configuration.",
+          "description": "Synchronize this group's declared files. For pre-commit also enables automatic local hook installation.",
           "title": "Enabled",
           "type": "boolean"
         },
-        "overlay": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Project overlay file merged into the shared configuration.",
-          "title": "Overlay"
+        "files": {
+          "description": "Explicit source/destination files from the shared repository. No default files or overlays are generated.",
+          "items": {
+            "$ref": "#/$defs/ConfigFileMapping"
+          },
+          "title": "Files",
+          "type": "array"
         },
-        "output": {
+        "hook_config": {
           "anyOf": [
             {
               "type": "string"
@@ -1934,16 +2007,40 @@
             }
           ],
           "default": null,
-          "description": "Destination path for the generated tool configuration.",
-          "title": "Output"
+          "description": "For pre-commit only: final project-owned hook configuration; default .pre-commit-config.yaml. Independent of copied base files.",
+          "title": "Hook Config"
         }
       },
       "title": "SharedConfigSpec",
       "type": "object",
       "x-ptk-field-order": [
         "enabled",
-        "overlay",
-        "output"
+        "files",
+        "hook_config"
+      ]
+    },
+    "SharedConfigsSpec": {
+      "additionalProperties": {
+        "$ref": "#/$defs/SharedConfigSpec"
+      },
+      "properties": {
+        "source": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ConfigSource"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "One repository and pinned revision shared by all configuration file groups."
+        }
+      },
+      "title": "SharedConfigsSpec",
+      "type": "object",
+      "x-ptk-field-order": [
+        "source"
       ]
     },
     "StepSpec": {
@@ -2068,7 +2165,6 @@
                 "echo",
                 "wait",
                 "report.import",
-                "configs.sync",
                 "tools.ensure",
                 "files.copy",
                 "files.clean",
@@ -3468,21 +3564,8 @@
       }
     },
     "configs": {
-      "additionalProperties": {
-        "$ref": "#/$defs/SharedConfigSpec"
-      },
-      "description": "Shared tool configuration settings, such as pre-commit, Ruff and clang-format.",
-      "propertyNames": {
-        "enum": [
-          "pre-commit",
-          "ruff",
-          "clang-format",
-          "clang-tidy",
-          "clangd"
-        ]
-      },
-      "title": "Configs",
-      "type": "object"
+      "$ref": "#/$defs/SharedConfigsSpec",
+      "description": "External configuration source and named file groups. Synchronization is maintainer-only; overlays remain project-owned."
     },
     "layout": {
       "$ref": "#/$defs/LayoutSpec",

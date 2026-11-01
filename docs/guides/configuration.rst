@@ -281,7 +281,7 @@ There are no nested groups. ``python`` and ``passthrough`` apply to command step
 parameters. String commands use platform shell syntax.
 
 The registered built-ins are ``echo``, ``wait``, ``report.import``,
-``configs.sync``, ``tools.ensure``, ``files.copy``, ``files.clean`` and
+``tools.ensure``, ``files.copy``, ``files.clean`` and
 ``version.generate``. Any step may also declare ``generators``; see
 :doc:`variant-generation`. Their configuration is in :doc:`/reference/builtins`.
 ``--to STEP`` selects a target and its transitive prerequisites; ``--only-step STEP``
@@ -348,9 +348,10 @@ Declare tool version checks under ``tools`` and reference them in a job's
 with ``ptk self-service tools --dry-run``. System package managers require ``--allow-system``;
 Chocolatey bootstrap is explicit. Prefer checksummed downloads.
 
-Only entries under ``configs`` are managed. Preview ``ptk maintainer sync configs --diff``;
-commit generated files and enforce ``ptk validate --generated`` in CX. Ruff uses a generated
-``ruff-base.toml`` and a project-owned ``ruff.toml`` extending it.
+Only explicit file mappings under ``configs`` are managed. External bases are
+unchanged read-only copies; projects own overlays and ``ruff.toml``. Pre-commit
+and clang merges write separate generated outputs. See :doc:`shared-configs`
+for source pinning, ownership, maintainer synchronization and offline checks.
 
 Local Git hooks
 ~~~~~~~~~~~~~~~
@@ -362,10 +363,10 @@ folder, for example ``config/ptk/configs.ptk.yml``::
    pre-commit:
      enabled: true
 
-A maintainer runs ``ptk maintainer sync configs pre-commit`` and commits the generated
-``.pre-commit-config.yaml``. An optional ``output`` changes its location. Ordinary
-job execution never generates or rewrites this configuration. If it is missing,
-startup fails with instructions to ask a maintainer to synchronize it.
+Provide and commit a project-owned ``.pre-commit-config.yaml``, or declare external
+file mappings and have a maintainer synchronize them. Optional ``hook_config``
+changes the file used by hook installation. Enabling hooks alone does not declare
+external files. Ordinary job execution never synchronizes configuration.
 
 Before a local job runs, PTK checks the configured hooks and installs or repairs
 them when necessary. This is available to every developer, including
@@ -402,7 +403,7 @@ same relative pre-commit configuration path and installed hook types.
 Use ``ptk self-service hooks install|uninstall|status`` for explicit hook management,
 ``ptk pre-commit run`` for staged files and ``ptk pre-commit run --all-files`` for all tracked
 files. ``ptk pre-commit validate`` checks the hook configuration. These commands
-honor a custom ``configs.pre-commit.output`` and also work when automatic
+honor a custom ``configs.pre-commit.hook_config`` and also work when automatic
 installation is disabled. See :doc:`/reference/cli` for file/ref selection and exit codes.
 
 PTK's pre-commit commands remove inherited Python environment selectors such as

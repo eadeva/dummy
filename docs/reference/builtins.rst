@@ -41,8 +41,6 @@ ordinary command with explicit inputs and outputs.
 Additional built-ins
 --------------------
 
-* ``configs.sync`` accepts optional ``with: {names: [ruff, clang-format]}`` and
-  runs the same shared-config service as ``ptk maintainer sync configs``.
 * ``tools.ensure`` accepts ``with: {tools: [cmake], allow_system: false}``. All
   names must be declared. Place it before dependent commands. Jobs containing
   this step defer the initial required-tool check to the step; subsequent commands

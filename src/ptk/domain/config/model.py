@@ -402,7 +402,6 @@ class StepSpec(_Strict):
             "echo",
             "wait",
             "report.import",
-            "configs.sync",
             "tools.ensure",
             "files.copy",
             "files.clean",
@@ -820,21 +819,194 @@ class CredentialSpec(_Strict):
 # --------------------------------------------------------------------------- shared configs, logging, reporting
 
 
-SharedConfigName = Literal["pre-commit", "ruff", "clang-format", "clang-tidy", "clangd"]
+class ConfigSource(_Strict):
+    repository: str = Field(
+        description="Git repository URL or local mirror path. Uses existing Git authentication; never embed credentials."
+    )
+    revision: str = Field(
+        description="Full commit hash or version tag, for example v2.4.0. Tags are pinned by the committed lock file."
+    )
+
+    @field_validator("revision")
+    @classmethod
+    def _revision(cls, value):
+        from ..shared_configs import valid_revision
+
+        return valid_revision(value)
+
+    @field_validator("repository")
+    @classmethod
+    def _repository(cls, value):
+        from urllib.parse import urlsplit
+
+        if not value or value.startswith("-") or any(ord(c) < 32 for c in value):
+            raise ValueError("invalid Git repository")
+        parsed = urlsplit(value)
+        if "://" in value:
+            if (
+                parsed.scheme not in {"https", "ssh", "file"}
+                or parsed.query
+                or parsed.fragment
+                or parsed.password
+                or (parsed.scheme == "https" and parsed.username)
+            ):
+                raise ValueError(
+                    "use HTTPS, SSH or a local mirror without embedded credentials/query/fragment"
+                )
+        elif "::" in value:
+            raise ValueError("Git remote helpers are unsupported")
+        return value
+
+
+class ConfigFileMapping(_Strict):
+    output: str | None = Field(
+        default=None,
+        description="Separate generated merged file for a pre-commit/clang overlay. The destination remains an unchanged external base.",
+    )
+
+    @field_validator("output")
+    @classmethod
+    def _output(cls, value):
+        from ..shared_configs import destination_path
+
+        return destination_path(value) if value is not None else None
+
+    @model_validator(mode="after")
+    def _merge_pair(self):
+        if bool(self.overlay) != bool(self.output):
+            raise ValueError(
+                "overlay and output must be declared together; destination is always the unchanged external base"
+            )
+        return self
+
+    overlay: str | None = Field(
+        default=None,
+        description="Optional project-owned YAML overlay for pre-commit or clang groups. Ruff uses its project-owned native extend configuration.",
+    )
+
+    @field_validator("overlay")
+    @classmethod
+    def _overlay(cls, value):
+        from ..shared_configs import relative_path
+
+        return relative_path(value) if value is not None else None
+
+    source: str = Field(
+        description="Literal file path in the source repository, relative to its root."
+    )
+    destination: str = Field(
+        description="Literal destination relative to this repository. Read-only byte-for-byte copy of the external base; never edit it. An overlay produces a separate output."
+    )
+
+    @field_validator("source")
+    @classmethod
+    def _source(cls, value):
+        from ..shared_configs import relative_path
+
+        return relative_path(value)
+
+    @field_validator("destination")
+    @classmethod
+    def _destination(cls, value):
+        from ..shared_configs import destination_path
+
+        return destination_path(value)
 
 
 class SharedConfigSpec(_Strict):
     enabled: bool = Field(
-        default=True, description="Enable this shared tool configuration."
+        default=True,
+        description="Synchronize this group's declared files. For pre-commit also enables automatic local hook installation.",
     )
-    overlay: str | None = Field(
+    files: list[ConfigFileMapping] = Field(
+        default_factory=list,
+        description="Explicit source/destination files from the shared repository. No default files or overlays are generated.",
+    )
+    hook_config: str | None = Field(
         default=None,
-        description="Project overlay file merged into the shared configuration.",
+        description="For pre-commit only: final project-owned hook configuration; default .pre-commit-config.yaml. Independent of copied base files.",
     )
-    output: str | None = Field(
+
+    @field_validator("hook_config")
+    @classmethod
+    def _hook_config(cls, value):
+        from ..shared_configs import destination_path
+
+        return destination_path(value) if value is not None else None
+
+
+class SharedConfigsSpec(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    __pydantic_extra__: dict[str, SharedConfigSpec] = Field(init=False)
+    source: ConfigSource | None = Field(
         default=None,
-        description="Destination path for the generated tool configuration.",
+        description="One repository and pinned revision shared by all configuration file groups.",
     )
+
+    def items(self):
+        return self.__pydantic_extra__.items()
+
+    def get(self, name, default=None):
+        return self.__pydantic_extra__.get(name, default)
+
+    def __iter__(self):
+        return iter(self.__pydantic_extra__)
+
+    @model_validator(mode="after")
+    def _mappings(self):
+        destinations = []
+        for name, spec in self.items():
+            if not re.fullmatch(r"[a-z][a-z0-9_-]*", name):
+                raise ValueError(
+                    "configuration group names must be lowercase identifiers"
+                )
+            if name != "pre-commit" and spec.hook_config is not None:
+                raise ValueError("hook_config is only valid for pre-commit")
+            for item in spec.files:
+                if item.overlay and name not in {
+                    "pre-commit",
+                    "clang-format",
+                    "clang-tidy",
+                    "clangd",
+                }:
+                    raise ValueError(
+                        "overlays are supported only for pre-commit and clang; Ruff inheritance stays project-owned"
+                    )
+                if (
+                    item.overlay
+                    and item.overlay.casefold() == item.destination.casefold()
+                ):
+                    raise ValueError("overlay cannot also be its generated destination")
+                if self.source is None:
+                    raise ValueError(
+                        "configs.source is required when files are declared"
+                    )
+                for destination in (item.destination, item.output):
+                    if destination is None:
+                        continue
+                    target = destination.casefold()
+                    if any(
+                        target == old
+                        or target.startswith(old + "/")
+                        or old.startswith(target + "/")
+                        for old in destinations
+                    ):
+                        raise ValueError(
+                            "configuration destinations and outputs must be unique and cannot overlap"
+                        )
+                    destinations.append(target)
+        for spec in self.__pydantic_extra__.values():
+            for item in spec.files:
+                if item.overlay and any(
+                    item.overlay.casefold() == target
+                    or item.overlay.casefold().startswith(target + "/")
+                    or target.startswith(item.overlay.casefold() + "/")
+                    for target in destinations
+                ):
+                    raise ValueError(
+                        "project overlays must be separate from every managed destination/output"
+                    )
+        return self
 
 
 class LayoutSpec(_Strict):
@@ -1033,9 +1205,9 @@ class PtkConfig(_Strict):
         description="Named executable jobs, including their steps, parameters and required tools.",
         default_factory=dict,
     )
-    configs: dict[SharedConfigName, SharedConfigSpec] = Field(
-        description="Shared tool configuration settings, such as pre-commit, Ruff and clang-format.",
-        default_factory=dict,
+    configs: SharedConfigsSpec = Field(
+        description="External configuration source and named file groups. Synchronization is maintainer-only; overlays remain project-owned.",
+        default_factory=SharedConfigsSpec,
     )
     layout: LayoutSpec = Field(
         description="Directory names for generated builds, binaries, logs and reports.",

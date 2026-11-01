@@ -87,7 +87,7 @@ def test_cmake_consumes_generated_values(tmp_path):
     )
 
 
-def test_builtin_generation_copy_clean_and_configs(tmp_path):
+def test_builtin_generation_copy_clean(tmp_path):
     config = tmp_path / ".main.ptk.yml"
     write_project(
         config,
@@ -100,11 +100,9 @@ def test_builtin_generation_copy_clean_and_configs(tmp_path):
                 "jobs": {
                     "go": {
                         "steps": {
-                            "sync": {"uses": "configs.sync"},
                             "ensure": {
                                 "uses": "tools.ensure",
                                 "with": {"tools": []},
-                                "needs": ["sync"],
                             },
                             "gen": {
                                 "generators": list(GENERATORS),
@@ -133,7 +131,7 @@ def test_builtin_generation_copy_clean_and_configs(tmp_path):
     assert result.exit_code == 0, result.output
     assert (tmp_path / "_bin/demo/variant.h").exists()
     assert not (tmp_path / "_builds/demo/go/gen").exists()
-    assert (tmp_path / "ruff-base.toml").exists()
+    assert not (tmp_path / "ruff-base.toml").exists()
 
 
 def test_file_cleanup_and_generation_reject_path_escape(tmp_path):

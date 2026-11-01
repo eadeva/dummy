@@ -146,7 +146,7 @@ class Doctor:
                     )
                 )
         try:
-            for item in self._configs.plan(project):
+            for item in self._configs.check(project):
                 state = OK if item.status == "up to date" else WARN
                 checks.append(
                     Check(

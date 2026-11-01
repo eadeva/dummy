@@ -1168,3 +1168,21 @@ Known planned product gaps remain in
    restores fail. Consumers wait for every producer matrix variant; max_workers
    limits each job matrix, not the whole GitHub workflow. VMR placeholders fail
    until completed. See :doc:`/guides/github-actions` for operational constraints.
+
+.. ddec:: External configuration ownership and explicit synchronization
+   :id: DD_EXTERNAL_CONFIGS
+   :status: accepted
+
+   **Context:** Base policy belongs to a separate repository; consuming projects
+   own overlays and Ruff configuration.
+
+   **Decision:** Remove packaged bases and the configs.sync step. Only maintainer
+   synchronization fetches one pinned source with explicit per-group mappings.
+   Preserve external blobs unchanged and read-only, record provenance/content
+   hashes in a committed lock, and protect local edits. Retain pre-commit/clang
+   merging into separate generated outputs. Offline validation never fetches.
+
+   **Consequences:** Projects must select a source and review updates explicitly.
+   Git does not preserve read-only permissions; content checks enforce freshness
+   after checkout. The lock is reviewable provenance, not a trust authority.
+   Removed mappings leave files for project review. See :doc:`/guides/shared-configs`.
