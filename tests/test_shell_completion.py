@@ -1,5 +1,6 @@
 """Exercise Click's completion protocol without invoking command callbacks."""
 
+import json
 import os
 import shlex
 import shutil
@@ -379,11 +380,25 @@ def test_powershell_prefix_correction_preserves_other_arguments(
     assert engine.get_completion_args() == (args, incomplete)
 
 
-@pytest.mark.skipif(
-    not (shutil.which("pwsh") or shutil.which("powershell")),
-    reason="requires native PowerShell",
+@pytest.mark.parametrize("shell", ["pwsh", "powershell"])
+@pytest.mark.parametrize(
+    ("line", "expected", "excluded"),
+    [
+        ("ptk build --", {"--build-type", "--only-step"}, set()),
+        ("ptk build -- ", set(), {"--build-type", "--only-step"}),
+        ("ptk build -- --", set(), {"--build-type", "--only-step"}),
+        ("ptk build --b", {"--build-type"}, {"--only-step"}),
+        ("ptk build --build-type D", {"Debug"}, {"Release"}),
+        ("ptk build --build-type ", {"Debug", "Release"}, set()),
+        ("ptk self-service ", {"completion", "extension", "tools"}, set()),
+    ],
 )
-def test_native_powershell_tab_expansion_for_bare_prefix(project, tmp_path):
+def test_native_powershell_tab_expansion(
+    project, tmp_path, shell, line, expected, excluded
+):
+    powershell = shutil.which(shell)
+    if not powershell:
+        pytest.skip(f"requires native {shell}")
     launcher = Path(sys.executable).with_name("ptk.exe" if os.name == "nt" else "ptk")
     if not launcher.exists():
         pytest.skip("requires installed PTK console entry point")
@@ -392,12 +407,13 @@ def test_native_powershell_tab_expansion_for_bare_prefix(project, tmp_path):
     script = tmp_path / "completion-test.ps1"
     script.write_text(
         source.output
-        + "\n(TabExpansion2 'ptk build --' 12).CompletionMatches.CompletionText\n",
+        + f"\n$line = '{line}'\n"
+        + "ConvertTo-Json -Compress -InputObject @((TabExpansion2 $line $line.Length).CompletionMatches.CompletionText)\n",
         encoding="utf-8",
     )
     result = subprocess.run(
         [
-            shutil.which("pwsh") or shutil.which("powershell"),
+            powershell,
             "-NoLogo",
             "-NoProfile",
             "-NonInteractive",
@@ -415,4 +431,6 @@ def test_native_powershell_tab_expansion_for_bare_prefix(project, tmp_path):
         check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
-    assert {"--build-type", "--only-step"} <= set(result.stdout.splitlines())
+    matches = set(json.loads(result.stdout))
+    assert expected <= matches
+    assert not excluded & matches

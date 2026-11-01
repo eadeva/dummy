@@ -23,6 +23,17 @@ from .state import CliState, state_of
 class PtkPowerShellComplete(PowerShellComplete):
     """Keep an unfinished bare -- independent of PowerShell's AST word count."""
 
+    # PowerShell's AST excludes trailing whitespace. Keep that boundary in the
+    # protocol so the normalization below cannot turn a committed -- back into
+    # an unfinished option prefix. Retain Click's registration/response adapter.
+    source_template = PowerShellComplete.source_template.replace(
+        "$env:COMP_WORDS = $commandAst.ToString()",
+        """$env:COMP_WORDS = $commandAst.ToString()
+    if ($cursorPosition -gt $commandAst.Extent.EndOffset) {
+        $env:COMP_WORDS += ' '
+    }""",
+    )
+
     def get_completion_args(self):
         words = os.environ["COMP_WORDS"]
         # PowerShell treats -- specially in its command AST. The generated

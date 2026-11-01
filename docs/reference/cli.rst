@@ -170,9 +170,22 @@ commands** in that shell. Omit the flag to keep your current key bindings
 available for the double-Tab binding; the PTK completer itself does not require it.
 PTK normalizes an unfinished bare ``--`` in PowerShell completion independently
 of the command AST's element count. A trailing space still commits ``--`` as the
-end-of-options marker. After updating PTK, reload the registration above when
-checking completion in an already-open terminal. This correction is covered by
-protocol tests; native PowerShell acceptance also has a platform-dependent test.
+end-of-options marker; the registration script preserves that boundary even
+though PowerShell removes trailing whitespace from its command AST. After updating
+PTK, regenerate the persistent registration and reload it in any already-open
+terminal. Native ``TabExpansion2`` tests cover both forms, option prefixes and
+choice values; Windows PowerShell 5.1 still requires verification on Windows.
+
+To check candidate generation independently of the Tab key binding, replace
+``JOB`` below with a configured job name and run::
+
+   $line = 'ptk JOB --'
+   (TabExpansion2 $line $line.Length).CompletionMatches | Select-Object CompletionText
+
+If this lists options but Tab does not, check the PSReadLine binding. If it
+returns nothing, check ``Get-Command ptk -All`` and ``ptk --version``, then reload
+the completion registration from that executable. Updating a checkout alone
+does not update a separately installed PTK package or a saved profile script.
 Generating a script without ``--install`` does not modify the profile.
 Profile loading must be allowed by your PowerShell execution policy; PTK does
 not change that policy. Terminals started with ``-NoProfile`` do not load it.
