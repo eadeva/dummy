@@ -100,7 +100,7 @@ def to_json(report: Report) -> str:
 
 
 def to_junit(report: Report) -> str:
-    """Steps as one test suite (CI dashboards show the job), imported suites after it."""
+    """Steps as one test suite (CX dashboards show the job), imported suites after it."""
     root = ET.Element("testsuites", name=f"{report.project} {report.job}")
     suite = ET.SubElement(
         root,

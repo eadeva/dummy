@@ -10,8 +10,8 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
    support `ptk describe --json --configuration` (inventory version 5 and configuration interface version 5).
 2. If PTK was installed directly with uv, run `ptk self-service extension` afterwards.
    Alternatively, in VS Code run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.23.1.vsix`. You can also use
-   `code --install-extension project-toolkit-0.23.1.vsix`.
+   `project-toolkit-0.23.2.vsix`. You can also use
+   `code --install-extension project-toolkit-0.23.2.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -75,7 +75,7 @@ Some action paths and flags are known by the extension, including validation,
 reports, initialization, variants, dry runs and cleanup; the schema alone is
 not the full contract.
 
-Extension 0.23.1 requires inventory `schema_version: 5` and
+Extension 0.23.2 requires inventory `schema_version: 5` and
 `configuration.version: 5`. These are independent of package/release numbers
 and the project marker's schema version. Unsupported interfaces are rejected;
 there is no legacy parser or runtime schema fallback. Breaking changes must
@@ -179,7 +179,7 @@ session. See the GUI jobs section in `docs/guides/configuration.rst` for setup.
 - Use **Display Variant** to inspect resolved features. Edit variant definitions
   in the configuration tree and form, or in raw YAML.
 - Expand **Workflows** to run or dry-run local workflows. Workflows retain their
-  owner variant and its repository variant mappings. On CI, workflows can only be dry-run; individual
+  owner variant and its repository variant mappings. On CX, workflows can only be dry-run; individual
   jobs remain runnable. The help icon displays workflow usage.
 - Expand **Built-in commands** to browse the CLI tree, including **self-service > creds**,
   configuration, variants and **help**. **CLI help** displays `ptk --help`;
@@ -325,7 +325,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.23.1.vsix`. Use `ptk self-service extension --dry-run`
+`extensions/project-toolkit/project-toolkit-0.23.2.vsix`. Use `ptk self-service extension --dry-run`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:
@@ -344,7 +344,7 @@ at the repository root, on Linux/macOS:
 PTK_TEST_PYTHON="$PWD/../../.venv/bin/python" npm run package
 ```
 
-CI uses `uv run ptk extension` to package the extension and run these integration
+CX uses `uv run ptk extension` to package the extension and run these integration
 tests on Linux and Windows.
 Controller tests inject the VS Code API and check task restoration, permissions,
 workspace trust, multi-root selection and cancellation; they are not graphical

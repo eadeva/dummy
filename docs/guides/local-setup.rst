@@ -100,7 +100,8 @@ Commit the final pre-commit configuration (project-owned or generated from
 explicit external mappings). By default it is ``.pre-commit-config.yaml`` at the
 repository root; ``hook_config`` selects another relative path.
 
-Every real local job verifies hook installation and repairs it when necessary.
+When enabled, every real local job verifies hook installation and repairs it
+when necessary.
 Local workflows check participating repositories before starting jobs. A working
 installation is reused. All developers can use this behavior without maintainer
 rights. PTK creates a dedicated pre-commit environment under the Git common

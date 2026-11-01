@@ -1,4 +1,4 @@
-"""Asking the person at the terminal (never in CI or without a terminal)."""
+"""Asking the person at the terminal (never in CX or without a terminal)."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ class ConsolePrompter:
     def secret(self, question: str) -> str:
         if not self.interactive():
             raise PtkError(
-                f"cannot ask for '{question}': no terminal (or running in CI)"
+                f"cannot ask for '{question}': no terminal (or running in CX)"
             )
         return getpass.getpass(f"{question}: ")
 
@@ -37,7 +37,7 @@ class PromptProvider:
 
     def available(self) -> tuple[bool, str]:
         if not self._prompter.interactive():
-            return False, "not interactive (no terminal, or CI)"
+            return False, "not interactive (no terminal, or CX)"
         return True, ""
 
     def get(self, key: SecretKey) -> str | None:

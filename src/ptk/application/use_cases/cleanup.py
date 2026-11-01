@@ -59,7 +59,7 @@ def prepare_cleanup(project, job_name, variant, role):
     if not visible(job.audience, role):
         raise PtkError(f"{job_name!r} is a maintainer-only job")
     if job.only_cx and not project.ci:
-        raise PtkError(f"job {job_name!r} is only available in CX/CI")
+        raise PtkError(f"job {job_name!r} is only available in CX")
     service = VariantService(project)
     if service.has_variants:
         resolved = service.resolve(variant)

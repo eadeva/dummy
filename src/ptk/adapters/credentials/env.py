@@ -1,4 +1,4 @@
-"""Environment variables (CI). Read-only."""
+"""Environment variables (CX). Read-only."""
 
 from __future__ import annotations
 

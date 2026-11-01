@@ -227,7 +227,7 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False, no_cache_ptk=Fals
     is_ci = parent.app.host.is_ci() if parent.ci is None else parent.ci
     if is_ci and not dry_run:
         raise PtkError(
-            "workflows run locally only; CX/CI execution uses individual jobs (GitHub template generation is planned separately)"
+            "workflows run locally only; CX execution uses individual jobs (use ptk maintainer gen-workflows for GitHub templates)"
         )
     from ...application.use_cases.workflow_variants import WorkflowVariants
     from .cleanup import clean_selected, mode

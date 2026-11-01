@@ -200,7 +200,7 @@ class SecretProvider(Protocol):
 
 class Prompter(Protocol):
     def interactive(self) -> bool:
-        """A person can answer (terminal attached and not in CI)."""
+        """A person can answer (terminal attached and not in CX)."""
 
     def secret(self, question: str) -> str: ...
 

@@ -101,8 +101,8 @@ or changing execution exit codes.
 The workflow JSON snapshot contains its context, child report data and nested
 graph. Child snapshots preserve report-disabled steps and secret masking, and
 later job executions cannot change their embedded results. HTML is the human
-view, JSON is structured data, JUnit is test/CI interchange and Markdown is the
-compact CI summary. Workflow reports currently export HTML/JSON; job reports
+view, JSON is structured data, JUnit is test/CX interchange and Markdown is the
+compact CX summary. Workflow reports currently export HTML/JSON; job reports
 support the complete format set.
 
 Project implementations own artifact correctness, output validation, side

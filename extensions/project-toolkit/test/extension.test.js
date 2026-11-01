@@ -362,7 +362,7 @@ test("optional typed parameter overrides retain booleans and literal text", asyn
   assert.deepEqual((await h.api.taskProvider.resolveTask(h.tasks[0])).execution.args, h.tasks[0].execution.args);
 });
 
-test("workflow and job name collisions dispatch explicitly and CI allows previews only", async t => {
+test("workflow and job name collisions dispatch explicitly and CX allows previews only", async t => {
   const doc = inventory();
   doc.ci = true;
   const h = harness(t, [doc]);

@@ -1,4 +1,4 @@
-name: CI
+name: CX
 on: [push, pull_request]
 permissions:
   contents: read

@@ -6,7 +6,7 @@ unified logging and reporting. See the [user guides](docs/guides/index.rst) for 
 
 **Status:** Configuration, execution, variants, credentials, reporting, tool setup,
 reusable Python tools, VMR discovery and local workflows are implemented. The current scope and acceptance
-boundaries are recorded in the [requirements](docs/requirements/index.rst) and [architecture decisions](docs/architecture/09-architecture-decisions.rst). Seventeen repository-local skills
+boundaries are recorded in the [requirements](docs/requirements/index.rst) and [architecture decisions](docs/architecture/09-architecture-decisions.rst). Eighteen repository-local skills
 include tested authoring and Python tool examples.
 
 For an existing project, use its team-provided PTK installation and start with
@@ -50,7 +50,7 @@ without compilers or credentials and writes logs and reports inside the copy. Th
 and is intended for configuration exploration and dry runs.
 
 The [documentation](docs/index.rst) contains user guides, CLI requirements,
-twelve arc42 architecture chapters, reference material and CI/CD guidance.
+twelve arc42 architecture chapters, reference material and CX guidance.
 Requirements follow the supplied convention in authored RST, without loading
 the reference meta-model. Historical inputs remain outside the published site
 and packages under `reference/`.
@@ -72,7 +72,7 @@ It supports single repositories, VMRs and multiple workspace folders.
 
 Install the VSIX through **Extensions: Install from VSIX...**. Build it from the
 repository root with `ptk extension` (or `uv run ptk extension`), or download
-the VSIX artifact from the branch's CI run. The job requires Node.js 22+ and npm,
+the VSIX artifact from the branch's CX run. The job requires Node.js 22+ and npm,
 installs the build dependencies, runs the checks and writes
 `extensions/project-toolkit/project-toolkit-0.4.0.vsix`.
 PTK must be installed on the workspace host. See
@@ -135,7 +135,7 @@ applies them. Commit the copied bases, generated files and the `.ptk-configs.loc
 
 When pre-commit is enabled, local jobs automatically install or repair its Git
 hooks for every developer. Workflows check each participating VMR repository
-before starting jobs. Help, dry runs and CI skip installation; missing generated
+before starting jobs. Help, dry runs and CX skip installation; missing generated
 configuration blocks execution. See [hook setup and conflicts](docs/guides/configuration.rst#local-git-hooks).
 
 ## Reports
@@ -345,7 +345,7 @@ Dependencies point inwards only; the domain has no I/O.
   show their graphs automatically; `--graph` inspects them without preparing commands.
 - `ptk variant list|show|explain` inspects variants without editing configuration.
   Select a variant before the command: `ptk -V debug build`.
-- `--ci/--no-ci` is maintainer-only. Automatic CI detection remains the default.
+- `--ci/--no-ci` is maintainer-only. Automatic CX detection remains the default.
 
 See [dependency execution and output responsibility](docs/reference/execution.rst) and the [CLI reference](docs/reference/cli.rst).
 
@@ -373,7 +373,7 @@ its repository's tools, environment, credentials and reports. Use `job: REPO:JOB
 independent jobs can run concurrently, regardless of YAML order. PTK preflights every call before execution
 and rejects conflicting parallel outputs or shared uv project environments.
 Generated VS Code tasks include workflows. These workflows run locally;
-execution on CX/CI is refused. For native GitHub execution, run
+execution on CX is refused. For native GitHub execution, run
 `ptk maintainer gen-workflows verify` to generate a callable workflow with a
 setup matrix and one GitHub job per configured invocation.
 
@@ -417,7 +417,7 @@ shared host operations. See `docs/guides/configuration.rst` and `docs/reference/
 
 For a complete tested starter, copy `examples/authoring`. For a reusable Python CLI starter,
 use `examples/python-tool`. The authoring skill catalog is in `docs/guides/skills.rst`;
-the wheel bundles the PTK expert agent, fifteen project-facing skills and lightweight offline references.
+the wheel bundles the PTK expert agent, sixteen project-facing skills and lightweight offline references.
 Run `ptk maintainer sync tasks` to create tasks. Run `ptk maintainer sync agent` to install
 `.github/agents/ptk-expert.agent.md`, copy skills to `.github/skills`, and install version-matched docs, examples and a configuration
 schema under `.github/ptk`. Relative links work without a PTK checkout or network

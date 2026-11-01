@@ -128,6 +128,8 @@ def test_tagged_build_and_frozen_sdist_rebuild(tmp_path):
         zipfile.ZipFile(next(rebuilt.glob("*.whl"))) as rebuilt_wheel,
     ):
         for name in (
+            "skills/ptk-devops/SKILL.md",
+            "skills/ptk-devops/agents/openai.yaml",
             "skills/ptk-github-workflows/SKILL.md",
             "skills/ptk-github-workflows/agents/openai.yaml",
             "docs/guides/github-actions.rst",

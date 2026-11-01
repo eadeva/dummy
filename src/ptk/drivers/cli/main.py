@@ -87,7 +87,7 @@ click.rich_click.SHOW_ARGUMENTS = True
     cls=MaintainerOption,
     default=None,
     is_eager=True,
-    help="Maintainers only: force CI mode on/off (default: detected).",
+    help="Maintainers only: force CX mode on/off (default: detected).",
 )
 @click.option(
     "-v",
@@ -326,7 +326,7 @@ def _value(value: Any) -> str:
 @click.option(
     "--names",
     is_flag=True,
-    help="Print buildable variant names only (for CI matrices).",
+    help="Print buildable variant names only (for CX matrices).",
 )
 @click.pass_context
 @guarded
@@ -453,7 +453,7 @@ def check_variants(ctx: click.Context, names: tuple[str, ...], strict: bool) -> 
 def run_command(
     ctx: click.Context, job: str | None, params: tuple[str, ...], **options: Any
 ) -> None:
-    """Run JOB by name - the generic form for scripts and CI.
+    """Run JOB by name - the generic form for scripts and CX.
 
     Same as [bold]ptk JOB[/], but parameters are given as [bold]-p NAME=VALUE[/].
     JOB defaults to [italic]project.default_job[/]. Arguments after [bold]--[/] go
@@ -598,7 +598,7 @@ def creds_setup(ctx: click.Context, create_vault: bool) -> None:
         console.print(f"[green]vault created[/] at {escape(str(vault.path))}")
     table = Table("provider", "status", "notes", box=None, pad_edge=False)
     hints = {
-        "env": "CI: set the variables shown by 'ptk self-service creds list'",
+        "env": "CX: set the variables shown by 'ptk self-service creds list'",
         "keyring": "OS keyring: Windows Credential Manager, macOS Keychain, Linux desktop",
         "gopass": "recommended for teams: gopass setup --crypto age (no gpg needed)",
         "vault": "built-in encrypted file: ptk self-service creds setup --vault",
@@ -735,7 +735,7 @@ def configs_sync(ctx: click.Context, names: tuple[str, ...], diff: bool) -> None
 @click.pass_context
 @guarded
 def configs_check(ctx: click.Context, names: tuple[str, ...]) -> None:
-    """Fail (exit code 1) if an effective config file is missing or out of date - for CI."""
+    """Fail (exit code 1) if an effective config file is missing or out of date - for CX."""
     project = _state(ctx).project()
     items = _state(ctx).app.shared_configs.check(project, list(names) or None)
     _show_config_results(items, project.root)
@@ -916,7 +916,7 @@ def agent_command(ctx: click.Context, check: bool) -> None:
 @click.option(
     "--check",
     is_flag=True,
-    help="Only check that tasks.json is up to date (exit code 1 if not) - for CI.",
+    help="Only check that tasks.json is up to date (exit code 1 if not) - for CX.",
 )
 @click.option(
     "--command",

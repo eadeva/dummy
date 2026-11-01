@@ -1,4 +1,4 @@
-"""HostEnvironment adapter: environment variables, CI detection, user identity."""
+"""HostEnvironment adapter: environment variables, CX detection, user identity."""
 
 from __future__ import annotations
 

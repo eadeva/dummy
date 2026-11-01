@@ -2,6 +2,9 @@ CLI command groups
 ==================
 
 PTK separates everyday work, local self-service and project maintenance.
+Documentation and user-facing messages use CX. Compatibility identifiers remain
+``--ci``, ``--no-ci``, ``PTK_CI``, the standard ``CI`` environment variable and
+expression field ``ci``; these are not renamed to match prose.
 Jobs and workflows are both direct commands: ``ptk build`` and ``ptk verify``.
 Use ``ptk maintainer NAME`` for jobs and workflows declared with
 ``audience: maintainer``. If a job and workflow share a name, choose explicitly

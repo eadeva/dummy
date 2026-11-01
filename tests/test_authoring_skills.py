@@ -129,3 +129,12 @@ def test_installed_workflow_skill_supports_a_consumer_pipeline(tmp_path, monkeyp
         SetupAuthoring(AuthoringFiles(), "test").execute(tmp_path, check=True).paths
         == []
     )
+
+
+def test_expert_agent_frontmatter_is_valid():
+    path = ROOT / ".claude/agents/ptk-expert.md"
+    _, frontmatter, body = path.read_text(encoding="utf-8").split("---", 2)
+    metadata = yaml.safe_load(frontmatter)
+    assert metadata["name"] == "ptk-expert"
+    assert isinstance(metadata["description"], str)
+    assert "ptk-devops/SKILL.md" in body

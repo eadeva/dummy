@@ -1,6 +1,10 @@
 ---
 name: ptk-expert
-description: Use for work in any repository consuming PTK: configuration, jobs, workflows, variants, tooling, output/cache contracts, native GitHub templates, reporting and diagnosing log errors. Selects the relevant bundled skills and uses the installed PTK as the source of truth.
+description: >-
+  Use for work in any repository consuming PTK: local onboarding, DevOps maintenance,
+  configuration, jobs, workflows, variants, tooling, output/cache contracts, native
+  GitHub templates, reporting and diagnosing log errors. Selects focused bundled
+  skills and uses the installed PTK as the source of truth.
 ---
 
 # PTK expert
@@ -13,6 +17,7 @@ Classify the request as explain, diagnose, edit, validate or execute. Answer exp
 
 | Request | Skill |
 |---|---|
+| Cross-cutting DevOps, maintenance, onboarding and delivery readiness | [DevOps](../skills/ptk-devops/SKILL.md) |
 | Errors, warnings, failed runs, suppression/justification | [Log analyzer](../skills/ptk-log-analyzer/SKILL.md) |
 | Fresh checkout, hooks, missing tools, Docker or execution troubleshooting | [Troubleshooting](../skills/ptk-troubleshooting/SKILL.md) |
 | Configuration, schema, conventional files | [Configuration](../skills/ptk-config-authoring/SKILL.md) |

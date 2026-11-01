@@ -68,7 +68,7 @@ def _plan(
     label = "/".join(path)
     skip = selection_skip
     if skip is None and step.only_cx and not ctx.symbols.get("ci", False):
-        skip = "only_cx: step requires CX/CI"
+        skip = "only_cx: step requires CX"
     if skip is None:
         skip = variant_restriction(step, ctx.symbols.get("variant"))
     if skip is None and step.when:

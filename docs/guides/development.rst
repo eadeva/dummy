@@ -126,9 +126,9 @@ YAML paths and values. Published docs do not include a source-module catalog or
 Python API reference. Internal Python interfaces are implementation details.
 Reusable packages expose commands as described in :doc:`python-tools`.
 
-Seventeen repository-local authoring skills are shipped under ``.claude/skills`` and
+Eighteen repository-local authoring skills are shipped under ``.claude/skills`` and
 included in the documentation. Tests check catalog completeness and source links.
-The wheel bundles fifteen project-facing skills, reference docs and examples
+The wheel bundles sixteen project-facing skills, reference docs and examples
 through the allowlist in ``src/ptk/authoring_bundle.py``. Keep the canonical skill
 files in ``.claude/skills``; do not maintain another copy for installed users.
 Consumer skill instructions must not depend on PTK's ``src`` or ``tests`` folders.
@@ -206,7 +206,7 @@ engine. Its pinned version, source and license notices live in
 engine and viewer; generated HTML embeds them without external requests. Run
 ``scripts/graph_preview.py OUTPUT_DIRECTORY`` for representative offline fixtures.
 ``extensions/project-toolkit/test/graph-ui.test.js`` exercises the real viewer
-with Playwright and ``PTK_TEST_PYTHON``; CI runs it in the quality job. Set
+with Playwright and ``PTK_TEST_PYTHON``; CX runs it in the quality job. Set
 ``PTK_TEST_CHROMIUM`` locally only when using a custom Chromium executable.
 It records source and output checksums in each SVG. The Sphinx build rejects
 missing, stale or manually edited renderings; the check itself needs only Python::

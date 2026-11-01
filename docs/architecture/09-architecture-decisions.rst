@@ -18,7 +18,7 @@ not imply that every related future capability has been implemented.
 
    **Context:** Projects need a familiar interface without centralizing every build tool.
 
-   **Decision:** PTK standardizes variants, parameters, setup, credentials, execution, logging and reporting. Projects own the commands and domain-specific behavior. Workflow/job/step names follow GitHub terminology; PTK supports CX work beyond CI.
+   **Decision:** PTK standardizes variants, parameters, setup, credentials, execution, logging and reporting. Projects own the commands and domain-specific behavior. Workflow/job/step names follow GitHub terminology; PTK supports cross-functional CX automation.
 
    **Alternatives considered:** A monolithic CLI containing each project tool would couple their release cycles.
 
@@ -512,7 +512,7 @@ not imply that every related future capability has been implemented.
 
    **Decision:** Use one PTK expert entry point with focused authoring, troubleshooting and log-analysis skills. Discover the actual project, installed CLI, permissions and supported contracts before acting.
 
-   Ship fifteen project-facing skills plus the expert with self-contained offline
+   Ship sixteen project-facing skills plus the expert with self-contained offline
    references; retain PTK development/docs-writing skills only in its checkout.
    Label checkout-only procedures, resolve links relative to installed resources,
    and use the deployed schema rather than requiring PTK source. Validate Markdown

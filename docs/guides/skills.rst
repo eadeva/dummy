@@ -1,7 +1,7 @@
 Authoring skills
 ================
 
-Canonical assistant instructions live in ``.claude/skills``. Fifteen project-facing
+Canonical assistant instructions live in ``.claude/skills``. Sixteen project-facing
 skills use links relative to their SKILL.md files and are bundled with the wheel.
 Two maintainer skills operate on PTK's own source checkout.
 
@@ -170,3 +170,15 @@ A successful link check proves resource availability; it does not prove that an
 AI assistant or the VS Code UI will behave correctly in every environment.
 Installed-wheel tests and disposable consumer scenarios provide additional
 execution evidence. Browser/native-Windows acceptance is reported separately.
+
+ptk-devops
+----------
+
+.. literalinclude:: ../../.claude/skills/ptk-devops/SKILL.md
+   :language: markdown
+
+Use this skill for cross-cutting project maintenance: local onboarding, Docker
+readiness, shared policy and artifact/CX delivery. It selects focused skills for
+implementation and keeps one expert agent responsible for the result. A second
+maintainer agent is unnecessary: maintenance is a task scope, not a permission
+grant or a different project model.

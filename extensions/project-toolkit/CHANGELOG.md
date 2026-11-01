@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.23.2
+
+- Use CX consistently in workflow availability labels and execution errors. Keep configuration keys and environment identifiers unchanged.
+
 ## 0.23.1
 
 - Clarify external base ownership without filesystem write protection in schema field help.

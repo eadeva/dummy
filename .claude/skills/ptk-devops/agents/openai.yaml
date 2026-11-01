@@ -1,0 +1,4 @@
+interface:
+  display_name: "PTK DevOps"
+  short_description: "Maintain project tooling, artifacts and CX workflows"
+  default_prompt: "Use $ptk-devops to review this project’s local setup, Docker tools and CX delivery flow using its installed PTK configuration."
