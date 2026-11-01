@@ -1,15 +1,39 @@
 """Shell registration and read-only, project-aware completion callbacks."""
 
+import os
 from pathlib import Path
 
 import rich_click as click
-from click.shell_completion import CompletionItem, get_completion_class
+from click.shell_completion import (
+    CompletionItem,
+    PowerShellComplete,
+    add_completion_class,
+    get_completion_class,
+    split_arg_string,
+)
 
 from ...application.use_cases.conditions import job_available
 from ...application.use_cases.role import visible
 from ...bootstrap import create_app
 from ...domain.errors import PtkError
 from .state import CliState, state_of
+
+
+@add_completion_class
+class PtkPowerShellComplete(PowerShellComplete):
+    """Keep an unfinished bare -- independent of PowerShell's AST word count."""
+
+    def get_completion_args(self):
+        words = os.environ["COMP_WORDS"]
+        # PowerShell treats -- specially in its command AST. The generated
+        # adapter's CommandElements count can therefore select the job name
+        # instead of this unfinished option prefix. A trailing space still
+        # commits -- as the end-of-options marker; quoted values are unchanged.
+        if words.endswith((" --", "\t--")):
+            parts = split_arg_string(words)
+            if len(parts) > 1 and parts[-1] == "--":
+                return parts[1:-1], "--"
+        return super().get_completion_args()
 
 
 def _items(values, incomplete):

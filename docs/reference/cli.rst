@@ -168,6 +168,11 @@ prefix; another Tab lists the remaining matches. This changes Tab for **all
 commands** in that shell. Omit the flag to keep your current key bindings
 (Windows PowerShell normally cycles matches with Tab). PSReadLine must be
 available for the double-Tab binding; the PTK completer itself does not require it.
+PTK normalizes an unfinished bare ``--`` in PowerShell completion independently
+of the command AST's element count. A trailing space still commits ``--`` as the
+end-of-options marker. After updating PTK, reload the registration above when
+checking completion in an already-open terminal. This correction is covered by
+protocol tests; native PowerShell acceptance also has a platform-dependent test.
 Generating a script without ``--install`` does not modify the profile.
 Profile loading must be allowed by your PowerShell execution policy; PTK does
 not change that policy. Terminals started with ``-NoProfile`` do not load it.

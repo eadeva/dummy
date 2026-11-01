@@ -5,6 +5,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 from click.shell_completion import get_completion_class
@@ -272,7 +273,17 @@ def test_native_completion_protocol(project, shell, expected):
 @pytest.mark.skipif(
     not shutil.which("bash") or sys.platform == "win32", reason="requires Bash"
 )
-def test_generated_bash_script_calls_real_ptk(project, tmp_path):
+@pytest.mark.parametrize(
+    ("words", "index", "expected"),
+    [
+        ("ptk build --build-type D", 3, {"Debug"}),
+        ("ptk build --", 2, {"--build-type", "--enabled", "--no-enabled"}),
+        ("ptk build --b", 2, {"--build-type"}),
+    ],
+)
+def test_generated_bash_script_calls_real_ptk(
+    project, tmp_path, words, index, expected
+):
     executable = tmp_path / "ptk"
     executable.write_text(
         f'#!/bin/sh\nexec {shlex.quote(sys.executable)} -m ptk "$@"\n'
@@ -291,13 +302,15 @@ def test_generated_bash_script_calls_real_ptk(project, tmp_path):
             "-c",
             """
 source "$1"
-COMP_WORDS=(ptk build --build-type D)
-COMP_CWORD=3
+read -r -a COMP_WORDS <<< "$2"
+COMP_CWORD=$3
 _ptk_completion ptk
 printf '%s\n' "${COMPREPLY[@]}"
 """,
             "bash",
             str(script),
+            words,
+            str(index),
         ],
         cwd=tmp_path,
         env={**os.environ, "PATH": str(tmp_path) + os.pathsep + os.environ["PATH"]},
@@ -307,7 +320,7 @@ printf '%s\n' "${COMPREPLY[@]}"
         timeout=30,
     )
     assert result.returncode == 0, result.stderr
-    assert result.stdout.strip() == "Debug"
+    assert expected <= set(result.stdout.splitlines())
 
 
 def test_powershell_double_tab_is_explicit_and_shell_specific(tmp_path, monkeypatch):
@@ -329,3 +342,77 @@ def test_powershell_double_tab_is_explicit_and_shell_specific(tmp_path, monkeypa
 def test_job_option_names_require_an_option_prefix(project, shell):
     assert "--build-type" not in complete(["build"], "", shell)
     assert "--build-type" in complete(["build"], "--", shell)
+
+
+@pytest.mark.parametrize("index", ["1", "2", "3"])
+def test_powershell_bare_option_prefix_does_not_depend_on_ast_count(project, index):
+    result = CliRunner().invoke(
+        cli,
+        [],
+        prog_name="ptk",
+        env={
+            "_PTK_COMPLETE": "powershell_complete",
+            "COMP_WORDS": "ptk build --",
+            "COMP_CWORD": index,
+        },
+    )
+    assert result.exit_code == 0, result.output
+    assert "--build-type" in result.output
+    assert "--only-step" in result.output
+
+
+@pytest.mark.parametrize(
+    ("words", "index", "args", "incomplete"),
+    [
+        ("ptk build -- ", "3", ["build", "--"], ""),
+        ("ptk build -- --", "3", ["build", "--"], "--"),
+        ('ptk build --branch "--"', "3", ["build", "--branch"], "--"),
+        ("ptk build --b", "2", ["build"], "--b"),
+    ],
+)
+def test_powershell_prefix_correction_preserves_other_arguments(
+    monkeypatch, words, index, args, incomplete
+):
+    monkeypatch.setenv("COMP_WORDS", words)
+    monkeypatch.setenv("COMP_CWORD", index)
+    engine = get_completion_class("powershell")(cli, {}, "ptk", "_PTK_COMPLETE")
+    assert engine.get_completion_args() == (args, incomplete)
+
+
+@pytest.mark.skipif(
+    not (shutil.which("pwsh") or shutil.which("powershell")),
+    reason="requires native PowerShell",
+)
+def test_native_powershell_tab_expansion_for_bare_prefix(project, tmp_path):
+    launcher = Path(sys.executable).with_name("ptk.exe" if os.name == "nt" else "ptk")
+    if not launcher.exists():
+        pytest.skip("requires installed PTK console entry point")
+    source = CliRunner().invoke(cli, ["self-service", "completion", "powershell"])
+    assert source.exit_code == 0, source.output
+    script = tmp_path / "completion-test.ps1"
+    script.write_text(
+        source.output
+        + "\n(TabExpansion2 'ptk build --' 12).CompletionMatches.CompletionText\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        [
+            shutil.which("pwsh") or shutil.which("powershell"),
+            "-NoLogo",
+            "-NoProfile",
+            "-NonInteractive",
+            "-File",
+            str(script),
+        ],
+        cwd=tmp_path,
+        env={
+            **os.environ,
+            "PATH": str(launcher.parent) + os.pathsep + os.environ["PATH"],
+        },
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert {"--build-type", "--only-step"} <= set(result.stdout.splitlines())
