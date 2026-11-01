@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.25.1
+
+- Use the sidebar PTk wizard design for the extension details and listing icon.
+
 ## 0.25.0
 
 - Replace job filters with portable `when` conditions, shared by runtime, job discovery and workflow matrix export. Remove all legacy filter fields.
