@@ -184,3 +184,16 @@ Constraints
 
 See :need:`REQ_Sw_CI_GENERATION`, :need:`REQ_Sw_GITHUB_ARTIFACTS` and
 :need:`DD_GITHUB_ACTIONS` for the requirements and decisions.
+
+Declared outputs and dependency checks
+--------------------------------------
+
+``needs`` orders producer and consumer jobs; it does not assert that every
+configured output exists. After producer execution, missing declared outputs are
+reported as unavailable and omitted from the upload candidates. Missing outputs
+alone do not fail an otherwise successful producer job. The uploader checks the
+files included in its manifest; the downloader checks the published manifest,
+identity and payload hashes. Neither reconstructs omitted output declarations.
+A successful empty manifest can therefore result in no restored files. If an
+output is mandatory, have the producer command verify it and fail when missing.
+These runtime artifact checks are separate from planning-time ``when`` conditions.

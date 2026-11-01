@@ -67,8 +67,6 @@ def _plan(
 ) -> PlannedStep:
     label = "/".join(path)
     skip = selection_skip
-    if skip is None:
-        skip = variant_restriction(step, ctx.symbols.get("variant"))
     if skip is None and step.when:
         try:
             if not expressions.evaluate(step.when, ctx.symbols):

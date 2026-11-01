@@ -94,8 +94,8 @@ branches continue. ``continue_on_error: true`` tolerates a failed step and relea
 its dependents; the failure remains visible in logs and reports. It does not turn
 a skipped or cancelled prerequisite into a success.
 
-``when`` and variant restrictions can skip a step. Use ``when: cx`` for
-a CX-only step; ``only_cx`` is supported only on jobs. Dependents are
+``when`` can skip a step. Use ``when: cx`` for
+a CX-only step; ``only_cx``, ``only_variants`` and ``omit_variants`` are supported only on jobs. Dependents are
 then skipped too. For optional checks which must not block another branch,
 author the dependencies accordingly. ``retries`` and ``timeout`` apply to one
 step; retrying a step does not rerun its prerequisites. Python handlers must

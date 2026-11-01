@@ -367,14 +367,6 @@ class StepSpec(_Strict):
             raise ValueError("generators must be unique within a step")
         return names
 
-    only_variants: list[str] = Field(
-        description="Run this step only for these variants. Other variants skip it; this does not select a variant.",
-        default_factory=list,
-    )
-    omit_variants: list[str] = Field(
-        description="Skip this step for these variants. This does not change the job’s selected variant.",
-        default_factory=list,
-    )
     needs: list[DependencyId] = Field(
         default_factory=list,
         description="Step IDs that must succeed first. Accepts one ID or a list; omission makes the step immediately eligible.",

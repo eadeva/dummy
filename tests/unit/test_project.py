@@ -146,20 +146,24 @@ jobs:
             load(root)
 
 
-def test_step_only_cx_rejected_but_job_filter_retained(write, load):
+@pytest.mark.parametrize(
+    "field,value",
+    [("only_cx", "true"), ("only_variants", "[debug]"), ("omit_variants", "[debug]")],
+)
+def test_step_filters_rejected_but_job_filters_retained(write, load, field, value):
     root = write(
-        project_files("""
-project: {name: demo}
+        project_files(f"""
+project: {{name: demo}}
 jobs:
   build:
     only_cx: true
     steps:
       compile:
         run: echo build
-        only_cx: true
+        {field}: {value}
 """)
     )
-    with pytest.raises(ConfigError, match="unknown key 'only_cx'"):
+    with pytest.raises(ConfigError, match=f"unknown key '{field}'"):
         load(root)
 
 
@@ -167,6 +171,8 @@ def test_schema_exposes_cx_filter_only_on_jobs():
     from ptk.application.use_cases.project import ExportSchema
 
     definitions = ExportSchema().execute()["$defs"]
-    assert "only_cx" not in definitions["StepSpec"]["properties"]
+    for field in ("only_cx", "only_variants", "omit_variants"):
+        assert field not in definitions["StepSpec"]["properties"]
+        assert field in definitions["JobSpec"]["properties"]
     assert "when" in definitions["StepSpec"]["properties"]
     assert "only_cx" in definitions["JobSpec"]["properties"]

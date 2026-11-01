@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.24.2
+
+- Remove step-level `only_variants` and `omit_variants` from configuration forms. Use `when` expressions for step conditions; job filters remain supported.
+
 ## 0.24.1
 
 - Remove step-level `only_cx` from configuration forms; use `when: cx`. Keep job-level `only_cx`. Explain planning-time conditions in field help.

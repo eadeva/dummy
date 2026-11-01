@@ -251,7 +251,7 @@ def test_exported_configuration_fields_have_model_owned_help():
             assert spec.get("description", "").strip(), f"{name}.{field} has no help"
     for definition, model, field in [
         ("JobSpec", JobSpec, "only_variants"),
-        ("StepSpec", StepSpec, "only_variants"),
+        ("StepSpec", StepSpec, "when"),
         ("ParamSpec", ParamSpec, "env"),
     ]:
         assert (
@@ -259,7 +259,7 @@ def test_exported_configuration_fields_have_model_owned_help():
             == model.model_fields[field].description
         )
     assert "error" in JobSpec.model_fields["only_variants"].description
-    assert "skip" in StepSpec.model_fields["only_variants"].description
+    assert "skip" in StepSpec.model_fields["when"].description
 
 
 def test_schema_field_order_survives_sorted_serialization():

@@ -173,7 +173,7 @@ def test_job_filters_error_steps_skip_and_only_cx_hidden(tmp_path):
                 "skip": {
                     "uses": "echo",
                     "with": {"message": "never"},
-                    "omit_variants": ["debug"],
+                    "when": "variant not in ['debug']",
                 },
                 "cx": {
                     "uses": "echo",
@@ -194,7 +194,7 @@ def test_job_filters_error_steps_skip_and_only_cx_hidden(tmp_path):
     result = invoke(tmp_path, "check", "--dry-run")
     assert (
         result.exit_code == 0
-        and "omit_variants" in result.output
+        and "condition is false: variant not in" in result.output
         and "condition is false: cx" in result.output
     )
 

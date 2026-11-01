@@ -835,13 +835,19 @@ folder configuration file for new repositories.
 Execution filters
 -----------------
 
-Jobs accept ``only_cx: true``. Jobs and steps accept
-``only_variants: [debug, release]`` and ``omit_variants: [debug]``. ``only_cx`` hides a job outside CX, including the
+Jobs accept ``only_cx: true``, ``only_variants: [debug, release]`` and
+``omit_variants: [debug]``. ``only_cx`` hides a job outside CX, including the
 extension inventory, and explicit execution is rejected. Job variant restrictions
-return an error. At step level, variant filters skip the step. Use ``when: cx`` for a CX-only
-step; step-level ``only_cx`` is rejected, without a compatibility alias.
-They never select a variant. Variant filters match resolved concrete names;
-``default`` represents repositories without variants.
+return an error and filter exported matrix jobs. They never select a variant.
+Variant filters match resolved concrete names; ``default`` represents repositories
+without variants.
+
+Steps use ``when`` exclusively: ``when: cx``,
+``when: variant in ['debug', 'release']`` or ``when: variant not in ['debug']``.
+Step-level ``only_cx``, ``only_variants`` and ``omit_variants`` are rejected without
+compatibility aliases. Combine requirements in one expression with ``and``.
+Job filters remain because jobs do not support ``when`` and their restrictions
+reject execution rather than skipping an individual step.
 
 Project-owned outputs and optional caching
 ------------------------------------------
