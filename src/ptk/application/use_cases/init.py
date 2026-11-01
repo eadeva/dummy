@@ -105,8 +105,8 @@ class InitProject:
                 "help": "Run the starter jobs locally",
                 "open_report": "always",
                 "jobs": {
-                    "hello": {"job": "hello"},
-                    "build": {"job": "build", "needs": "hello"},
+                    "hello": {},
+                    "build": {"needs": "hello"},
                 },
             },
             "jobs/hello.ptk.yml": {

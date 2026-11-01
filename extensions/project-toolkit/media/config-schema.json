@@ -3224,34 +3224,21 @@
     "WorkflowJob": {
       "additionalProperties": false,
       "properties": {
-        "job": {
-          "description": "Job to invoke once in this workflow: JOB in the owner's repository or REPO:JOB. The same job name in another repository is distinct. Workspace-owned workflows require REPO:JOB.",
-          "pattern": "^(?:[a-z][a-z0-9_-]*:)?[a-z][a-z0-9_-]*$",
-          "title": "Job",
-          "type": "string",
-          "x-ptk-reference": {
-            "path": [
-              "jobs"
-            ],
-            "label": "job",
-            "allow-custom": true
-          }
-        },
         "needs": {
           "anyOf": [
             {
-              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+              "pattern": "^(?:[a-z][a-z0-9_-]*:)?[a-z][a-z0-9_-]*$",
               "type": "string"
             },
             {
               "items": {
-                "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$",
+                "pattern": "^(?:[a-z][a-z0-9_-]*:)?[a-z][a-z0-9_-]*$",
                 "type": "string"
               },
               "type": "array"
             }
           ],
-          "description": "Invocation IDs that must succeed before this job starts. Accepts one ID or a list. Omit for an immediately eligible job.",
+          "description": "Job keys that must succeed before this job starts. Accepts one ID or a list. Omit for an immediately eligible job.",
           "title": "Needs"
         },
         "params": {
@@ -3267,16 +3254,10 @@
           "type": "boolean"
         }
       },
-      "required": [
-        "job"
-      ],
       "title": "WorkflowJob",
       "type": "object",
-      "x-ptk-initial": {
-        "job": "hello"
-      },
+      "x-ptk-initial": {},
       "x-ptk-field-order": [
-        "job",
         "needs",
         "params",
         "continue_on_error"
@@ -3330,15 +3311,22 @@
           "additionalProperties": {
             "$ref": "#/$defs/WorkflowJob"
           },
-          "description": "Named job invocations. IDs are local to this workflow and are referenced by needs. YAML order controls presentation only.",
+          "description": "Jobs keyed directly by JOB or REPO:JOB. Values configure needs, params and error handling; no separate job field. Needs references these exact keys. YAML order controls presentation only.",
           "minProperties": 1,
           "propertyNames": {
-            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]*$"
+            "pattern": "^(?:[a-z][a-z0-9_-]*:)?[a-z][a-z0-9_-]*$"
           },
           "title": "Jobs",
           "type": "object",
           "x-ptk-entry-name": "job",
-          "x-ptk-graph": "job"
+          "x-ptk-graph": "job",
+          "x-ptk-key-reference": {
+            "path": [
+              "jobs"
+            ],
+            "label": "job",
+            "allow-custom": true
+          }
         }
       },
       "required": [

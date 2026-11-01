@@ -1,13 +1,10 @@
 help: Build the frontend, then run independent checks locally
 max_workers: 2
 jobs:
-  build:
-    job: build
-  unit:
-    job: test
+  build: {}
+  test:
     needs: build
-  backend:
-    job: backend:test
+  backend:test:
     needs: build
     params:
       suite: smoke

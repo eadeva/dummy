@@ -31,9 +31,11 @@ selected for their producers, including job-specific suffixes.
 Every execution job declares ``needs: [setup, ...configured_producers]``. Each
 has a separate variant matrix. A consumer waits for all variants of its producer
 jobs, then downloads only its selected producer variant. This deliberately avoids
-using a matrix job's last-finishing output as an artifact selector. Invocation
-IDs are translated to producing PTK job names. The reserved invocation name
-``setup`` is rejected during generation.
+using a matrix job's last-finishing output as an artifact selector. Workflow job keys identify producing PTK jobs directly. GitHub IDs are generated
+as ``job_`` followed by the key with ``_`` encoded as ``_u`` and ``:`` as ``_c``.
+This collision-free encoding also names per-job matrix outputs; display names
+retain the original keys. The setup job remains ``setup``, so a PTK job named
+``setup`` is allowed.
 
 Owner ``repo_variants`` mappings apply to VMR producers. Identical mapped calls
 are deduplicated; conflicting parameters/dependencies for the same producer

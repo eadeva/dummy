@@ -21,8 +21,8 @@ def test_workspace_transcript_identifies_equal_jobs_and_resolved_versions(tmp_pa
         {
             "verify": {
                 "jobs": {
-                    "first": {"job": "a:build"},
-                    "second": {"job": "b:build"},
+                    "a:build": {},
+                    "b:build": {},
                 }
             }
         },
@@ -58,8 +58,8 @@ def test_failed_and_blocked_jobs_close_with_clear_workflow_counts(tmp_path):
         workflows={
             "verify": {
                 "jobs": {
-                    "bad": {"job": "bad"},
-                    "blocked": {"job": "blocked", "needs": ["bad"]},
+                    "bad": {},
+                    "blocked": {"needs": ["bad"]},
                 }
             }
         },
@@ -83,7 +83,7 @@ def test_workflow_header_masks_prepared_metadata_before_jobs_start(tmp_path, ver
     repository(
         tmp_path,
         jobs={"build": job},
-        workflows={"verify": {"jobs": {"build": {"job": "build"}}}},
+        workflows={"verify": {"jobs": {"build": {}}}},
         extra={
             "credentials": {"api": {"providers": ["env"]}},
             "versioning": {"project": {"source": "literal", "version": "9.8.7"}},
@@ -130,11 +130,10 @@ def test_workflow_recap_retains_allowed_failures_and_exact_step_identity(
         workflows={
             "verify": {
                 "jobs": {
-                    "try-build": {
-                        "job": "bad",
+                    "bad": {
                         "continue_on_error": allowed_at == "workflow",
                     },
-                    "next": {"job": "after", "needs": ["try-build"]},
+                    "after": {"needs": ["bad"]},
                 }
             }
         },
@@ -152,7 +151,7 @@ def test_workflow_recap_retains_allowed_failures_and_exact_step_identity(
             "What failed: [debug][bad][run] | FAILED | allowed failure | exit code 3"
             in summary
         )
-        assert "invocation: try-build" in summary and "invocation: next" in summary
+        assert "invocation: bad" in summary and "invocation: after" in summary
         assert (
             "Jobs: 1 passed | 1 failed"
             if allowed_at == "workflow"
@@ -161,7 +160,7 @@ def test_workflow_recap_retains_allowed_failures_and_exact_step_identity(
 
 
 def test_workflow_recap_identifies_job_failure_before_any_step_started(tmp_path):
-    repository(tmp_path, workflows={"verify": {"jobs": {"build": {"job": "build"}}}})
+    repository(tmp_path, workflows={"verify": {"jobs": {"build": {}}}})
     lock = tmp_path / ".ptk/locks/default/build.lock"
     lock.parent.mkdir(parents=True)
     lock.write_text("held by another run")

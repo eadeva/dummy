@@ -23,9 +23,7 @@ def setup_project(root, *, collide=False):
             ),
             "other": command("from pathlib import Path; Path('workflow-ran').touch()"),
         },
-        workflows={
-            "verify": {"help": "Verify everything", "jobs": {"run": {"job": "other"}}}
-        },
+        workflows={"verify": {"help": "Verify everything", "jobs": {"other": {}}}},
     )
 
 
@@ -99,9 +97,9 @@ def test_vmr_workspace_and_member_shortcuts(tmp_path, monkeypatch):
     setup_project(tmp_path / "app")
     write_workflows(
         (tmp_path / "workflow.ptk.yml").parent / "workflows",
-        yaml.safe_load(
-            "workflows:\n  all:\n    jobs:\n      check:\n        job: app:other\n"
-        )["workflows"],
+        yaml.safe_load("workflows:\n  all:\n    jobs:\n      app:other: {}\n")[
+            "workflows"
+        ],
     )
     monkeypatch.chdir(tmp_path)
     runner = CliRunner(env={"PTK_CX": "0", "PTK_ROLE": "user"})
@@ -113,7 +111,7 @@ def test_vmr_workspace_and_member_shortcuts(tmp_path, monkeypatch):
 def test_shortcut_respects_workflow_command_policy(tmp_path):
     root = repository(
         tmp_path,
-        workflows={"verify": {"jobs": {"build": {"job": "build"}}}},
+        workflows={"verify": {"jobs": {"build": {}}}},
         extra={"command_audience": {"workflow": "maintainer"}},
     )
     assert "verify" not in invoke(root, "--help").output

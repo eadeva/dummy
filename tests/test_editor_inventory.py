@@ -32,8 +32,8 @@ def test_inventory_is_read_only_filters_roles_and_omits_secret_values(tmp_path):
     }
     data["jobs"]["go"]["params"]["token"] = {"type": "secret", "env": "EXAMPLE_TOKEN"}
     data["workflows"] = {
-        "verify": {"jobs": {"go": {"job": "go"}}},
-        "release": {"audience": "maintainer", "jobs": {"go": {"job": "go"}}},
+        "verify": {"jobs": {"go": {}}},
+        "release": {"audience": "maintainer", "jobs": {"go": {}}},
     }
     data["vars"] = {"internal": "PRIVATE_CONFIG_VALUE"}
     write_project(entry, yaml.safe_dump(data))
@@ -88,7 +88,7 @@ def test_inventory_respects_group_policies(tmp_path):
         "workflow": "maintainer",
         "maintainer.config": "maintainer",
     }
-    data["workflows"] = {"verify": {"jobs": {"go": {"job": "go"}}}}
+    data["workflows"] = {"verify": {"jobs": {"go": {}}}}
     write_project(entry, yaml.safe_dump(data))
     result = CliRunner(env={"PTK_ROLE": "user"}).invoke(
         cli, ["describe", "--json"], cwd=Path(entry).parent
@@ -115,9 +115,9 @@ def test_vmr_inventory_retains_healthy_members_when_one_is_invalid(
     _a, b = workspace(tmp_path)
     write_workflows(
         (tmp_path / "workflow.ptk.yml").parent / "workflows",
-        yaml.safe_load(
-            "workflows:\n  verify:\n    jobs:\n      build:\n        job: firmware:build\n"
-        )["workflows"],
+        yaml.safe_load("workflows:\n  verify:\n    jobs:\n      firmware:build: {}\n")[
+            "workflows"
+        ],
     )
     b.write_text(
         "not: a valid project\nrepository: {alias: bootloader, config_path: config}\n"

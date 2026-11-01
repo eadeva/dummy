@@ -120,10 +120,7 @@
     if (typeof value === "string" && resolved["x-ptk-reference"]) {
       const reference = resolved["x-ptk-reference"];
       const configuration = state.logical ? state.value : state.configurationValue;
-      const graph = path && PtkDependencies.context(schema, state.value, path, S);
-      const names = graph?.kind === "job" && path.at(-1) === "job"
-        ? PtkDependencies.availableJobs(configuration, graph.value, graph.selected)
-        : Object.keys(reference.path.reduce((value, key) => value?.[key], configuration) || {});
+      const names = Object.keys(reference.path.reduce((value, key) => value?.[key], configuration) || {});
       if (reference["allow-custom"]) {
         input = el("input", undefined, { id, type: "text", list: `${id}-choices` });
         input.value = value;

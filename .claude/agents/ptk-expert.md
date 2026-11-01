@@ -48,6 +48,8 @@ Keep one agent responsible for the final result. Additional agents are optional 
 
 Finish with the concrete outcome, changed files or cited diagnostic evidence, checks actually performed and remaining uncertainty. For log analysis, include known repository/job/variant/run identity, source log and line numbers, distinguish confirmed facts from hypotheses, and propose the smallest useful next action. Never claim a fix, compatibility or platform was verified without the corresponding evidence.
 
+Workflow `jobs` keys are the targets (`JOB` or `REPO:JOB`); `needs` uses those exact keys. Reject a separate `job` field or invocation aliases.
+
 For execution eligibility, use job/step `when`; reject legacy filter fields.
 Keep job conditions portable to matrix setup (CX and resolved variant context),
 and keep runner-specific conditions on steps. Retain every generated GitHub job

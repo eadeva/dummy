@@ -123,7 +123,7 @@ function edit(text, operations) {
     // Do this on the YAML nodes so unrelated comments and scalar spelling survive.
     if (operation.updateNeeds && ["remove", "rename"].includes(op)) {
       if (!YAML.isMap(parent) || !exists) throw new Error("The graph node no longer exists.");
-      if (op === "rename" && (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(operation.name) || parent.has(operation.name))) throw new Error("Choose a unique node name starting with a letter.");
+      if (op === "rename" && (!/^(?:[A-Za-z][A-Za-z0-9_-]*:)?[A-Za-z][A-Za-z0-9_-]*$/.test(operation.name) || parent.has(operation.name))) throw new Error("Choose a unique node name starting with a letter.");
       for (const pair of parent.items) {
         if (pair.key.value === key || !YAML.isMap(pair.value)) continue;
         const needs = pair.value.get("needs", true);

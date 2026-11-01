@@ -51,9 +51,10 @@ window.PtkGraphEditor = (() => {
     }
     const selected = entries.find(node => node.id === context.selected);
     if (selected) {
-      const detail = D.describe(context.value[selected.id]);
+      const detail = context.kind === "job" ? { kind: "job", label: "Job", command: "" } : D.describe(context.value[selected.id]);
       const summary = html("div", undefined, { class: "dependency-detail" });
-      summary.append(html("strong", `${selected.id} · ${detail.label}`), html("code", detail.command));
+      summary.append(html("strong", `${selected.id} · ${detail.label}`));
+      if (detail.command) summary.append(html("code", detail.command));
       const dependents = entries.filter(node => node.needs.includes(selected.id));
       const links = html("div", undefined, { class: "row" });
       links.append(html("span", dependents.length ? "Used by:" : "No dependent nodes yet", { class: "muted" }));
@@ -112,7 +113,7 @@ window.PtkGraphEditor = (() => {
     }
     for (const node of entries) {
       const lines = wrap(node.id, "600 14px system-ui");
-      const detail = D.describe(context.value[node.id]);
+      const detail = context.kind === "job" ? { kind: "job", label: "Job", command: "" } : D.describe(context.value[node.id]);
       const subtitle = wrap([node.label && node.label !== node.id ? node.label : "", detail.command].filter(Boolean).join(" · "), "12px system-ui");
       if (subtitle.length > 2) { subtitle.length = 2; subtitle[1] = subtitle[1].slice(0, -1) + "…"; }
       graph.setNode(node.id, { width: 224, height: 58 + lines.length * 19 + subtitle.length * 16, lines, subtitle, detail });

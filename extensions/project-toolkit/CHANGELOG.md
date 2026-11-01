@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.26.0
+
+- Workflow jobs are keyed directly by JOB or REPO:JOB, without a repeated job field. The wizard suggests unused jobs; needs and graph selection use the exact keys. Update PTK and the extension together and migrate existing workflows.
+- Explicitly adding an optional Boolean field starts with the opposite of its schema default, including nested setup fields. Existing values and whole-object defaults are unchanged.
+- Keep uses and the supported built-in operations.
+
 ## 0.25.4
 
 - Give editor actions visible button borders and backgrounds, including navigation, Edit fields, Remove, help and expandable sections. Add consistent hover/pressed feedback and graph-node hover highlighting while retaining keyboard focus and theme colors.

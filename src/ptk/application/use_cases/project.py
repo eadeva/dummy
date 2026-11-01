@@ -495,7 +495,7 @@ class ExportSchema:
             "ToolbaseSource": {"package": "tool", "version": "1.0.0"},
             "PythonSpec": {"interpreter": "cli"},
             "StepSpec": {"run": "echo Hello"},
-            "WorkflowJob": {"job": "hello"},
+            "WorkflowJob": {},
             "VersionSource": {"source": "literal", "version": "0.1.0"},
             "VersioningSpec": {"project": {}},
             "Constraint": {"expr": "true"},
@@ -540,7 +540,7 @@ class ExportSchema:
             "description"
         ] = "Start with a letter or digit; use letters, digits, underscores, dots or hyphens. Step names must be unique within their job."
         definitions["WorkflowSpec"]["properties"]["jobs"]["x-ptk-graph"] = "job"
-        definitions["WorkflowJob"]["properties"]["job"]["x-ptk-reference"] = {
+        definitions["WorkflowSpec"]["properties"]["jobs"]["x-ptk-key-reference"] = {
             "path": ["jobs"],
             "label": "job",
             "allow-custom": True,

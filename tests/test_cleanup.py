@@ -129,8 +129,8 @@ def workspace(tmp_path, mapping):
         workflows={
             "verify": {
                 "jobs": {
-                    "own": {"job": "build"},
-                    "other": {"job": "b:build", "needs": ["own"]},
+                    "build": {},
+                    "b:build": {"needs": ["build"]},
                 }
             }
         },
@@ -202,7 +202,7 @@ def test_job_filters_error_steps_skip_and_only_cx_hidden(tmp_path):
 def test_old_workflow_variant_rejected(tmp_path):
     repository(
         tmp_path,
-        workflows={"verify": {"jobs": {"bad": {"job": "build", "variant": "debug"}}}},
+        workflows={"verify": {"jobs": {"build": {"variant": "debug"}}}},
     )
     result = invoke(tmp_path, "workflow", "run", "verify", "--dry-run")
     assert result.exit_code == 2 and "variant" in result.output

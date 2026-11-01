@@ -19,8 +19,8 @@ def test_workflow_snapshots_steps_hidden_details_and_blocked_jobs(tmp_path):
         workflows={
             "verify": {
                 "jobs": {
-                    "build": {"job": "build"},
-                    "package": {"job": "package", "needs": "build"},
+                    "build": {},
+                    "package": {"needs": "build"},
                 }
             }
         },
@@ -45,7 +45,7 @@ def test_workflow_snapshots_steps_hidden_details_and_blocked_jobs(tmp_path):
     assert "project failure" in page
     assert 'data-source="log"' in page and 'data-source="execution"' in page
     assert "Expand all jobs" in page
-    child = report_file.parent / "jobs/build/report.html"
+    child = report_file.parent / "jobs/job_build/report.html"
     assert "Back to workflow verify" in child.read_text()
     log = data["children"]["build"]["steps"][0]["log_file"]
     assert str(report_file.parent) in log
@@ -68,11 +68,7 @@ def test_workspace_children_keep_equal_step_names_and_independent_variants(tmp_p
     )
     write_workflows(
         tmp_path / "workflows",
-        {
-            "verify": {
-                "jobs": {"first": {"job": "one:build"}, "second": {"job": "two:build"}}
-            }
-        },
+        {"verify": {"jobs": {"one:build": {}, "two:build": {}}}},
     )
     result = invoke(tmp_path, "workflow", "run", "verify")
     assert result.exit_code == 0, result.output

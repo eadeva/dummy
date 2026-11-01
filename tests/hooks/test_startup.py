@@ -29,9 +29,7 @@ def test_help_preview_and_cx_do_not_install(tmp_path, monkeypatch, args):
     write_workflows(
         (root / "config/workflow.ptk.yml").parent / "workflows",
         yaml.safe_load(
-            yaml.safe_dump(
-                {"workflows": {"verify": {"jobs": {"first": {"job": "build"}}}}}
-            )
+            yaml.safe_dump({"workflows": {"verify": {"jobs": {"build": {}}}}})
         )["workflows"],
     )
 
@@ -108,9 +106,9 @@ def test_vmr_workflow_checks_each_participant_before_any_job(
                         "verify": {
                             "open_report": None,
                             "jobs": {
-                                "one": {"job": "a:build"},
-                                "two": {"job": "b:build"},
-                                "again": {"job": "a:verify", "needs": ["one", "two"]},
+                                "a:build": {},
+                                "b:build": {},
+                                "a:verify": {"needs": ["a:build", "b:build"]},
                             },
                         }
                     }

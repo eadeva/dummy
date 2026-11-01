@@ -14,7 +14,7 @@ test("shipped graphical editor connects by drag and dropdown, saves real YAML, a
   const page = await browser.newPage({ viewport: { width: 1180, height: 1100 } });
   const errors = [], requests = [];
   page.on("pageerror", error => errors.push(error.message));
-  const original = "# My project\njobs:\n  build:\n    steps:\n      check: {run: check}\n      test: {run: test, needs: [check]}\n      package: {run: package, needs: [test]}\n      docs: {run: docs}\nworkflows:\n  verify:\n    jobs:\n      build: {job: build}\n      deploy: {job: other:deploy, needs: [build]}\n";
+  const original = "# My project\njobs:\n  build:\n    steps:\n      check: {run: check}\n      test: {run: test, needs: [check]}\n      package: {run: package, needs: [test]}\n      docs: {run: docs}\nworkflows:\n  verify:\n    jobs:\n      build: {}\n      other:deploy: {needs: [build]}\n";
   const h = harness(original);
   const panel = await h.resolve();
   await h.editors.open(h.document.uri, ["jobs", "build", "steps", "package"]);
@@ -87,23 +87,23 @@ test("shipped graphical editor connects by drag and dropdown, saves real YAML, a
   assert.match(await page.locator(".dependency-node").last().textContent(), /other:deploy/);
   assert.equal(await page.getByLabel("job", { exact: true }).inputValue(), "other:deploy");
   assert.equal(await page.locator("datalist option").count(), 0);
-  // Repeated calls to one repository job are diagnosed while the form stays usable.
-  h.external("workflows:\n  verify:\n    jobs:\n      check: {job: check}\n      test: {job: test}\n      package: {job: package, needs: [check, test, extension]}\n      docs: {job: docs}\n      extension: {job: check}\n");
+  // Invalid workflow dependencies are diagnosed while the form stays usable.
+  h.external("workflows:\n  verify:\n    jobs:\n      check: {}\n      test: {}\n      package: {needs: [check, test, extension]}\n      docs: {}\n      extension: {needs: missing}\n");
   await h.editors.open(h.document.uri, ["workflows", "verify", "jobs", "package"]);
-  await page.getByRole("alert").filter({ hasText: "only be chosen once" }).waitFor();
+  await page.getByRole("alert").filter({ hasText: "unknown prerequisite" }).waitFor();
   await page.getByLabel("Select job", { exact: true }).selectOption("extension");
-  assert.equal(await page.getByLabel("job", { exact: true }).inputValue(), "check");
-  await page.getByLabel("job", { exact: true }).fill("extension");
+  assert.equal(await page.getByLabel("needs", { exact: true }).inputValue(), "missing");
+  await page.getByLabel("needs", { exact: true }).fill("check");
   await page.getByRole("button", { name: "Save", exact: true }).click();
   await page.waitForFunction(() => document.querySelectorAll(".dependency-node").length === 5);
   await page.getByLabel("Select job", { exact: true }).selectOption("package");
   assert.equal(await page.locator(".dependency-node").count(), 5);
-  assert.equal(await page.locator(".dependency-edge").count(), 3);
+  assert.equal(await page.locator(".dependency-edge").count(), 4);
   assert.equal(await page.locator('.dependency-node[data-node-id="check"]').count(), 1);
   assert.equal(await page.locator('.dependency-node[data-node-id="extension"]').count(), 1);
   assert.equal(await page.getByRole("button", { name: "Remove prerequisite extension from package", exact: true }).count(), 1);
   await page.getByLabel("Select job", { exact: true }).selectOption("extension");
-  assert.equal(await page.getByLabel("job", { exact: true }).inputValue(), "extension");
+  assert.equal(await page.getByLabel("job", { exact: true }).count(), 0);
   // A conventional job file uses its installed JobSpec schema, not logical root paths.
   h.external("steps:\n  check: {run: check}\n  test: {run: test}\n");
   const schema = require("../media/config-schema.json");

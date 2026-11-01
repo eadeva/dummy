@@ -78,36 +78,39 @@ network access or credentials.
 Job invocations and dependencies
 --------------------------------
 
-``jobs`` is a nonempty mapping from unique invocation IDs to job calls. Each ID
-starts with a letter or digit and can contain letters, digits, underscores,
-hyphens and dots. It identifies one invocation within this workflow, independently
-of the target job name. For example::
+``jobs`` is a nonempty mapping keyed directly by the target job: ``JOB`` in
+its owner's repository or ``REPO:JOB`` for a configured repository. Workspace-owned
+workflows require qualified keys. Repository and job names start with lowercase
+letters and contain lowercase letters, digits, underscores or hyphens. There is
+no separate ``job`` field or invocation alias. For example::
 
    jobs:
-     compile:
-       job: my_repo:build
-     unit:
-       job: my_repo:test
-       needs: compile
+     my_repo:build: {}
+     my_repo:test:
+       needs: my_repo:build
        params:
          suite: unit
-     integration:
-       job: backend:test
-       needs: compile
-     package:
-       job: my_repo:package
-       needs: [unit, integration]
+     backend:test:
+       needs: my_repo:build
+     my_repo:package:
+       needs: [my_repo:test, backend:test]
 
-``compile`` runs first; ``unit`` and ``integration`` can run concurrently;
-``package`` starts after both succeed. ``needs`` references invocation IDs, never
-repository aliases or target job names. Each repository/job pair may appear once
-per workflow. Different repositories may expose jobs with the same name.
+The build runs first, both test jobs may run concurrently, and packaging waits
+for both. ``needs`` references the exact authored keys, including repository
+prefixes. Each repository/job pair may appear once; local and owner-qualified
+spellings of the same target cannot both occur. Different repositories may expose
+jobs with the same name. Use ``{}`` for a job without invocation options.
 
-Each invocation accepts:
+Existing workflows must move each former ``job`` value into its mapping key,
+remove that field, and replace old invocation aliases in every ``needs`` entry.
+The previous shape is rejected; there is no compatibility conversion. Update
+PTK and the extension together. Regenerate or manually update GitHub templates
+for the new encoded matrix/output IDs; generation still does not overwrite
+existing files.
 
-* ``job``: an existing job name in the owner's repository, or ``REPO:JOB``.
-  Workspace-owned workflows require the qualified form.
-* ``needs``: one invocation ID or a list of IDs. Omission or ``[]`` makes the job
+Each value accepts:
+
+* ``needs``: one job key or a list of keys. Omission or ``[]`` makes the job
   immediately eligible. All listed prerequisites must complete successfully.
 * ``params``: values for parameters already declared by the target job.
   Values use that job's types, choices and validation. Secret parameters are
@@ -150,7 +153,7 @@ that call; a previous job changing Git state does not refresh later snapshots.
 A dry run resolves configuration and plans the calls, but creates no run outputs,
 installs no tools and does not resolve credentials. As with job previews,
 custom version-discovery commands can execute and must be read-only. Workflow
-previews list invocation IDs, resolved targets and prerequisites (or ``ready``); use the target job's ``dry-run`` to
+previews list job keys, resolved targets and prerequisites (or ``ready``); use the target job's ``dry-run`` to
 inspect its individual commands.
 
 A failed or skipped prerequisite blocks dependent jobs, which are recorded as
@@ -205,7 +208,7 @@ VMR ownership
 
 At the VMR root, ``workflows/<name>.ptk.yml`` holds each workspace workflow.
 Each document contains one workflow body. Every workspace-owned invocation must use
-``job: REPO:JOB``. Only configured VMR members can be referenced; filesystem paths are not
+``REPO:JOB`` keys. Only configured VMR members can be referenced; filesystem paths are not
 repository selectors.
 
 Workspace-owned workflows have no variant configuration. They can call repositories
@@ -243,7 +246,7 @@ Repository-owned workflows honor the owner's layout/report directory; workspace
 workflows use the workspace's ``_reports``. Child report snapshots include their
 own log copies so later runs do not redirect earlier report links to newer logs. Workflow reports use the same overview, failure recap, execution details,
 diagnostics and configuration sections as job reports. Execution entries show
-invocation IDs, ``needs``, targets, status and skip reasons. Graph jobs expand
+job keys, ``needs``, targets, status and skip reasons. Graph jobs expand
 to show their recorded steps and internal edges without changing job dependencies.
 See :doc:`reports` for navigation, filtering and evidence handling.
 The JSON summary retains job results in ``jobs``, child report snapshots in
@@ -263,7 +266,7 @@ and cross-repository workflows qualify step prefixes as
 ``[variant][repository:job][step]``. Header blocks stay together while output
 from parallel jobs can alternate between them. Each summary is also one block:
 job summaries list steps, and the workflow summary lists job identities,
-variants, invocation aliases, outcomes, durations and skip reasons. The
+variants, workflow job keys, outcomes, durations and skip reasons. The
 ``What failed`` recap retains exact step identities and annotates allowed
 failures even when the workflow passes. Workspace headers identify their scope
 as ``[workspace][workflow]`` instead of inventing a shared variant; each job
@@ -283,10 +286,8 @@ Set the policy on the workflow, independently of each job's report policy::
    # config/ptk/workflows/verify.ptk.yml
    open_report: always
    jobs:
-     check:
-       job: check
+     check: {}
      test:
-       job: test
        needs: check
 
 Every workflow also writes ``diagnostics.html`` with findings from all children.

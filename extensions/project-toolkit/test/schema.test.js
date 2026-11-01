@@ -71,10 +71,10 @@ test("new jobs create a named step with required executable fields", () => {
 
 test("new workflows reference an existing job and do not invent an unavailable one", () => {
   assert.deepEqual(S.initial(schema.$defs.WorkflowSpec, schema, { configuration: { jobs: { build: {} } } }), {
-    jobs: { job: { job: "build" } },
+    jobs: { build: {} },
   });
-  assert.deepEqual(S.initial(schema.$defs.WorkflowSpec, schema, { configuration: { jobs: {} } }), { jobs: { job: { job: "" } } });
-  assert.deepEqual(S.initial({ ...schema.$defs.WorkflowJob, "x-ptk-initial": { job: "my_repo:build" } }, schema, { configuration: { jobs: {} } }), { job: "my_repo:build" });
+  assert.deepEqual(S.initial(schema.$defs.WorkflowSpec, schema, { configuration: { jobs: {} } }), { jobs: { job: {} } });
+  assert.equal(schema.$defs.WorkflowJob.properties.job, undefined);
 });
 
 test("impossible required recursion fails clearly instead of inserting invalid null", () => {

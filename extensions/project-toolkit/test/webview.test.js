@@ -159,30 +159,16 @@ test("a rejected connection does not trap the editor in a retry before the next 
   assert.equal((await h.edits())[1].operations[0].prerequisite, "test");
 });
 
-test("workflow job selection excludes duplicates and adding a reused target makes no edit", options, async t => {
-  const h = await form(t, { repository: { alias: "app" }, jobs: {check: {steps: {}}, test: {steps: {}}}, workflows: {verify: {jobs: {a: {job: "check"}, b: {job: "app:check"}}}} }, ["workflows", "verify", "jobs", "b"]);
-  assert.match(await h.page.locator(".dependency-editor [role=alert]").innerText(), /only be chosen once/);
-  assert.deepEqual(await h.page.locator("datalist option").evaluateAll(options => options.map(option => option.value)), ["test"]);
-  await h.field("job").fill("test"); await h.field("job").blur();
-  const [edit] = await h.edits();
-  h.value.workflows.verify.jobs.b.job = "test";
-  await h.state({ ack: edit.id });
-  assert.equal(await h.page.locator(".dependency-node").count(), 2);
-  await h.page.evaluate(() => window.dispatchEvent(new MessageEvent("message", { data: { type: "navigate", selection: ["workflows", "verify", "jobs"] } })));
+test("workflow creation selects the job key and rejects duplicate qualified owner targets", options, async t => {
+  const h = await form(t, { repository: { alias: "app" }, jobs: {check: {steps: {}}, test: {steps: {}}}, workflows: {verify: {jobs: {check: {}}}} }, ["workflows", "verify", "jobs"]);
   await h.page.getByRole("button", { name: "Set up new workflow job", exact: true }).click();
-  await h.page.getByLabel("New element name", { exact: true }).fill("third");
+  assert.deepEqual(await h.page.locator("datalist option").evaluateAll(options => options.map(option => option.value)), ["test"]);
+  await h.page.getByLabel("New element name", { exact: true }).fill("app:check");
   await h.page.getByRole("button", { name: "Configure", exact: true }).click();
-  await h.page.getByLabel("job", { exact: true }).fill("app:check");
   await h.page.getByRole("button", { name: "Review", exact: true }).click();
   await h.page.getByRole("button", { name: "Create", exact: true }).click();
   assert.match(await h.page.locator(".creation-wizard [role=alert]").innerText(), /only be chosen once/);
-  assert.equal((await h.edits()).length, 1);
-  await h.page.getByRole("button", { name: "Back", exact: true }).click();
-  await h.page.getByLabel("job", { exact: true }).fill("other:check");
-  await h.page.getByRole("button", { name: "Review", exact: true }).click();
-  await h.page.getByRole("button", { name: "Create", exact: true }).click();
-  assert.equal((await h.edits()).length, 2);
-  assert.equal((await h.edits())[1].operations[0].value.job, "other:check");
+  assert.equal((await h.edits()).length, 0);
 });
 
 test("editing a needs field detects a loop without leaving the configuration form", options, async t => {
@@ -473,21 +459,14 @@ test("workflow run form supports all owner variants and automatic default select
   assert.equal(message.preview, false);
 });
 
-test("workflow invocation editor exposes qualified jobs and needs without step groups", options, async t => {
-  const value = { workflows: { verify: { jobs: { compile: { job: "my_repo:build" }, test: { job: "my_repo:test", needs: "compile" } } } } };
-  const h = await form(t, value, ["workflows", "verify", "jobs", "test"]);
-  assert.equal(await h.field("job").inputValue(), "my_repo:test");
-  assert.equal(await h.field("needs").inputValue(), "compile");
+test("workflow editor exposes qualified keys and needs without a repeated job field", options, async t => {
+  const value = { workflows: { verify: { jobs: { "my_repo:build": {}, "my_repo:test": { needs: "my_repo:build" } } } } };
+  const h = await form(t, value, ["workflows", "verify", "jobs", "my_repo:test"]);
+  assert.equal(await h.field("job").count(), 0);
+  assert.equal(await h.field("needs").inputValue(), "my_repo:build");
   await h.page.getByRole("button", { name: "Help for needs", exact: true }).click();
-  assert.match(await h.page.locator(".field-help:not([hidden])").innerText(), /Invocation IDs/);
-  const optional = await h.page.getByRole("combobox", { name: "Optional field", exact: true }).locator("option").allTextContents();
-  assert.ok(optional.includes("params") && optional.includes("continue_on_error"));
-  assert.ok(!optional.some(name => ["repo", "parallel", "steps"].includes(name)));
-  await h.field("job").fill("backend_repo:run_tests");
-  await h.field("job").blur();
-  const edits = await h.edits();
-  assert.deepEqual(edits.at(-1).operations[0].path, ["workflows", "verify", "jobs", "test", "job"]);
-  assert.equal(edits.at(-1).operations[0].value, "backend_repo:run_tests");
+  assert.match(await h.page.locator(".field-help:not([hidden])").innerText(), /Job keys/);
+  assert.equal(value.workflows.verify.jobs["my_repo:test"].job, undefined);
 });
 
 test("job and step configuration explain outputs and optional cache before opt-in", options, async t => {

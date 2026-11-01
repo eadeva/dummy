@@ -21,7 +21,7 @@ def test_parallel_workflow_jobs_share_the_invocation_date(tmp_path, monkeypatch)
         workflows={
             "verify": {
                 "open_report": None,
-                "jobs": {"a": {"job": "one"}, "b": {"job": "two"}},
+                "jobs": {"one": {}, "two": {}},
             }
         },
     )

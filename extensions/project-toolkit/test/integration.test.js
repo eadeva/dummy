@@ -49,7 +49,7 @@ function project(root, alias) {
       },
       steps: {say: { uses: "echo", with: { message: "${params.message} ${params.verbose} ${params.tags}" } }},
     } },
-    workflows: { verify: { jobs: { build: { job: "build" } } } },
+    workflows: { verify: { jobs: { build: {} } } },
   });
 }
 
@@ -193,7 +193,7 @@ test("actual VMR discovery supports member jobs and workspace workflow previews"
   for (const name of ["small", "large"]) fs.unlinkSync(path.join(root, `a/variants/${name}.ptk.yml`));
   fs.writeFileSync(path.join(root, ".main.ptk.yml"), "virtual_monorepo: true\nmembers: [a, b]\n");
   fs.mkdirSync(path.join(root, "workflows"));
-  fs.writeFileSync(path.join(root, "workflows/verify.ptk.yml"), "jobs:\n  build: {job: alpha:build}\n");
+  fs.writeFileSync(path.join(root, "workflows/verify.ptk.yml"), "jobs:\n  alpha:build: {}\n");
   for (const folder of [root, path.join(root, "a"), path.join(root, "b")]) fs.writeFileSync(path.join(folder, "maintainers.ptk.yml"), JSON.stringify({ maintainers: [os.userInfo().username] }));
   const doc = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"], { PTK_ROLE: "" }));
   assert.equal(doc.mode, "workspace");
@@ -438,7 +438,7 @@ test("new configuration items from the installed schema validate with their requ
   assert.deepEqual(Object.keys(config.value.jobs["new-job"].steps), ["step", "step_2"]);
   add(["jobs", "new-job", "steps", "step", "python"], "PythonSpec");
   add(["workflows", "new-workflow"], "WorkflowSpec");
-  assert.equal(config.value.workflows["new-workflow"].jobs.job.job, "build");
+  assert.deepEqual(config.value.workflows["new-workflow"].jobs, {build: {}});
 });
 
 test("creation modes from the installed CLI write ordinary valid job files", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
@@ -467,7 +467,7 @@ test("real maintainer jobs and workflows execute through the discovered namespac
   fs.writeFileSync(path.join(root, "maintainers.ptk.yml"), JSON.stringify({ maintainers: [os.userInfo().username] }));
   const job = JSON.parse(fs.readFileSync(path.join(root, "jobs/build.ptk.yml"), "utf8"));
   fs.writeFileSync(path.join(root, "jobs/publish.ptk.yml"), JSON.stringify({ ...job, audience: "maintainer" }));
-  fs.writeFileSync(path.join(root, "workflows/release.ptk.yml"), JSON.stringify({ audience: "maintainer", open_report: null, jobs: { publish: { job: "publish" } } }));
+  fs.writeFileSync(path.join(root, "workflows/release.ptk.yml"), JSON.stringify({ audience: "maintainer", open_report: null, jobs: { publish: {} } }));
   const user = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));
   assert.equal(core.availableTargets([{ inventory: user }]).some(target => ["publish", "release"].includes(target.name)), false);
   const doc = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"], { PTK_ROLE: "" }));
@@ -507,7 +507,7 @@ test("real CLI offers PTK cache bypass for job and workflow tasks", { skip: !pyt
   writeProject(root, {
     repository: { alias: "demo", config_path: "." }, project: { name: "cache" },
     jobs: { build: { steps: { run: { uses: "echo" } } } },
-    workflows: { all: { jobs: { build: { job: "build" } } } },
+    workflows: { all: { jobs: { build: {} } } },
   });
   const inventory = core.parseInventory(invoke(root, ["describe", "--json", "--configuration"]));
   const project = inventory.projects[0];

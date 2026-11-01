@@ -238,14 +238,13 @@ Jobs and parameters
 ----------------------
 
 PTK calls executable units **jobs**. Use ``jobs:`` for definitions,
-``project.default_job`` for the default, and ``job:`` for a workflow call.
+``project.default_job`` for the default. Workflow ``jobs`` keys are directly the
+job names, optionally qualified as ``REPO:JOB``.
 For example::
 
-   name: demo
-   default_job: check
-   steps:
-     checks:
-       job: check
+   # workflows/verify.ptk.yml
+   jobs:
+     check: {}
 
 Job declarations
 ~~~~~~~~~~~~~~~~

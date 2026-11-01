@@ -390,9 +390,7 @@ def test_native_workflow_policy_dedicated_opening_and_retained_graph(
                 },
             }
         },
-        workflows={
-            "verify": {"open_report": None, "jobs": {"generate": {"job": "generate"}}}
-        },
+        workflows={"verify": {"open_report": None, "jobs": {"generate": {}}}},
         extra={
             "report_formats": ["html", "json"],
             "log_analysis": {

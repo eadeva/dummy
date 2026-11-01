@@ -10,7 +10,7 @@ IDENTIFIER = r"^[A-Za-z0-9][A-Za-z0-9_.-]*$"
 DependencyId = Annotated[str, StringConstraints(pattern=IDENTIFIER)]
 
 
-def validate_graph(nodes, label):
+def validate_graph(nodes, label, *, identifier=IDENTIFIER):
     folders = {}
     for name, node in nodes.items():
         folder = name.rstrip(".").casefold()
@@ -19,7 +19,7 @@ def validate_graph(nodes, label):
                 f"{label} IDs {folders[folder]!r} and {name!r} share an output folder on supported platforms"
             )
         folders[folder] = name
-        if not re.fullmatch(IDENTIFIER, name):
+        if not re.fullmatch(identifier, name):
             raise ValueError(f"invalid {label} ID {name!r}")
         if len(node.needs) != len(set(node.needs)):
             raise ValueError(f"{label} {name!r}: needs must not repeat an ID")

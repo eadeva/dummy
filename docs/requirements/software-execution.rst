@@ -337,7 +337,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall define workflows as named job invocations with explicit needs dependencies, resolve qualified REPO:JOB targets and owner variant mappings, reject invalid graphs before execution, schedule ready jobs within one concurrency limit, block dependents of failed or skipped prerequisites unless failure is tolerated, and reject local workflow execution in CX mode.
+   PTK shall define workflows keyed directly by JOB or REPO:JOB, without a separate job field or invocation alias, with explicit needs referencing exact job keys, resolve qualified REPO:JOB targets and owner variant mappings, reject invalid graphs before execution, schedule ready jobs within one concurrency limit, block dependents of failed or skipped prerequisites unless failure is tolerated, and reject local workflow execution in CX mode.
 
    Each repository/job pair shall occur at most once per workflow, including
    sequential calls and local/owner-qualified spellings of the same target.

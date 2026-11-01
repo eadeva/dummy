@@ -210,8 +210,8 @@ def spec():
     return WorkflowSpec.model_validate(
         {
             "jobs": {
-                "compile": {"job": "build"},
-                "check": {"job": "test", "needs": ["compile"]},
+                "build": {},
+                "test": {"needs": ["build"]},
             }
         }
     )
@@ -224,9 +224,9 @@ def test_generated_workflow_has_setup_needs_docker_and_actions():
     data = yaml.safe_load(text)
     assert set(data["on"]) == {"workflow_call"}
     assert "maintainer matrix --workflow" in data["jobs"]["setup"]["steps"][-1]["run"]
-    assert data["jobs"]["compile"]["needs"] == ["setup"]
-    assert data["jobs"]["check"]["needs"] == ["setup", "compile"]
-    steps = data["jobs"]["check"]["steps"]
+    assert data["jobs"]["job_build"]["needs"] == ["setup"]
+    assert data["jobs"]["job_test"]["needs"] == ["setup", "job_build"]
+    steps = data["jobs"]["job_test"]["steps"]
     assert [s.get("uses", "").split("/")[-1].split("@")[0] for s in steps] == [
         "checkout",
         "ptk-download",
@@ -255,8 +255,8 @@ def configure_workflow(project):
     model["workflows"] = {
         "verify": {
             "jobs": {
-                "compile": {"job": "build"},
-                "check": {"job": "test", "needs": ["compile"]},
+                "build": {},
+                "test": {"needs": ["build"]},
             }
         }
     }
@@ -269,10 +269,10 @@ def test_matrix_exports_dependencies_for_each_variant(project):
     result = invoke(root, "maintainer", "matrix", "--workflow", "verify", cx=True)
     assert result.exit_code == 0, result.output
     data = json.loads(result.output)
-    assert len(data["jobs"]["compile"]["include"]) == 2
-    for row in data["jobs"]["check"]["include"]:
+    assert len(data["jobs"]["build"]["include"]) == 2
+    for row in data["jobs"]["test"]["include"]:
         producer = row["producers"][0]
-        assert producer["invocation"] == "compile" and producer["job"] == "build"
+        assert producer["invocation"] == "job_build" and producer["job"] == "build"
         assert producer["variant"] == row["variant"]
         assert producer["upload"]["base_url"] == row["upload"]["base_url"]
     result = invoke(
@@ -285,7 +285,7 @@ def test_matrix_exports_dependencies_for_each_variant(project):
         "github",
         cx=True,
     )
-    assert result.exit_code == 0 and "matrix_compile=" in result.output
+    assert result.exit_code == 0 and "matrix_job_build=" in result.output
 
 
 def test_generation_never_overwrites_existing_workflow(project):
@@ -353,19 +353,19 @@ def test_real_verify_configuration_generates_callable_workflow(tmp_path):
     document = yaml.safe_load(
         (tmp_path / ".github/workflows/ptk-verify.yml").read_text()
     )
-    assert document["jobs"]["package"]["needs"] == [
+    assert document["jobs"]["job_package"]["needs"] == [
         "setup",
-        "check",
-        "test",
-        "extension",
+        "job_check",
+        "job_test",
+        "job_extension",
     ]
     assert set(document["jobs"]) == {
         "setup",
-        "check",
-        "test",
-        "package",
-        "docs",
-        "extension",
+        "job_check",
+        "job_test",
+        "job_package",
+        "job_docs",
+        "job_extension",
     }
 
 
@@ -415,9 +415,7 @@ def test_vmr_detection_replaces_normal_checkout(tmp_path):
     from tests.workflows.test_cli import repository
 
     (tmp_path / ".main.ptk.yml").write_text("virtual_monorepo: true\nmembers: [app]\n")
-    repository(
-        tmp_path / "app", workflows={"verify": {"jobs": {"build": {"job": "build"}}}}
-    )
+    repository(tmp_path / "app", workflows={"verify": {"jobs": {"build": {}}}})
     grant_maintainer(tmp_path)
     grant_maintainer(tmp_path / "app")
     result = invoke(tmp_path, "maintainer", "gen-workflows", "app/verify")
@@ -465,8 +463,8 @@ def test_vmr_matrix_maps_producer_variants_and_directories(tmp_path):
             model["workflows"] = {
                 "verify": {
                     "jobs": {
-                        "tool": {"job": "tools:build"},
-                        "build": {"job": "build", "needs": ["tool"]},
+                        "tools:build": {},
+                        "build": {"needs": ["tools:build"]},
                     }
                 }
             }
@@ -481,6 +479,7 @@ def test_vmr_matrix_maps_producer_variants_and_directories(tmp_path):
     assert row["variant"] == "debug" and row["working_directory"] == "app"
     assert row["producers"][0]["variant"] == "host"
     assert row["producers"][0]["working_directory"] == "tools"
+    assert row["producers"][0]["invocation"] == "job_tools_cbuild"
 
 
 def test_verify_jobs_declare_disjoint_portable_outputs():
@@ -553,23 +552,23 @@ def test_generated_jobs_remain_defined_and_guard_empty_variant_matrices():
             "verify", spec(), action_repository="eadeva/dummy", action_ref="v1"
         )
     )
-    assert set(document["jobs"]) == {"setup", "compile", "check"}
-    for name in ("compile", "check"):
+    assert set(document["jobs"]) == {"setup", "job_build", "job_test"}
+    for name in ("job_build", "job_test"):
         assert f"has_jobs_{name}" in document["jobs"]["setup"]["outputs"]
         assert f"has_jobs_{name} == 'true'" in document["jobs"][name]["if"]
         assert "fromJSON" in document["jobs"][name]["strategy"]["matrix"]
-    assert "needs.compile.result == 'success'" in document["jobs"]["check"]["if"]
+    assert "needs.job_build.result == 'success'" in document["jobs"]["job_test"]["if"]
 
 
 def test_tolerated_job_failure_does_not_tolerate_output_contract_failure():
     workflow = spec()
-    workflow.jobs["compile"].continue_on_error = True
+    workflow.jobs["build"].continue_on_error = True
     document = yaml.safe_load(
         render_workflow(
             "verify", workflow, action_repository="eadeva/dummy", action_ref="v1"
         )
     )
-    job = document["jobs"]["compile"]
+    job = document["jobs"]["job_build"]
     assert "continue-on-error" not in job
     run = next(step for step in job["steps"] if step.get("id") == "run")
     assert run["continue-on-error"] is True
@@ -577,3 +576,27 @@ def test_tolerated_job_failure_does_not_tolerate_output_contract_failure():
     assert check["if"] == "${{ !cancelled() }}"
     assert check["env"]["PTK_OUTPUTS_VALID"] == "${{ steps.run.outputs.outputs-valid }}"
     assert "exit 1" in check["run"]
+
+
+def test_qualified_workflow_keys_generate_distinct_portable_ids_and_matching_outputs():
+    from ptk.domain.workflows import workflow_job_id
+
+    keys = ["setup", "app:build", "app_cbuild", "app_build", "build"]
+    assert len({workflow_job_id(key) for key in keys}) == len(keys)
+    workflow = WorkflowSpec(
+        jobs={
+            key: {} if i == 0 else {"needs": keys[i - 1]} for i, key in enumerate(keys)
+        }
+    )
+    rendered = yaml.safe_load(
+        render_workflow(
+            "verify", workflow, action_repository="eadeva/dummy", action_ref="v1"
+        )
+    )
+    for i, key in enumerate(keys):
+        identity = workflow_job_id(key)
+        job = rendered["jobs"][identity]
+        assert job["name"] == key
+        assert job["needs"] == ["setup", *([workflow_job_id(keys[i - 1])] if i else [])]
+        assert f"matrix_{identity}" in rendered["jobs"]["setup"]["outputs"]
+        assert f"matrix_{identity}" in job["strategy"]["matrix"]

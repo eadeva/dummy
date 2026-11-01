@@ -81,7 +81,10 @@ def matrix_command(ctx, jobs, event, at, format_, workflow):
         )
     encode = lambda value: json.dumps(value, ensure_ascii=False, separators=(",", ":"))
     if format_ == "github":
-        for invocation, matrix in data.get("jobs", {}).items():
+        for target, matrix in data.get("jobs", {}).items():
+            from ...domain.workflows import workflow_job_id
+
+            invocation = workflow_job_id(target)
             click.echo("matrix_" + invocation + "=" + encode(matrix))
             click.echo(
                 "has_jobs_"

@@ -1,6 +1,4 @@
 help: Run both repositories using the selected owner variant
 jobs:
-  frontend:
-    job: test
-  backend:
-    job: backend:test
+  test: {}
+  backend:test: {}

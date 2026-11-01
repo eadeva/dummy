@@ -81,8 +81,9 @@
       const seed = JSON.stringify([modes.length ? state.mode : state.type, namedFields ? state.name : ""]);
       if (state.initialized && state.seed === seed) return;
       state.draft = modes.length ? S.stepInitial(childSpec(), schema, state.mode) : S.initial(chosenSpec(), schema, context());
+      const declared = S.effective(childSpec(), state.draft, schema);
+      if (namedFields && typeof state.draft === "boolean" && typeof declared.default === "boolean" && !(parentSpec.required || []).includes(state.name)) state.draft = !declared.default;
       if (state.draft && typeof state.draft === "object" && !Array.isArray(state.draft)) Object.assign(state.draft, structuredClone(options.defaults || {}));
-      if (options.jobChoices && !options.jobChoices.includes(state.draft.job)) state.draft.job = options.jobChoices[0] || "";
       const directory = S.resolve(childSpec(), schema)["x-ptk-directory-template"];
       if (directory) state.draft.path = directory.replace("{name}", state.name.trim());
       state.seed = seed; state.initialized = true;
@@ -172,7 +173,9 @@
           addRow.append(button(array ? `Add item to ${label}` : `Add field to ${label}`, () => {
             const key = fieldName(value, name?.value || "", resolved);
             const child = S.child(field, value, key, schema);
-            const next = modeOptions(child).length ? S.stepInitial(child, schema, mode.value) : S.initial(child, schema, { ...context(), name: key, existing: array ? value : [] });
+            let next = modeOptions(child).length ? S.stepInitial(child, schema, mode.value) : S.initial(child, schema, { ...context(), name: key, existing: array ? value : [] });
+            const declared = S.effective(child, next, schema);
+            if (!array && typeof next === "boolean" && typeof declared.default === "boolean" && !(resolved.required || []).includes(key)) next = !declared.default;
             if (array) value.push(next); else value[key] = next;
             render();
           })); row.append(addRow, fieldHelp, mode, modeHelp);
@@ -196,9 +199,14 @@
         if (!isList) {
           const name = el(namedFields ? "select" : "input", undefined, { id: "creation-name", "aria-label": namedFields ? "Field to add" : "New element name" });
           if (namedFields) fields.forEach(key => name.append(el("option", key, { value: key })));
-          name.value = state.name; if (!namedFields) name.placeholder = "Choose a descriptive name";
+          name.value = state.name; if (!namedFields) name.placeholder = options.jobChoices ? "JOB or REPO:JOB" : "Choose a descriptive name";
+          if (options.jobChoices) {
+            const choices = el("datalist", undefined, { id: "workflow-job-choices" });
+            options.jobChoices.forEach(job => choices.append(el("option", job, { value: job })));
+            name.setAttribute("list", "workflow-job-choices"); node.append(choices);
+          }
           name.addEventListener(namedFields ? "change" : "input", () => { state.name = name.value; state.error = ""; if (namedFields) { state.type = ""; state.mode = ""; render(); } });
-          node.append(el("label", namedFields ? "Field to add" : "Name", { for: "creation-name" }), name);
+          node.append(el("label", namedFields ? "Field to add" : options.jobChoices ? "Job (JOB or REPO:JOB)" : "Name", { for: "creation-name" }), name);
           if (parentSpec.propertyNames?.description) node.append(el("p", parentSpec.propertyNames.description, { class: "help" }));
         }
         const child = childSpec();

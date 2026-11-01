@@ -67,14 +67,14 @@ def test_workflow_matrix_prunes_disabled_producer_branch_but_keeps_independent_j
 
     model = read_project(root / ".main.ptk.yml")
     model["jobs"]["build"]["when"] = "variant == 'release'"
-    model["workflows"]["verify"]["jobs"]["independent"] = {"job": "cx"}
+    model["workflows"]["verify"]["jobs"]["cx"] = {}
     write_project(root / ".main.ptk.yml", model)
     result = invoke(root, "maintainer", "matrix", "--workflow", "verify", cx=True)
     assert result.exit_code == 0, result.output
     data = json.loads(result.output)["jobs"]
-    assert [r["variant"] for r in data["compile"]["include"]] == ["release"]
-    assert [r["variant"] for r in data["check"]["include"]] == ["release"]
-    assert len(data["independent"]["include"]) == 2
+    assert [r["variant"] for r in data["build"]["include"]] == ["release"]
+    assert [r["variant"] for r in data["test"]["include"]] == ["release"]
+    assert len(data["cx"]["include"]) == 2
     result = invoke(
         root,
         "-V",
@@ -88,6 +88,6 @@ def test_workflow_matrix_prunes_disabled_producer_branch_but_keeps_independent_j
         cx=True,
     )
     assert result.exit_code == 0, result.output
-    assert 'matrix_compile={"include":[]}' in result.output
-    assert "has_jobs_compile=false" in result.output
-    assert "has_jobs_independent=true" in result.output
+    assert 'matrix_job_build={"include":[]}' in result.output
+    assert "has_jobs_job_build=false" in result.output
+    assert "has_jobs_job_cx=true" in result.output

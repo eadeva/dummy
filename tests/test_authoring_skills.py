@@ -87,8 +87,8 @@ def test_installed_workflow_skill_supports_a_consumer_pipeline(tmp_path, monkeyp
             "workflows": {
                 "quality": {
                     "jobs": {
-                        "producer": {"job": "compile"},
-                        "consumer": {"job": "inspect", "needs": ["producer"]},
+                        "compile": {},
+                        "inspect": {"needs": ["compile"]},
                     }
                 }
             },
@@ -112,11 +112,11 @@ def test_installed_workflow_skill_supports_a_consumer_pipeline(tmp_path, monkeyp
         assert result.exit_code == 0, result.output
     path = tmp_path / ".github/workflows/ptk-quality.yml"
     generated = yaml.safe_load(path.read_text())
-    assert generated["jobs"]["consumer"]["needs"] == ["setup", "producer"]
+    assert generated["jobs"]["job_inspect"]["needs"] == ["setup", "job_compile"]
     assert "workflow_call" in generated["on"]
     result = runner.invoke(cli, ["maintainer", "matrix", "--workflow", "quality"])
     assert result.exit_code == 0, result.output
-    row = json.loads(result.output)["jobs"]["consumer"]["include"][0]
+    row = json.loads(result.output)["jobs"]["inspect"]["include"][0]
     assert row["variant"] is None
     assert row["producers"][0]["job"] == "compile"
     assert not (

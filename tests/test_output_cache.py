@@ -360,8 +360,8 @@ def workflow_project(root):
         "workflows": {
             "all": {
                 "jobs": {
-                    "last": {"job": "package", "needs": ["first"]},
-                    "first": {"job": "build"},
+                    "package": {"needs": ["build"]},
+                    "build": {},
                 }
             }
         },
@@ -475,7 +475,7 @@ def test_gui_launch_and_whole_job_cannot_be_cached():
 
 def test_workflow_flag_disables_nested_step_cache_even_without_job_cache(project):
     root, model = project
-    model["workflows"] = {"all": {"jobs": {"go": {"job": "go"}}}}
+    model["workflows"] = {"all": {"jobs": {"go": {}}}}
     save(root, model)
     invoke(root, "all")
     invoke(root, "all")
@@ -502,7 +502,7 @@ def test_workspace_flag_reaches_repository_jobs(project, tmp_path, args):
     (member / "source").write_text("one")
     save(member, model)
     (root / ".main.ptk.yml").write_text("virtual_monorepo: true\nmembers: [member]\n")
-    write_workflows(root / "workflows", {"all": {"jobs": {"go": {"job": "demo:go"}}}})
+    write_workflows(root / "workflows", {"all": {"jobs": {"demo:go": {}}}})
     invoke(root, "demo", "go")
     invoke(root, "demo", "go")
     assert (member / "calls").read_text() == "RCR"

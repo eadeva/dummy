@@ -707,9 +707,7 @@ def test_workflow_bazel_diagnostics_open_locally_and_retain_saved_policy(
                 "steps": {"compile": {"run": [sys.executable, "-c", code]}},
             }
         },
-        workflows={
-            "verify": {"open_report": None, "jobs": {"build": {"job": "build"}}}
-        },
+        workflows={"verify": {"open_report": None, "jobs": {"build": {}}}},
         extra={
             "report_formats": ["html", "json"],
             "log_analysis": {

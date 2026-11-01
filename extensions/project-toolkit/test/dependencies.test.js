@@ -6,11 +6,11 @@ const graph = { check: { run: "check" }, test: { run: "test", needs: ["check"] }
 
 test("workflow choices exclude used repository jobs, including qualified local aliases", () => {
   const configuration = { repository: { alias: "app" }, jobs: { check: {}, test: {}, package: {} } };
-  const calls = { one: { job: "app:check" }, two: { job: "other:test" }, three: { job: "package" } };
+  const calls = { "app:check": {}, "other:test": {}, package: {} };
   assert.deepEqual(D.availableJobs(configuration, calls), ["test"]);
-  assert.deepEqual(D.availableJobs(configuration, calls, "one"), ["check", "test"]);
-  assert.throws(() => D.validateTargets({ ...calls, four: { job: "check" } }, "app"), /only be chosen once/);
-  assert.doesNotThrow(() => D.validateTargets({ ...calls, four: { job: "test" } }, "app"));
+  assert.deepEqual(D.availableJobs(configuration, calls, "app:check"), ["check", "test"]);
+  assert.throws(() => D.validateTargets({ ...calls, check: {} }, "app"), /only be chosen once/);
+  assert.doesNotThrow(() => D.validateTargets({ ...calls, test: {} }, "app"));
 });
 
 test("dependency edits preserve joins, reject backwards connections and repair imported bad edges", () => {

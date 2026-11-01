@@ -241,7 +241,7 @@ def test_actual_step_path_selection_rules_deduplication_and_workflow(
                 }
             }
         },
-        workflows={"verify": {"jobs": {"build": {"job": "build"}}}},
+        workflows={"verify": {"jobs": {"build": {}}}},
         extra={
             "report_formats": ["html", "json"],
             "log_analysis": {

@@ -49,16 +49,16 @@ jobs:
     container:
       image: ${{ inputs.container-image }}
     outputs:
-      matrix_check: ${{ steps.matrix.outputs.matrix_check }}
-      matrix_test: ${{ steps.matrix.outputs.matrix_test }}
-      matrix_package: ${{ steps.matrix.outputs.matrix_package }}
-      matrix_docs: ${{ steps.matrix.outputs.matrix_docs }}
-      matrix_extension: ${{ steps.matrix.outputs.matrix_extension }}
-      has_jobs_check: ${{ steps.matrix.outputs.has_jobs_check }}
-      has_jobs_test: ${{ steps.matrix.outputs.has_jobs_test }}
-      has_jobs_package: ${{ steps.matrix.outputs.has_jobs_package }}
-      has_jobs_docs: ${{ steps.matrix.outputs.has_jobs_docs }}
-      has_jobs_extension: ${{ steps.matrix.outputs.has_jobs_extension }}
+      matrix_job_check: ${{ steps.matrix.outputs.matrix_job_check }}
+      matrix_job_test: ${{ steps.matrix.outputs.matrix_job_test }}
+      matrix_job_package: ${{ steps.matrix.outputs.matrix_job_package }}
+      matrix_job_docs: ${{ steps.matrix.outputs.matrix_job_docs }}
+      matrix_job_extension: ${{ steps.matrix.outputs.matrix_job_extension }}
+      has_jobs_job_check: ${{ steps.matrix.outputs.has_jobs_job_check }}
+      has_jobs_job_test: ${{ steps.matrix.outputs.has_jobs_job_test }}
+      has_jobs_job_package: ${{ steps.matrix.outputs.has_jobs_job_package }}
+      has_jobs_job_docs: ${{ steps.matrix.outputs.has_jobs_job_docs }}
+      has_jobs_job_extension: ${{ steps.matrix.outputs.has_jobs_job_extension }}
       upload_base: ${{ steps.matrix.outputs.upload_base }}
     steps:
     - uses: actions/checkout@v4
@@ -76,17 +76,19 @@ jobs:
         ptk "${args[@]}" maintainer matrix --workflow "$PTK_WORKFLOW" --format github >> "$GITHUB_OUTPUT"
 
         '
-  check:
+  job_check:
+    name: check
     runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.container-image }}
     needs:
     - setup
-    if: ${{ !cancelled() && needs.setup.result == 'success' && needs.setup.outputs.has_jobs_check == 'true' }}
+    if: ${{ !cancelled() && needs.setup.result == 'success' && needs.setup.outputs.has_jobs_job_check == 'true'
+      }}
     strategy:
       fail-fast: false
       max-parallel: 2
-      matrix: ${{ fromJSON(needs.setup.outputs.matrix_check) }}
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix_job_check) }}
     steps:
     - uses: actions/checkout@v4
     - name: Run PTK job
@@ -110,17 +112,18 @@ jobs:
         uploads-json: ${{ steps.run.outputs.uploads-json }}
         working-directory: ${{ matrix.working_directory }}
         additional_properties: ${{ inputs.additional-properties }}
-  test:
+  job_test:
+    name: test
     runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.container-image }}
     needs:
     - setup
-    if: ${{ !cancelled() && needs.setup.result == 'success' && needs.setup.outputs.has_jobs_test == 'true' }}
+    if: ${{ !cancelled() && needs.setup.result == 'success' && needs.setup.outputs.has_jobs_job_test == 'true' }}
     strategy:
       fail-fast: false
       max-parallel: 2
-      matrix: ${{ fromJSON(needs.setup.outputs.matrix_test) }}
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix_job_test) }}
     steps:
     - uses: actions/checkout@v4
     - name: Run PTK job
@@ -144,21 +147,23 @@ jobs:
         uploads-json: ${{ steps.run.outputs.uploads-json }}
         working-directory: ${{ matrix.working_directory }}
         additional_properties: ${{ inputs.additional-properties }}
-  package:
+  job_package:
+    name: package
     runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.container-image }}
     needs:
     - setup
-    - check
-    - test
-    - extension
-    if: ${{ !cancelled() && needs.setup.result == 'success' && needs.setup.outputs.has_jobs_package == 'true' &&
-      needs.check.result == 'success' && needs.test.result == 'success' && needs.extension.result == 'success' }}
+    - job_check
+    - job_test
+    - job_extension
+    if: ${{ !cancelled() && needs.setup.result == 'success' && needs.setup.outputs.has_jobs_job_package == 'true'
+      && needs.job_check.result == 'success' && needs.job_test.result == 'success' && needs.job_extension.result
+      == 'success' }}
     strategy:
       fail-fast: false
       max-parallel: 2
-      matrix: ${{ fromJSON(needs.setup.outputs.matrix_package) }}
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix_job_package) }}
     steps:
     - uses: actions/checkout@v4
     - name: Download producer outputs
@@ -190,17 +195,18 @@ jobs:
         uploads-json: ${{ steps.run.outputs.uploads-json }}
         working-directory: ${{ matrix.working_directory }}
         additional_properties: ${{ inputs.additional-properties }}
-  docs:
+  job_docs:
+    name: docs
     runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.container-image }}
     needs:
     - setup
-    if: ${{ !cancelled() && needs.setup.result == 'success' && needs.setup.outputs.has_jobs_docs == 'true' }}
+    if: ${{ !cancelled() && needs.setup.result == 'success' && needs.setup.outputs.has_jobs_job_docs == 'true' }}
     strategy:
       fail-fast: false
       max-parallel: 2
-      matrix: ${{ fromJSON(needs.setup.outputs.matrix_docs) }}
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix_job_docs) }}
     steps:
     - uses: actions/checkout@v4
     - name: Run PTK job
@@ -224,18 +230,19 @@ jobs:
         uploads-json: ${{ steps.run.outputs.uploads-json }}
         working-directory: ${{ matrix.working_directory }}
         additional_properties: ${{ inputs.additional-properties }}
-  extension:
+  job_extension:
+    name: extension
     runs-on: ${{ inputs.runner }}
     container:
       image: ${{ inputs.container-image }}
     needs:
     - setup
-    if: ${{ !cancelled() && needs.setup.result == 'success' && needs.setup.outputs.has_jobs_extension == 'true'
+    if: ${{ !cancelled() && needs.setup.result == 'success' && needs.setup.outputs.has_jobs_job_extension == 'true'
       }}
     strategy:
       fail-fast: false
       max-parallel: 2
-      matrix: ${{ fromJSON(needs.setup.outputs.matrix_extension) }}
+      matrix: ${{ fromJSON(needs.setup.outputs.matrix_job_extension) }}
     steps:
     - uses: actions/checkout@v4
     - name: Run PTK job

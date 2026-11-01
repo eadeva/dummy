@@ -93,7 +93,10 @@
         while (Object.keys(value).length < (spec.minProperties || 0)) {
           const unused = [...Object.keys(spec.properties || {}), ...(spec.propertyNames?.enum || [])].find(key => !Object.hasOwn(value, key));
           if (!unused && spec.additionalProperties === false) throw new Error("The schema cannot supply enough required fields.");
-          const key = unused || uniqueName(spec["x-ptk-entry-name"] || "item", new Set(Object.keys(value)));
+          const keyReference = spec["x-ptk-key-reference"];
+          const targets = keyReference?.path.reduce((value, key) => value?.[key], context.configuration);
+          const target = Object.keys(targets || {}).find(key => !Object.hasOwn(value, key));
+          const key = unused || target || uniqueName(spec["x-ptk-entry-name"] || "item", new Set(Object.keys(value)));
           value[key] = create(spec.properties?.[key] || spec.additionalProperties, undefined, depth + 1);
         }
         return value;

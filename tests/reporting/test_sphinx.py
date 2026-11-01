@@ -272,7 +272,7 @@ def test_workflow_build_discovery_hidden_steps_and_retained_history(tmp_path):
                 }
             }
         },
-        workflows={"verify": {"jobs": {"docs": {"job": "docs"}}}},
+        workflows={"verify": {"jobs": {"docs": {}}}},
         extra={
             "layout": {"builds": "custom builds"},
             "report_formats": ["html", "json"],
@@ -285,7 +285,7 @@ def test_workflow_build_discovery_hidden_steps_and_retained_history(tmp_path):
     workflow_data = json.loads(workflow.read_text())
     [doc] = workflow_data["children"]["docs"]["sphinx"]
     assert doc["step"] == "sphinx" and len(doc["needs"]) == 3
-    assert str(workflow.parent / "jobs/docs/inputs") in doc["needs_file"]
+    assert str(workflow.parent / "jobs/job_docs/inputs") in doc["needs_file"]
     assert Path(doc["needs_file"]).is_file()
     assert "custom builds" in doc["docs_index"]
     job = json.loads((root / "_reports/default/docs/report.json").read_text())

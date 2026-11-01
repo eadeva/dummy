@@ -2,14 +2,12 @@ help: Run check, test and package in order, alongside documentation
 open_report: always
 max_workers: 2
 jobs:
-  check:
-    job: check
-  test:
-    job: test
+  check: {}
+  test: {}
   package:
-    job: package
-    needs: [ "check", "test", "extension" ]
-  docs:
-    job: docs
-  extension:
-    job: extension
+    needs:
+    - check
+    - test
+    - extension
+  docs: {}
+  extension: {}

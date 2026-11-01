@@ -527,3 +527,18 @@ false and requires explicit ``outputs`` when enabled. Field help explains path
 resolution and roots that always run. Job/workflow parameter forms and saved
 tasks expose ``--no-cache-ptk`` to bypass PTK reuse throughout the invocation.
 See :doc:`output-reuse` for complete behavior.
+
+Workflow targets and explicit Boolean fields
+--------------------------------------------
+
+Workflow ``jobs`` entries use the target name as their key: ``JOB`` or
+``REPO:JOB``. The wizard suggests unused local jobs and accepts qualified
+cross-repository names. No separate ``job`` field is configured. Dependencies
+use these exact keys, and renaming an entry changes its target and updates
+sibling ``needs`` references.
+
+Explicitly adding an optional Boolean field starts with the opposite of its
+schema default: adding ``cache`` (default false) starts at true. A default-true
+field starts at false. Review or change the value before creating it. Whole-object
+initialization and required-field defaults are unchanged. Fields without a
+Boolean default keep the ordinary initial value.

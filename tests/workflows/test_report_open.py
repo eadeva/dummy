@@ -43,10 +43,8 @@ def invoke(write):
                 "Path(os.environ['PTK_STEP_REPORTS_DIR'], 'tests.xml').write_text("
                 "'<testsuite><testcase name=\"bad\"><failure/></testcase></testsuite>')"
             )
-        call = {"job": "missing" if invalid else "check"}
-        workflow = {
-            "jobs": {"check": {**call, "continue_on_error": outcome == "tolerated"}}
-        }
+        target = "missing" if invalid else "check"
+        workflow = {"jobs": {target: {"continue_on_error": outcome == "tolerated"}}}
         if policy != "default":
             workflow["open_report"] = policy
         root = write(
@@ -172,7 +170,7 @@ def test_cancellation_alone_is_not_an_error(
 
 def test_invalid_workflow_report_policy_is_rejected():
     with pytest.raises(ValidationError):
-        WorkflowSpec(open_report="sometimes", jobs={"check": {"job": "check"}})
+        WorkflowSpec(open_report="sometimes", jobs={"check": {}})
 
 
 @pytest.mark.parametrize(
@@ -205,9 +203,7 @@ def test_explicit_workflow_report_opens_latest_aggregate_only(
 
     root = repository(
         tmp_path,
-        workflows={
-            "verify": {"open_report": None, "jobs": {"build": {"job": "build"}}}
-        },
+        workflows={"verify": {"open_report": None, "jobs": {"build": {}}}},
         extra={
             "variants": {"default": "small", "variants": {"small": {}, "large": {}}},
             **({"layout": {"reports": "custom-reports"}} if custom else {}),
@@ -246,16 +242,16 @@ def test_workspace_report_respects_owner_and_member_report_policy(
     repository(
         tmp_path / "a",
         alias="alpha",
-        workflows={"verify": {"jobs": {"build": {"job": "build"}}}},
+        workflows={"verify": {"jobs": {"build": {}}}},
     )
     (tmp_path / ".main.ptk.yml").write_text(
         "virtual_monorepo: true\nmembers: [a]\n", encoding="utf-8"
     )
     write_workflows(
         (tmp_path / "workflow.ptk.yml").parent / "workflows",
-        yaml.safe_load(
-            "workflows:\n  verify:\n    jobs:\n      build:\n        job: alpha:build\n"
-        )["workflows"],
+        yaml.safe_load("workflows:\n  verify:\n    jobs:\n      alpha:build: {}\n")[
+            "workflows"
+        ],
     )
     monkeypatch.chdir(tmp_path)
     runner = CliRunner(env={"PTK_ROLE": "user", "PTK_CX": "0"})

@@ -18,7 +18,7 @@ def prepare(node, invocation):
     return "app", SimpleNamespace(
         project=SimpleNamespace(root=Path(".")),
         plan=SimpleNamespace(
-            variant=None, job=node.job, walk=list, outputs=[], skip_reason=None
+            variant=None, job=invocation, walk=list, outputs=[], skip_reason=None
         ),
     )
 
@@ -32,10 +32,10 @@ def plan(jobs, **options):
 def test_diamond_overlaps_siblings_and_waits_for_both_before_join():
     prepared = plan(
         {
-            "join": {"job": "join", "needs": ["left", "right"]},
-            "left": {"job": "left", "needs": "root"},
-            "right": {"job": "right", "needs": "root"},
-            "root": {"job": "root"},
+            "join": {"needs": ["left", "right"]},
+            "left": {"needs": "root"},
+            "right": {"needs": "root"},
+            "root": {},
         },
         max_workers=2,
     )
@@ -61,9 +61,9 @@ def test_diamond_overlaps_siblings_and_waits_for_both_before_join():
 def test_ready_dependent_starts_without_waiting_for_unrelated_branch():
     prepared = plan(
         {
-            "fast": {"job": "fast"},
-            "slow": {"job": "slow"},
-            "dependent": {"job": "dependent", "needs": "fast"},
+            "fast": {},
+            "slow": {},
+            "dependent": {"needs": "fast"},
         },
         max_workers=2,
     )
@@ -80,7 +80,7 @@ def test_ready_dependent_starts_without_waiting_for_unrelated_branch():
 
 
 def test_worker_limit_bounds_ready_jobs():
-    prepared = plan({name: {"job": name} for name in "abcd"}, max_workers=2)
+    prepared = plan({name: {} for name in "abcd"}, max_workers=2)
     barrier, lock = threading.Barrier(2), threading.Lock()
     active = maximum = 0
 
@@ -102,10 +102,10 @@ def test_worker_limit_bounds_ready_jobs():
 def test_unsuccessful_prerequisite_blocks_its_chain_but_not_independent_jobs(outcome):
     prepared = plan(
         {
-            "broken": {"job": "broken"},
-            "child": {"job": "child", "needs": "broken"},
-            "grandchild": {"job": "grandchild", "needs": "child"},
-            "independent": {"job": "independent"},
+            "broken": {},
+            "child": {"needs": "broken"},
+            "grandchild": {"needs": "child"},
+            "independent": {},
         }
     )
     calls = []
@@ -124,8 +124,8 @@ def test_unsuccessful_prerequisite_blocks_its_chain_but_not_independent_jobs(out
 def test_tolerated_failure_releases_dependents_and_retains_failed_report():
     prepared = plan(
         {
-            "broken": {"job": "broken", "continue_on_error": True},
-            "next": {"job": "next", "needs": "broken"},
+            "broken": {"continue_on_error": True},
+            "next": {"needs": "broken"},
         }
     )
     result = RunWorkflow().execute(
@@ -143,9 +143,9 @@ def test_tolerated_failure_releases_dependents_and_retains_failed_report():
 def test_cancel_reaches_active_job_and_prevents_queued_and_dependent_calls():
     prepared = plan(
         {
-            "first": {"job": "first", "continue_on_error": True},
-            "queued": {"job": "queued"},
-            "dependent": {"job": "dependent", "needs": "first"},
+            "first": {"continue_on_error": True},
+            "queued": {},
+            "dependent": {"needs": "first"},
         },
         max_workers=1,
     )
@@ -166,7 +166,7 @@ def test_cancel_reaches_active_job_and_prevents_queued_and_dependent_calls():
 
 
 def test_pre_cancelled_workflow_never_launches_jobs():
-    prepared = plan({"one": {"job": "one"}})
+    prepared = plan({"one": {}})
     cancel = Cancelled()
     cancel.set()
     result = RunWorkflow().execute(
@@ -179,7 +179,7 @@ def test_run_error_becomes_failed_result_with_reason():
     def run(*_):
         raise PtkError("job lock held")
 
-    result = RunWorkflow().execute(plan({"one": {"job": "one"}}), run, Cancelled())
+    result = RunWorkflow().execute(plan({"one": {}}), run, Cancelled())
     assert result.status == Status.FAILED
     assert result.jobs[0].message == "job lock held"
 
@@ -187,9 +187,9 @@ def test_run_error_becomes_failed_result_with_reason():
 def test_transitive_dependencies_order_distinct_jobs_even_in_reverse_yaml_order():
     prepared = plan(
         {
-            "again": {"job": "package", "needs": "middle"},
-            "middle": {"job": "test", "needs": "first"},
-            "first": {"job": "build"},
+            "package": {"needs": "test"},
+            "test": {"needs": "build"},
+            "build": {},
         }
     )
     calls = []
@@ -199,17 +199,21 @@ def test_transitive_dependencies_order_distinct_jobs_even_in_reverse_yaml_order(
         return CallOutcome(Status.PASSED)
 
     RunWorkflow().execute(prepared, run, Cancelled())
-    assert calls == ["first", "middle", "again"]
+    assert calls == ["build", "test", "package"]
 
 
 def test_repeated_jobs_are_rejected_even_with_one_worker():
-    with pytest.raises(ValidationError, match="only be chosen once per workflow"):
-        plan({"a": {"job": "build"}, "b": {"job": "build"}}, max_workers=1)
+    with pytest.raises(ValueError, match="only be chosen once per workflow"):
+        WorkflowSpec(
+            jobs={"build": {}, "app:build": {}}, max_workers=1
+        ).validate_job_targets("app")
 
 
 def test_repeated_jobs_remain_invalid_when_ordered():
-    with pytest.raises(ValidationError, match="only be chosen once per workflow"):
-        WorkflowSpec(jobs={"a": {"job": "build"}, "b": {"job": "build", "needs": "a"}})
+    with pytest.raises(ValueError, match="only be chosen once per workflow"):
+        WorkflowSpec(
+            jobs={"app:build": {}, "build": {"needs": "app:build"}}
+        ).validate_job_targets("app")
 
 
 def test_local_and_qualified_owner_job_are_one_identity():
@@ -223,21 +227,15 @@ def test_local_and_qualified_owner_job_are_one_identity():
         PtkConfig.model_validate(
             {
                 **common,
-                "workflows": {
-                    "verify": {
-                        "jobs": {"a": {"job": "build"}, "b": {"job": "app:build"}}
-                    }
-                },
+                "workflows": {"verify": {"jobs": {"build": {}, "app:build": {}}}},
             }
         )
     config = PtkConfig.model_validate(
         {
             **common,
             "workflows": {
-                "verify": {
-                    "jobs": {"a": {"job": "build"}, "b": {"job": "other:build"}}
-                },
-                "another": {"jobs": {"a": {"job": "build"}}},
+                "verify": {"jobs": {"build": {}, "other:build": {}}},
+                "another": {"jobs": {"build": {}}},
             },
         }
     )
@@ -247,18 +245,17 @@ def test_local_and_qualified_owner_job_are_one_identity():
 @pytest.mark.parametrize(
     "jobs,message",
     [
-        ({"a": {"job": "build", "needs": "missing"}}, "unknown invocation 'missing'"),
-        ({"a": {"job": "build", "needs": "build"}}, "unknown invocation 'build'"),
-        ({"a": {"job": "build", "needs": "a"}}, "cannot need itself"),
+        ({"build": {"needs": "missing"}}, "unknown invocation 'missing'"),
+        ({"build": {"needs": "build"}}, "cannot need itself"),
         (
-            {"a": {"job": "a", "needs": ["b", "b"]}, "b": {"job": "b"}},
+            {"a": {"needs": ["b", "b"]}, "b": {}},
             "must not repeat",
         ),
         (
             {
-                "a": {"job": "a", "needs": "c"},
-                "b": {"job": "b", "needs": "a"},
-                "c": {"job": "c", "needs": "b"},
+                "a": {"needs": "c"},
+                "b": {"needs": "a"},
+                "c": {"needs": "b"},
             },
             "a -> b -> c -> a",
         ),
@@ -273,14 +270,14 @@ def test_invalid_graphs_are_rejected_when_loading(jobs, message):
     "value",
     [
         {"steps": {"build": {"run": "build"}}},
-        {"parallel": True, "jobs": {"build": {"job": "build"}}},
-        {"jobs": {"build": {"job": "build", "repo": "app"}}},
+        {"parallel": True, "jobs": {"build": {}}},
+        {"jobs": {"build": {"repo": "app"}}},
         {"jobs": {"group": {"steps": {"build": {"run": "build"}}}}},
         {"jobs": {"build": "build"}},
         {"jobs": {}},
-        {"jobs": {"../escape": {"job": "build"}}},
-        {"jobs": {"build": {"job": "repo:other:build"}}},
-        {"jobs": {"build": {"job": "build", "needs": None}}},
+        {"jobs": {"build": {"job": "build"}}},
+        {"jobs": {"repo:other:build": {}}},
+        {"jobs": {"build": {"needs": None}}},
     ],
 )
 def test_invalid_and_removed_workflow_shapes_are_rejected(value):
@@ -291,8 +288,8 @@ def test_invalid_and_removed_workflow_shapes_are_rejected(value):
 def test_required_output_failure_blocks_workflow_consumer_even_if_tolerated():
     prepared = plan(
         {
-            "producer": {"job": "produce", "continue_on_error": True},
-            "consumer": {"job": "consume", "needs": "producer"},
+            "produce": {"continue_on_error": True},
+            "consume": {"needs": "produce"},
         }
     )
     calls = []
@@ -302,7 +299,7 @@ def test_required_output_failure_blocks_workflow_consumer_even_if_tolerated():
         return CallOutcome(Status.FAILED, output_contract_failure=True)
 
     result = RunWorkflow().execute(prepared, run, Cancelled())
-    assert calls == ["producer"]
+    assert calls == ["produce"]
     assert result.status == Status.FAILED
     assert not result.jobs[0].allowed_failure
     assert result.jobs[1].status == Status.SKIPPED
@@ -311,9 +308,9 @@ def test_required_output_failure_blocks_workflow_consumer_even_if_tolerated():
 def test_disabled_job_skips_and_blocks_only_its_branch():
     prepared = plan(
         {
-            "producer": {"job": "produce"},
-            "consumer": {"job": "consume", "needs": "producer"},
-            "independent": {"job": "other"},
+            "produce": {},
+            "consume": {"needs": "produce"},
+            "other": {},
         }
     )
     prepared.jobs[0].prepared.plan.skip_reason = "job condition is false: cx"
@@ -324,7 +321,7 @@ def test_disabled_job_skips_and_blocks_only_its_branch():
         return CallOutcome(Status.PASSED)
 
     result = RunWorkflow().execute(prepared, run, Cancelled())
-    assert calls == ["independent"]
+    assert calls == ["other"]
     assert [job.status for job in result.jobs] == [
         Status.SKIPPED,
         Status.SKIPPED,

@@ -43,11 +43,11 @@ def project(root):
                 "publish": job("private-result", "maintainer"),
             },
             "workflows": {
-                "verify": {"open_report": None, "jobs": {"build": {"job": "build"}}},
+                "verify": {"open_report": None, "jobs": {"build": {}}},
                 "release": {
                     "audience": "maintainer",
                     "open_report": None,
-                    "jobs": {"publish": {"job": "publish"}},
+                    "jobs": {"publish": {}},
                 },
             },
             "variants": {"default": "small", "variants": {"small": {}, "large": {}}},
@@ -216,7 +216,7 @@ def test_workspace_and_member_workflows_keep_their_namespace(tmp_path, monkeypat
             "ship": {
                 "audience": "maintainer",
                 "open_report": None,
-                "jobs": {"release": {"job": "demo:publish"}},
+                "jobs": {"demo:publish": {}},
             }
         },
     )

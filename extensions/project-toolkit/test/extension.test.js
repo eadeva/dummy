@@ -931,7 +931,7 @@ test("a step removed while the run form is open prevents the entire variant batc
 
 test("configuration graph trees use PTK metadata for job and workflow joins", async t => {
   const doc = inventory(), config = doc.projects[0].configuration;
-  config.value = {jobs: {build: {steps: {start: {uses: "echo"}, left: {uses: "echo", needs: "start"}, right: {uses: "echo", needs: "start"}, join: {uses: "echo", needs: ["left", "right"]}}}}, workflows: {verify: {jobs: {start: {job: "build"}, left: {job: "build", needs: "start"}, right: {job: "build", needs: "start"}, join: {job: "build", needs: ["left", "right"]}}}}};
+  config.value = {jobs: {build: {steps: {start: {uses: "echo"}, left: {uses: "echo", needs: "start"}, right: {uses: "echo", needs: "start"}, join: {uses: "echo", needs: ["left", "right"]}}}}, workflows: {verify: {jobs: {start: {}, left: {job: "build", needs: "start"}, right: {job: "build", needs: "start"}, join: {job: "build", needs: ["left", "right"]}}}}};
   const nodes = [{id: "start", needs: []}, {id: "left", needs: ["start"]}, {id: "right", needs: ["start"]}, {id: "join", needs: ["left", "right"]}];
   const projection = [{id: "start", parent: null, shared: false}, {id: "left", parent: 0, shared: false}, {id: "join", parent: 1, shared: false}, {id: "right", parent: 0, shared: false}, {id: "join", parent: 3, shared: true}];
   config.graphs = [{path: ["jobs", "build", "steps"], nodes, tree: projection}, {path: ["workflows", "verify", "jobs"], nodes: nodes.map(node => ({...node, label: "engine:build"})), tree: projection}];

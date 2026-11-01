@@ -12,6 +12,7 @@ from ...application.use_cases.variants import VariantService
 from ...application.use_cases.workflow_variants import WorkflowVariants
 from ...bootstrap import create_app
 from ...domain.errors import PtkError
+from ...domain.workflows import workflow_job_id
 from .state import CliState, guarded
 from .workflows import catalog
 
@@ -53,7 +54,7 @@ def workflow_matrix(ctx, name, *, at, event):
             call = spec.jobs[invocation]
             if any(dep not in rows for dep in call.needs):
                 continue
-            alias, _, job = call.job.partition(":")
+            alias, _, job = invocation.partition(":")
             if not job:
                 alias, job = owner, alias
             if alias in entries and alias not in owners:
@@ -106,7 +107,7 @@ def workflow_matrix(ctx, name, *, at, event):
                 ) from None
             rows[invocation] = {
                 **row,
-                "invocation": invocation,
+                "invocation": workflow_job_id(invocation),
                 "working_directory": directory,
                 "params": call.params,
                 "maintainer": "maintainer" in row["command"],
@@ -164,11 +165,7 @@ def render_workflow(
         raise PtkError("--action-repository must be OWNER/REPO")
     if not re.fullmatch(r"[A-Za-z0-9_./-]+", action_ref):
         raise PtkError("invalid --action-ref")
-    if "setup" in spec.jobs:
-        raise PtkError("workflow invocation ID 'setup' is reserved for matrix setup")
-    for key in spec.jobs:
-        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]*", key):
-            raise PtkError(f"{key!r} is not a GitHub job ID")
+    ids = {key: workflow_job_id(key) for key in spec.jobs}
 
     def action(kind):
         return f"{action_repository}/.github/actions/ptk-{kind}@{action_ref}"
@@ -197,11 +194,11 @@ def render_workflow(
         "outputs": {
             **{
                 f"matrix_{key}": "${{ steps.matrix.outputs.matrix_" + key + " }}"
-                for key in spec.jobs
+                for key in ids.values()
             },
             **{
                 f"has_jobs_{key}": "${{ steps.matrix.outputs.has_jobs_" + key + " }}"
-                for key in spec.jobs
+                for key in ids.values()
             },
             "upload_base": "${{ steps.matrix.outputs.upload_base }}",
         },
@@ -218,7 +215,9 @@ def render_workflow(
         ],
     }
     jobs = {"setup": setup}
-    for key, call in spec.jobs.items():
+    for target, call in spec.jobs.items():
+        key = ids[target]
+        dependencies = [ids[dep] for dep in call.needs]
         steps = checkout()
         if call.needs:
             steps.append(
@@ -262,12 +261,15 @@ def render_workflow(
             },
         ]
         jobs[key] = {
+            "name": target,
             **execution,
-            "needs": ["setup", *call.needs],
+            "needs": ["setup", *dependencies],
             "if": "${{ !cancelled() && needs.setup.result == 'success' && needs.setup.outputs.has_jobs_"
             + key
             + " == 'true'"
-            + "".join(" && needs." + dep + ".result == 'success'" for dep in call.needs)
+            + "".join(
+                " && needs." + dep + ".result == 'success'" for dep in dependencies
+            )
             + " }}",
             "strategy": {
                 "fail-fast": False,

@@ -116,10 +116,8 @@ In ``workflows/release.ptk.yml``:
 .. code-block:: yaml
 
    jobs:
-     build:
-       job: build
+     build: {}
      package:
-       job: package
        needs: [build]
 
 ``build`` always runs. ``package`` may reuse its existing archive if all declared

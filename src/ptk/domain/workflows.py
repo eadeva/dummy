@@ -3,30 +3,34 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
+    StringConstraints,
     field_validator,
     model_validator,
 )
 
-from .graphs import IDENTIFIER, DependencyId, ancestors, validate_graph
+from .graphs import ancestors, validate_graph
 
 NAME = r"^[a-z][a-z0-9_-]*$"
+TARGET = r"^(?:[a-z][a-z0-9_-]*:)?[a-z][a-z0-9_-]*$"
+JobTarget = Annotated[str, StringConstraints(pattern=TARGET)]
+
+
+def workflow_job_id(target: str) -> str:
+    """Injective portable ID for GitHub jobs/outputs and report directories."""
+    return "job_" + target.replace("_", "_u").replace(":", "_c")
 
 
 class WorkflowJob(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    job: str = Field(
-        description="Job to invoke once in this workflow: JOB in the owner's repository or REPO:JOB. The same job name in another repository is distinct. Workspace-owned workflows require REPO:JOB.",
-        pattern=r"^(?:[a-z][a-z0-9_-]*:)?[a-z][a-z0-9_-]*$",
-    )
-    needs: list[DependencyId] = Field(
+    needs: list[JobTarget] = Field(
         default_factory=list,
-        description="Invocation IDs that must succeed before this job starts. Accepts one ID or a list. Omit for an immediately eligible job.",
+        description="Job keys that must succeed before this job starts. Accepts one ID or a list. Omit for an immediately eligible job.",
     )
     params: dict[str, Any] = Field(
         description="Parameter values supplied to the called job.", default_factory=dict
@@ -37,7 +41,7 @@ class WorkflowJob(BaseModel):
     )
 
     @field_validator(
-        "needs", mode="before", json_schema_input_type=DependencyId | list[DependencyId]
+        "needs", mode="before", json_schema_input_type=JobTarget | list[JobTarget]
     )
     @classmethod
     def _needs(cls, value):
@@ -47,7 +51,7 @@ class WorkflowJob(BaseModel):
     @classmethod
     def _unique(cls, value):
         if len(value) != len(set(value)):
-            raise ValueError("needs must not repeat an invocation ID")
+            raise ValueError("needs must not repeat a job key")
         return value
 
 
@@ -72,21 +76,21 @@ class WorkflowSpec(BaseModel):
         le=32,
     )
     jobs: dict[str, WorkflowJob] = Field(
-        description="Named job invocations. IDs are local to this workflow and are referenced by needs. YAML order controls presentation only.",
+        description="Jobs keyed directly by JOB or REPO:JOB. Values configure needs, params and error handling; no separate job field. Needs references these exact keys. YAML order controls presentation only.",
         min_length=1,
-        json_schema_extra={"propertyNames": {"pattern": IDENTIFIER}},
+        json_schema_extra={"propertyNames": {"pattern": TARGET}},
     )
 
     @model_validator(mode="after")
     def _graph(self):
-        validate_graph(self.jobs, "workflow job")
+        validate_graph(self.jobs, "workflow job", identifier=TARGET)
         self.validate_job_targets()
         return self
 
     def validate_job_targets(self, owner: str | None = None):
         seen = {}
-        for invocation, call in self.jobs.items():
-            target = call.job if ":" in call.job else f"{owner or ''}:{call.job}"
+        for invocation in self.jobs:
+            target = invocation if ":" in invocation else f"{owner or ''}:{invocation}"
             if target in seen:
                 raise ValueError(
                     f"job {target.lstrip(':')!r} can only be chosen once per workflow; "

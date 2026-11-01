@@ -9,15 +9,14 @@
   const targetKey = (target, owner) => target.includes(":") ? target : `${owner || ""}:${target}`;
   function availableJobs(configuration, invocations, current) {
     const owner = configuration?.repository?.alias;
-    const used = new Set(Object.entries(invocations || {}).filter(([id, call]) => id !== current && typeof call?.job === "string").map(([, call]) => targetKey(call.job, owner)));
+    const used = new Set(Object.keys(invocations || {}).filter(id => id !== current).map(id => targetKey(id, owner)));
     return Object.keys(configuration?.jobs || {}).filter(job => !used.has(targetKey(job, owner)));
   }
   function validateTargets(invocations, owner) {
     const seen = new Map();
-    for (const [id, call] of Object.entries(invocations || {})) {
-      if (typeof call?.job !== "string") continue;
-      const key = targetKey(call.job, owner);
-      if (seen.has(key)) throw new Error(`Job ${call.job} can only be chosen once per workflow; ${seen.get(key)} and ${id} refer to it.`);
+    for (const id of Object.keys(invocations || {})) {
+      const key = targetKey(id, owner);
+      if (seen.has(key)) throw new Error(`Job ${id} can only be chosen once per workflow; ${seen.get(key)} and ${id} refer to it.`);
       seen.set(key, id);
     }
   }
@@ -27,7 +26,7 @@
       if (!object(item)) throw new Error(`${id}: the definition must be a mapping. Use the fields below to correct it.`);
       const needs = typeof item.needs === "string" ? [item.needs] : item.needs ?? [];
       if (item.needs === null || !Array.isArray(needs) || needs.some(need => typeof need !== "string")) throw new Error(`${id}: needs must be a name or list of names. Use the fields below to correct it.`);
-      return { id, needs, label: typeof item.job === "string" ? item.job : typeof item.title === "string" ? item.title : "" };
+      return { id, needs, label: typeof item.title === "string" ? item.title : "" };
     });
   }
   function validate(entries) {
@@ -78,7 +77,6 @@
     }
   }
   function describe(item) {
-    if (typeof item.job === "string") return { kind: "job", label: "Job", command: item.job };
     if (item.uses) return { kind: "builtin", label: "Built-in", command: item.uses };
     const command = Array.isArray(item.run) ? item.run.map(value => /\s/.test(String(value)) ? JSON.stringify(value) : String(value)).join(" ") : String(item.run || "");
     if (item.python) {

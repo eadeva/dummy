@@ -37,7 +37,6 @@ test("graph summaries distinguish declared execution forms without resolving sec
   assert.equal(D.describe({run: ["check.py"]}).label, "Python script");
   assert.equal(D.describe({uses: "echo"}).kind, "builtin");
   assert.equal(D.describe({generators: ["cmake"]}).command, "cmake");
-  assert.equal(D.describe({job: "repo:build"}).command, "repo:build");
   assert.equal(D.describe({run: ["tool", "two words"], secrets: {TOKEN: "vault.token"}}).command, 'tool "two words"');
   assert.equal(D.describe({run: [7], generators: "invalid"}).command, "7");
 });
@@ -115,9 +114,9 @@ test("list item setup appends a configured value without mutating the original l
 });
 
 test("graph-dependent defaults and unused workflow targets reach review", t => {
-  const h = setup(t, schema.$defs.WorkflowSpec.properties.jobs, {build: {job: "build"}}, {defaults: {needs: ["build"]}, jobChoices: ["test"]});
-  h.fill("creation-name", "checks"); h.click("Configure"); h.click("Review"); h.click("Create");
-  assert.deepEqual(h.writes[0], {key: "checks", value: {job: "test", needs: ["build"]}});
+  const h = setup(t, schema.$defs.WorkflowSpec.properties.jobs, {build: {}}, {defaults: {needs: ["build"]}, jobChoices: ["test"]});
+  h.fill("creation-name", "test"); h.click("Configure"); h.click("Review"); h.click("Create");
+  assert.deepEqual(h.writes[0], {key: "test", value: {needs: ["build"]}});
 });
 
 test("adding a nested step inside job setup also requires an explicit mode", t => {
@@ -131,4 +130,18 @@ test("adding a nested step inside job setup also requires an explicit mode", t =
   mode.value = "python-venv"; mode.emit("change"); h.click("Add field to steps");
   h.click("Review"); h.click("Create");
   assert.deepEqual(h.writes[0].value.steps.second.python, {venv: {requirements: [], packages: []}});
+});
+
+test("explicit optional Boolean additions invert defaults without changing initial object defaults", t => {
+  const spec = {type: "object", additionalProperties: false, properties: {cache: {type: "boolean", default: false}, enabled: {type: "boolean", default: true}}};
+  const h = setup(t, spec);
+  h.fill("creation-name", "cache", "change");
+  h.click("Configure"); h.click("Review"); h.click("Create");
+  assert.deepEqual(h.writes, [{key: "cache", value: true}]);
+  const other = setup(t, spec);
+  other.fill("creation-name", "enabled", "change");
+  other.click("Configure"); other.click("Review"); other.click("Create");
+  assert.deepEqual(other.writes, [{key: "enabled", value: false}]);
+  assert.equal(S.initial(spec.properties.cache, schema), false);
+  assert.equal(S.initial(spec.properties.enabled, schema), true);
 });

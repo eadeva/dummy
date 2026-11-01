@@ -242,7 +242,7 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False, no_cache_ptk=Fals
     bindings = {}
 
     def prepare(node, invocation):
-        prefix, separator, job_name = node.job.rpartition(":")
+        prefix, separator, job_name = invocation.rpartition(":")
         alias = prefix if separator else owner
         if alias is None:
             raise PtkError("workspace workflow calls require a qualified job: REPO:JOB")
@@ -368,7 +368,9 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False, no_cache_ptk=Fals
             files = []
             report_errors = False
             try:
-                child_target = target / "jobs" / node.id
+                from ...domain.workflows import workflow_job_id
+
+                child_target = target / "jobs" / workflow_job_id(node.id)
                 summary = snapshot_logs(run_summary(p, result), child_target)
                 report = state.app.reports.build(prepared.project, summary)
                 child_reports[node.id] = report
