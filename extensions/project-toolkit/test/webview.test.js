@@ -561,3 +561,20 @@ test("variable categories and selected rows use dark theme colours", options, as
   await h.page.getByRole('searchbox').first().press('Enter');
   assert.match(await h.field('first').inputValue(), /\$\{git.short_commit\}/);
 });
+
+test("repeated Rename clicks reuse the input and preserve the draft name", options, async t => {
+  const h = await form(t, { jobs: { build: { steps: { compile: { run: 'make' } } } } }, ['jobs', 'build', 'steps']);
+  const rename = h.page.getByRole('button', { name: 'Rename', exact: true });
+  await rename.click();
+  const input = h.page.getByLabel('New name for compile', { exact: true });
+  await input.fill('build_objects');
+  await rename.click();
+  await rename.click();
+  assert.equal(await input.count(), 1);
+  assert.equal(await input.inputValue(), 'build_objects');
+  assert.equal(await input.evaluate(node => document.activeElement === node), true);
+  assert.equal(await h.page.getByRole('button', { name: 'Apply name', exact: true }).count(), 1);
+  await h.page.getByRole('button', { name: 'Apply name', exact: true }).click();
+  assert.equal((await h.edits()).length, 1);
+  assert.equal((await h.edits())[0].operations[0].name, 'build_objects');
+});

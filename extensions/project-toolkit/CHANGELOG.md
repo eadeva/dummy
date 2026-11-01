@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.25.3
+
+- Repeated Rename clicks focus the existing name input and preserve its draft instead of adding duplicate controls.
+
 ## 0.25.2
 
 - Add direct field editing and confirmed removal for selected graph steps. Remove or rename sibling prerequisite references in the same YAML edit, preserving comments. Do not replay rejected structural edits.

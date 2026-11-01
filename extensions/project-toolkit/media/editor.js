@@ -382,7 +382,9 @@
     }
     if (canRename) {
       actions.append(button("Rename", () => {
-        const row = el("div", undefined, { className: "row" });
+        const existing = field.querySelector(".rename-row input");
+        if (existing) { existing.focus(); return; }
+        const row = el("div", undefined, { className: "row rename-row" });
         const input = el("input", undefined, { "aria-label": `New name for ${key}` });
         input.value = String(key);
         row.append(input, button("Apply name", () => afterEdits(() => change({ op: "rename", path, name: input.value.trim(), ...(nodeContext(path) ? { updateNeeds: true } : {}) }, true))));
