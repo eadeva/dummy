@@ -38,7 +38,11 @@ Ownership
 
 ``destination`` is an unchanged external base. Do not edit it in the project.
 PTK leaves it writable and records its repository, requested revision, resolved
-commit, source path and SHA-256 contents in ``.ptk-configs.lock.json``. Keep bases
+commit, source path and SHA-256 contents in ``.ptk-configs.lock.json`` inside
+``repository.config_path``. For ``config_path: config/ptk``, the lock is
+``config/ptk/.ptk-configs.lock.json``, beside ``configs.ptk.yml``. All sync, check
+and deviation-report commands use this location; no root-level fallback is read.
+Keep bases
 in a visibly named directory such as ``config/external``. Binary files remain
 byte-for-byte copies too; PTK does not inject comments into external files.
 

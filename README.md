@@ -123,7 +123,7 @@ own overlays and Ruff's `ruff.toml`. Pre-commit and clang overlays generate a
 separate output. See [external configuration ownership and synchronization](docs/guides/shared-configs.rst).
 
 `ptk maintainer sync configs --diff` previews changes; `ptk maintainer sync configs`
-applies them. Commit the copied bases, generated files and `.ptk-configs.lock.json`.
+applies them. Commit the copied bases, generated files and the `.ptk-configs.lock.json` inside `repository.config_path`.
 `ptk validate --generated` checks contents and provenance offline in CX.
 
 When pre-commit is enabled, local jobs automatically install or repair its Git

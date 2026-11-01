@@ -24,7 +24,7 @@ def destination_path(value: str) -> str:
     path = PurePosixPath(value)
     if (
         any(part.casefold() in {".git", ".ptk"} for part in path.parts)
-        or value.casefold() == ".ptk-configs.lock.json"
+        or path.name.casefold() == ".ptk-configs.lock.json"
         or value.endswith((".ptk.yml", ".ptk.yaml"))
     ):
         raise ValueError(

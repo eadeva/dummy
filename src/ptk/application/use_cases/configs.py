@@ -71,8 +71,15 @@ class SharedConfigs:
     def __init__(self, files: SharedConfigFiles):
         self._files = files
 
-    def _lock(self, root):
-        content, mode = self._files.read(root, LOCK)
+    @staticmethod
+    def lock_path(project):
+        return (
+            (project.config_root / LOCK).relative_to(project.root.resolve()).as_posix()
+        )
+
+    def _lock(self, project):
+        path = self.lock_path(project)
+        content, mode = self._files.read(project.root, path)
         if content is None:
             return {}, content, mode
         try:
@@ -91,7 +98,7 @@ class SharedConfigs:
                     raise ValueError("invalid file record")
             return data, content, mode
         except (ValueError, TypeError, AttributeError) as exc:
-            raise PtkError(f"invalid {LOCK}: {exc}") from None
+            raise PtkError(f"invalid {path}: {exc}") from None
 
     @staticmethod
     def _selection(project, names):
@@ -138,7 +145,7 @@ class SharedConfigs:
     def check(self, project, names=None):
         """Read-only offline validation; no cache creation, fetch or tag lookup."""
         groups = self._selection(project, names)
-        previous, raw, mode = self._lock(project.root)
+        previous, raw, mode = self._lock(project)
         source = project.config.configs.source
         identity = source.model_dump() if source else None
         same_source = previous.get("source") == identity
@@ -173,7 +180,12 @@ class SharedConfigs:
         if desired != recorded or result and not same_source:
             result.append(
                 ConfigFile(
-                    "lock", project.root / LOCK, raw, raw, old_mode=mode, stale=True
+                    "lock",
+                    project.root / self.lock_path(project),
+                    raw,
+                    raw,
+                    old_mode=mode,
+                    stale=True,
                 )
             )
         return result
@@ -184,7 +196,7 @@ class SharedConfigs:
 
     def _plan(self, project, names=None):
         groups = self._selection(project, names)
-        previous, raw, old_mode = self._lock(project.root)
+        previous, raw, old_mode = self._lock(project)
         source = project.config.configs.source
         identity = source.model_dump() if source else None
         if names and previous and previous.get("source") != identity:
@@ -272,7 +284,13 @@ class SharedConfigs:
         }
         content = (json.dumps(document, sort_keys=True, indent=2) + "\n").encode()
         changes.append(
-            ConfigFile("lock", project.root / LOCK, content, raw, old_mode=old_mode)
+            ConfigFile(
+                "lock",
+                project.root / self.lock_path(project),
+                content,
+                raw,
+                old_mode=old_mode,
+            )
         )
         return changes
 
@@ -292,7 +310,7 @@ class SharedConfigs:
 
     def deviations(self, project):
         """Describe local effective YAML differences using hash-verified bases only."""
-        previous, _, _ = self._lock(project.root)
+        previous, _, _ = self._lock(project)
         source = project.config.configs.source
         identity = source.model_dump() if source else None
         groups = self._selection(project, None)
@@ -379,7 +397,7 @@ class SharedConfigs:
             destination_path(output)
         except ValueError as exc:
             raise PtkError(str(exc)) from None
-        reserved = {LOCK}
+        reserved = {self.lock_path(project).casefold()}
         for spec in (spec for name, spec in project.config.configs.items()):
             for item in spec.files:
                 reserved.update(

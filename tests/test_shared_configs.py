@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 import yaml
 
@@ -166,7 +168,8 @@ def test_external_sync_retains_pristine_bases_merges_and_tracks_provenance(exter
     assert not (root / "ruff.toml").exists()
     assert (root / "config/external/ruff-base.toml").stat().st_mode & 0o200
     assert (root / "scripts/shared/hook.py").stat().st_mode & 0o111
-    lock = json.loads((root / LOCK).read_text())
+    lock = json.loads((root / "config" / LOCK).read_text())
+    assert not (root / LOCK).exists()
     assert len(lock["commit"]) == 40
     assert lock["files"]["config/external/clang-format.yaml"]["kind"] == "external-base"
     assert lock["files"][".clang-format"]["kind"] == "generated"
@@ -376,7 +379,7 @@ def test_commit_revision_and_removed_mapping_preserve_existing_files(external):
     assert (root / "config/external/ruff-base.toml").is_file()
     assert (
         "config/external/ruff-base.toml"
-        not in json.loads((root / LOCK).read_text())["files"]
+        not in json.loads((root / "config" / LOCK).read_text())["files"]
     )
     assert all(item.status == "up to date" for item in service.check(project()))
 
@@ -447,11 +450,11 @@ def test_sync_replaces_prior_read_only_copies_with_writable_files(external):
 
     root, _, _, service, _, project = external
     service.sync(project())
-    lock = json.loads((root / LOCK).read_text())
+    lock = json.loads((root / "config" / LOCK).read_text())
     for path, record in lock["files"].items():
         record["mode"] &= ~0o222
         (root / path).chmod(record["mode"])
-    (root / LOCK).write_text(json.dumps(lock))
+    (root / "config" / LOCK).write_text(json.dumps(lock))
     service.sync(project())
     assert all((root / path).stat().st_mode & 0o200 for path in lock["files"])
 
@@ -464,3 +467,30 @@ def test_report_uses_current_output_and_marks_edits(external):
     assert report["modified_base_files"] == []
     assert report["deviations"][0]["output_matches_sync"] is False
     assert "+ColumnLimit: 180" in report["deviations"][0]["diff"]
+
+
+@pytest.mark.parametrize("config_path", [".", "settings/ptk"])
+def test_lock_follows_repository_configuration_directory(external, config_path):
+    from ptk.application.use_cases.configs import LOCK
+    from tests.project_files import write_project
+
+    root, _, config, service, _, project = external
+    config["repository"]["config_path"] = config_path
+    write_project(root / ".main.ptk.yml", config)
+    service.sync(project())
+    assert (root / config_path / LOCK).is_file()
+    assert all(item.status == "up to date" for item in service.check(project()))
+    assert service.deviations(project())["modified_base_files"] == []
+    with pytest.raises(PtkError):
+        service.write_deviations(project(), (Path(config_path) / LOCK).as_posix())
+
+
+def test_root_lock_is_not_used_as_fallback(external):
+    from ptk.application.use_cases.configs import LOCK
+
+    root, _, _, service, _, project = external
+    service.sync(project())
+    (root / "config" / LOCK).rename(root / LOCK)
+    assert any(item.status != "up to date" for item in service.check(project()))
+    with pytest.raises(PtkError, match="synchronize"):
+        service.deviations(project())

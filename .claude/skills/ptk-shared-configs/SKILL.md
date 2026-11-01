@@ -9,7 +9,7 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 1. Read [external configuration ownership](../../../docs/guides/shared-configs.rst) and inspect the runtime schema with `ptk maintainer config schema`.
 2. Declare a general `source.repository` and `source.revision` plus per-group `files` mappings with `source` and `destination`. PTK ships no bases. Use an explicit version tag or full commit hash, never an invented repository or floating branch.
-3. External destinations are unchanged copies. Never edit them in the consuming project. Inspect their provenance and content hashes in `.ptk-configs.lock.json`.
+3. External destinations are unchanged copies. Never edit them in the consuming project. Inspect their provenance and content hashes in `.ptk-configs.lock.json` inside the project’s `repository.config_path` directory.
 4. For pre-commit/clang customization, author a project-owned `overlay` and a separate generated `output`. Never merge into the base. Preserve native merge semantics.
 5. For Ruff, author project-owned `ruff.toml` with native `extend` pointing to the external copy. Ruff has no overlay/generation mode.
 6. Preview `ptk maintainer sync configs --diff`, apply `ptk maintainer sync configs`, then run offline `ptk validate --generated`. There is no configs.sync step; jobs must not synchronize policy.

@@ -1179,7 +1179,7 @@ Known planned product gaps remain in
    **Decision:** Remove packaged bases and the configs.sync step. Only maintainer
    synchronization fetches one pinned source with explicit per-group mappings.
    Preserve external blobs unchanged, record provenance/content
-   hashes in a committed lock, and protect local edits. Retain pre-commit/clang
+   hashes in a committed lock inside repository.config_path, and protect local edits. Retain pre-commit/clang
    merging into separate generated outputs. Offline validation never fetches.
 
    **Consequences:** Projects must select a source and review updates explicitly.
