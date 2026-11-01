@@ -326,3 +326,29 @@ Discovery, file ownership, schema authority and workspace routing.
    case; tests provide candidate verification evidence, not acceptance.
 
    **Evidence:** ``src/ptk/application/use_cases/configs.py``; ``src/ptk/adapters/shared_configs.py``; ``tests/test_shared_configs.py``.
+
+
+.. req-sw:: Report external configuration deviations
+   :id: REQ_Sw_CONFIG_DEVIATIONS
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: under review
+   :verification_criteria: Tests verify writable synchronization, normalized YAML differences, modified-base filenames, unavailable comparisons, offline operation, destination protection and maintainer-only access.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_CONFIG
+   :tags: implemented
+
+   PTK shall leave synchronized files writable and offer a maintainer command
+   that exports JSON deviations from verified bases with a separate list of
+   modified base filenames. It shall not fetch, repair files or compare against
+   a modified base while reporting.
+
+   **Origin:** User requested removal of write protection and a maintainer JSON
+   deviation report distinguishing project changes from wrongly modified bases.
+
+   **Implementation:** Offline comparison uses the committed lock and normalized
+   current generated YAML. Project-owned Ruff inheritance remains outside scope.
+
+   **Evidence:** ``src/ptk/application/use_cases/configs.py``; ``tests/test_shared_configs.py``; ``tests/test_command_access.py``.

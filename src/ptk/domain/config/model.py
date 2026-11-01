@@ -895,7 +895,7 @@ class ConfigFileMapping(_Strict):
         description="Literal file path in the source repository, relative to its root."
     )
     destination: str = Field(
-        description="Literal destination relative to this repository. Read-only byte-for-byte copy of the external base; never edit it. An overlay produces a separate output."
+        description="Literal destination relative to this repository. Unchanged byte-for-byte copy of the external base; never edit it. An overlay produces a separate output."
     )
 
     @field_validator("source")

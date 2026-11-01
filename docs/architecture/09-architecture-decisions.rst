@@ -1178,11 +1178,11 @@ Known planned product gaps remain in
 
    **Decision:** Remove packaged bases and the configs.sync step. Only maintainer
    synchronization fetches one pinned source with explicit per-group mappings.
-   Preserve external blobs unchanged and read-only, record provenance/content
+   Preserve external blobs unchanged, record provenance/content
    hashes in a committed lock, and protect local edits. Retain pre-commit/clang
    merging into separate generated outputs. Offline validation never fetches.
 
    **Consequences:** Projects must select a source and review updates explicitly.
-   Git does not preserve read-only permissions; content checks enforce freshness
-   after checkout. The lock is reviewable provenance, not a trust authority.
+   Files remain writable; content checks enforce freshness after checkout.
+   Maintainers export deviations and modified-base filenames with configs-report. The lock is reviewable provenance, not a trust authority.
    Removed mappings leave files for project review. See :doc:`/guides/shared-configs`.

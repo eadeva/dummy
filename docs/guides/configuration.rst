@@ -349,7 +349,7 @@ with ``ptk self-service tools --dry-run``. System package managers require ``--a
 Chocolatey bootstrap is explicit. Prefer checksummed downloads.
 
 Only explicit file mappings under ``configs`` are managed. External bases are
-unchanged read-only copies; projects own overlays and ``ruff.toml``. Pre-commit
+unchanged copies; projects own overlays and ``ruff.toml``. Pre-commit
 and clang merges write separate generated outputs. See :doc:`shared-configs`
 for source pinning, ownership, maintainer synchronization and offline checks.
 

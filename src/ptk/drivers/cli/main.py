@@ -744,6 +744,27 @@ def configs_check(ctx: click.Context, names: tuple[str, ...]) -> None:
         sys.exit(1)
 
 
+@click.command("configs-report")
+@click.option(
+    "--output",
+    default="_reports/config-deviations.json",
+    show_default=True,
+    help="Repository-relative JSON report path.",
+)
+@click.pass_context
+@guarded
+def configs_report(ctx, output):
+    """Report effective deviations and modified external base files without fetching."""
+    project = _state(ctx).project()
+    report = _state(ctx).app.shared_configs.write_deviations(project, output)
+    click.echo(f"Configuration deviations: {project.root / output}")
+    click.echo(
+        f"{len(report['deviations'])} deviations, "
+        f"{len(report['modified_base_files'])} modified bases, "
+        f"{len(report['unavailable'])} unavailable comparisons"
+    )
+
+
 # --------------------------------------------------------------------------- report
 
 
@@ -1312,6 +1333,7 @@ for command in (
 for command in (
     matrix_command,
     gen_workflows,
+    configs_report,
     config_group,
     sync_command,
     version_group,

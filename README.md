@@ -118,7 +118,7 @@ visible through `ptk validate` and do not block installation.
 ## Shared configs
 
 PTK copies explicitly mapped files from a pinned external Git repository. It ships
-no base configurations. External copies remain unchanged and read-only; projects
+no base configurations. External copies remain unchanged; projects
 own overlays and Ruff's `ruff.toml`. Pre-commit and clang overlays generate a
 separate output. See [external configuration ownership and synchronization](docs/guides/shared-configs.rst).
 

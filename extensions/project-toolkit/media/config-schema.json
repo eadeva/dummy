@@ -302,7 +302,7 @@
           "type": "string"
         },
         "destination": {
-          "description": "Literal destination relative to this repository. Read-only byte-for-byte copy of the external base; never edit it. An overlay produces a separate output.",
+          "description": "Literal destination relative to this repository. Unchanged byte-for-byte copy of the external base; never edit it. An overlay produces a separate output.",
           "title": "Destination",
           "type": "string"
         }

@@ -37,14 +37,14 @@ Ownership
 ---------
 
 ``destination`` is an unchanged external base. Do not edit it in the project.
-PTK makes it read-only and records its repository, requested revision, resolved
+PTK leaves it writable and records its repository, requested revision, resolved
 commit, source path and SHA-256 contents in ``.ptk-configs.lock.json``. Keep bases
 in a visibly named directory such as ``config/external``. Binary files remain
 byte-for-byte copies too; PTK does not inject comments into external files.
 
 ``overlay`` belongs to the project. Only pre-commit, clang-format, clang-tidy and
 clangd support YAML merging. An overlay requires a separate ``output``; PTK never
-merges into the base. Generated outputs are read-only and carry provenance and
+merges into the base. Generated outputs remain writable and carry provenance and
 an instruction to edit the overlay. Maps merge recursively, lists/scalars replace,
 and null removes keys. Pre-commit merges repositories by URL and hooks by ID;
 clang-tidy combines check expressions and merges CheckOptions.
@@ -54,10 +54,69 @@ Ruff and arbitrary groups only copy files. The project authors its own
 PTK does not create or update this project file.
 
 Commit bases, overlays, generated outputs, mapping configuration and the lock.
-Git preserves executable bits but not read-only permissions: a fresh checkout may
-be writable. Offline checks therefore verify contents and executable status,
-not write permissions. Synchronization restores read-only permissions. These are
-accidental-edit protection, not a security boundary; review and CX enforce ownership.
+PTK does not apply filesystem write protection. Ownership is documented and
+checked using content hashes; a locally modified file still blocks synchronization.
+Validation ignores write permissions and checks executable status where supported.
+Synchronization writes normal writable files, including files made read-only by
+an earlier synchronization.
+
+Deviation report
+----------------
+
+Run the maintainer-only command::
+
+   ptk maintainer configs-report
+   ptk maintainer configs-report --output _reports/policy-review.json
+
+The default output is ``_reports/config-deviations.json``, relative to the repository.
+The command uses local files and the committed lock without fetching. It writes
+JSON with these sections:
+
+* ``deviations``: configured generated outputs that differ from their verified
+  bases, with group, base, overlay, output, ``output_matches_sync`` and unified diff.
+* ``modified_base_files``: only the filenames of external bases whose bytes differ
+  from their recorded hashes. No base-content diffs are included in this section.
+* ``unavailable``: missing bases/outputs, unsynchronized mappings, invalid YAML
+  or comparisons omitted because their base was modified.
+
+The report includes source/revision and the pinned commit. Differences use
+normalized YAML, ignoring comments, key ordering and formatting, including PTK's
+provenance comments. Lists retain their order. Comparisons use the current output
+on disk, not a newly merged overlay: synchronize after editing overlays to review
+new effective settings. ``output_matches_sync: false`` identifies output content
+that changed since synchronization, independently of whether that change came
+from a person or another tool.
+
+Example (diff shortened)::
+
+   {
+     "deviations": [
+       {
+         "group": "clang-format",
+         "base": "config/external/clang-format.yaml",
+         "overlay": "config/overlays/clang-format.yaml",
+         "output": ".clang-format",
+         "output_matches_sync": true,
+         "diff": "... -ColumnLimit: 100 ... +ColumnLimit: 120 ..."
+       }
+     ],
+     "modified_base_files": ["config/external/ruff-base.toml"],
+     "unavailable": [
+       {"path": "config/external/ruff-base.toml", "reason": "base modified; comparison omitted"}
+     ]
+   }
+
+Only enabled, explicitly mapped configurations are inspected. A missing file is
+reported as unavailable, not as modified. Unsynchronized source changes require
+synchronization first. PTK never uses a modified base as the reference for a diff.
+Ruff's project-owned ``ruff.toml`` and arbitrary native inheritance mechanisms are
+outside this report: PTK checks their copied bases but does not infer their
+project-specific effective configuration.
+
+An existing PTK deviation report can be replaced. Authored files and mapped bases,
+overlays or outputs cannot be report destinations. Successful report generation
+returns success even when findings exist; use ``ptk validate --generated`` for a
+freshness gate. Reporting neither repairs nor synchronizes configuration files.
 
 Updating and checking
 ---------------------

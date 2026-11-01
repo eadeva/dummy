@@ -546,3 +546,7 @@ Then ``ptk bazel-clean`` invokes native ``bazel clean`` and
 ``clean`` to a job running ``bazel build`` does not switch its subcommand.
 Native cleanup scope is controlled by the build tool and its working directory;
 it is independent of PTK's selected-job folder cleanup.
+
+``ptk maintainer configs-report [--output PATH]`` writes an offline JSON report
+of effective YAML deviations and modified external base filenames. See
+:doc:`/guides/shared-configs` for scope, output fields and limitations.

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.23.1
+
+- Clarify external base ownership without filesystem write protection in schema field help.
+
 ## 0.23.0
 
 - Describe external Git sources, pinned revisions and per-group file mappings in configuration forms. Distinguish unchanged external bases, project-owned overlays and separate generated outputs; remove the configs.sync job step.

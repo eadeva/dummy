@@ -15,6 +15,7 @@ from tests.project_files import read_project, write_project, write_workflows
 from tests.test_workspace import workspace
 
 MUTATIONS = [
+    ["maintainer", "configs-report"],
     ["maintainer", "sync", "configs"],
     ["maintainer", "sync", "configs", "--diff"],
     ["maintainer", "sync", "tasks"],

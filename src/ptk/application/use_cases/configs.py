@@ -85,7 +85,8 @@ class SharedConfigs:
                 if (
                     not isinstance(record, dict)
                     or not isinstance(record.get("sha256"), str)
-                    or record.get("mode") not in (0o444, 0o555)
+                    or not isinstance(record.get("mode"), int)
+                    or not 0 <= record["mode"] <= 0o777
                 ):
                     raise ValueError("invalid file record")
             return data, content, mode
@@ -154,8 +155,8 @@ class SharedConfigs:
                     project.root / destination,
                     None,
                     old,
-                    mode=record.get("mode", 0o444) if os.name != "nt" else 0o444,
-                    old_mode=old_mode & ~0o222 if old_mode is not None else None,
+                    mode=(record.get("mode", 0o644) & 0o111) if os.name != "nt" else 0,
+                    old_mode=old_mode & 0o111 if old_mode is not None else None,
                     expected=record.get("sha256"),
                     stale=not same_source
                     or record.get("source") != item.source
@@ -221,11 +222,11 @@ class SharedConfigs:
                     + provenance
                     + "\n"
                 ).encode() + content
-            mode = (mode if os.name != "nt" else 0o644) & ~0o222
+            mode = mode if os.name != "nt" else 0o644
             old, current_mode = self._files.read(project.root, destination)
             owned = previous.get("files", {}).get(destination)
             wanted = (digest(content), mode)
-            # Equal bytes may be adopted and made read-only on initial sync.
+            # Equal bytes may be adopted on initial sync.
             if (
                 old is not None
                 and digest(old) != wanted[0]
@@ -256,7 +257,7 @@ class SharedConfigs:
                         + (
                             f" + overlay {overlay_path}"
                             if overlay_path
-                            else " (read-only; do not edit)"
+                            else " (external base; do not edit)"
                         )
                     ],
                 )
@@ -288,3 +289,125 @@ class SharedConfigs:
                         item.mode,
                     )
             return planned
+
+    def deviations(self, project):
+        """Describe local effective YAML differences using hash-verified bases only."""
+        previous, _, _ = self._lock(project.root)
+        source = project.config.configs.source
+        identity = source.model_dump() if source else None
+        groups = self._selection(project, None)
+        if any(spec.files for spec in groups.values()) and (
+            not previous or previous.get("source") != identity
+        ):
+            raise PtkError(
+                "synchronize the configured source before reporting deviations"
+            )
+        report = {
+            "report_type": "ptk-config-deviations",
+            "schema_version": 1,
+            "source": identity,
+            "commit": previous.get("commit"),
+            "deviations": [],
+            "modified_base_files": [],
+            "unavailable": [],
+        }
+        records = previous.get("files", {})
+        for name, spec in groups.items():
+            for item in spec.files:
+                base, _ = self._files.read(project.root, item.destination)
+                record = records.get(item.destination, {})
+                reason = None
+                if record.get("source") != item.source or record.get("group") != name:
+                    reason = "mapping not synchronized"
+                elif base is None:
+                    reason = "base missing"
+                elif digest(base) != record.get("sha256"):
+                    report["modified_base_files"].append(item.destination)
+                    reason = "base modified; comparison omitted"
+                if reason:
+                    report["unavailable"].append(
+                        {"path": item.destination, "reason": reason}
+                    )
+                    continue
+                if not item.output:
+                    continue
+                effective, _ = self._files.read(project.root, item.output)
+                if effective is None:
+                    report["unavailable"].append(
+                        {"path": item.output, "reason": "output missing"}
+                    )
+                    continue
+                try:
+                    before = yaml.safe_dump(
+                        yaml.safe_load(base), sort_keys=True, allow_unicode=True
+                    )
+                    after = yaml.safe_dump(
+                        yaml.safe_load(effective), sort_keys=True, allow_unicode=True
+                    )
+                except (yaml.YAMLError, UnicodeError, TypeError, ValueError) as exc:
+                    report["unavailable"].append(
+                        {"path": item.output, "reason": f"invalid YAML: {exc}"}
+                    )
+                    continue
+                diff = "".join(
+                    difflib.unified_diff(
+                        before.splitlines(keepends=True),
+                        after.splitlines(keepends=True),
+                        fromfile=item.destination,
+                        tofile=item.output,
+                    )
+                )
+                if diff:
+                    output_record = records.get(item.output, {})
+                    report["deviations"].append(
+                        {
+                            "group": name,
+                            "base": item.destination,
+                            "overlay": item.overlay,
+                            "output": item.output,
+                            "output_matches_sync": digest(effective)
+                            == output_record.get("sha256"),
+                            "diff": diff,
+                        }
+                    )
+        return report
+
+    def write_deviations(self, project, output):
+        from ...domain.shared_configs import destination_path
+
+        try:
+            destination_path(output)
+        except ValueError as exc:
+            raise PtkError(str(exc)) from None
+        reserved = {LOCK}
+        for spec in (spec for name, spec in project.config.configs.items()):
+            for item in spec.files:
+                reserved.update(
+                    p.casefold()
+                    for p in (item.destination, item.overlay, item.output)
+                    if p
+                )
+        if output.casefold() in reserved:
+            raise PtkError("report output cannot replace a configuration file")
+        with self._files.transaction(project.root):
+            existing, _ = self._files.read(project.root, output)
+            if existing is not None:
+                try:
+                    owned = (
+                        json.loads(existing).get("report_type")
+                        == "ptk-config-deviations"
+                    )
+                except (ValueError, AttributeError):
+                    owned = False
+                if not owned:
+                    raise PtkError(
+                        "report output exists and is not a PTK configuration deviations report"
+                    )
+            report = self.deviations(project)
+            self._files.write(
+                project.root,
+                output,
+                (json.dumps(report, indent=2) + "\n").encode(),
+                0o644,
+            )
+        return report
