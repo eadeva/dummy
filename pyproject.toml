@@ -62,6 +62,7 @@ cache-keys = [
   {file = "src/ptk/**/*.py"},
   {file = ".claude/skills/**"}, {file = ".claude/agents/**"},
   {file = "docs/**"},
+  {file = "install/**"},
   {file = "extensions/project-toolkit/package*.json"},
   {file = "extensions/project-toolkit/src/**"},
   {file = "extensions/project-toolkit/media/**"},

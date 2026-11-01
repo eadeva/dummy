@@ -251,6 +251,12 @@ def test_init_readme_links_and_bundle_are_ready_for_sync(tmp_path, config_dir):
         assert (readme.parent / link).exists(), link
     assert (tmp_path / ".github/agents/ptk-expert.agent.md").is_file()
     assert len(list((tmp_path / ".github/skills").glob("ptk-*/SKILL.md"))) == 16
+    from pathlib import Path
+
+    for script in ("install.sh", "install.ps1"):
+        assert (tmp_path / ".github/ptk/install" / script).read_bytes() == (
+            Path(__file__).parents[1] / "install" / script
+        ).read_bytes()
     assert (
         app.setup_authoring.execute(tmp_path, check=True, config_path=config_dir).paths
         == []

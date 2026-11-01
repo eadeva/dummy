@@ -53,6 +53,8 @@ EXAMPLES = ("authoring", "python-tool", "quickstart", "workflows", "artifacts")
 
 def source_files(root: Path) -> dict[str, Path]:
     files = {f"docs/{name}.rst": root / "docs" / f"{name}.rst" for name in DOCS}
+    for name in ("install.sh", "install.ps1"):
+        files[f"install/{name}"] = root / "install" / name
     resource = "docs/resources/bazel/ptk_variants.bzl"
     files[resource] = root / resource
     for name in SKILLS:

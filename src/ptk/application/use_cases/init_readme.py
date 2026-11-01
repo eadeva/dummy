@@ -26,6 +26,32 @@ This directory contains the project-owned configuration behind those commands.
 
 ## For developers
 
+### Install PTK
+
+Use the installation script included in this repository. From the repository
+root, run the command for your platform:
+
+Linux/macOS:
+
+```bash
+sh .github/ptk/install/install.sh
+```
+
+Windows PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .github/ptk/install/install.ps1
+```
+
+The scripts install uv if needed, install or update PTK, and set up shell
+completion and the bundled VS Code extension when supported. Follow their
+terminal instructions, then open a new terminal if `ptk` is not yet on PATH.
+Use your project's approved package source and credentials. Maintainers should
+provide `PTK_SOURCE` when a specific package version or source is required;
+otherwise these copied scripts install `ptk` from the configured package index.
+See the [shell installer](@ROOT@.github/ptk/install/install.sh) and
+[PowerShell installer](@ROOT@.github/ptk/install/install.ps1) for available options.
+
 ### Start with help and self-service
 
 From the repository root or one of its subdirectories, start with:
@@ -121,9 +147,16 @@ CX mode is detected automatically. `PTK_CX` overrides detection, while
 
 ### Set up a new repository
 
+If PTK is not installed yet, obtain `install/install.sh` or `install/install.ps1`
+from the PTK source repository at your approved release and run it locally.
+Set `PTK_SOURCE` to your approved package/version or source as needed, and
+configure access to your package index before installation. A PTK source checkout
+is installed directly when its own installer runs without `PTK_SOURCE`.
+
 For a repository without PTK configuration, use
 `ptk init --config-dir config/ptk` (choose the directory for that project).
-This creates starter configuration, this README and the assistant bundle.
+This creates starter configuration, this README, the assistant bundle and both
+installation scripts under `.github/ptk/install/` for colleagues to use.
 Review and adapt the starter jobs, variants and component before committing.
 Existing configured repositories do not need this command; use the sync commands
 below to update their managed documentation and assistant resources.
@@ -156,7 +189,8 @@ Ask your assistant to read the expert agent or relevant skill first. Automatic
 discovery depends on the editor/assistant. Bundled examples are references, not
 additional jobs configured in this repository.
 
-After upgrading PTK, refresh this README and the managed assistant bundle with:
+After upgrading PTK, refresh this README, installation scripts and the managed
+assistant bundle with:
 
 ```bash
 ptk maintainer sync agent --check

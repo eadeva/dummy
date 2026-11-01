@@ -51,6 +51,14 @@ Init also installs the version-matched assistant bundle in ``.github/agents``,
 no separate sync command is needed on first initialization. Assistant discovery
 depends on the editor. Installation does not execute skills or grant permissions.
 
+Both platform installers are included under ``.github/ptk/install/`` and updated
+by ``ptk maintainer sync agent`` with the same local-edit protection as the
+assistant bundle. Init copies these scripts; it does not execute them. Developers
+run the appropriate script from the repository root. Maintainers bootstrapping
+without PTK obtain the script from ``install/`` in the PTK source repository at
+their approved release. Configure ``PTK_SOURCE`` and package-index access for
+the project; copied installers otherwise install ``ptk`` from the configured index.
+
 The example core component is registered at ``components/core``. Its
 ``component.variants.ptk.yml`` lives there beside the future build definition.
 Project settings include the shared environment. Files contain their section
