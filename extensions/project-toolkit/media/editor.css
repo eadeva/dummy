@@ -2,12 +2,14 @@
 * { box-sizing: border-box; }
 body { padding: 0; margin: 0; color: var(--vscode-foreground); background: var(--vscode-editor-background); font-family: var(--vscode-font-family, sans-serif); font-size: var(--vscode-font-size, 13px); }
 button, input, select, textarea { font: inherit; }
-button { cursor: pointer; border: 1px solid transparent; border-radius: 4px; padding: 7px 12px; color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
+button { cursor: pointer; border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, var(--vscode-descriptionForeground))); border-radius: 4px; padding: 7px 12px; color: var(--vscode-button-foreground); background: var(--vscode-button-background); }
 button:hover { background: var(--vscode-button-hoverBackground); }
 button.secondary { color: var(--vscode-button-secondaryForeground, var(--vscode-foreground)); background: var(--vscode-button-secondaryBackground, var(--vscode-input-background)); }
-button.link { padding: 3px 2px; color: var(--vscode-textLink-foreground); background: transparent; text-align: left; }
+button.link { padding: 4px 8px; color: var(--vscode-button-secondaryForeground, var(--vscode-foreground)); background: var(--vscode-button-secondaryBackground, var(--vscode-input-background)); text-align: left; }
 button.small { padding: 4px 8px; }
-button.danger { color: var(--vscode-errorForeground); background: transparent; }
+button.danger { color: var(--vscode-errorForeground); background: var(--vscode-button-secondaryBackground, var(--vscode-input-background)); border-color: var(--vscode-errorForeground); }
+button.secondary:hover:not(:disabled), button.link:hover:not(:disabled), button.danger:hover:not(:disabled) { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground)); border-color: var(--vscode-focusBorder); }
+button:active:not(:disabled) { box-shadow: inset 0 0 0 1px currentColor; }
 button:disabled { opacity: .5; cursor: default; }
 :focus-visible { outline: 2px solid var(--vscode-focusBorder); outline-offset: 2px; }
 input:not([type=checkbox]), select, textarea { width: 100%; color: var(--vscode-input-foreground); background: var(--vscode-input-background); border: 1px solid var(--vscode-input-border, var(--vscode-widget-border, transparent)); border-radius: 3px; padding: 8px 10px; }
@@ -113,7 +115,7 @@ footer { position: sticky; bottom: 0; background: var(--vscode-editor-background
 .configuration .field > .row { grid-column: 2 / -1; margin-top: 6px; }
 .configuration .field-help { grid-column: 1 / -1; grid-row: 2; padding: 6px 8px; margin-top: 6px; background: var(--vscode-textBlockQuote-background); border-left: 2px solid var(--vscode-charts-blue, var(--vscode-focusBorder)); }
 .configuration .field .help { margin: 0; }
-.configuration .help-toggle { min-height: 22px; width: 22px; padding: 0; border-radius: 50%; font-size: 11px; background: transparent; color: var(--vscode-textLink-foreground); }
+.configuration .help-toggle { min-height: 24px; width: 24px; padding: 0; border-radius: 4px; font-size: 12px; font-weight: 600; background: var(--vscode-button-secondaryBackground, var(--vscode-input-background)); color: var(--vscode-button-secondaryForeground, var(--vscode-foreground)); }
 .configuration .help-toggle:hover, .configuration .help-toggle[aria-expanded=true] { background: var(--vscode-toolbar-hoverBackground); }
 .required-mark { color: var(--vscode-descriptionForeground); }
 .configuration .field.needs-value { border-left-color: var(--vscode-inputValidation-errorBorder, var(--vscode-errorForeground)); }
@@ -133,6 +135,10 @@ footer { position: sticky; bottom: 0; background: var(--vscode-editor-background
 .creation-entry { padding-left: 12px; border-left: 2px solid var(--vscode-panel-border); margin: 8px 0; }
 .creation-help { margin: 5px 0; }
 .creation-help summary { cursor: pointer; color: var(--vscode-textLink-foreground); }
+summary { width: fit-content; max-width: 100%; padding: 6px 10px; border: 1px solid var(--vscode-button-border, var(--vscode-contrastBorder, var(--vscode-descriptionForeground))); border-radius: 4px; background: var(--vscode-button-secondaryBackground, var(--vscode-input-background)); }
+.creation-help summary, .run-options summary, .run-variants summary { color: var(--vscode-button-secondaryForeground, var(--vscode-foreground)); }
+summary:hover { background: var(--vscode-button-secondaryHoverBackground, var(--vscode-list-hoverBackground)); border-color: var(--vscode-focusBorder); }
+details[open] > summary { border-color: var(--vscode-focusBorder); }
 .creation-help p { padding: 6px 10px; background: var(--vscode-textBlockQuote-background); }
 .creation-add { padding: 8px 0; }
 .creation-add > input, .creation-add > select { flex: 1; width: auto; min-width: 120px; }
@@ -190,6 +196,7 @@ footer { position: sticky; bottom: 0; background: var(--vscode-editor-background
 .dependency-editor[data-entity=job] { --ptk-node-color: var(--vscode-charts-blue, #478bd2); }
 .dependency-node { cursor: pointer; }
 .dependency-node rect { fill: var(--vscode-input-background, #eee); stroke: var(--ptk-node-color); stroke-width: 1.5; }
+.dependency-node [role=button]:hover rect { fill: var(--vscode-button-secondaryHoverBackground, var(--vscode-input-background)); stroke: var(--vscode-focusBorder); stroke-width: 3; }
 .dependency-node [aria-pressed=true] rect, .dependency-node :focus-visible rect { stroke: var(--vscode-focusBorder, #8a6df0); stroke-width: 3; }
 .dependency-node text { fill: var(--vscode-foreground, #222); font: 600 14px system-ui; pointer-events: none; }
 .dependency-node .dependency-subtitle { font-size: 12px; font-weight: 400; }

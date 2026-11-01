@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.25.4
+
+- Give editor actions visible button borders and backgrounds, including navigation, Edit fields, Remove, help and expandable sections. Add consistent hover/pressed feedback and graph-node hover highlighting while retaining keyboard focus and theme colors.
+
 ## 0.25.3
 
 - Repeated Rename clicks focus the existing name input and preserve its draft instead of adding duplicate controls.
