@@ -102,7 +102,7 @@ not imply that every related future capability has been implemented.
 
    **Context:** Local cross-repository execution needs joins and partial ordering.
 
-   **Decision:** Use a jobs mapping keyed directly by JOB or REPO:JOB, with needs referencing exact keys. Remove separate invocation aliases and the redundant job field. Empty options use {}. Encode qualified keys into collision-free GitHub IDs and portable report directories; display original job keys. Validate graph and known output/environment conflicts before execution; bound ready jobs with max_workers.
+   **Decision:** Use a jobs mapping keyed directly by JOB or REPO:JOB, with needs referencing exact keys. Remove separate invocation aliases and the redundant job field. Empty options use {}. Use readable job_<jobname> / repo_<reponame>_job_<jobname> IDs for GitHub and portable report directories, rejecting collisions during workflow validation; display original job keys. Validate graph and known output/environment conflicts before execution; bound ready jobs with max_workers.
 
    Each repository/job pair may appear once per workflow; see the identity and
    configuration-time validation clarification in :need:`DD_GRAPH_EDITING`.

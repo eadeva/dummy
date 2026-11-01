@@ -479,7 +479,7 @@ def test_vmr_matrix_maps_producer_variants_and_directories(tmp_path):
     assert row["variant"] == "debug" and row["working_directory"] == "app"
     assert row["producers"][0]["variant"] == "host"
     assert row["producers"][0]["working_directory"] == "tools"
-    assert row["producers"][0]["invocation"] == "job_tools_cbuild"
+    assert row["producers"][0]["invocation"] == "repo_tools_job_build"
 
 
 def test_verify_jobs_declare_disjoint_portable_outputs():
@@ -600,3 +600,38 @@ def test_qualified_workflow_keys_generate_distinct_portable_ids_and_matching_out
         assert job["needs"] == ["setup", *([workflow_job_id(keys[i - 1])] if i else [])]
         assert f"matrix_{identity}" in rendered["jobs"]["setup"]["outputs"]
         assert f"matrix_{identity}" in job["strategy"]["matrix"]
+
+
+@pytest.mark.parametrize(
+    ("target", "expected"),
+    [
+        ("build", "job_build"),
+        ("setup", "job_setup"),
+        ("backend:build", "repo_backend_job_build"),
+        ("my_repo:build_debug", "repo_my_repo_job_build_debug"),
+        ("my-repo:build-debug", "repo_my-repo_job_build-debug"),
+    ],
+)
+def test_readable_workflow_job_ids(target, expected):
+    from ptk.domain.workflows import workflow_job_id
+
+    assert workflow_job_id(target) == expected
+
+
+def test_ambiguous_generated_ids_rejected_before_workflow_execution():
+    with pytest.raises(ValueError) as error:
+        WorkflowSpec(jobs={"a_job_b:c": {}, "a:b_job_c": {}})
+    message = str(error.value)
+    assert "a_job_b:c" in message
+    assert "a:b_job_c" in message
+    assert "repo_a_job_b_job_c" in message
+    assert "rename" in message
+
+
+def test_render_rechecks_ids_after_programmatic_workflow_mutation():
+    workflow = WorkflowSpec(jobs={"a_job_b:c": {}})
+    workflow.jobs["a:b_job_c"] = workflow.jobs["a_job_b:c"]
+    with pytest.raises(ValueError, match="same generated ID"):
+        render_workflow(
+            "verify", workflow, action_repository="eadeva/dummy", action_ref="v1"
+        )

@@ -575,3 +575,34 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
 
    **Evidence:** ``tests/test_upload_configuration.py``; ``tests/test_output_cache.py``;
    ``tests/test_github_actions.py``; ``tests/workflows/test_scheduler.py``.
+
+
+.. req-sw:: Readable and unique workflow job identifiers
+   :id: REQ_Sw_WORKFLOW_IDS
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: under review
+   :verification_criteria: Tests verify exact local/qualified IDs, underscore preservation, matching dependency and matrix references, and rejection identifying both colliding targets.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_EXECUTION
+   :tags: implemented
+
+   PTK shall use job_<jobname> for local targets and
+   repo_<reponame>_job_<jobname> for qualified targets in generated GitHub IDs,
+   matrix-output names and local workflow report directories. It shall retain
+   authored target keys for display and reject colliding generated identifiers
+   before execution or generation, naming both targets and suggesting a rename.
+
+   **Origin:** User request for readable repository/job identifiers.
+
+   **Implementation:** Implemented in shared workflow validation and generation;
+   local workflow, matrix and action integration tests pass.
+
+   **Decision:** Prefer readable names and explicit collision validation over
+   character escaping. Existing templates remain project-owned and require
+   consistent updates to job IDs, needs and matrix-output references.
+
+   **Evidence:** ``src/ptk/domain/workflows.py``;
+   ``tests/test_github_actions.py``. Hosted GitHub execution is not claimed.

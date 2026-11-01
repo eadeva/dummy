@@ -378,3 +378,14 @@ PTK reuse for every child job and step, including calls into other repositories.
 Outputs primarily describe artifacts for workflow uploads and downloads; the
 project owns their validity, cache policy and transfer operations. See
 :doc:`output-reuse` for examples and the full contract.
+
+Portable job identifiers
+------------------------
+
+PTK keeps ``JOB`` and ``REPO:JOB`` as authored workflow keys. For report folders
+and generated GitHub job/output identifiers it uses ``job_<jobname>`` and
+``repo_<reponame>_job_<jobname>`` respectively, retaining existing underscores.
+Validation rejects two keys that yield the same identifier and names both targets.
+For example, ``a_job_b:c`` and ``a:b_job_c`` collide; rename a repository alias
+or job and update its references. Dots remain forbidden in job names.
+See :doc:`github-actions` for migrating existing generated templates.

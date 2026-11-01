@@ -22,8 +22,9 @@ JobTarget = Annotated[str, StringConstraints(pattern=TARGET)]
 
 
 def workflow_job_id(target: str) -> str:
-    """Injective portable ID for GitHub jobs/outputs and report directories."""
-    return "job_" + target.replace("_", "_u").replace(":", "_c")
+    """Readable portable ID; WorkflowSpec rejects ambiguous target combinations."""
+    repo, separator, job = target.partition(":")
+    return f"repo_{repo}_job_{job}" if separator else f"job_{target}"
 
 
 class WorkflowJob(BaseModel):
@@ -89,7 +90,16 @@ class WorkflowSpec(BaseModel):
 
     def validate_job_targets(self, owner: str | None = None):
         seen = {}
+        ids = {}
         for invocation in self.jobs:
+            identity = workflow_job_id(invocation)
+            if identity in ids:
+                raise ValueError(
+                    f"workflow jobs {ids[identity]!r} and {invocation!r} produce "
+                    f"the same generated ID {identity!r}; rename a repository alias "
+                    "or job to make the IDs distinct"
+                )
+            ids[identity] = invocation
             target = invocation if ":" in invocation else f"{owner or ''}:{invocation}"
             if target in seen:
                 raise ValueError(

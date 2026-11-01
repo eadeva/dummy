@@ -165,6 +165,7 @@ def render_workflow(
         raise PtkError("--action-repository must be OWNER/REPO")
     if not re.fullmatch(r"[A-Za-z0-9_./-]+", action_ref):
         raise PtkError("invalid --action-ref")
+    spec.validate_job_targets()
     ids = {key: workflow_job_id(key) for key in spec.jobs}
 
     def action(kind):

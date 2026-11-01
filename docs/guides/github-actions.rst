@@ -32,10 +32,18 @@ Every execution job declares ``needs: [setup, ...configured_producers]``. Each
 has a separate variant matrix. A consumer waits for all variants of its producer
 jobs, then downloads only its selected producer variant. This deliberately avoids
 using a matrix job's last-finishing output as an artifact selector. Workflow job keys identify producing PTK jobs directly. GitHub IDs are generated
-as ``job_`` followed by the key with ``_`` encoded as ``_u`` and ``:`` as ``_c``.
-This collision-free encoding also names per-job matrix outputs; display names
-retain the original keys. The setup job remains ``setup``, so a PTK job named
-``setup`` is allowed.
+as ``job_<jobname>`` for local jobs and
+``repo_<reponame>_job_<jobname>`` for qualified jobs. Existing underscores remain
+unchanged. Workflow validation rejects combinations that produce the same ID,
+naming both targets and asking for a repository alias or job rename. For example,
+``a_job_b:c`` and ``a:b_job_c`` both produce ``repo_a_job_b_job_c`` and cannot
+share a workflow. This also protects local report directories. These IDs also
+name per-job matrix outputs; display names retain the original keys. The setup
+job remains ``setup``, so a PTK job named ``setup`` is allowed.
+
+Existing generated workflows must be updated to use the new IDs consistently
+in jobs, needs and setup output references; generation continues to leave
+existing files unchanged.
 
 Owner ``repo_variants`` mappings apply to VMR producers. Identical mapped calls
 are deduplicated; conflicting parameters/dependencies for the same producer
