@@ -175,7 +175,13 @@ class AuthoringResources(Protocol):
     def bundle(self) -> dict[str, bytes]: ...
 
     def sync(
-        self, root: Path, files: dict[str, bytes], *, version: str, check: bool
+        self,
+        root: Path,
+        files: dict[str, bytes],
+        *,
+        version: str,
+        check: bool,
+        configuration_readme: tuple[str, bytes] | None = None,
     ) -> list[str]: ...
 
 

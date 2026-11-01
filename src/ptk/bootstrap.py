@@ -72,7 +72,7 @@ class App:
         from .adapters.scaffold import FileProjectScaffold
         from .application.use_cases.init import InitProject
 
-        return InitProject(FileProjectScaffold(), self.host)
+        return InitProject(FileProjectScaffold(), self.host, self.setup_authoring)
 
     @cached_property
     def show_config(self) -> ShowConfig:

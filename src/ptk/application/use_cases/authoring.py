@@ -4,6 +4,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from ...domain.errors import PtkError
 from ..ports import AuthoringResources
 from .project import ExportSchema
 
@@ -18,7 +19,8 @@ class SetupAuthoring:
     def __init__(self, files: AuthoringResources, version: str):
         self._files, self._version = files, version
 
-    def execute(self, root: Path, *, check=False) -> AuthoringResult:
+    def render(self):
+        """Render the same portable bundle for initialization and later sync."""
         files = {}
         count = 0
         for name, content in self._files.bundle().items():
@@ -76,6 +78,51 @@ class SetupAuthoring:
             "Keep project-specific instructions in separately owned files; updates "
             "preserve locally edited managed files by reporting conflicts.\n"
         ).encode()
+        return files, count
+
+    def scaffold_files(self, config_path):
+        import hashlib
+
+        from ...authoring_bundle import manifest_content
+        from .init_readme import configuration_readme
+
+        files, _ = self.render()
+        name = (Path(config_path) / "README.md").as_posix()
+        readme = configuration_readme(Path(config_path))
+        files["ptk/manifest.json"] = manifest_content(
+            files,
+            self._version,
+            {"path": name, "sha256": hashlib.sha256(readme.encode()).hexdigest()},
+        )
+        result = {
+            ".github/" + name: value.decode("utf-8") for name, value in files.items()
+        }
+        if name in result:
+            raise PtkError(
+                "configuration directory conflicts with the managed assistant bundle"
+            )
+        result[name] = readme
+        return result
+
+    def execute(self, root: Path, *, check=False, config_path=None) -> AuthoringResult:
+        from .init_readme import configuration_readme
+
+        files, count = self.render()
+        readme = (
+            None
+            if config_path is None
+            else (
+                (Path(config_path) / "README.md").as_posix(),
+                configuration_readme(Path(config_path)).encode(),
+            )
+        )
         return AuthoringResult(
-            self._files.sync(root, files, version=self._version, check=check), count
+            self._files.sync(
+                root,
+                files,
+                version=self._version,
+                check=check,
+                configuration_readme=readme,
+            ),
+            count,
         )

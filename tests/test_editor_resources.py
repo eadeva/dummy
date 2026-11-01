@@ -182,3 +182,63 @@ def test_all_installed_reference_links_are_self_contained(tmp_path):
     assert (tmp_path / ".github/ptk/docs/guides/local-setup.rst").is_file()
     assert not (tmp_path / ".github/skills/ptk-development").exists()
     assert not (tmp_path / ".github/skills/ptk-docs-writing").exists()
+
+
+def test_managed_config_readme_sync_check_update_conflict_and_relocation(
+    tmp_path, monkeypatch
+):
+    from ptk.application.use_cases import init_readme
+    from ptk.bootstrap import create_app
+
+    app = create_app(environ={})
+    app.init_project.execute(tmp_path, config_path="config/ptk")
+    readme = tmp_path / "config/ptk/README.md"
+    original = readme.read_text()
+    monkeypatch.setattr(
+        init_readme, "TEMPLATE", init_readme.TEMPLATE + "\nNew PTK guidance.\n"
+    )
+    assert app.setup_authoring.execute(
+        tmp_path, config_path="config/ptk", check=True
+    ).paths
+    assert readme.read_text() == original
+    app.setup_authoring.execute(tmp_path, config_path="config/ptk")
+    assert "New PTK guidance." in readme.read_text()
+    readme.write_text("local edit")
+    manifest = tmp_path / ".github/ptk/manifest.json"
+    before = manifest.read_bytes()
+    with pytest.raises(PtkError, match="preserving locally changed"):
+        app.setup_authoring.execute(tmp_path, config_path="other/deep/config")
+    assert readme.read_text() == "local edit" and manifest.read_bytes() == before
+    readme.write_text(original + "\nNew PTK guidance.\n")
+    app.setup_authoring.execute(tmp_path, config_path="other/deep/config")
+    relocated = tmp_path / "other/deep/config/README.md"
+    assert not readme.exists()
+    assert "../../../.github/agents/ptk-expert.agent.md" in relocated.read_text()
+    assert (
+        json.loads(manifest.read_text())["configuration_readme"]["path"]
+        == "other/deep/config/README.md"
+    )
+
+
+def test_readme_sync_rejects_unowned_files_and_unsafe_paths(tmp_path):
+    adapter = AuthoringFiles()
+    readme = tmp_path / "README.md"
+    readme.write_text("project owned")
+    with pytest.raises(PtkError, match="unowned"):
+        adapter.sync(
+            tmp_path,
+            {},
+            version="1",
+            check=False,
+            configuration_readme=("README.md", b"generated"),
+        )
+    assert not (tmp_path / ".github").exists()
+    for path in ("../README.md", ".git/README.md", "config/not-readme.md"):
+        with pytest.raises(PtkError, match="invalid configuration README"):
+            adapter.sync(
+                tmp_path,
+                {},
+                version="1",
+                check=False,
+                configuration_readme=(path, b"generated"),
+            )

@@ -443,7 +443,15 @@ default. Scripts and ``--yes`` require the option. The path is relative to each
 repository root. Root metadata stays minimal; initial
 configuration documents follow the fixed layout under PATH. ``jobs/hello.ptk.yml``
 and ``jobs/build.ptk.yml`` provide separate runnable examples. Optional fields
-are documented in comments. Existing files are never overwritten.
+are documented in comments. Init also writes a generated ``README.md`` under PATH
+and installs the expert agent, 16 project-facing skills, offline references and
+schema under ``.github``. Links in the README are relative to the chosen config
+directory. The README, configuration and assistant files are protected by preflight. Dry-run writes nothing. Use
+``ptk maintainer sync agent`` for later managed README and bundle updates. README provenance is stored
+in ``.github/ptk/manifest.json``; unchanged generated files update automatically,
+while local edits or different unowned files cause conflicts. ``--check`` includes
+the README. A changed config path relocates an unmodified managed README and
+rebuilds its relative links; modified old files must be reconciled first.
 
 In VMR mode, omit DIRECTORY to initialize **all checked-out members without a
 root .main.ptk.yml**. This works before any member has PTK configuration and from

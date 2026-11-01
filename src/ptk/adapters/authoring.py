@@ -9,7 +9,7 @@ import tempfile
 from importlib import resources
 from pathlib import Path, PurePosixPath
 
-from ..authoring_bundle import source_files
+from ..authoring_bundle import manifest_content, source_files
 from ..domain.errors import PtkError
 
 MANIFEST = "ptk/manifest.json"
@@ -36,6 +36,8 @@ class AuthoringFiles:
 
         def visit(folder, prefix=""):
             for entry in folder.iterdir():
+                if entry.name == "__pycache__" or entry.name.endswith((".pyc", ".pyo")):
+                    continue
                 name = prefix + entry.name
                 if entry.is_dir():
                     visit(entry, name + "/")
@@ -46,7 +48,13 @@ class AuthoringFiles:
         return result
 
     def sync(
-        self, root: Path, files: dict[str, bytes], *, version: str, check: bool
+        self,
+        root: Path,
+        files: dict[str, bytes],
+        *,
+        version: str,
+        check: bool,
+        configuration_readme: tuple[str, bytes] | None = None,
     ) -> list[str]:
         """Return changed paths; protect custom edits and unrelated .github files."""
         root = root.resolve()
@@ -80,10 +88,12 @@ class AuthoringFiles:
 
         manifest = safe(MANIFEST)
         previous = {}
+        old_readme = None
         if manifest.exists():
             try:
                 data = json.loads(manifest.read_text(encoding="utf-8"))
                 previous = data["files"]
+                old_readme = data.get("configuration_readme")
                 if (
                     data["schema_version"] != 1
                     or not isinstance(previous, dict)
@@ -109,31 +119,92 @@ class AuthoringFiles:
                 not path.is_file() or digest(current) != previous.get(name)
             ):
                 conflicts.append(name)
+
+        def readme_path(name):
+            relative = PurePosixPath(name)
+            if (
+                relative.is_absolute()
+                or ".." in relative.parts
+                or "\\" in name
+                or relative.name != "README.md"
+                or any(part in {".git", ".repo", ".ptk"} for part in relative.parts)
+            ):
+                raise PtkError(f"invalid configuration README path: {name!r}")
+            if relative.parts[:2] in (
+                (".github", "ptk"),
+                (".github", "skills"),
+                (".github", "agents"),
+            ):
+                raise PtkError(
+                    "configuration README conflicts with the managed assistant bundle"
+                )
+            path = root.joinpath(*relative.parts)
+            for candidate in (path, *path.parents):
+                if candidate == root:
+                    break
+                if candidate.is_symlink() or candidate.is_junction():
+                    raise PtkError(f"refusing symlinked README path: {candidate}")
+                if candidate != path and candidate.exists() and not candidate.is_dir():
+                    raise PtkError(f"README parent is not a directory: {candidate}")
+            if not path.resolve().is_relative_to(root):
+                raise PtkError("configuration README escapes repository")
+            return path
+
+        if old_readme is not None:
+            if (
+                not isinstance(old_readme, dict)
+                or not isinstance(old_readme.get("path"), str)
+                or not isinstance(old_readme.get("sha256"), str)
+            ):
+                raise PtkError("invalid configuration README provenance")
+            readme_path(old_readme["path"])
+        readme_changes = []
+        next_readme = old_readme
+        if configuration_readme is not None:
+            name, value = configuration_readme
+            desired = {name: value}
+            if old_readme and old_readme["path"] != name:
+                desired[old_readme["path"]] = None
+            for rel, content in desired.items():
+                path = readme_path(rel)
+                if path == github / "ptk/README.md" or path == manifest:
+                    raise PtkError(
+                        "configuration README conflicts with the managed assistant bundle"
+                    )
+                current = path.read_bytes() if path.is_file() else None
+                if current == content and not (path.exists() and not path.is_file()):
+                    continue
+                recorded = (
+                    old_readme["sha256"]
+                    if old_readme and old_readme["path"] == rel
+                    else None
+                )
+                if path.exists() and (
+                    not path.is_file() or digest(current) != recorded
+                ):
+                    conflicts.append(rel)
+                readme_changes.append((path, content))
+            next_readme = {"path": name, "sha256": digest(value)}
         if conflicts:
             raise PtkError(
                 "preserving locally changed or unowned authoring files; move or reconcile them before setup:\n  "
                 + "\n  ".join(conflicts)
             )
-        content = (
-            json.dumps(
-                {
-                    "schema_version": 1,
-                    "ptk_version": version,
-                    "files": {
-                        name: digest(value) for name, value in sorted(files.items())
-                    },
-                },
-                indent=2,
-            )
-            + "\n"
-        ).encode()
+        content = manifest_content(files, version, next_readme)
         if not manifest.is_file() or manifest.read_bytes() != content:
             changes.append(MANIFEST)
+        paths = changes + [
+            path.relative_to(root).as_posix() for path, _ in readme_changes
+        ]
         if check:
-            return changes
-        for name in changes:
-            path = safe(name)
-            value = content if name == MANIFEST else files.get(name)
+            return paths
+        operations = [
+            (safe(name), files.get(name)) for name in changes if name != MANIFEST
+        ]
+        operations += readme_changes
+        if MANIFEST in changes:
+            operations.append((manifest, content))
+        for path, value in operations:
             if value is None:
                 path.unlink(missing_ok=True)
                 continue
@@ -149,4 +220,4 @@ class AuthoringFiles:
             finally:
                 if temporary is not None:
                     temporary.unlink(missing_ok=True)
-        return changes
+        return paths

@@ -236,3 +236,59 @@ steps:
     result = CliRunner(env={"PTK_CX": "0"}).invoke(cli, ["check"], cwd=tmp_path)
     assert result.exit_code == 0, result.output
     assert "discovered" in result.output
+
+
+@pytest.mark.parametrize("config_dir", ["ptk", "config/toolkit", "."])
+def test_init_readme_links_and_bundle_are_ready_for_sync(tmp_path, config_dir):
+    import re
+
+    from ptk.bootstrap import create_app
+
+    app = create_app(environ={"PTK_CX": "0"})
+    app.init_project.execute(tmp_path, config_path=config_dir)
+    readme = tmp_path / config_dir / "README.md"
+    for link in re.findall(r"\]\(([^)]+)\)", readme.read_text()):
+        assert (readme.parent / link).exists(), link
+    assert (tmp_path / ".github/agents/ptk-expert.agent.md").is_file()
+    assert len(list((tmp_path / ".github/skills").glob("ptk-*/SKILL.md"))) == 16
+    assert (
+        app.setup_authoring.execute(tmp_path, check=True, config_path=config_dir).paths
+        == []
+    )
+
+
+def test_init_readme_is_protected_and_dry_run_writes_nothing(tmp_path):
+    from ptk.bootstrap import create_app
+
+    app = create_app(environ={})
+    app.init_project.execute(tmp_path, config_path="config/ptk", dry_run=True)
+    assert not list(tmp_path.iterdir())
+    folder = tmp_path / "config/ptk"
+    folder.mkdir(parents=True)
+    readme = folder / "README.md"
+    readme.write_text("custom readme")
+    with pytest.raises(PtkError, match="refusing to overwrite"):
+        app.init_project.execute(tmp_path, config_path="config/ptk")
+    assert readme.read_text() == "custom readme"
+    assert not (tmp_path / ".github").exists()
+
+
+def test_init_bundle_conflict_prevents_partial_initialization(tmp_path):
+    from ptk.bootstrap import create_app
+
+    path = tmp_path / ".github/agents/ptk-expert.agent.md"
+    path.parent.mkdir(parents=True)
+    path.write_text("custom agent")
+    with pytest.raises(PtkError, match="refusing to overwrite"):
+        create_app(environ={}).init_project.execute(tmp_path, config_path="config")
+    assert path.read_text() == "custom agent"
+    assert not (tmp_path / ".main.ptk.yml").exists()
+    assert not (tmp_path / "config/README.md").exists()
+
+
+def test_init_rejects_config_readme_collision_with_managed_bundle(tmp_path):
+    from ptk.bootstrap import create_app
+
+    with pytest.raises(PtkError, match="conflicts with the managed assistant bundle"):
+        create_app(environ={}).init_project.execute(tmp_path, config_path=".github/ptk")
+    assert not (tmp_path / ".main.ptk.yml").exists()

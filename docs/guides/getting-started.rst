@@ -43,6 +43,13 @@ The chosen directory contains ``project.ptk.yml`` for project settings, plus:
 * ``tools.ptk.yml``, ``versioning.ptk.yml``, ``credentials.ptk.yml`` and ``configs.ptk.yml``.
 * ``folder_structure.ptk.yml`` and ``workflows/verify.ptk.yml``.
 * ``maintainers.ptk.yml`` for the independent identity list.
+* A generated ``README.md`` with commands, ownership guidance and relative links
+  to the installed expert agent, skills, offline docs and schema.
+
+Init also installs the version-matched assistant bundle in ``.github/agents``,
+``.github/skills`` and ``.github/ptk``. It works offline with packaged resources;
+no separate sync command is needed on first initialization. Assistant discovery
+depends on the editor. Installation does not execute skills or grant permissions.
 
 The example core component is registered at ``components/core``. Its
 ``component.variants.ptk.yml`` lives there beside the future build definition.
@@ -57,7 +64,12 @@ and version substitutions; ``build`` generates ``_bin/<variant>/build/generated/
 snapshot. See :doc:`/guides/versioning` to select Git tags or existing manifests instead.
 
 No existing configuration file is overwritten; all destinations are checked
-before writing. Existing ``.gitignore`` content is kept and missing PTK ignore
+before writing. The config README is managed with the assistant bundle;
+keep project-specific guidance separately. Existing assistant-file collisions also
+stop init before writes. The bundle includes provenance for subsequent
+``ptk maintainer sync agent`` updates, which protect locally edited files.
+In a VMR, each newly initialized repository receives its own bundle.
+Existing ``.gitignore`` content is kept and missing PTK ignore
 rules are appended. The project name defaults to the destination directory name.
 
 The command works without an existing project, including inside a directory

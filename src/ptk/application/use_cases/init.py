@@ -35,9 +35,15 @@ def repository_alias(name: str) -> str:
 
 
 class InitProject:
-    def __init__(self, scaffold: ProjectScaffold, host: HostEnvironment | None = None):
+    def __init__(
+        self,
+        scaffold: ProjectScaffold,
+        host: HostEnvironment | None = None,
+        authoring=None,
+    ):
         self._scaffold = scaffold
         self._host = host
+        self._authoring = authoring
 
     def execute(
         self,
@@ -205,6 +211,17 @@ class InitProject:
                 }
             )
         )
+        from .init_readme import configuration_readme
+
+        files[(folder / "README.md").as_posix()] = configuration_readme(folder)
+        if self._authoring is not None:
+            bundle = self._authoring.scaffold_files(folder)
+            files.pop((folder / "README.md").as_posix())
+            if set(files) & set(bundle):
+                raise PtkError(
+                    "configuration directory conflicts with the managed assistant bundle"
+                )
+            files.update(bundle)
         kept = self._scaffold.create(target, files, dry_run=dry_run)
         return InitResult(files, kept, dry_run)
 

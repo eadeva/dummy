@@ -891,24 +891,27 @@ def report_open(
 @click.option(
     "--check",
     is_flag=True,
-    help="Check the installed agent, skills and docs without writing; exit 1 if outdated.",
+    help="Check the config README, agent, skills and docs without writing; exit 1 if outdated.",
 )
 @click.pass_context
 @guarded
 def agent_command(ctx: click.Context, check: bool) -> None:
-    """Install the PTK expert agent, its skills and offline docs under .github."""
+    """Sync the config README and PTK agent, skills and offline docs."""
     state = _state(ctx)
-    result = state.app.setup_authoring.execute(state.project().root, check=check)
+    project = state.project()
+    result = state.app.setup_authoring.execute(
+        project.root, check=check, config_path=project.config.repository.config_path
+    )
     if check:
         console.print(
-            "PTK agent, skills and docs are "
+            "PTK README, agent, skills and docs are "
             + ("out of date" if result.paths else "up to date")
         )
         if result.paths:
             ctx.exit(1)
     else:
         console.print(
-            f"PTK agent, skills and docs: {result.skill_count} skills, {len(result.paths)} files updated."
+            f"PTK README, agent, skills and docs: {result.skill_count} skills, {len(result.paths)} files updated."
         )
 
 
@@ -1212,7 +1215,7 @@ def _show_init_result(target: Path, result: InitResult) -> None:
             f"{'would create' if result.dry_run else 'created'} {target / file}",
             markup=False,
         )
-        if result.dry_run:
+        if result.dry_run and not file.startswith(".github/"):
             console.print(content, markup=False, highlight=False)
     if result.kept_gitignore:
         console.print(

@@ -79,3 +79,31 @@ def source_files(root: Path) -> dict[str, Path]:
         if not path.is_file() or path.is_symlink():
             raise ValueError(f"missing or symlinked authoring resource: {name}")
     return files
+
+
+def manifest_content(
+    files: dict[str, bytes], version: str, configuration_readme=None
+) -> bytes:
+    """Identical provenance for initial scaffolding and protected updates."""
+    import hashlib
+    import json
+
+    return (
+        json.dumps(
+            {
+                "schema_version": 1,
+                "ptk_version": version,
+                **(
+                    {"configuration_readme": configuration_readme}
+                    if configuration_readme
+                    else {}
+                ),
+                "files": {
+                    name: hashlib.sha256(value).hexdigest()
+                    for name, value in sorted(files.items())
+                },
+            },
+            indent=2,
+        )
+        + "\n"
+    ).encode()
