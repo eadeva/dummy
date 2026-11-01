@@ -18,89 +18,152 @@ def configuration_readme(folder: Path) -> str:
     return TEMPLATE.replace("@ROOT@", root)
 
 
-TEMPLATE = """# PTK configuration
+TEMPLATE = """# Project Toolkit: developer guide
 
-This directory contains this repository's Project Toolkit (PTK) configuration.
-PTK provides a shared CLI and VS Code experience for jobs, variants, local
-workflows, diagnostics and artifact handoff. Project commands and tools perform
-and validate the actual work.
+Project Toolkit (PTK) provides this repository's common interface for running
+jobs, choosing variants, orchestrating local workflows and inspecting reports.
+This directory contains the project-owned configuration behind those commands.
 
-## Start here
+## For developers
 
-Run commands from the repository root or one of its subdirectories:
+### Start with help and self-service
+
+From the repository root or one of its subdirectories, start with:
 
 ```bash
 ptk --help
-ptk validate
-ptk -V debug run hello --dry-run
+ptk help
+ptk self-service
 ```
 
-The last command previews a starter job created by `ptk init`. Replace the starter
-jobs, variants and component with your project's configuration. Use a dry run to
-inspect commands and the dependency graph before executing an unfamiliar job.
-The Project Toolkit VS Code extension provides configuration forms, graphs and
-job launch controls; use it with the matching installed PTK runtime.
+Use `ptk --help` for available commands, jobs and workflows; `ptk help` for the
+project's help page; and `ptk self-service` to discover developer setup and
+support commands for tools, hooks, credentials and environment checks.
 
-## Configuration ownership
+For guided work, start with the **[PTK expert agent](@ROOT@.github/agents/ptk-expert.agent.md)**
+and the **Project Toolkit VS Code extension**. Ask your assistant to read the
+expert agent before working on this repository's PTK configuration. It points
+to the relevant [skills](@ROOT@.github/skills/) for focused tasks; you can also
+select a skill directly. Automatic agent/skill discovery depends on your editor.
+
+### Use the Project Toolkit extension
+
+The **Project Toolkit VS Code extension** is the recommended interface for
+running and configuring jobs and workflows. It provides a configuration tree,
+guided forms, dependency graphs, variant and parameter selection, and report
+access. Use it with the matching installed PTK runtime. See the
+[extension guide](@ROOT@.github/ptk/docs/guides/editor.rst) for installation and usage.
+
+Start with the project's existing jobs and workflows. Preview unfamiliar work
+with a dry run, inspect the dependency graph, then execute the selected variant.
+Use the generated reports and diagnostics to investigate failures.
+
+### Run from the terminal
+
+From the repository root or one of its subdirectories:
+
+```bash
+ptk validate
+ptk run JOB --dry-run
+ptk -V VARIANT run JOB
+ptk workflow run WORKFLOW --dry-run
+ptk workflow run WORKFLOW
+```
+
+Replace `JOB`, `VARIANT` and `WORKFLOW` with names configured in this repository.
+Omit `-V` to use the project's default selection. PTK workflows run locally;
+CX pipelines execute individual jobs. Consult `ptk JOB --help` for job parameters.
+Use `--no-cache-ptk` when you need to bypass PTK output reuse.
+
+### Add or change jobs and workflows
+
+Prefer the extension's configuration forms and graphs for creating jobs, choosing
+command or Python modes, documenting parameters and connecting dependencies.
+Raw YAML remains available when needed. The owning files are in [jobs/](jobs/)
+and [workflows/](workflows/); each filename supplies its entity name.
+
+Use `needs` for ordering; independent work may run concurrently. Use `when` for
+conditions. Job conditions use portable CX/variant context; runner-specific
+conditions belong on steps. Declare the files or folders your commands produce:
+every declared output is required, and missing outputs fail the producer and
+block consumers. Your commands remain responsible for contents and freshness.
+
+Validate configuration and preview affected jobs/workflows before execution.
+For guidance, ask your assistant to use the
+[job authoring skill](@ROOT@.github/skills/ptk-job-authoring/SKILL.md) or
+[workflow authoring skill](@ROOT@.github/skills/ptk-workflow-authoring/SKILL.md).
+Read [local setup and troubleshooting](@ROOT@.github/ptk/docs/guides/local-setup.rst)
+when hooks, tools or credentials prevent a run.
+
+## For maintainers and DevOps
+
+### Maintain project configuration
 
 The repository's [entry file](@ROOT@.main.ptk.yml) selects this directory through
-`repository.config_path`. Files contain their section body; filenames supply
-job, workflow and variant names. There are no implicit local/CX overlays.
+`repository.config_path`. Files contain their section body. There are no implicit
+local/CX overlays. The extension is also recommended for reviewing and editing
+these settings against the installed runtime's schema.
 
 - [project.ptk.yml](project.ptk.yml): project settings and component registration.
-- [jobs/](jobs/): commands, parameters, step dependencies and declared outputs.
-- [workflows/](workflows/): local orchestration of jobs through `needs`.
 - [variants/](variants/) and [project.variants.ptk.yml](project.variants.ptk.yml):
-  variant selections and defaults; component features live beside their code.
-- [tools.ptk.yml](tools.ptk.yml), [versioning.ptk.yml](versioning.ptk.yml),
-  [configs.ptk.yml](configs.ptk.yml) and [credentials.ptk.yml](credentials.ptk.yml):
-  tool, version, external-policy and credential declarations.
+  selections and defaults; component features live beside their code.
+- [tools.ptk.yml](tools.ptk.yml) and [versioning.ptk.yml](versioning.ptk.yml):
+  tool declarations and version sources.
+- [configs.ptk.yml](configs.ptk.yml): external policy sources and project overlays.
+- [credentials.ptk.yml](credentials.ptk.yml): credential declarations, never secrets.
 - [maintainers.ptk.yml](maintainers.ptk.yml): maintainer login IDs, not Git emails.
 
-Keep secrets out of committed configuration. External synchronized base files
-belong to their source repository; project-owned overlays remain separate.
-This README is managed by PTK and refreshed by `ptk maintainer sync agent`.
-Local edits are protected by the same conflict checks as the agent and skills.
-Keep repository-specific guidance in a separate document.
+Keep external synchronized bases unchanged; maintain project overlays separately.
+CX mode is detected automatically. `PTK_CX` overrides detection, while
+`--cx` / `--no-cx` are maintainer-only switches. See the
+[configuration guide](@ROOT@.github/ptk/docs/guides/configuration.rst) and
+[DevOps skill](@ROOT@.github/skills/ptk-devops/SKILL.md).
 
-## Execution and outputs
+### Set up a new repository
 
-Use `needs` for ordering; declaration order does not serialize independent work.
-Use `when` for conditions. Job conditions use portable CX/variant context;
-runner-specific conditions belong on steps. CX mode is detected automatically;
-`PTK_CX` overrides detection, while `--cx` / `--no-cx` are maintainer-only switches.
+For a repository without PTK configuration, use
+`ptk init --config-dir config/ptk` (choose the directory for that project).
+This creates starter configuration, this README and the assistant bundle.
+Review and adapt the starter jobs, variants and component before committing.
+Existing configured repositories do not need this command; use the sync commands
+below to update their managed documentation and assistant resources.
 
-Every declared output is required. Missing outputs fail their producer and block
-consumers; projects still own artifact contents and freshness. Declare outputs
-primarily for workflow uploads/downloads. PTK cache is an optional aid enabled
-with `cache: true`; correctness remains the project's responsibility.
-`--no-cache-ptk` disables reuse throughout an execution.
+### Set up CX workflows and artifacts
 
-PTK workflows orchestrate local runs. Generated GitHub workflows run individual
-PTK jobs after a matrix setup job. All configured jobs remain in the YAML;
-job conditions filter their variant rows. Runners, Docker images, checkout,
-credentials and workflow callers remain project-owned.
+Use `ptk maintainer gen-workflows` to generate callable GitHub workflow templates.
+A setup job exports the variant matrices; subsequent jobs download producer
+artifacts, run one PTK job and upload its declared outputs. All configured job
+definitions remain in the YAML; job conditions filter their variant rows.
+Existing workflow files are not overwritten.
 
-## Agent, skills and offline reference
+Review dependencies, variant mappings, required outputs and artifact destinations.
+Provide the project's runners, Docker images, checkout, credentials and caller
+workflows/events. See the
+[GitHub workflow skill](@ROOT@.github/skills/ptk-github-workflows/SKILL.md) before
+changing generated templates or transfer wiring.
 
-`ptk init` installs the version-matched assistant bundle in this repository:
+Outputs primarily describe artifacts for workflow uploads/downloads. PTK cache is
+an optional aid enabled with `cache: true`; cache correctness and artifact
+freshness remain project responsibilities. Declaring paths does not transfer files.
 
-- [PTK expert agent](@ROOT@.github/agents/ptk-expert.agent.md): entry point for
-  assistant-guided PTK work.
-- [PTK skills](@ROOT@.github/skills/): focused authoring and troubleshooting guidance.
-- [Job authoring](@ROOT@.github/skills/ptk-job-authoring/SKILL.md),
-  [DevOps](@ROOT@.github/skills/ptk-devops/SKILL.md) and
-  [GitHub workflows](@ROOT@.github/skills/ptk-github-workflows/SKILL.md).
-- [Offline documentation](@ROOT@.github/ptk/README.md) and
-  [configuration schema](@ROOT@.github/ptk/config-schema.json).
+### Keep the assistant reference current
 
-Ask your assistant to read the expert agent or the relevant skill first.
-Automatic discovery depends on your editor/assistant; installation does not
-execute skills or grant permissions. The bundled examples are references,
-not additional jobs configured in this repository.
+The repository includes the [PTK expert agent](@ROOT@.github/agents/ptk-expert.agent.md),
+[focused skills](@ROOT@.github/skills/),
+[offline documentation](@ROOT@.github/ptk/README.md) and
+[configuration schema](@ROOT@.github/ptk/config-schema.json).
+Ask your assistant to read the expert agent or relevant skill first. Automatic
+discovery depends on the editor/assistant. Bundled examples are references, not
+additional jobs configured in this repository.
 
-After upgrading PTK, maintainers can refresh the managed bundle with
-`ptk maintainer sync agent`. Locally edited managed files cause conflicts rather
-than being silently overwritten. Keep project-specific instructions separately.
-Commit the configuration and assistant bundle so colleagues receive them.
+After upgrading PTK, refresh this README and the managed assistant bundle with:
+
+```bash
+ptk maintainer sync agent --check
+ptk maintainer sync agent
+```
+
+Unchanged managed files update automatically; local edits produce conflicts rather
+than being silently overwritten. Keep repository-specific guidance separately.
+Commit configuration and assistant-reference updates so colleagues receive them.
 """
