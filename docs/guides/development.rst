@@ -126,12 +126,16 @@ YAML paths and values. Published docs do not include a source-module catalog or
 Python API reference. Internal Python interfaces are implementation details.
 Reusable packages expose commands as described in :doc:`python-tools`.
 
-Sixteen repository-local authoring skills are shipped under ``.claude/skills`` and
+Seventeen repository-local authoring skills are shipped under ``.claude/skills`` and
 included in the documentation. Tests check catalog completeness and source links.
-The wheel bundles fourteen project-facing skills, reference docs and examples
+The wheel bundles fifteen project-facing skills, reference docs and examples
 through the allowlist in ``src/ptk/authoring_bundle.py``. Keep the canonical skill
 files in ``.claude/skills``; do not maintain another copy for installed users.
 Consumer skill instructions must not depend on PTK's ``src`` or ``tests`` folders.
+The release smoke check verifies installed Markdown links plus RST document,
+literal-include and download targets within the deployed bundle. Keep these
+checks complete when adding references. Raw RST schema directives refer readers
+to the bundled JSON schema; consumers do not build PTK's documentation to use it.
 
 ``ptk package`` selects the release/docs groups, builds the wheel from an sdist,
 checks metadata, and smoke-tests an installed wheel in a separate project before

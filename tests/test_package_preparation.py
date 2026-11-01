@@ -89,3 +89,19 @@ def test_skill_link_check_rejects_missing_and_external_targets(tmp_path):
     skill.write_text("[Outside](../../../outside.rst)")
     with pytest.raises(ValueError, match="broken installed skill reference"):
         prepare_package.check_skill_links(tmp_path)
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        ":doc:`Missing </guides/missing>`",
+        ".. literalinclude:: ../../examples/missing.py",
+        ":download:`file <../missing.txt>`",
+    ],
+)
+def test_offline_reference_check_rejects_missing_rst_dependencies(tmp_path, content):
+    doc = tmp_path / ".github/ptk/docs/guides/example.rst"
+    doc.parent.mkdir(parents=True)
+    doc.write_text(content)
+    with pytest.raises(ValueError, match="broken installed skill reference"):
+        prepare_package.check_skill_links(tmp_path)

@@ -134,6 +134,9 @@ def test_tagged_build_and_frozen_sdist_rebuild(tmp_path):
             "docs/guides/cx-matrix.rst",
             "docs/guides/output-reuse.rst",
             "docs/guides/reports.rst",
+            "docs/guides/local-setup.rst",
+            "docs/guides/shared-configs.rst",
+            "agents/ptk-expert.agent.md",
         ):
             asset = f"ptk/resources/authoring/{name}"
             assert original.read(asset) == rebuilt_wheel.read(asset)

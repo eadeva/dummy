@@ -46,10 +46,12 @@ class SetupAuthoring:
         ).encode()
         files["ptk/README.md"] = (
             f"# PTK {self._version} offline reference\n\n"
-            "These guides, examples and skills match the installed PTK version. "
+            "These guides, examples and skills match the PTK version that exported this bundle. "
             "They are managed by `ptk maintainer sync agent`; preserve project-specific changes in separate files.\n\n"
             "- [Assistant discovery guide](docs/guides/agent-guide.rst)\n"
+            "- [Local setup, hooks and tools](docs/guides/local-setup.rst)\n"
             "- [Configuration](docs/guides/configuration.rst)\n"
+            "- [External bases and deviation reports](docs/guides/shared-configs.rst)\n"
             "- [CLI](docs/reference/cli.rst)\n"
             "- [Log analysis](docs/guides/log-analysis.rst)\n"
             "- [PTK expert agent](../agents/ptk-expert.agent.md)\n"
@@ -62,7 +64,16 @@ class SetupAuthoring:
             "The guides are readable reStructuredText source. The schema contains the "
             "field reference otherwise rendered by Sphinx. Bundled examples live in `examples/`. "
             "Copy examples to a disposable directory before running them. "
-            "PTK development commands in the quickstart refer to the PTK source checkout.\n"
+            "Examples are syntax references, not jobs present in your project. "
+            "Use your installed runtime and discovered invocation routes for execution. "
+            "PTK packaging, extension-build and benchmark commands explicitly labelled "
+            "source-checkout-only do not apply to consumer repositories.\n\n"
+            "Resolve RST :doc: targets from docs/ (absolute document paths) or the current "
+            "page (relative paths). Literal includes refer to the bundled examples; "
+            "Sphinx-generated schema tables are supplied as config-schema.json. "
+            "Traceability IDs refer to the published product documentation. "
+            "Keep project-specific instructions in separately owned files; updates "
+            "preserve locally edited managed files by reporting conflicts.\n"
         ).encode()
         return AuthoringResult(
             self._files.sync(root, files, version=self._version, check=check), count

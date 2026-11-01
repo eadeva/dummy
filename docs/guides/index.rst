@@ -9,6 +9,7 @@ and defaults, use :doc:`/reference/configuration-schema`.
    :maxdepth: 1
 
    getting-started
+   local-setup
    configuration
    shared-configs
    python-tools

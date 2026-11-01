@@ -274,11 +274,14 @@ Steps are a mapping of unique IDs to executable step bodies, for example::
        python:
          interpreter: cli
 
-Each step has exactly one of ``run`` or ``uses``. ``needs`` lists prerequisite
+A step selects ``run`` or ``uses``, or contains a nonempty ``generators`` list
+without either. ``run`` and ``uses`` are mutually exclusive; generators may
+also accompany either execution form. ``needs`` lists prerequisite
 step IDs; independent steps can run concurrently, bounded by job ``max_workers``.
 There are no nested groups. ``python`` and ``passthrough`` apply to command steps; ``with`` applies to
 ``uses``. Prefer argument lists for paths containing spaces and user-supplied
-parameters. String commands use platform shell syntax.
+parameters. Ordinary non-Python string commands use platform shell syntax;
+Python modes use argument parsing as described in :doc:`/reference/execution`.
 
 The registered built-ins are ``echo``, ``wait``, ``report.import``,
 ``tools.ensure``, ``files.copy``, ``files.clean`` and

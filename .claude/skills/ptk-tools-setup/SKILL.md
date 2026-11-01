@@ -1,14 +1,13 @@
 ---
 name: ptk-tools-setup
-description: Declare tool checks and installers or diagnose PTK self-service tools, diagnostics and
-  onboarding.
+description: "Configure or troubleshoot required tools and installation in a PTK project, including missing or incompatible tools, selected PATH, Docker policies and local onboarding. Discover supported installer fields; do not assume the project uses PTK\u2019s development toolchain."
 ---
 
 # ptk-tools-setup
 
 First follow the [project discovery and execution guide](../../../docs/guides/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
 
-1. Read [docs/guides/configuration.rst](../../../docs/guides/configuration.rst) and [docs/reference/cli.rst](../../../docs/reference/cli.rst); use `ptk maintainer config schema` for tool fields.
+1. Read [docs/guides/configuration.rst](../../../docs/guides/configuration.rst) and [docs/reference/cli.rst](../../../docs/reference/cli.rst); use `ptk describe --json --configuration` (or the bundled schema when runtime inspection is unavailable) for tool fields.
 
 2. Inspect the selected job's inherited tool requirements and platform-specific definitions. Reuse existing tool keys and sources; declare a check command, version range and version_regex matching observed output.
 
@@ -26,7 +25,7 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 9. Verify with `ptk self-service doctor` and rerun the tool's check. Use `ptk maintainer sync configs` for shared configuration and `ptk self-service hooks install` for hooks.
 
-10. Test adapters with fake runners or local archives; do not install machine-wide tools in unit tests.
+10. For a configuration change, verify the selected tool check and resolved executable, not PTK internal adapter tests. Only PTK developers change/test adapters in its source checkout.
 
 11. Global and job `requires_tools` merge per tool: unmentioned tools stay inherited, `name: false` disables one, and settings mappings override only that job. Tool files load automatically; see [docs/guides/configuration.rst](../../../docs/guides/configuration.rst).
 
@@ -39,4 +38,6 @@ Only when the project uses Artifactory, configure the HTTPS base URL, repository
 
 For generated GitHub workflows, supply a Linux container image with matching PTK, Python 3.12+, Bash, curl and project tools already installed. The shipped artifact/run Actions do not install PTK. See [GitHub workflows](../ptk-github-workflows/SKILL.md).
 
-`docker: false` is the default and disables installation only inside Docker. Keep version checks, report entries and existing tool activation. Use `docker: true` only when installation inside the image is intended. `PTK_DOCKER=1|0` overrides best-effort runtime detection.
+Consult [local setup](../../../docs/guides/local-setup.rst) for the preparation order and hook behavior. `tools.ensure` defers initial required-tool checks; order it before consumers with explicit `needs`. Unknown executables in arbitrary commands are not discovered as tool requirements. Mise is not a built-in installer; do not invent a `mise` schema field.
+
+`docker: false` is the default and disables installation only inside Docker. Keep version checks, report entries and existing tool activation. Use `docker: true` only when installation inside the image is intended. `PTK_DOCKER=1|0` overrides best-effort runtime detection. Report every unavailable/incompatible tool with its recorded reason; direct the developer to correct the image or its selected PATH rather than disabling checks.

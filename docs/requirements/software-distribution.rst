@@ -111,7 +111,7 @@ items are explicitly marked and must not be presented as supported commands.
    :security: false
    :legal: false
    :status: accepted
-   :verification_criteria: Installed-resource tests verify agent/skill references and offline docs in a separate consuming project.
+   :verification_criteria: Installed-resource tests verify agent/skill and README links, offline RST document/include/download targets, and version-matched resources in a separate consuming project.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_AUTHORING
    :tags: implemented
@@ -151,7 +151,7 @@ items are explicitly marked and must not be presented as supported commands.
    :security: false
    :legal: false
    :status: accepted
-   :verification_criteria: Catalog/resource checks reject broken checkout-only links and exercise installed authoring resources in a separate project.
+   :verification_criteria: Catalog/resource checks reject broken checkout-only links and exercise installed authoring resources with non-default configuration directories and unrelated job names in a separate project.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_AUTHORING
    :tags: implemented

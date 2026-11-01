@@ -1,5 +1,32 @@
-Preparing an Artifactory release
-==================================
+Preparing package artifacts
+===========================
+
+Package a consuming project
+---------------------------
+
+PTK orchestrates the project's chosen packaging commands. It does not add a
+``package`` job, Python build backend or dependency groups to an existing project.
+Discover the actual job with ``ptk --help`` or ``ptk describe --json`` and inspect
+its source before execution. Preserve that project's version source, backend,
+artifact naming and release policy; non-Python projects need no Python packaging
+configuration merely because they use PTK.
+
+Declare outputs on the producing steps or job, inspect the completed output
+summary and ``upload.json``, and verify artifacts using the project's own tools.
+See :doc:`artifacts`, :doc:`python-tools` and :doc:`github-actions` when relevant.
+Preparation does not imply publication. Keep credentials out of manifests and
+confirm that an apparent build/packaging command does not also publish.
+
+Install a distributed PTK release
+---------------------------------
+
+Use the team's approved package source and installer. After installation verify
+``ptk --version``. Use ``ptk self-service extension`` for VS Code and, as a project
+maintainer, ``ptk maintainer sync agent`` for portable offline agent resources.
+A consumer does not build PTK's VSIX or run PTK's packaging job.
+
+Prepare PTK itself (source checkout only)
+-----------------------------------------
 
 Run ``uv run ptk package`` (or ``ptk package`` from this checkout). The job
 selects the uv ``release`` and ``docs`` dependency groups and creates::
@@ -67,7 +94,7 @@ validation failures leave the previous successful artifacts intact. Additional
 or modified files in the output directory are preserved by refusing replacement.
 
 The wheel includes lightweight reference documentation, runnable example sources
-and fourteen project authoring skills. It does not include rendered HTML or require
+and fifteen project authoring skills. It does not include rendered HTML or require
 Sphinx at runtime. The full HTML documentation is the separate docs ZIP, suitable
 for a documentation site or an Artifactory generic repository. Only the wheel and
 source archive in ``dist`` belong in an Artifactory Python package repository.

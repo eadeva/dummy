@@ -1,6 +1,6 @@
 ---
 name: ptk-development
-description: Modify ptk core code, adapters, use cases or extension interfaces.
+description: 'Develop PTK itself in its source checkout: core code, adapters, execution, packaging and extension interfaces. Do not use for ordinary configuration changes in a consuming project.'
 ---
 
 # ptk-development
@@ -21,7 +21,7 @@ Use this skill only in PTK's own source checkout. Confirm the checkout, project 
 
 7. Exercise Windows-specific paths in Windows CX; do not claim cross-platform success from Linux alone.
 
-8. Update docs, examples and relevant authoring skills with behavior changes. Review all skill links and the expert routing table; add new project-facing resources to the authoring bundle and test installed-wheel synchronization, not just source paths. Keep secrets and generated workspace outputs out of git.
+8. Update docs, examples and relevant authoring skills with behavior changes. Review source and installed Markdown/RST links, bundled literal includes and the expert routing table; add new project-facing resources to the authoring bundle and test installed-wheel synchronization, not just source paths. Keep secrets and generated workspace outputs out of git.
 
 9. Review CX results before marking a milestone complete; record explicit remaining limitations in the relevant requirements, decisions and guides. Do not assume a PLAN.md exists.
 

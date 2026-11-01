@@ -25,7 +25,7 @@ For example, ``verify`` can call ``build`` and then ``test``. The ``build`` job
 can contain ``configure`` and ``compile`` steps that call the chosen build tool.
 Keep tool commands in the job and reuse that job from workflows or CX pipelines.
 See :doc:`configuration` for job and step fields and
-:doc:`/architecture/06-runtime-view` for execution behavior.
+:doc:`/reference/execution` for execution behavior.
 
 Local orchestration and CX pipelines
 ------------------------------------

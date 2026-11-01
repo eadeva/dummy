@@ -9,7 +9,7 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 1. Read [configuration](../../../docs/guides/configuration.rst), the owning job document and referenced tools/parameters. Use the installed document schema for exact fields. Preserve existing job names, scripts, selected runtimes and output conventions unless the requested change requires otherwise.
 
-2. Use a `steps` mapping of unique IDs, each with exactly one of `run` or `uses`. Add `needs: ID` or `needs: [ID, ID]` for prerequisites. Independent steps may overlap; declaration order does not serialize them.
+2. Use a `steps` mapping of unique IDs, each with `run`, `uses`, or a nonempty generation-only `generators` list. `run` and `uses` are mutually exclusive; generators may accompany either. Add `needs: ID` or `needs: [ID, ID]` for prerequisites. Independent steps may overlap; declaration order does not serialize them.
 
 3. Use argument lists for commands with parameters or paths containing spaces.
 
@@ -27,11 +27,13 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 10. If the requested change affects maintained VS Code tasks, update them with `ptk maintainer sync tasks`, preserving the project's user/maintainer task policy; use `--users-only` when explicitly wanted.
 
-11. Inspect with `--graph`; dry-runs include graphs automatically. Keep repository-root default cwd. Step folders are conventions, not enforced sandboxes: declare dependencies for shared writes and use `${steps.ID.build_dir}` for known paths. `--only-step` requires existing prerequisite artifacts; never assume stored runtime outputs. Retries affect one step; Python handlers must cooperate with deadlines. Use `files.clean` only within generated workspace folders.
+11. Inspect with `--graph`; dry-runs include graphs automatically. Keep repository-root default cwd. Step folders are conventions, not enforced sandboxes: declare dependencies for shared writes and use `${steps.ID.build_dir}` for known paths. `--only-step` requires existing prerequisite artifacts; never assume stored runtime outputs. Retries affect one step; built-in handlers observe cancellation, and external processes follow the documented timeout behavior. Use `files.clean` only within generated workspace folders.
 
 Declare `outputs` explicitly as paths or `{path, artifact_type}` objects on the producing step/job. Their principal purpose is workflow artifact transfer; output validity is project responsibility. Opt into reuse only with declared outputs and `cache: true`; content hashes, not timestamps, decide reuse. Root steps/calls still execute, and `--no-cache-ptk` disables reuse throughout execution. Read [output reuse](../../../docs/guides/output-reuse.rst) and [artifact manifests](../../../docs/guides/artifacts.rst).
 
 For GUI launchers, inspect the installed job `gui` field and its constraints in [execution](../../../docs/reference/execution.rst). The launched process outlives PTK; successful launch is not proof the application completed. Do not treat detached GUI jobs as completed artifact producers. Use the editor's creation wizard and runtime mode descriptions for Python, direct-command and shell choices; do not embed shell syntax in argv lists.
+
+Before real execution, account for required-tool/credential checks and enabled local hook installation. Python environments are prepared when their steps start. Configuration freshness is a separate explicit check, not an automatic job prerequisite. Read [local setup](../../../docs/guides/local-setup.rst) when startup fails.
 
 Read [versioning](../ptk-versioning/SKILL.md) only for version sources or generated version files, and [workflow authoring](../ptk-workflow-authoring/SKILL.md) to compose existing jobs.
 

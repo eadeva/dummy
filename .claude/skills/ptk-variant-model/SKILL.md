@@ -1,7 +1,6 @@
 ---
 name: ptk-variant-model
-description: Add or change ptk components, features, inherited variants, aliases or
-  step conditions.
+description: "Create or diagnose a PTK project\u2019s component features, inherited variants, aliases, constraints and step eligibility. Use for variant resolution, qualified feature references and step-local generators without assuming debug/release variants exist."
 ---
 
 # ptk-variant-model
@@ -32,7 +31,7 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 Temporary feature overrides on jobs do not change files. A local workflow selects one owner variant with global `-V`; its `repo_variants`
 mapping selects variants in other repositories. Steps only filter eligibility,
-not variant selection. GitHub setup can expand multiple concrete owner variants;
+not variant selection. A generated build graph describes build targets; it is separate from PTK’s step dependency graph and does not create missing `needs` edges. GitHub setup can expand multiple concrete owner variants;
 see [GitHub workflows](../ptk-github-workflows/SKILL.md). Maintainers alone
 can force `--ci`/`--no-ci`; all users retain automatic CX detection. See
 [configuration](../../../docs/guides/configuration.rst).

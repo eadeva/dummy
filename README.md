@@ -2,12 +2,19 @@
 
 A configuration-driven project CLI: jobs made of named steps with explicit dependencies,
 built-in variant handling, credentials, tool setup, shared base configs,
-unified logging and reporting. See [`reference/development-plan.md`](reference/development-plan.md) for the full plan.
+unified logging and reporting. See the [user guides](docs/guides/index.rst) for supported behavior.
 
 **Status:** Configuration, execution, variants, credentials, reporting, tool setup,
 reusable Python tools, VMR discovery and local workflows are implemented. The current scope and acceptance
-boundaries are recorded in `reference/development-plan.md`. Sixteen repository-local skills
+boundaries are recorded in the [requirements](docs/requirements/index.rst) and [architecture decisions](docs/architecture/09-architecture-decisions.rst). Seventeen repository-local skills
 include tested authoring and Python tool examples.
+
+For an existing project, use its team-provided PTK installation and start with
+`ptk --help`, `ptk describe --json` and `ptk validate`. Follow the
+[local setup guide](docs/guides/local-setup.rst); a consumer repository does not
+need PTK source, Node.js or PTK development dependencies.
+
+The following commands are **only for developing PTK in this source checkout**:
 
 ```bash
 uv sync                     # install with dev dependencies
@@ -410,7 +417,7 @@ shared host operations. See `docs/guides/configuration.rst` and `docs/reference/
 
 For a complete tested starter, copy `examples/authoring`. For a reusable Python CLI starter,
 use `examples/python-tool`. The authoring skill catalog is in `docs/guides/skills.rst`;
-the wheel bundles the PTK expert agent, fourteen project-facing skills and lightweight offline references.
+the wheel bundles the PTK expert agent, fifteen project-facing skills and lightweight offline references.
 Run `ptk maintainer sync tasks` to create tasks. Run `ptk maintainer sync agent` to install
 `.github/agents/ptk-expert.agent.md`, copy skills to `.github/skills`, and install version-matched docs, examples and a configuration
 schema under `.github/ptk`. Relative links work without a PTK checkout or network

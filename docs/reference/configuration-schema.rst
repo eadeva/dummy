@@ -5,7 +5,7 @@ These tables describe YAML fields using the schema that PTK uses to validate
 configuration. Section names are configuration paths: ``<name>`` means a key
 you choose, and ``[]`` means a list item. Linked types lead to the corresponding
 field table. Shared structures are documented once at their first path; the same
-fields apply wherever that structure is linked, including nested step groups.
+fields apply wherever that structure is linked, including repeated job and step definitions.
 
 ``Required: no`` means the field can be omitted. A missing default in a table
 can mean a default factory (for example, an empty mapping), rather than ``null``.
@@ -19,6 +19,11 @@ validated by the schema. See :doc:`/reference/builtins` and
 
 Export a machine-readable schema for editor integration::
 
-   uv run ptk maintainer config schema -o schema.json
+   ptk maintainer config schema -o schema.json
+
+Ordinary users can inspect runtime document schemas with
+``ptk describe --json --configuration``. Installed offline resources also include
+``config-schema.json`` beside their README; the directive below is expanded only
+in the published Sphinx site, so raw RST readers should use that JSON schema.
 
 .. ptk-schema::

@@ -512,6 +512,14 @@ not imply that every related future capability has been implemented.
 
    **Decision:** Use one PTK expert entry point with focused authoring, troubleshooting and log-analysis skills. Discover the actual project, installed CLI, permissions and supported contracts before acting.
 
+   Ship fifteen project-facing skills plus the expert with self-contained offline
+   references; retain PTK development/docs-writing skills only in its checkout.
+   Label checkout-only procedures, resolve links relative to installed resources,
+   and use the deployed schema rather than requiring PTK source. Validate Markdown
+   and RST resource closure during release smoke checks and exercise realistic
+   consumer tasks without the packaging checkout. Keep local onboarding separate
+   from native workflow generation and preserve project-owned instructions.
+
    **Alternatives considered:** Adding agents solely for each skill was rejected as unnecessary coordination.
 
    **Consequences:** Specialists can be introduced for genuinely separate work later; a skill does not authorize executing or publishing unrequested project work.

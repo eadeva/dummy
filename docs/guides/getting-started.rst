@@ -9,6 +9,15 @@ When working on PTK itself, run ``uv sync`` from its source checkout to install
 the development dependencies. This is separate from initializing a consuming
 project.
 
+Join an existing project
+------------------------
+
+Use the team-provided PTK launcher and check ``ptk --version``, ``ptk --help``
+and ``ptk validate`` from the checkout. Read :doc:`local-setup` for tools, local
+hooks and troubleshooting. Do not run ``ptk init`` over an existing project.
+A project can have entirely different jobs, variants and configuration paths
+from the examples below; use its help or ``ptk describe --json`` to discover them.
+
 Create your own project
 -----------------------
 
@@ -65,7 +74,9 @@ Run the repository example
 The quickstart uses only the Python interpreter running ptk. It needs no CMake,
 compiler, credentials, or network connection once ptk is installed. Commands
 below work on Linux and Windows. Copy ``examples/quickstart`` outside this Git
-checkout, then open a terminal in the copy. PTK discovers its root marker::
+checkout, then open a terminal in the copy. When using installed authoring
+resources, the same example is under ``.github/ptk/examples/quickstart``; copy it
+out of the managed reference directory first. PTK discovers its root marker::
 
    ptk validate
    ptk -V debug build --dry-run
@@ -73,19 +84,19 @@ checkout, then open a terminal in the copy. PTK discovers its root marker::
    ptk -V release build
 
 ``dry-run`` displays the commands without executing the steps. ``build`` first
-writes ``examples/quickstart/_bin/<variant>/build/message.txt``, then runs a parallel
+writes ``_bin/<variant>/build/message.txt`` under the copied project, then runs a parallel
 check set. The extra check is enabled for ``debug`` and skipped for ``release``.
 The unit check writes JUnit XML which ptk imports into its report.
 
 Inspect the results
 -------------------
 
-Open ``examples/quickstart/_reports/debug/build/report.html`` in a browser, or::
+Open ``_reports/debug/build/report.html`` under the copied project in a browser, or::
 
    ptk -V debug report open build
 
 JSON, JUnit XML and Markdown reports are written alongside the HTML. Logs are in
-``examples/quickstart/_logs/debug/build``. Previous logs are retained according
+``_logs/debug/build`` under the copy. Previous logs are retained according
 to the project's history setting.
 
 Read the configuration and workload
@@ -100,7 +111,7 @@ Read the configuration and workload
 .. literalinclude:: ../../examples/quickstart/demo.py
    :language: python
 
-The larger ``examples/demo`` directory illustrates a firmware configuration.
+In PTK's source checkout only, the larger ``examples/demo`` directory illustrates a firmware configuration.
 Its CMake presets, toolchains and upload scripts are project-specific placeholders;
 it is suitable for configuration validation and dry runs, not an unattended build.
 

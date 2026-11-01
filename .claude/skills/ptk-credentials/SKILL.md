@@ -1,14 +1,13 @@
 ---
 name: ptk-credentials
-description: Declare, provision or troubleshoot ptk credentials without exposing secret
-  values.
+description: Declare, provision or diagnose credential providers and step secret injection in a PTK project. Use for missing credentials, provider conflicts and requested setup without exposing values or retrieving secrets merely to inspect availability.
 ---
 
 # ptk-credentials
 
 First follow the [project discovery and execution guide](../../../docs/guides/agent-guide.rst). Apply it even when this skill is invoked directly; examples are syntax references, not project defaults.
 
-1. Read [docs/guides/configuration.rst](../../../docs/guides/configuration.rst) and [docs/reference/cli.rst](../../../docs/reference/cli.rst); inspect the credential fields with `ptk maintainer config schema`.
+1. Read [docs/guides/configuration.rst](../../../docs/guides/configuration.rst) and [docs/reference/cli.rst](../../../docs/reference/cli.rst); inspect the credential fields with `ptk describe --json --configuration` (or the bundled schema when runtime inspection is unavailable).
 
 2. Declare fields and an ordered provider chain; default order is env, keyring, gopass, vault, prompt.
 
@@ -30,4 +29,4 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 11. Use `ptk self-service creds test NAME` only after inspecting the configured test command and its external effects.
 
-In VMR mode, use `ptk self-service creds list` for shared names and repository-qualified conflicts. Listing must never unlock a store. Use the storage namespace when implementing providers; logical credential references alone are not unique across VMR definitions.
+In VMR mode, use `ptk self-service creds list` for shared names and repository-qualified conflicts. Listing must never unlock a store. Preserve the owning repository and configured storage namespace when diagnosing conflicts; logical names alone are not unique across VMR definitions. Use supported providers or ordinary external tools, not an invented provider plugin.

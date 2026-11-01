@@ -81,7 +81,10 @@ cache remains disabled unless the project explicitly enables it.
 Action contracts
 ----------------
 
-The three composite actions live under ``.github/actions``. Their runtime is
+The three composite actions live under ``.github/actions`` in the selected PTK
+Action repository, not automatically in the consuming repository. The generator
+writes references to that repository/ref; ``sync agent`` does not copy Actions.
+Their runtime is
 part of the installed PTK package; use matching Action/PTK versions.
 
 ``ptk-run-job``

@@ -170,3 +170,15 @@ def test_bundle_ignores_local_config_and_generated_examples(tmp_path):
         for name in assets
     )
     assert all("_logs" not in name and "__pycache__" not in name for name in assets)
+
+
+def test_all_installed_reference_links_are_self_contained(tmp_path):
+    from scripts.prepare_package import check_skill_links
+
+    SetupAuthoring(AuthoringFiles(), "review").execute(tmp_path)
+    check_skill_links(tmp_path)
+    assert not (tmp_path / "src").exists()
+    assert not (tmp_path / "pyproject.toml").exists()
+    assert (tmp_path / ".github/ptk/docs/guides/local-setup.rst").is_file()
+    assert not (tmp_path / ".github/skills/ptk-development").exists()
+    assert not (tmp_path / ".github/skills/ptk-docs-writing").exists()

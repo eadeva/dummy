@@ -24,6 +24,7 @@ SKILLS = (
 )
 DOCS = (
     "guides/agent-guide",
+    "guides/local-setup",
     "reference/cli",
     "guides/configuration",
     "guides/python-tools",

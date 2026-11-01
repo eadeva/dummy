@@ -1,7 +1,6 @@
 ---
 name: ptk-docs-writing
-description: Document ptk features, configuration or project jobs and maintain
-  tested examples.
+description: Maintain PTK product documentation, requirements, architecture decisions and tested examples in the PTK source checkout. Do not impose this documentation structure on consuming projects.
 ---
 
 # ptk-docs-writing
@@ -28,4 +27,4 @@ Use this skill only in PTK's own source checkout. Confirm the checkout, project 
 
 10. Keep credentials fictional, use project-relative paths, and describe platform-specific requirements.
 
-11. Update the relevant .claude/skills instructions and expert routing when changing an authoring workflow. Keep local execution distinct from native GitHub generation; document explicit outputs, cache opt-in, matrix setup and Docker/VMR TODOs. Verify that linked references are included in the installed authoring bundle.
+11. Update the relevant .claude/skills instructions and expert routing when changing an authoring workflow. Keep local execution distinct from native GitHub generation; document explicit outputs, cache opt-in, matrix setup and Docker/VMR TODOs. Verify that linked references and literal includes are included in the installed authoring bundle. Consumer-facing guides must begin with the consumer workflow; label PTK checkout-only jobs/scripts and avoid assuming build/package/verify jobs. Update the local setup guide when preflight, Docker or hook behavior changes.

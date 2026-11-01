@@ -76,13 +76,44 @@ def check_skill_links(project: Path) -> None:
     # Windows temporary paths can contain short names or redirected ancestors.
     # Compare canonical paths on both sides of the containment check.
     github = (project / ".github").resolve()
-    for skill in (github / "skills").glob("*/SKILL.md"):
-        for link in re.findall(r"\]\(([^)]+)\)", skill.read_text(encoding="utf-8")):
-            target = (skill.parent / link).resolve()
-            if not target.is_relative_to(github) or not target.exists():
-                raise ValueError(
-                    f"broken installed skill reference: {skill.name}: {link}"
-                )
+
+    def check(source, link, target):
+        resolved = target.resolve()
+        if not resolved.is_relative_to(github) or not resolved.is_file():
+            raise ValueError(
+                f"broken installed skill reference: {source.relative_to(github)}: {link}"
+            )
+
+    markdown = [
+        *(github / "skills").glob("*/SKILL.md"),
+        *(github / "agents").glob("*.md"),
+    ]
+    readme = github / "ptk/README.md"
+    if readme.is_file():
+        markdown.append(readme)
+    for source in markdown:
+        for link in re.findall(r"\]\(([^)]+)\)", source.read_text(encoding="utf-8")):
+            check(source, link, source.parent / link)
+    docs = github / "ptk/docs"
+    for source in docs.rglob("*.rst"):
+        text = source.read_text(encoding="utf-8")
+        for raw in re.findall(r":doc:`([^`]+)`", text):
+            link = raw.split("<")[-1].rstrip(">")
+            target = (
+                docs / link.lstrip("/")
+                if link.startswith("/")
+                else source.parent / link
+            )
+            check(source, raw, target.with_suffix(".rst"))
+        for link in re.findall(
+            r"^\.\. (?:literalinclude|include|image|figure)::\s+(\S+)",
+            text,
+            re.MULTILINE,
+        ):
+            check(source, link, source.parent / link)
+        for raw in re.findall(r":download:`([^`]+)`", text):
+            link = raw.split("<")[-1].rstrip(">")
+            check(source, raw, source.parent / link)
 
 
 def smoke(wheel: Path, temporary: Path) -> None:

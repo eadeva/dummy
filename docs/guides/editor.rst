@@ -225,9 +225,11 @@ Installed configuration copies in virtual environments and generated output do
 not trigger discovery. Refresh requests are serialized, and PTK task completion
 refreshes the tree. Click **PTK unavailable** to see the exact discovery error.
 
-Build from the repository root with ``ptk extension`` or ``uv run ptk extension``.
+Only in PTK's source checkout, build from its root with ``ptk extension`` or
+``uv run ptk extension``. Consumer projects use ``ptk self-service extension``.
 The job checks Node.js 22+ and npm, installs the build dependencies, runs the
-checks and writes ``extensions/project-toolkit/project-toolkit-0.22.0.vsix``.
+checks and writes a stable ``project-toolkit.vsix`` under the package step
+bin directory (normally ``_bin/default/extension/package/project-toolkit.vsix``).
 Use ``ptk self-service extension --dry-run`` to preview it. Node.js and npm must be on PATH.
 Set ``PTK_TEST_PYTHON`` to the project's Python interpreter to include real CLI
 integration tests. CX builds downloadable VSIX artifacts on Linux and Windows;
@@ -350,7 +352,7 @@ JavaScript, run ``npm run build`` and reload the development window.
 To install a development build into your normal VS Code instead::
 
    uv run ptk extension
-   uv run ptk self-service extension --vsix extensions/project-toolkit/project-toolkit-0.22.0.vsix --force
+   uv run ptk self-service extension --vsix _bin/default/extension/package/project-toolkit.vsix --force
 
 Editable installs intentionally contain no built-in VSIX; supply ``--vsix`` for
 this workflow. Full ``uv run ptk package`` builds the release artifacts containing

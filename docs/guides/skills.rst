@@ -86,7 +86,8 @@ behavior. Installing the wheel alone does not modify any consuming repository.
 The development and docs-writing skills remain checkout-only. Point an assistant
 working on PTK itself to those source skills explicitly.
 
-Tests validate the catalog and references, execute the authoring starter and
+Tests validate the catalog, agent/skill Markdown links and offline RST document,
+include and download targets inside the installed bundle, execute the authoring starter and
 build the ordinary Python tool example and run its CLI through uv.
 
 ptk-vmr
@@ -151,3 +152,21 @@ reviews callable native pipelines, matrix setup, Docker/VMR checkout TODOs and
 artifact Actions. It includes output declarations and never assumes a consumer
 project has PTK's own verify jobs or packaging scripts. Synchronization includes
 the matching GitHub, matrix, output-reuse and reporting reference guides.
+
+Keep project instructions separate
+----------------------------------
+
+The installed bundle is version-matched reference material, not a copy of PTK's
+source project. A consumer can have different job names, no variants, no Python
+package and any valid configuration directory. Start with the runtime discovery
+contract in :doc:`agent-guide` and the local onboarding flow in :doc:`local-setup`.
+
+Keep team-specific assistant instructions in files owned by that project. Do not
+edit the installed reference examples to configure builds, and do not modify the
+bundle manifest to hide drift. Synchronization reports conflicting edits and
+preserves them. Reconcile changes intentionally before updating the bundle.
+
+A successful link check proves resource availability; it does not prove that an
+AI assistant or the VS Code UI will behave correctly in every environment.
+Installed-wheel tests and disposable consumer scenarios provide additional
+execution evidence. Browser/native-Windows acceptance is reported separately.

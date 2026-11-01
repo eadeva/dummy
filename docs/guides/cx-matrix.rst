@@ -100,7 +100,9 @@ base, using its GitHub ``needs`` to supply the producer job name:
 
 For example, artifacts from ``build/compile`` can share version, commit and
 variant while using ``artifact_type=binaries`` or ``artifact_type=symbols``.
-A test job depending on ``build`` can select only the binaries. Completed jobs
+A project-written transfer tool can use those labels to select only binaries.
+The shipped ``ptk-download`` Action restores all outputs in each selected producer
+manifest; it does not provide an artifact-type filter. Completed jobs
 write an :doc:`upload manifest <artifacts>` with actual paths, producing steps
 and optional output ``artifact_type`` labels. The shipped Actions own property assignment, matching, ZIP packaging and
 downloads; projects may also supply their own transfer steps. A type

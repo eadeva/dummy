@@ -6,6 +6,34 @@ the skill references needed for the task. Refresh discovery after a version,
 configuration, repository or role change. These instructions describe PTK's
 contracts; they do not prescribe a project's jobs, tools, variants or layout.
 
+Installed bundle and project ownership
+--------------------------------------
+
+When deployed, the entry point is ``.github/agents/ptk-expert.agent.md`` and skills
+are in ``.github/skills``. Their linked offline reference is ``.github/ptk``.
+The manifest and README identify the exporting PTK release. These are managed
+reference assets, not the project's authored configuration. Resolve relative
+links from the document you read, not from the shell working directory.
+
+The consumer owns its root ``.main.ptk.yml``, configured ``repository.config_path``,
+jobs, scripts, variants and policies. That directory need not be ``config/ptk``.
+Do not copy PTK's own ``verify``, ``package`` or ``extension`` jobs, use its
+``src/ptk`` imports, or require its tests/dependency groups in another repository.
+A non-Python project can use the installed CLI without a local ``pyproject.toml``.
+
+The raw offline guides are readable RST. ``:doc:`` paths starting with ``/`` are
+relative to the bundled ``docs`` root; other document paths are relative to the
+current page. Literal includes point to the bundled examples. ``:need:`` IDs are
+traceability references in the published product documentation, not commands or
+files to find in a consumer checkout. The schema reference's Sphinx-generated
+tables are available as the adjacent ``config-schema.json`` in the offline bundle.
+
+Do not edit installed examples or the managed agent/skills to configure a project.
+Keep project-specific instructions in separately owned files under the team's
+chosen assistant conventions. ``ptk maintainer sync agent --check`` diagnoses
+bundle drift; synchronization protects local edits. Resolve conflicts through
+review rather than deleting customizations or changing manifest hashes.
+
 Establish the target
 --------------------
 
@@ -18,11 +46,14 @@ Establish the target
    to inspect a project. A consumer project need not contain PTK's Python source,
    build scripts, development dependency groups or tests.
 
-3. Prefer ``ptk describe --json`` for permitted commands, projects, variants,
+3. Prefer ``ptk describe --json`` (the intentionally hidden machine interface,
+   available even though ordinary help omits it) for permitted commands, projects, variants,
    parameters and execution routes. Request ``--configuration`` only for authored
    values, diagnostics, source provenance, document ownership, schema or template
    capabilities. Use each project's ``invocation.cwd`` and ``invocation.prefix``
-   with its supplied command/help paths. Put global options before the repository
+   with its supplied command/help paths. Configuration inventories can be large:
+   inspect only the relevant project, document and schema definitions rather than
+   printing the entire payload into an assistant transcript. Put global options before the repository
    alias. Do not implement another loader or infer permission from a visible file.
 
 4. Treat ``JOB``, ``VARIANT``, ``ALIAS``, ``FEATURE`` and example paths as placeholders.
@@ -47,6 +78,11 @@ repair. Read existing logs without requiring a valid project. Label unavailable
 validation or uncertain runtime behavior. Missing PTK, permissions or a marker
 does not authorize installation, self-granting maintainer access, initialization
 or broad filesystem scans. Suggest the specific next step only when needed.
+
+For local setup, distinguish preparation from execution: required
+tools and enabled hook installation gate real local jobs; Python environments
+are prepared at step start. External config freshness and synchronization remain
+explicit operations. See :doc:`local-setup`. Keep local-only requests local.
 
 Use ``layout``, printed result paths and recorded ``run.json`` paths to locate
 outputs. Do not assume ``config/ptk``, ``_logs``, ``_reports``, ``debug``, ``build``

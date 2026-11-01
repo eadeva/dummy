@@ -1,8 +1,9 @@
 Step dependency execution
 =========================
 
-Jobs contain a mapping of named steps. Each step has one ``run`` command or
-``uses`` handler. ``needs`` names prerequisite step IDs in the same job::
+Jobs contain a mapping of named steps. A step has a ``run`` command, a ``uses``
+handler, or only a nonempty ``generators`` list. Generators may also precede a
+command or handler. ``needs`` names prerequisite step IDs in the same job::
 
    # config/ptk/jobs/build.ptk.yml
    max_workers: 4
@@ -291,8 +292,7 @@ The graph does not discover or verify artifact dependencies; see
 The extension consumes the same PTK-provided tree projection. Expand
 prerequisites to inspect their dependents; both canonical nodes and shared
 references edit the same configuration definition. There are no dependency-level
-navigation groups. See :doc:`/guides/editor` and the decisions in
-:doc:`/architecture/09-architecture-decisions`.
+navigation groups. See :doc:`/guides/editor` for configuration graph controls.
 
 Graphs in execution reports
 ---------------------------
