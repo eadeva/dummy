@@ -193,6 +193,15 @@ forms use VS Code's document save and undo behavior. Dragging creates scheduling
 dependencies; it does not reorder definitions, run commands or establish artifact
 contracts. Positions are automatic and are not stored in YAML.
 
+Selected graph steps expose **Edit step fields** to reach their controls and
+**Remove step** to delete the definition. Removal asks for confirmation and
+lists affected dependents; their references in ``needs`` are removed in the same
+edit. No replacement dependency is inferred, so review execution order afterwards.
+Renaming a graph node from its parent list updates sibling ``needs`` references.
+Other textual references (for example templates containing a step name) remain
+project-owned and must be reviewed separately. Rejected structural actions are
+not replayed on the next edit. Comments and unrelated fields are preserved.
+
 Validation errors stay visible without disabling the configuration editor.
 An invalid graph displays its diagnostic while fields and Raw YAML remain
 available. Existing missing or cyclic references can be removed one at a time;
@@ -360,6 +369,12 @@ the extension. This keeps local testing independent of publishing or version bum
 
 Variable insertion
 ------------------
+
+The variable picker offers categories with counts and search within the selected
+category. Only variables available to the current field/job are listed. Use
+arrow keys and Enter to insert, Escape to close, and Tab to navigate the picker.
+Selection and hover colors follow the editor theme, including dark/high-contrast
+themes. Insertion preserves the caret position and existing field text.
 
 Template-capable configuration text inputs offer **Insert variable…** and
 autocomplete when typing ``${``. Search by name, group or description; use

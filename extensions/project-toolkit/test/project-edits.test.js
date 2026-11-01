@@ -90,3 +90,18 @@ test("graph connections update only the owning job document and survive invalid 
   assert.equal(YAML.parse(text).help, 123);
   assert.deepEqual(YAML.parse(text).steps.test.needs, ["compile"]);
 });
+
+test("step maintenance updates dependent needs in the same owning YAML file", () => {
+  const { config, docs } = fixture();
+  const file = '/repo/config/jobs/build.ptk.yml';
+  docs.set(file, '# preserve\nsteps:\n  compile: {run: make}\n  test: {run: pytest, needs: compile}\n');
+  config.value.jobs.build = YAML.parse(docs.get(file));
+  const edits = plan(config, docs, [
+    { op: 'rename', path: ['jobs', 'build', 'steps', 'compile'], name: 'build', updateNeeds: true },
+    { op: 'set', path: ['jobs', 'build', 'steps', 'build', 'run'], value: 'make all' },
+    { op: 'remove', path: ['jobs', 'build', 'steps', 'build'], updateNeeds: true },
+  ]);
+  assert.equal(edits.size, 1);
+  assert.match(edits.get(file), /# preserve/);
+  assert.deepEqual(YAML.parse(edits.get(file)), { steps: { test: { run: 'pytest' } } });
+});

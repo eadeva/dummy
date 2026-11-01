@@ -64,6 +64,19 @@ h2[data-entity=step] { color: var(--vscode-descriptionForeground); }
 .variable-option[aria-selected=true] { background: var(--vscode-list-activeSelectionBackground); color: var(--vscode-list-activeSelectionForeground); outline: 1px solid var(--vscode-focusBorder); outline-offset: -1px; }
 .variable-name { font-family: var(--vscode-editor-font-family, monospace); overflow-wrap: anywhere; }
 .variable-option .help { grid-column: 1 / -1; margin: 0; color: inherit; opacity: .85; }
+.variable-picker { color: var(--vscode-editorWidget-foreground, var(--vscode-foreground)); }
+.variable-picker > select { margin-bottom: 8px; }
+.variable-picker option { color: var(--vscode-dropdown-foreground, var(--vscode-input-foreground)); background: var(--vscode-dropdown-background, var(--vscode-input-background)); }
+.variable-option:hover { color: var(--vscode-list-hoverForeground, var(--vscode-foreground)); background: var(--vscode-list-hoverBackground, var(--vscode-input-background)); }
+.variable-option[aria-selected=true], .variable-option[aria-selected=true]:hover { color: var(--vscode-list-activeSelectionForeground, var(--vscode-foreground)); background: var(--vscode-list-activeSelectionBackground, var(--vscode-input-background)); }
+.variable-option .badge { color: inherit; background: transparent; border: 1px solid currentColor; }
+.variable-option .help { opacity: 1; }
+.variable-option { grid-template-columns: minmax(0, 1fr) auto; }
+.node-actions { flex-wrap: wrap; margin: 10px 0; }
+.remove-confirmation { flex-basis: 100%; grid-column: 1 / -1; }
+@media (forced-colors: active) {
+  .variable-option[aria-selected=true], .variable-option[aria-selected=true]:hover { background: Highlight; color: HighlightText; outline: 2px solid Highlight; }
+}
 .notice { margin: 12px 0; padding: 10px 14px; border-left: 3px solid var(--vscode-charts-orange, var(--vscode-focusBorder)); background: var(--vscode-textBlockQuote-background); line-height: 1.5; white-space: pre-wrap; }
 .notice.error { border-left-color: var(--vscode-errorForeground); color: var(--vscode-errorForeground); }
 .notice[hidden] { display: none; }

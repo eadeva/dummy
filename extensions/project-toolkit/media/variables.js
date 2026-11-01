@@ -35,9 +35,9 @@
     const tail = closing < 0 ? "" : value.slice(caret, closing);
     return { start, end: closing >= 0 && !/[{}\s]/.test(tail) ? closing + 1 : caret, query: before.slice(start + 2) };
   }
-  function filter(entries, query) {
+  function filter(entries, query, group = "") {
     const words = query.toLowerCase().trim().split(/\s+/).filter(Boolean);
-    return entries.filter(entry => words.every(word => `${entry.reference} ${entry.group} ${entry.description}`.toLowerCase().includes(word)))
+    return entries.filter(entry => (!group || entry.group === group) && words.every(word => `${entry.reference} ${entry.group} ${entry.description}`.toLowerCase().includes(word)))
       .sort((a, b) => a.group.localeCompare(b.group) || a.reference.localeCompare(b.reference));
   }
   return { available, token, filter };

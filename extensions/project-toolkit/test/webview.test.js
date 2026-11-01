@@ -527,3 +527,37 @@ test("graph search, direction and dependent setup preserve the authored graph", 
   await h.page.setViewportSize({width: 390, height: 850});
   assert(await h.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
 });
+
+test("selected steps expose removal with dependency explanation and do not replay rejected actions", options, async t => {
+  const value = { jobs: { build: { steps: { compile: { run: 'make' }, test: { run: 'pytest', needs: ['compile'] } } } } };
+  const h = await form(t, value, ['jobs', 'build', 'steps', 'compile']);
+  await h.page.getByRole('button', { name: 'Edit step fields', exact: true }).click();
+  await h.field('run').fill('make all');
+  await h.field('run').press('Tab');
+  const edit = (await h.edits())[0];
+  value.jobs.build.steps.compile.run = 'make all';
+  await h.state({ value, ack: edit.id });
+  await h.page.getByRole('button', { name: 'Remove step', exact: true }).click();
+  assert.match(await h.page.locator('.remove-confirmation').innerText(), /test/);
+  await h.page.getByRole('button', { name: 'Confirm removal', exact: true }).click();
+  const removal = (await h.edits()).at(-1);
+  assert.equal(removal.operations[0].updateNeeds, true);
+  await h.state({ value, ack: removal.id, issue: 'Source changed' });
+  await h.page.getByRole('button', { name: 'test', exact: true }).first().click();
+  assert.equal((await h.edits()).length, 2);
+  assert.equal(await h.field('run').inputValue(), 'pytest');
+});
+
+test("variable categories and selected rows use dark theme colours", options, async t => {
+  const h = await form(t);
+  await h.page.addStyleTag({ content: ':root { --vscode-foreground: #dddddd; --vscode-editor-background: #181818; --vscode-input-background: #252525; --vscode-input-foreground: #eeeeee; --vscode-list-activeSelectionBackground: #164f76; --vscode-list-activeSelectionForeground: #ffffff; --vscode-button-hoverBackground: #ffffff; }' });
+  await h.field('first').focus();
+  await h.page.getByRole('button', { name: 'Insert variable…', exact: true }).first().click();
+  await h.page.getByLabel('Variable category', { exact: true }).first().selectOption('Git');
+  const option = h.page.locator('.variable-picker:not([hidden]) .variable-option');
+  assert.equal(await option.count(), 1);
+  await option.hover();
+  assert.deepEqual(await option.evaluate(node => [getComputedStyle(node).color, getComputedStyle(node).backgroundColor]), ['rgb(255, 255, 255)', 'rgb(22, 79, 118)']);
+  await h.page.getByRole('searchbox').first().press('Enter');
+  assert.match(await h.field('first').inputValue(), /\$\{git.short_commit\}/);
+});

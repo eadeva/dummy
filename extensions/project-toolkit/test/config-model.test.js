@@ -109,3 +109,17 @@ test("custom YAML tags have no editable merge behavior", () => {
     assert.throws(() => model.edit(text, [{ op: "set", path: ["vars", "value"], value: 2 }]), /unsupported tag/);
   }
 });
+
+test("graph removal and rename keep sibling prerequisites valid and preserve authored comments", () => {
+  const text = '# pipeline\nsteps:\n  compile: {run: make}\n  test:\n    run: pytest # preserve\n    needs: compile\n  package:\n    run: zip\n    needs: [compile, test]\n';
+  const renamed = model.edit(text, [{ op: 'rename', path: ['steps', 'compile'], name: 'build', updateNeeds: true }]);
+  assert.equal(model.inspect(renamed).value.steps.test.needs, 'build');
+  assert.deepEqual(model.inspect(renamed).value.steps.package.needs, ['build', 'test']);
+  assert.match(renamed, /# preserve/);
+  const removed = model.edit(renamed, [{ op: 'remove', path: ['steps', 'build'], updateNeeds: true }]);
+  assert.equal(model.inspect(removed).value.steps.build, undefined);
+  assert.equal(model.inspect(removed).value.steps.test.needs, undefined);
+  assert.deepEqual(model.inspect(removed).value.steps.package.needs, ['test']);
+  assert.match(removed, /# pipeline/);
+  assert.throws(() => model.edit(text, [{ op: 'rename', path: ['steps', 'compile'], name: 'test', updateNeeds: true }]), /unique/);
+});

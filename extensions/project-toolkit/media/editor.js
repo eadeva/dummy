@@ -98,6 +98,22 @@
       remember(); renderConfiguration();
     });
   }
+  function nodeContext(path) {
+    const graph = PtkDependencies.context(schema, state.value, path, S);
+    return graph && path.length === graph.path.length + 1 ? graph : undefined;
+  }
+  function removeField(container, path) {
+    const graph = nodeContext(path);
+    if (!graph) { afterEdits(() => change({ op: "remove", path }, true)); return; }
+    container.querySelector(".remove-confirmation")?.remove();
+    const box = el("div", undefined, { className: "remove-confirmation notice" });
+    const dependents = Object.entries(valueAt(graph.path) || {}).filter(([, item]) => (Array.isArray(item?.needs) ? item.needs : [item?.needs]).includes(path.at(-1))).map(([id]) => id);
+    box.append(el("p", `Remove ${graph.kind} ${path.at(-1)}? ${dependents.length ? `Its prerequisite references in ${dependents.join(", ")} will also be removed. Review their execution order afterwards.` : "Other nodes will be kept."}`),
+      button("Confirm removal", () => afterEdits(() => change({ op: "remove", path, updateNeeds: true }, true)), "danger"),
+      button("Cancel", () => box.remove()));
+    container.append(box);
+    box.scrollIntoView({ block: "nearest" });
+  }
   function control(value, spec, onValue, id, path) {
     const resolved = S.effective(spec, value, schema);
     let input;
@@ -218,6 +234,15 @@
       });
       main.append(crumbs, el("h2", P.pathLabel(state.value, selected), { "data-entity": P.entity(selected, state) || "" }));
       const graph = PtkDependencies.context(schema, state.value, selected, S);
+      if (nodeContext(selected)) {
+        const actions = el("div", undefined, { className: "row node-actions" });
+        actions.append(button(`Edit ${graph.kind} fields`, () => {
+          const field = main.querySelector(".field");
+          field?.scrollIntoView({ block: "start" });
+          field?.querySelector("input, textarea, select, button")?.focus({ preventScroll: true });
+        }), button(`Remove ${graph.kind}`, () => removeField(actions, [...selected]), "danger"));
+        main.append(actions);
+      }
       if (graph) {
         graph.owner = (state.logical ? state.value : state.configurationValue)?.repository?.alias;
         const canvas = el("div"); main.append(canvas);
@@ -360,11 +385,11 @@
         const row = el("div", undefined, { className: "row" });
         const input = el("input", undefined, { "aria-label": `New name for ${key}` });
         input.value = String(key);
-        row.append(input, button("Apply name", () => afterEdits(() => change({ op: "rename", path, name: input.value.trim() }, true))));
+        row.append(input, button("Apply name", () => afterEdits(() => change({ op: "rename", path, name: input.value.trim(), ...(nodeContext(path) ? { updateNeeds: true } : {}) }, true))));
         field.append(row); input.focus();
       }, "secondary small"));
     }
-    actions.append(button("Remove", () => afterEdits(() => change({ op: "remove", path }, true)), "danger small"));
+    actions.append(button("Remove", () => removeField(field, path), "danger small"));
     field.append(actions); main.append(field);
   }
   function variableControl(field, input, path) {
@@ -373,6 +398,11 @@
     const tools = el("div", undefined, { className: "variable-tools" });
     const popup = el("div", undefined, { className: "variable-picker", hidden: "", role: "region", "aria-label": "Insert variable" });
     const search = el("input", undefined, { type: "search", placeholder: "Search variables…", "aria-label": "Search variables", autocomplete: "off" });
+    const category = el("select", undefined, { "aria-label": "Variable category" });
+    category.append(el("option", `All categories (${entries.length})`, { value: "" }));
+    for (const group of [...new Set(entries.map(entry => entry.group))].sort()) {
+      category.append(el("option", `${group} (${entries.filter(entry => entry.group === group).length})`, { value: group }));
+    }
     const results = el("div", undefined, { className: "variable-results", role: "listbox", id: `${input.id}-variables`, "aria-label": "Variables" });
     const summary = el("p", undefined, { className: "help", role: "status" });
     const close = (focus = false) => {
@@ -402,7 +432,7 @@
       close(true);
     }
     function show(query) {
-      matches = PtkVariables.filter(entries, query); active = 0;
+      matches = PtkVariables.filter(entries, query, category.value); active = 0;
       results.replaceChildren();
       for (const [index, entry] of matches.entries()) {
         const option = button("", () => insert(entry), "variable-option");
@@ -413,12 +443,13 @@
         option.addEventListener("pointerdown", event => event.preventDefault());
         results.append(option);
       }
-      summary.textContent = matches.length ? `${matches.length} variables · ↑/↓ select · Enter inserts · Esc closes` : "No matching variables.";
+      summary.textContent = matches.length ? `${matches.length} variables · ↑/↓ select · Enter inserts · Esc closes` : "No matching variables. Try another category or search.";
       highlight();
     }
     function open(auto = false) {
       if (variablePicker?.input !== input) variablePicker?.close();
       automatic = auto;
+      if (auto) category.value = "";
       range = PtkVariables.token(input.value, input.selectionStart) || { start: input.selectionStart, end: input.selectionEnd, query: "" };
       popup.hidden = false; search.hidden = auto;
       variablePicker = { input, close, field };
@@ -427,7 +458,7 @@
       show(search.value);
       if (!auto) search.focus();
     }
-    const launch = button("${}", () => open(), "secondary small");
+    const launch = button("${} Insert variable", () => open(), "secondary small");
     launch.setAttribute("aria-label", "Insert variable…");
     launch.title = "Insert variable (or type ${)";
     launch.addEventListener("pointerdown", event => event.preventDefault());
@@ -438,7 +469,7 @@
         event.preventDefault(); active = matches.length ? (active + (event.key === "ArrowDown" ? 1 : -1) + matches.length) % matches.length : 0; highlight();
       } else if (event.key === "Enter" && matches[active]) { event.preventDefault(); insert(matches[active]); }
       else if (event.key === "Escape") { event.preventDefault(); close(true); }
-      else if (event.key === "Tab") { close(); flush(); }
+      else if (event.key === "Tab" && automatic) { close(); flush(); }
     }
     input.addEventListener("keydown", keys); search.addEventListener("keydown", keys);
     input.addEventListener("input", () => {
@@ -447,6 +478,11 @@
       else close();
     });
     search.addEventListener("input", () => show(search.value));
+    category.addEventListener("change", () => {
+      if (automatic) { automatic = false; search.hidden = false; search.focus(); }
+      show(search.value);
+    });
+    category.addEventListener("keydown", event => { if (event.key === "Escape") { event.preventDefault(); close(true); } });
     const moved = () => {
       if (variablePicker?.input === input && automatic) {
         if (PtkVariables.token(input.value, input.selectionStart)) open(true);
@@ -460,7 +496,7 @@
     });
     search.setAttribute("aria-controls", results.id); input.setAttribute("aria-controls", results.id);
     input.setAttribute("aria-autocomplete", "list");
-    popup.append(search, results, summary, button("Close", () => close(true), "secondary small"));
+    popup.append(category, search, results, summary, button("Close", () => close(true), "secondary small"));
     tools.append(launch);
     field.append(tools, popup);
   }
@@ -704,7 +740,7 @@
         queue.clear();
         // A rejected connection is an action, not a text draft. Do not replay
         // it ahead of the user's repair or next selection after a stale save.
-        for (const operation of [...submitted.filter(op => op.op !== "dependency" && !creationAck), ...drafts]) queue.set(JSON.stringify(operation.path), operation);
+        for (const operation of [...submitted.filter(op => op.op === "set" && !creationAck), ...drafts]) queue.set(JSON.stringify(operation.path), operation);
       }
       commitRequested = false; deferred.length = 0;
       issue = message.issue || "The document changed outside this form. Review the refreshed fields before editing again.";

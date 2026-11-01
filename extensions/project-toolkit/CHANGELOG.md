@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.25.2
+
+- Add direct field editing and confirmed removal for selected graph steps. Remove or rename sibling prerequisite references in the same YAML edit, preserving comments. Do not replay rejected structural edits.
+- Add searchable variable categories with counts, clearer insertion controls, keyboard navigation and theme-aware hover/selection contrast.
+
 ## 0.25.1
 
 - Use the sidebar PTk wizard design for the extension details and listing icon.

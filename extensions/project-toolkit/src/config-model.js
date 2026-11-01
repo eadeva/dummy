@@ -119,6 +119,25 @@ function edit(text, operations) {
     if (YAML.isSeq(parent) && (!Number.isInteger(key) || key > parent.items.length)) throw new Error("Invalid list position.");
     if (YAML.isMap(parent) && typeof key !== "string") throw new Error("Invalid field name.");
     const exists = parent.has(key);
+    // Graph node removal/rename also updates sibling needs, in the same edit.
+    // Do this on the YAML nodes so unrelated comments and scalar spelling survive.
+    if (operation.updateNeeds && ["remove", "rename"].includes(op)) {
+      if (!YAML.isMap(parent) || !exists) throw new Error("The graph node no longer exists.");
+      if (op === "rename" && (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(operation.name) || parent.has(operation.name))) throw new Error("Choose a unique node name starting with a letter.");
+      for (const pair of parent.items) {
+        if (pair.key.value === key || !YAML.isMap(pair.value)) continue;
+        const needs = pair.value.get("needs", true);
+        const needsPath = [...path.slice(0, -1), pair.key.value, "needs"];
+        if (state.locked.some(prefix => prefix.every((part, i) => needsPath[i] === part) || needsPath.every((part, i) => prefix[i] === part))) throw new Error("A prerequisite uses complex YAML. Edit it in Raw YAML before changing this node.");
+        if (YAML.isScalar(needs) && needs.value === key) {
+          if (op === "rename") needs.value = operation.name;
+          else pair.value.delete("needs");
+        } else if (YAML.isSeq(needs)) {
+          if (op === "remove") needs.items = needs.items.filter(item => item.value !== key);
+          else needs.items.forEach(item => { if (item.value === key) item.value = operation.name; });
+        }
+      }
+    }
     if (op === "add") {
       if (exists) throw new Error(`Field ${key} already exists.`);
       validateValue(operation.value);

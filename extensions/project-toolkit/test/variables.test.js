@@ -48,3 +48,9 @@ test("typed output paths offer variables while artifact types stay literal", () 
   assert.ok(V.available(state, schema, ["jobs", "build", "outputs", 0, "path"], S).some(entry => entry.reference === "run.bin_dir"));
   assert.deepEqual(V.available(state, schema, ["jobs", "build", "outputs", 0, "artifact_type"], S), []);
 });
+
+test("variable categories combine with search and preserve field-scoped entries", () => {
+  assert.deepEqual(V.filter(variables.entries, '', 'Git').map(e => e.reference), ['git.short_commit']);
+  assert.deepEqual(V.filter(variables.entries, 'path', 'Environment').map(e => e.reference), ['env:PATH']);
+  assert.deepEqual(V.filter(variables.entries, 'git', 'Run'), []);
+});
