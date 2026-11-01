@@ -145,3 +145,59 @@ test("explicit optional Boolean additions invert defaults without changing initi
   assert.equal(S.initial(spec.properties.cache, schema), false);
   assert.equal(S.initial(spec.properties.enabled, schema), true);
 });
+
+const paramId = key => `parameter-definition-[]-${key}`;
+test("parameter wizard creates choice definitions with guidance and validates choices", t => {
+  const h = setup(t, schema.$defs.JobSpec.properties.params);
+  h.fill("creation-name", "build_type"); h.click("Configure");
+  h.fill(paramId("type"), "choice", "change"); h.click("Review");
+  assert(h.all().some(node => /add at least one non-empty choice/.test(node.textContent)));
+  h.fill(paramId("choices"), "Debug\nRelease");
+  h.fill(paramId("help"), "Select the build configuration.");
+  h.fill(paramId("env"), "BUILD_TYPE");
+  const enabled = h.byId(paramId("has-default")); enabled.checked = true; enabled.emit("change");
+  assert.equal(h.byId(paramId("default")).value, "Debug");
+  assert(h.all().some(node => /--build-type Debug/.test(node.textContent)));
+  h.click("Review"); h.click("Create");
+  assert.deepEqual(h.writes[0], {key: "build_type", value: {type: "choice", help: "Select the build configuration.", env: "BUILD_TYPE", choices: ["Debug", "Release"], default: "Debug"}});
+});
+
+test("editing a parameter is a cancellable draft and changing to secret removes defaults", t => {
+  const parent = {token: {type: "str", default: "placeholder", help: "Token", env: "TOKEN"}};
+  const h = setup(t, schema.$defs.JobSpec.properties.params, parent, {editKey: "token"});
+  h.fill(paramId("type"), "secret", "change");
+  assert.equal(h.byId(paramId("default")), undefined);
+  assert(h.all().some(node => /Secrets cannot have saved defaults/.test(node.textContent)));
+  h.click("Review"); assert.equal(h.writes.length, 0);
+  h.click("Back"); h.click("Review"); h.click("Save parameter");
+  assert.deepEqual(h.writes[0], {key: "token", value: {type: "secret", help: "Token", env: "TOKEN"}});
+  assert.equal(parent.token.default, "placeholder");
+});
+
+test("required parameter removes default without changing saved source", t => {
+  const parent = {count: {type: "int", default: 4}};
+  const h = setup(t, schema.$defs.JobSpec.properties.params, parent, {editKey: "count"});
+  const required = h.byId(paramId("required")); required.checked = true; required.emit("change");
+  assert.equal(h.byId(paramId("default")), undefined);
+  h.click("Cancel setup"); assert.equal(h.cancellations.length, 1);
+  assert.deepEqual(parent.count, {type: "int", default: 4});
+});
+
+test("parameter default validation catches incompatible values and permits runtime templates", () => {
+  for (const value of [{type: "choice", choices: ["A"], default: "B"}, {type: "int", default: 1.5}, {type: "secret", default: "no"}, {type: "bool", default: "maybe"}, {required: true, default: "x"}]) assert(C.problems(S, schema.$defs.ParamSpec, schema, value).length);
+  assert.deepEqual(C.problems(S, schema.$defs.ParamSpec, schema, {type: "int", default: "${vars.count}"}), []);
+});
+
+test("parameter template drafts survive review/back and choice edits invalidate an old default", t => {
+  const parent = {build_type: {type: "choice", choices: ["Debug", "Release"], default: "Debug"}};
+  const h = setup(t, schema.$defs.JobSpec.properties.params, parent, {editKey: "build_type"});
+  h.fill(paramId("choices"), "Release"); h.click("Review");
+  assert(h.all().some(node => /select a default from the allowed choices/.test(node.textContent)));
+  h.fill(paramId("default-mode"), "template", "change");
+  h.fill(paramId("default"), "${vh.data.build_type}");
+  h.click("Review"); h.click("Back");
+  assert.equal(h.byId(paramId("default")).value, "${vh.data.build_type}");
+  h.click("Review"); h.click("Save parameter");
+  assert.equal(h.writes[0].value.default, "${vh.data.build_type}");
+  assert.equal(parent.build_type.default, "Debug");
+});

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.26.1
+
+- Add a dedicated parameter setup/edit form with readable type choices, descriptions, environment sources, required settings, typed defaults, variable templates and one-choice-per-line editing.
+- Show CLI flag and step-reference examples. Review changes before saving; cancel preserves the original. Type/source changes explicitly reset incompatible draft values. Secrets cannot have saved defaults.
+- Document shell option completion with ptk JOB -- followed by Tab and how to load shell registration.
+
 ## 0.26.0
 
 - Workflow jobs are keyed directly by JOB or REPO:JOB, without a repeated job field. The wizard suggests unused jobs; needs and graph selection use the exact keys. Update PTK and the extension together and migrate existing workflows.

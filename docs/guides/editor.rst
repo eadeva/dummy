@@ -542,3 +542,30 @@ schema default: adding ``cache`` (default false) starts at true. A default-true
 field starts at false. Review or change the value before creating it. Whole-object
 initialization and required-field defaults are unchanged. Fields without a
 Boolean default keep the ordinary initial value.
+
+
+Configuring job parameters
+--------------------------
+
+Open a job's ``params`` field and choose **Set up new parameter** to add a named
+parameter. The setup form offers text, whole/decimal numbers, on/off flags,
+choices, paths, lists and secrets with descriptions of their use. Write the help
+text developers will see, enter choices one per line, choose whether a value is
+required, and optionally name an environment variable. The form explains the
+priority: explicit argument, then environment, then default.
+
+Enable **Use a default value** to enter a typed literal or a PTK variable/template.
+Boolean defaults use a checkbox, choice defaults use a dropdown, and list defaults
+use one item per line. Templates retain variable insertion and are resolved and
+type-checked at execution. Required and secret parameters cannot have defaults.
+Secret values must come from the environment or a hidden terminal prompt; never
+store them in configuration. The form shows the generated command-line option
+and the parameter reference to use in steps.
+
+Use **Edit parameter…** on existing entries or in the parameter detail view.
+Edits remain in a draft until **Review → Save parameter**. Cancel leaves the
+original unchanged. Changing type explicitly clears its default/choices; changing
+the default source resets the draft default. Unknown YAML fields are retained so
+validation can report them. Locked YAML values require Raw YAML. These controls
+configure parameter definitions; the job run form still supplies execution-only
+overrides without changing the project configuration.

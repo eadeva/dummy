@@ -181,6 +181,12 @@ Discovery, file ownership, schema authority and workspace routing.
    configuration fields. The schema shall retain descriptions, required values,
    types, limits and applicable name restrictions for guided creation of arbitrary
    configuration elements. Clients shall not need to invent runtime mode fields.
+   Parameter authoring shall provide type-specific defaults, choice entry,
+   required/environment settings and CLI/reference examples in a reviewable draft.
+   Editing an existing parameter shall use the same form, preserve the source on
+   cancellation and reject concurrent source changes. Required/secret defaults
+   and incompatible literal defaults shall be rejected before submission; runtime
+   template resolution remains the backend's responsibility.
 
    **Origin:** User request for intuitive step-wise setup of all new configuration
    elements and improved configuration-graph interaction.

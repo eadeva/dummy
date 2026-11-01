@@ -1227,3 +1227,16 @@ Known planned product gaps remain in
    still validate other enabled jobs before scheduling. No arbitrary Python,
    previous-result or filesystem predicate is introduced. See
    :doc:`/guides/github-actions` and :doc:`/reference/execution`.
+
+
+Parameter authoring controls
+----------------------------
+
+Parameter definitions use a dedicated draft form within the shared configuration
+wizard. The form shows type-specific defaults, choices and source precedence,
+and previews the CLI flag and step reference. Editing existing definitions uses
+the same review/commit flow. Changing type or default source deliberately resets
+the incompatible draft value; cancellation restores the untouched source.
+Required and secret definitions cannot have defaults. Runtime template conversion
+and full-project validation remain backend responsibilities. This avoids exposing
+an unconstrained JSON ``Any`` default as the primary parameter-authoring UI.

@@ -13,7 +13,7 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 3. Use argument lists for commands with parameters or paths containing spaces.
 
-4. Declare typed parameters; keep CLI > parameter file > declared env > default precedence.
+4. Recommend the extension’s **Set up new parameter** / **Edit parameter…** form for parameter definitions: select a type, description, allowed choices, required setting, environment source and optional literal/template default, then review before saving. Changing type resets its draft default/choices; Cancel preserves the source. Keep secrets out of defaults. To discover job options in a configured shell, type `ptk JOB --` then Tab; bare whitespace does not list options. Use `ptk JOB --help` for descriptions and `ptk self-service completion install` if registration is missing. Declare typed parameters; keep CLI > parameter file > declared env > default precedence.
 
 5. Do not combine `required: true` with a default or make a default reference other parameters.
 

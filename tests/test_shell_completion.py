@@ -323,3 +323,9 @@ def test_powershell_double_tab_is_explicit_and_shell_specific(tmp_path, monkeypa
     assert "Register-ArgumentCompleter" in listing.output
     invalid = runner.invoke(cli, ["self-service", "completion", "bash", "--double-tab"])
     assert invalid.exit_code == 2 and "PowerShell option" in invalid.output
+
+
+@pytest.mark.parametrize("shell", ["bash", "zsh", "fish", "powershell"])
+def test_job_option_names_require_an_option_prefix(project, shell):
+    assert "--build-type" not in complete(["build"], "", shell)
+    assert "--build-type" in complete(["build"], "--", shell)

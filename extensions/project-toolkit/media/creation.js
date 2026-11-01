@@ -25,6 +25,18 @@
       if (!Number.isFinite(value) || Number.isInteger(value) && !Number.isSafeInteger(value)) result.push(`${path}: enter a finite, precisely representable number.`);
       for (const [key, invalid, message] of [["minimum", value < rule.minimum, "at least"], ["maximum", value > rule.maximum, "at most"], ["exclusiveMinimum", value <= rule.exclusiveMinimum, "greater than"], ["exclusiveMaximum", value >= rule.exclusiveMaximum, "less than"]]) if (invalid) result.push(`${path}: must be ${message} ${rule[key]}.`);
     }
+    if (rule.title === "ParamSpec" && value && typeof value === "object") {
+      const kind = value.type || "str", hasDefault = value.default !== undefined && value.default !== null;
+      const template = typeof value.default === "string" && value.default.replaceAll("$${", "").includes("${");
+      if (kind === "choice" && (!Array.isArray(value.choices) || !value.choices.length || value.choices.some(item => typeof item !== "string" || !item.trim()))) result.push(`${path}: add at least one non-empty choice.`);
+      if (kind !== "choice" && value.choices != null) result.push(`${path}: choices are only valid for a choice parameter.`);
+      if (hasDefault && (kind === "secret" || value.required)) result.push(`${path}: secret or required parameters cannot have a default.`);
+      if (hasDefault && !template) {
+        if (kind === "choice" && !value.choices?.includes(value.default)) result.push(`${path}: select a default from the allowed choices.`);
+        if (["int", "float"].includes(kind) && (!String(value.default).trim() || !Number.isFinite(Number(value.default)) || kind === "int" && !Number.isInteger(Number(value.default)))) result.push(`${path}: enter a valid ${kind === "int" ? "whole" : "decimal"} number as default.`);
+        if (kind === "bool" && ![true, false, "true", "false", "1", "0", "yes", "no", "on", "off", "y", "n"].includes(typeof value.default === "string" ? value.default.toLowerCase() : value.default)) result.push(`${path}: choose true or false as default.`);
+      }
+    }
     if (value !== null && typeof value === "object") {
       const array = Array.isArray(value), entries = Object.entries(value);
       const minimum = array ? rule.minItems : rule.minProperties, maximum = array ? rule.maxItems : rule.maxProperties;
@@ -56,6 +68,7 @@
     const namedFields = !isList && parentSpec.additionalProperties === false;
     const fields = S.orderedEntries(spec, {}, schema, { includeMissing: true }).map(([key]) => key).filter(key => !Object.hasOwn(parent, key));
     const state = { page: 0, name: namedFields ? fields[0] || "" : "", type: "", mode: "", draft: undefined, initialized: false, seed: "", busy: false, error: "" };
+    if (options.editKey !== undefined) Object.assign(state, { page: 1, name: options.editKey, draft: structuredClone(parent[options.editKey]), initialized: true });
     let lastPage = -1;
     const node = document.createElement("section"); node.className = "creation-wizard"; node.setAttribute("aria-label", "Configuration setup");
     container.append(node);
@@ -86,6 +99,7 @@
       if (state.draft && typeof state.draft === "object" && !Array.isArray(state.draft)) Object.assign(state.draft, structuredClone(options.defaults || {}));
       const directory = S.resolve(childSpec(), schema)["x-ptk-directory-template"];
       if (directory) state.draft.path = directory.replace("{name}", state.name.trim());
+      defaultModes.clear();
       state.seed = seed; state.initialized = true;
     }
     function validate() {
@@ -104,8 +118,98 @@
       const details = el("details", undefined, { class: "creation-help" });
       details.append(el("summary", title), el("p", text, { class: "help" })); target.append(details);
     }
+    function parameterForm(target, value, field, keys) {
+      const kind = value.type || "str";
+      const prefix = `parameter-definition-${JSON.stringify(keys)}`;
+      const labels = { str: "Text — names, labels and arguments", int: "Whole number — counts and limits", float: "Decimal number — ratios and thresholds", bool: "On / off — Boolean flag", choice: "Choice — select from allowed values", path: "Path — file or directory", list: "List — multiple text values", secret: "Secret — environment or hidden prompt" };
+      const add = (label, control, description) => {
+        const row = el("div", undefined, { class: "creation-field" });
+        row.append(el("label", label, { for: control.getAttribute("id") }), control);
+        if (description) row.append(el("p", description, { class: "help" }));
+        target.append(row); return row;
+      };
+      const text = (key, label, description, multiline = false) => {
+        const control = el(multiline ? "textarea" : "input", undefined, { id: `${prefix}-${key}` });
+        control.value = value[key] || "";
+        control.addEventListener("input", () => { if (control.value || key === "help") value[key] = control.value; else delete value[key]; });
+        add(label, control, description); return control;
+      };
+      const type = el("select", undefined, { id: `${prefix}-type` });
+      S.resolve(field, schema).properties.type.enum.forEach(item => type.append(el("option", labels[item] || item, { value: item })));
+      type.value = kind;
+      type.addEventListener("change", () => {
+        value.type = type.value; delete value.default; delete value.choices; defaultModes.delete(JSON.stringify(keys));
+        if (type.value === "choice") value.choices = [];
+        render();
+      });
+      add("Parameter type", type, "Changing the type clears its default and choice list. Other settings are kept; Cancel leaves the saved parameter unchanged.");
+      text("help", "Description shown to developers", "Explain what this parameter changes. Shown in command help and the run form.", true);
+      if (kind === "choice") {
+        const choices = el("textarea", undefined, { id: `${prefix}-choices` });
+        choices.value = (value.choices || []).join("\n");
+        choices.addEventListener("input", () => {
+          value.choices = choices.value.split("\n").filter(item => item.trim());
+          const current = [...node.querySelectorAll("select")].find(control => control.getAttribute("id") === `${prefix}-default`);
+          if (current) {
+            current.replaceChildren();
+            if (!value.choices.includes(value.default)) current.append(el("option", "Choose a default…", { value: "" }));
+            value.choices.forEach(choice => current.append(el("option", choice, { value: choice })));
+            current.value = value.choices.includes(value.default) ? value.default : "";
+          }
+        });
+        add("Allowed choices (one per line)", choices, "Use exact values, such as Debug and Release. At least one is required.");
+      }
+      const required = el("input", undefined, { id: `${prefix}-required`, type: "checkbox" });
+      required.checked = Boolean(value.required);
+      required.addEventListener("change", () => { value.required = required.checked; if (value.required) delete value.default; render(); });
+      add("Require a value", required, "The developer must supply a value through an argument or environment variable. Enabling this removes the default.");
+      text("env", "Environment variable (optional)", "Enter the variable name, not its value. Priority: explicit argument → environment → default.");
+      if (kind === "secret") target.append(el("p", "Secrets cannot have saved defaults. Use an environment variable or PTK’s hidden terminal prompt; do not store a secret here.", { class: "notice" }));
+      else if (!value.required) {
+        const hasDefault = value.default !== undefined && value.default !== null;
+        const enabled = el("input", undefined, { id: `${prefix}-has-default`, type: "checkbox" }); enabled.checked = hasDefault;
+        enabled.addEventListener("change", () => {
+          defaultModes.delete(JSON.stringify(keys));
+          if (!enabled.checked) delete value.default;
+          else value.default = kind === "bool" ? false : ["int", "float"].includes(kind) ? 0 : kind === "list" ? [] : kind === "choice" ? value.choices?.[0] || "" : "";
+          render();
+        });
+        add("Use a default value", enabled, "Used only when neither an argument nor the configured environment supplies a value.");
+        if (hasDefault) {
+          const template = typeof value.default === "string" && value.default.replaceAll("$${", "").includes("${");
+          const mode = el("select", undefined, { id: `${prefix}-default-mode` });
+          mode.append(el("option", "Literal value", { value: "literal" }), el("option", "PTK variable / template", { value: "template" }));
+          // Keep template mode selected while typing even before the opening token is complete.
+          const modeKey = JSON.stringify(keys);
+          const isTemplate = defaultModes.get(modeKey) ?? template;
+          mode.value = isTemplate ? "template" : "literal";
+          mode.addEventListener("change", () => { defaultModes.set(modeKey, mode.value === "template"); value.default = mode.value === "template" ? "" : kind === "bool" ? false : ["int", "float"].includes(kind) ? 0 : kind === "list" ? [] : kind === "choice" ? value.choices?.[0] || "" : ""; render(); });
+          add("Default source", mode, "Changing this source resets the draft default. Templates are resolved and type-checked when the job runs.");
+          let control;
+          if (isTemplate) {
+            control = el("input", undefined, { id: `${prefix}-default` }); control.value = String(value.default);
+            control.addEventListener("input", () => { value.default = control.value; });
+          } else if (kind === "list") {
+            control = el("textarea", undefined, { id: `${prefix}-default` }); control.value = Array.isArray(value.default) ? value.default.join("\n") : String(value.default);
+            control.addEventListener("input", () => { value.default = control.value.split("\n").filter(item => item.length); });
+          } else {
+            const spec = { type: kind === "bool" ? "boolean" : kind === "int" ? "integer" : kind === "float" ? "number" : "string", ...(kind === "choice" ? { enum: value.choices || [] } : {}) };
+            const literal = kind === "bool" ? [true, "true", "1", "yes", "on", "y"].includes(typeof value.default === "string" ? value.default.toLowerCase() : value.default) : ["int", "float"].includes(kind) && Number.isFinite(Number(value.default)) ? Number(value.default) : value.default;
+            control = input(literal, spec, next => { value.default = next; }, `${prefix}-default`, [...path, state.name, ...keys, "default"]);
+          }
+          const row = add(kind === "list" && !isTemplate ? "Default items (one per line)" : "Default value", control);
+          if (isTemplate || ["str", "path"].includes(kind)) variables?.(row, control, [...path, state.name, ...keys, "default"]);
+        }
+      }
+      const paramName = keys.length ? String(keys.at(-1)) : state.name;
+      const flag = paramName.replaceAll("_", "-");
+      const example = kind === "bool" ? `--${flag} / --no-${flag}` : kind === "secret" ? `--${flag} (hidden prompt)` : `--${flag} ${kind === "choice" ? value.choices?.[0] || "VALUE" : kind === "list" ? "item1,item2" : "VALUE"}`;
+      target.append(el("p", `Command-line option: ${example}`, { class: "help" }), el("p", "Use in a step: ${params." + paramName + "}", { class: "help" }));
+    }
+    const defaultModes = new Map();
     function editValue(target, value, field, keys, label, required = false, depth = 0) {
       if (depth > 20) { target.append(el("p", "Use Raw YAML for deeper nesting after creation.", { class: "help" })); return; }
+      if (S.resolve(field, schema).title === "ParamSpec" && value && typeof value === "object") { parameterForm(target, value, field, keys); return; }
       const resolved = S.effective(field, value, schema), id = `create-value-${JSON.stringify(keys)}`;
       const row = el("div", undefined, { class: "creation-field" });
       const top = el("div", undefined, { class: "row" });
@@ -244,19 +348,19 @@
         }
         node.append(el("p", state.initialized ? "Going back keeps your draft. Changing its field, mode or value type starts a new draft when you continue." : "This setup only prepares configuration. Nothing is written until Create. Setup never executes commands or installs dependencies.", { class: "help" }));
       } else if (state.page === 1) {
-        node.append(el("p", "Required fields are marked *. Review example commands and paths, then add optional fields as needed. Values remain in this draft until Create.", { class: "help" }));
+        node.append(el("p", "Required fields are marked *. Review example commands and paths, then add optional fields as needed. Values remain in this draft until the final confirmation.", { class: "help" }));
         editValue(node, state.draft, chosenSpec(), [], state.name || "New item");
       } else {
-        node.append(el("p", "Review the configuration below. Create adds this element; it does not run commands or install dependencies. Use Save & validate afterwards for full project checks.", { class: "help" }));
+        node.append(el("p", "Review the configuration below. The final button saves this draft; it does not run commands or install dependencies. Use Save & validate afterwards for full project checks.", { class: "help" }));
         node.append(el("pre", JSON.stringify(state.draft, null, 2), { class: "creation-preview", "aria-label": "Configuration preview" }));
       }
       const actions = el("div", undefined, { class: "actions creation-actions" });
       actions.append(button("Cancel setup", onCancel));
-      if (state.page) actions.append(button("Back", () => { state.page--; state.error = ""; render(); }));
-      actions.append(button(state.page === 2 ? "Create" : state.page === 1 ? "Review" : "Configure", () => {
+      if (state.page > (options.editKey !== undefined ? 1 : 0)) actions.append(button("Back", () => { state.page--; state.error = ""; render(); }));
+      actions.append(button(state.page === 2 ? options.editKey !== undefined ? "Save parameter" : "Create" : state.page === 1 ? "Review" : "Configure", () => {
         if (state.page === 0) { fieldName(parent, state.name, parentSpec); initialize(); state.page = 1; render(); }
-        else if (state.page === 1) { validate(); state.page = 2; render(); }
-        else { validate(); onCreate(fieldName(parent, state.name, parentSpec), structuredClone(state.draft)); }
+        else if (state.page === 1) { validate(); state.error = ""; state.page = 2; render(); }
+        else { validate(); onCreate(options.editKey !== undefined ? options.editKey : fieldName(parent, state.name, parentSpec), structuredClone(state.draft)); }
       }, false));
       node.append(actions);
       if (state.busy) node.querySelectorAll("input, select, textarea, button").forEach(control => { control.disabled = true; });

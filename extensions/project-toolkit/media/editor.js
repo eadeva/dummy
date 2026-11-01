@@ -268,6 +268,7 @@
       const spec = S.at(schema, state.value, selected, schema);
       const resolved = S.effective(spec, value, schema);
       if (resolved.description) main.append(el("p", resolved.description, { className: "help" }));
+      if (resolved.title === "ParamSpec") main.append(button("Edit parameter…", () => startCreation(selected.slice(0, -1), {}, selected.at(-1)), ""));
       if (resolved.properties?.outputs && resolved.properties?.cache) {
         main.append(el("p", "Outputs primarily describe artifacts for uploads and downloads in workflows. Declaring outputs does not transfer files. PTK’s built-in cache is an optional aid: the project owns the output declarations and cache correctness. Reuse requires cache: true and explicit outputs; --no-cache-ptk disables it for the whole invocation.", { className: "help", "data-output-guidance": "true" }));
       }
@@ -275,6 +276,12 @@
         main.append(el("p", "This value uses an alias, unsupported tag or complex mapping. Use Raw YAML to edit it.", { className: "notice" }));
       } else if (value === null || typeof value !== "object") {
         main.append(el("p", "PTK configuration files must contain a mapping. Use Raw YAML to correct this document.", { className: "notice" }));
+      } else if (resolved.title === "ParamSpec") {
+        main.append(el("p", `${value.type || "str"} · ${value.required ? "Required" : "Optional"}${value.env ? ` · Environment: ${value.env}` : ""}`, { className: "help" }));
+        if (value.help) main.append(el("p", value.help));
+        if (value.default !== undefined && value.default !== null && value.type !== "secret") main.append(el("p", `Default: ${display(value.default)}`, { className: "help" }));
+        if (value.choices) main.append(el("p", `Choices: ${value.choices.join(", ")}`, { className: "help" }));
+        main.append(el("p", "Use Edit parameter to change its type, description, allowed choices, default and environment source together. Changes are saved only after review.", { className: "help" }));
       } else {
         const entries = S.orderedEntries(spec, value, schema);
         if (!entries.length) main.append(el("p", "No fields yet. Add a field below to get started.", { className: "empty" }));
@@ -337,7 +344,8 @@
     }
     if (value !== null && typeof value === "object") {
       const summary = Array.isArray(value) ? `${value.length} items` : Object.keys(value).join(", ") || "Empty object";
-      const open = button("Edit fields →", () => navigate(path), "link");
+      const parameter = resolved.title === "ParamSpec";
+      const open = button(parameter ? "Edit parameter…" : "Edit fields →", () => parameter ? startCreation(path.slice(0, -1), {}, path.at(-1)) : navigate(path), "link");
       open.id = id;
       body.append(el("span", summary, { className: "field-summary", title: summary }), open);
     } else {
@@ -503,25 +511,30 @@
     const missing = S.orderedEntries(spec, {}, schema, { includeMissing: true }).filter(([key]) => !Object.hasOwn(value, key));
     if (!Array.isArray(value) && resolved.additionalProperties === false && !missing.length) return;
     const isJob = selected.length === 1 && selected[0] === "jobs";
-    const label = isJob ? "New job" : resolved["x-ptk-graph"] === "step" ? "New step" : resolved["x-ptk-graph"] === "job" ? "New workflow job" : Array.isArray(value) ? "New item" : "New field";
+    const label = S.resolve(S.child(spec, value, "", schema), schema).title === "ParamSpec" ? "New parameter" : isJob ? "New job" : resolved["x-ptk-graph"] === "step" ? "New step" : resolved["x-ptk-graph"] === "job" ? "New workflow job" : Array.isArray(value) ? "New item" : "New field";
     const box = el("fieldset", undefined, { className: "add" });
     box.append(el("legend", label), el("p", "Choose → Configure → Review. Setup explains each field and prepares a draft before adding it.", { className: "help" }), button(`Set up ${label.toLowerCase()}`, () => startCreation([...selected]), ""));
     main.append(box);
   }
-  function startCreation(path, defaults = {}) {
+  function startCreation(path, defaults = {}, editKey) {
     afterEdits(() => {
       if (creation) { showIssue("Finish or cancel the current setup first."); return; }
       const parent = valueAt(path);
       if (!parent || typeof parent !== "object") throw new Error("The parent field no longer exists.");
       if (state.locked.some(prefix => prefix.length <= path.length && prefix.every((key, i) => key === path[i]))) throw new Error("Use Raw YAML to edit this locked field.");
       const spec = S.at(schema, state.value, path, schema);
+      if (editKey !== undefined) {
+        const target = [...path, editKey];
+        if (state.locked.some(prefix => prefix.every((key, i) => target[i] === key) || target.every((key, i) => prefix[i] === key))) throw new Error("Use Raw YAML to edit this parameter containing a locked value.");
+      }
       const holder = el("div");
+      const originalParameter = editKey !== undefined ? JSON.stringify(parent[editKey]) : undefined;
       const draft = { path, submitting: false, needsFocus: true };
       draft.api = PtkCreation.mount(holder, {
-        S, schema, parent: structuredClone(parent), spec, path, defaults,
+        S, schema, parent: structuredClone(parent), spec, path, defaults, editKey,
         jobChoices: S.resolve(spec, schema)["x-ptk-graph"] === "job" ? PtkDependencies.availableJobs(state.logical ? state.value : state.configurationValue, parent) : undefined,
         configuration: state.logical ? state.value : state.configurationValue,
-        label: Array.isArray(parent) ? "new item" : "new element",
+        label: editKey !== undefined ? `parameter ${editKey}` : S.resolve(S.child(spec, parent, "", schema), schema).title === "ParamSpec" ? "parameter" : Array.isArray(parent) ? "new item" : "new element",
         input: control, variables: variableControl,
         onCancel: () => { if (!draft.submitting) { variablePicker?.close(); creation = undefined; renderConfiguration(); } },
         onCreate: (key, value) => {
@@ -529,7 +542,9 @@
           if (!current || typeof current !== "object") throw new Error("The parent field no longer exists. Cancel and reopen setup.");
           const currentSpec = S.at(schema, state.value, path, schema);
           const resolved = S.effective(currentSpec, current, schema);
-          const index = PtkCreation.fieldName(current, String(key), resolved);
+          const index = editKey !== undefined ? editKey : PtkCreation.fieldName(current, String(key), resolved);
+          if (editKey !== undefined && !Object.hasOwn(current, editKey)) throw new Error("This parameter no longer exists. Cancel and reopen setup.");
+          if (editKey !== undefined && JSON.stringify(current[editKey]) !== originalParameter) throw new Error("This parameter changed while setup was open. Cancel and reopen it to review the latest values.");
           const child = S.child(currentSpec, current, index, schema);
           const errors = PtkCreation.problems(S, child, schema, value);
           if (errors.length) throw new Error(errors.slice(0, 8).join("\n"));
@@ -542,7 +557,7 @@
             selected = value !== null && typeof value === "object" ? [...path, index] : path;
             remember(); renderConfiguration();
           });
-          change({ op: "add", path: [...path, index], value }, true);
+          change({ op: editKey !== undefined ? "set" : "add", path: [...path, index], value }, true);
           draft.editId = inflight?.id;
         },
       });

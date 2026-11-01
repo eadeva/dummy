@@ -139,6 +139,14 @@ session. If you launch the installer in a separate process with ``powershell
 -File``, open a new terminal afterwards. Use ``-NoCompletion`` (PowerShell) or
 ``--no-completion`` (Bash) to leave completion settings unchanged.
 
+To complete job options, type ``ptk JOB --`` and press Tab (twice to list
+multiple matches in shells using that binding). Bare ``ptk JOB `` followed by Tab
+does not list option names: option completion starts with ``-``. After a choice
+option, Tab completes its allowed values, for example ``ptk JOB --build-type D``.
+Use ``ptk JOB --help`` for all options and descriptions. If even ``--`` produces
+no suggestions, install/load completion for the active shell and open a new
+terminal; check that its PATH selects the intended PTK installation.
+
 To target just one PowerShell profile instead of all shells::
 
    ptk self-service completion powershell --double-tab --install $PROFILE.CurrentUserAllHosts
