@@ -732,7 +732,7 @@ def test_workflow_bazel_diagnostics_open_locally_and_retain_saved_policy(
         },
     )
     if cx:
-        result = invoke(root, "build", env={"PTK_CI": "1"})
+        result = invoke(root, "build", env={"PTK_CX": "1"})
         assert result.exit_code == 0, result.output
         report = json.loads((root / "_reports/default/build/report.json").read_text())
         assert report["bazel"] and not opened
@@ -807,7 +807,7 @@ def test_hidden_step_and_dry_run_do_not_capture_bazel(tmp_path):
     )
     preview = invoke(root, "build", "--dry-run")
     assert preview.exit_code == 0 and not list(root.rglob("*.bep.json"))
-    result = invoke(root, "build", env={"PTK_CI": "1"})
+    result = invoke(root, "build", env={"PTK_CX": "1"})
     assert result.exit_code == 0, result.output
     report = json.loads((root / "_reports/default/build/report.json").read_text())
     assert not report["bazel"] and not report["steps"]

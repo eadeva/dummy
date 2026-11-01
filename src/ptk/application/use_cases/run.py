@@ -171,7 +171,7 @@ class PrepareRun:
                 f"'{request.job}' is a maintainer-only job "
                 "(login IDs are listed in maintainers.ptk.yml)"
             )
-        if job.only_cx and not project.ci:
+        if job.only_cx and not project.cx:
             raise PtkError(f"job {request.job!r} is only available in CX")
         host_env = self._host.variables
         os_name = self._host.os_name()
@@ -426,7 +426,7 @@ class PrepareRun:
             {
                 "variant": variant_name,
                 "os": os_name,
-                "ci": project.ci,
+                "cx": project.cx,
                 "params": params,
                 "vars": resolved_vars,
                 "env": base,

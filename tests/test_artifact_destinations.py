@@ -63,7 +63,7 @@ def invoke(root, *args, env=None, variant=None):
     return CliRunner(
         env={
             "PTK_ROLE": "",
-            "PTK_CI": "0",
+            "PTK_CX": "0",
             "GITHUB_EVENT_PATH": "",
             "GITHUB_EVENT_NAME": "push",
             "GITHUB_REF_TYPE": "branch",
@@ -197,7 +197,7 @@ def test_vmr_member_uses_own_alias_and_version(tmp_path, monkeypatch):
     for name in ("one", "two"):
         make_project(tmp_path / name, name)
     monkeypatch.chdir(tmp_path)
-    runner = CliRunner(env={"PTK_ROLE": "", "PTK_CI": "0", "GITHUB_EVENT_PATH": ""})
+    runner = CliRunner(env={"PTK_ROLE": "", "PTK_CX": "0", "GITHUB_EVENT_PATH": ""})
     result = runner.invoke(
         cli,
         [

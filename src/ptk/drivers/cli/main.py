@@ -26,7 +26,7 @@ from ...domain.errors import (
     PtkError,
     RunNotFoundError,
 )
-from .access import AccessGroup, MaintainerOption, can_switch_ci
+from .access import AccessGroup, MaintainerOption, can_switch_cx
 from .artifacts import artifacts_group
 from .completion import completion_command
 from .completion import jobs as complete_jobs
@@ -83,7 +83,7 @@ click.rich_click.SHOW_ARGUMENTS = True
     help="Override a configuration value, e.g. --set jobs.build.params.jobs.default=4",
 )
 @click.option(
-    "--ci/--no-ci",
+    "--cx/--no-cx",
     cls=MaintainerOption,
     default=None,
     is_eager=True,
@@ -125,7 +125,7 @@ click.rich_click.SHOW_ARGUMENTS = True
 def cli(
     ctx: click.Context,
     overrides: tuple[str, ...],
-    ci: bool | None,
+    cx: bool | None,
     verbose: int,
     variant: str | None,
     clean: bool = False,
@@ -140,14 +140,14 @@ def cli(
     state = state_of(ctx)
     entries = ctx.find_root().meta.get("vmr_repositories") or {}
     if (
-        state.ci is not None
+        state.cx is not None
         and (
             getattr(ctx.command, "repository_boundary", False)
             or ctx.invoked_subcommand not in entries
         )
-        and not can_switch_ci(ctx)
+        and not can_switch_cx(ctx)
     ):
-        raise PtkError("--ci/--no-ci is a maintainer-only option")
+        raise PtkError("--cx/--no-cx is a maintainer-only option")
     from .cleanup import mode
 
     if mode(state) and ctx.invoked_subcommand is not None:

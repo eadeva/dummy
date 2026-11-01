@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.24.0
+
+- Rename PTK runtime metadata to `cx`, matching `--cx`, `--no-cx`, `PTK_CX`, and the `cx` condition symbol. Legacy PTK CI aliases are removed; external provider environment names remain supported.
+- Require inventory version 6; configuration interface version remains 5. Update PTK and the extension together.
+
 ## 0.23.2
 
 - Use CX consistently in workflow availability labels and execution errors. Keep configuration keys and environment identifiers unchanged.

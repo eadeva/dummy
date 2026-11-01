@@ -34,7 +34,7 @@ class Host:
     def __init__(self, variables=None):
         self.variables = variables or {}
 
-    def is_ci(self):
+    def is_cx(self):
         return False
 
     def os_name(self):
@@ -291,7 +291,7 @@ def cli_env(write, tmp_path):
 
     def invoke(*args, input=None):
         base = []
-        return CliRunner(env={"PTK_CI": "0", **env}).invoke(
+        return CliRunner(env={"PTK_CX": "0", **env}).invoke(
             cli, [*base, *args], input=input, catch_exceptions=False, cwd=root
         )
 

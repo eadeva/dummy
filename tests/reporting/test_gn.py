@@ -420,7 +420,7 @@ def test_native_workflow_policy_dedicated_opening_and_retained_graph(
         'toolchain("tc") { tool("stamp") { command = "touch {{output}}" } }\ngroup("app") {}\nprint("ERROR active defect")\nprint("WARNING ignored warning")\nprint("WARNING justified warning")\n'
     )
     if cx:
-        result = invoke(root, "generate", env={"PTK_CI": "1"})
+        result = invoke(root, "generate", env={"PTK_CX": "1"})
         assert result.exit_code == 0, result.output
         report = json.loads(
             (root / "_reports/default/generate/report.json").read_text()
@@ -453,7 +453,7 @@ def test_native_workflow_policy_dedicated_opening_and_retained_graph(
     opened.clear()
     with (root / "BUILD.gn").open("a") as handle:
         handle.write('assert(false, "actual generation defect")\n')
-    failed = invoke(root, "generate", env={"PTK_CI": "1" if cx else "0"})
+    failed = invoke(root, "generate", env={"PTK_CX": "1" if cx else "0"})
     assert failed.exit_code != 0
     report = json.loads((root / "_reports/default/generate/report.json").read_text())
     assert not report["log_findings"] and not report["gn"][0]["graph"]

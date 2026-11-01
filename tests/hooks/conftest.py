@@ -96,7 +96,7 @@ def repository(root, *, alias="app", enabled=True, output=None):
 
 
 def invoke(root, *args):
-    return CliRunner(env={"PTK_ROLE": "user", "PTK_CI": "0"}).invoke(
+    return CliRunner(env={"PTK_ROLE": "user", "PTK_CX": "0"}).invoke(
         cli, [*args], catch_exceptions=False, cwd=root
     )
 

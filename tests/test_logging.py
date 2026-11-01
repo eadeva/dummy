@@ -196,18 +196,18 @@ def test_console_verbosity(write):
     root = project(write)
     args = []
     env = {**HOST, "PTK_CRED_REPO_TOKEN": "t0ps3cret"}
-    normal = CliRunner(env={"PTK_CI": "0", **env}).invoke(
+    normal = CliRunner(env={"PTK_CX": "0", **env}).invoke(
         cli, [*args, "run"], catch_exceptions=False, cwd=root
     )
     assert "debug:" not in normal.output and "warning: exit code 2" in normal.output
     assert "[default][go][a] A" in normal.output
     (root / ".once").unlink(missing_ok=True)
-    verbose = CliRunner(env={"PTK_CI": "0", **env}).invoke(
+    verbose = CliRunner(env={"PTK_CX": "0", **env}).invoke(
         cli, ["-v", *args, "run"], catch_exceptions=False, cwd=root
     )
     assert "debug: cwd" in verbose.output and "t0ps3cret" not in verbose.output
     (root / ".once").unlink(missing_ok=True)
-    quiet = CliRunner(env={"PTK_CI": "0", **env}).invoke(
+    quiet = CliRunner(env={"PTK_CX": "0", **env}).invoke(
         cli, [*args, "run", "-q"], catch_exceptions=False, cwd=root
     )
     assert "[default][go][a] A" not in quiet.output and "warning:" in quiet.output

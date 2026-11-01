@@ -2,9 +2,12 @@ CLI command groups
 ==================
 
 PTK separates everyday work, local self-service and project maintenance.
-Documentation and user-facing messages use CX. Compatibility identifiers remain
-``--ci``, ``--no-ci``, ``PTK_CI``, the standard ``CI`` environment variable and
-expression field ``ci``; these are not renamed to match prose.
+PTK uses CX for automated test and development execution: ``--cx`` /
+``--no-cx``, environment override ``PTK_CX``, and condition symbol ``cx``.
+These replace the former CI-named PTK interfaces; legacy aliases are not accepted.
+Update existing scripts and conditions when upgrading. Standard provider variables
+such as ``CI``, ``GITHUB_ACTIONS`` and ``GITLAB_CI`` still automatically detect
+hosted execution; ``PTK_CX`` overrides that detection.
 Jobs and workflows are both direct commands: ``ptk build`` and ``ptk verify``.
 Use ``ptk maintainer NAME`` for jobs and workflows declared with
 ``audience: maintainer``. If a job and workflow share a name, choose explicitly
@@ -245,7 +248,7 @@ and workflow list/show. Workflow execution selects the owner variant and resolve
 other repositories through its ``repo_variants`` mappings.
 The option is no longer accepted after a job or subcommand.
 
-``--ci`` / ``--no-ci`` is maintainer-only: hidden from user help and completion,
+``--cx`` / ``--no-cx`` is maintainer-only: hidden from user help and completion,
 and rejected on direct invocation. With neither flag, CX detection works for all
 users. In a VMR, a repository-qualified command checks that member's maintainer
 list; workspace commands check the root list. Member operations also enforce

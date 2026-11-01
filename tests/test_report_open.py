@@ -31,7 +31,7 @@ def invoke(write, monkeypatch):
         policy=None,
         *,
         fail=False,
-        ci=False,
+        cx=False,
         dry=False,
         imported_failure=False,
         all_variants=False,
@@ -62,8 +62,8 @@ def invoke(write, monkeypatch):
         if all_variants:
             args.append("--all-variants")
         env = {
-            "PTK_CI": "" if ci == "auto" else "1" if ci else "0",
-            "GITHUB_ACTIONS": "true" if ci == "auto" else "false",
+            "PTK_CX": "" if cx == "auto" else "1" if cx else "0",
+            "GITHUB_ACTIONS": "true" if cx == "auto" else "false",
         }
         result = CliRunner(env=env).invoke(cli, args, catch_exceptions=False, cwd=root)
         return result, opened, root
@@ -72,7 +72,7 @@ def invoke(write, monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "policy,fail,ci,dry,expected",
+    "policy,fail,cx,dry,expected",
     [
         (None, False, False, False, False),
         (None, True, False, False, True),
@@ -86,15 +86,15 @@ def invoke(write, monkeypatch):
         ("always", False, False, True, False),
     ],
 )
-def test_open_policy(invoke, policy, fail, ci, dry, expected):
-    result, opened, root = invoke(policy, fail=fail, ci=ci, dry=dry)
+def test_open_policy(invoke, policy, fail, cx, dry, expected):
+    result, opened, root = invoke(policy, fail=fail, cx=cx, dry=dry)
     assert result.exit_code == (1 if fail and not dry else 0), result.output
     assert bool(opened) == expected
     if opened:
         assert opened[0].name == ("diagnostics.html" if fail else "report.html")
     if not dry:
         assert "[default][check] report: " in result.output
-    if ci or dry or policy is None:
+    if cx or dry or policy is None:
         assert not list(root.rglob("report.html"))
 
 
@@ -217,7 +217,7 @@ jobs:
     monkeypatch.setattr(
         help_html, "open_in_browser", lambda path: opened.append(path) or True
     )
-    runner = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"})
+    runner = CliRunner(env={"PTK_CX": "0", "PTK_ROLE": "user"})
     base = []
 
     def invoke(*args):

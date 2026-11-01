@@ -25,7 +25,7 @@ class CliState:
     app: App
     config: Path | None = None
     overrides: tuple[str, ...] = ()
-    ci: bool | None = None
+    cx: bool | None = None
     verbose: int = 0
     variant: str | None = None
     clean: bool = False
@@ -40,13 +40,13 @@ class CliState:
         if not self._loaded:
             try:
                 project = self.app.load_project.execute(
-                    config_file=self.config, overrides=self.overrides, ci=self.ci
+                    config_file=self.config, overrides=self.overrides, cx=self.cx
                 )
                 if (
-                    self.ci is not None
+                    self.cx is not None
                     and resolve_role(project, self.app.host) != "maintainer"
                 ):
-                    raise PtkError("--ci/--no-ci is a maintainer-only option")
+                    raise PtkError("--cx/--no-cx is a maintainer-only option")
                 self._project = project
             except PtkError as exc:
                 self._project_error = exc
@@ -84,7 +84,7 @@ def state_of(ctx: click.Context) -> CliState:
             overrides=tuple(
                 v for v in (params.get("overrides") or ()) if not v.startswith("vh.")
             ),
-            ci=params.get("ci"),
+            cx=params.get("cx"),
             verbose=params.get("verbose") or 0,
             variant=params.get("variant"),
             clean=params.get("clean", False),

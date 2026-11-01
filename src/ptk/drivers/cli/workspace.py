@@ -27,15 +27,15 @@ class RepositoryGroup(ProjectGroup):
             ),
             config=self.entry_file,
             overrides=parent_state.overrides,
-            ci=parent_state.ci,
+            cx=parent_state.cx,
             verbose=parent_state.verbose,
             variant=parent_state.variant,
             clean=parent_state.clean,
             re_run=parent_state.re_run,
             no_cache_ptk=parent_state.no_cache_ptk,
         )
-        if parent_state.ci is not None and extra["obj"].role() != "maintainer":
-            raise click.ClickException("--ci/--no-ci is a maintainer-only option")
+        if parent_state.cx is not None and extra["obj"].role() != "maintainer":
+            raise click.ClickException("--cx/--no-cx is a maintainer-only option")
         return super().make_context(info_name, args, parent=parent, **extra)
 
 
@@ -127,7 +127,7 @@ class WorkspaceGroup(ProjectGroup):
 
         @functools.wraps(self.callback)
         def selected_callback():
-            return self.callback(overrides=(), ci=None, verbose=0, variant=None)
+            return self.callback(overrides=(), cx=None, verbose=0, variant=None)
 
         group = RepositoryGroup(
             cmd_name,
@@ -141,10 +141,10 @@ class WorkspaceGroup(ProjectGroup):
         return group
 
     def format_help(self, ctx, formatter):
-        from .access import can_switch_ci
+        from .access import can_switch_cx
 
-        if ctx.params.get("ci") is not None and not can_switch_ci(ctx):
-            raise click.ClickException("--ci/--no-ci is a maintainer-only option")
+        if ctx.params.get("cx") is not None and not can_switch_cx(ctx):
+            raise click.ClickException("--cx/--no-cx is a maintainer-only option")
         try:
             repos = self._repositories(ctx)
         except click.ClickException:

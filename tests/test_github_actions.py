@@ -266,7 +266,7 @@ def configure_workflow(project):
 
 def test_matrix_exports_dependencies_for_each_variant(project):
     root = configure_workflow(project)
-    result = invoke(root, "maintainer", "matrix", "--workflow", "verify", ci=True)
+    result = invoke(root, "maintainer", "matrix", "--workflow", "verify", cx=True)
     assert result.exit_code == 0, result.output
     data = json.loads(result.output)
     assert len(data["jobs"]["compile"]["include"]) == 2
@@ -283,7 +283,7 @@ def test_matrix_exports_dependencies_for_each_variant(project):
         "verify",
         "--format",
         "github",
-        ci=True,
+        cx=True,
     )
     assert result.exit_code == 0 and "matrix_compile=" in result.output
 
@@ -301,7 +301,7 @@ def test_generation_never_overwrites_existing_workflow(project):
 
 def test_generation_denied_in_cx_for_nonmaintainer(project):
     root = configure_workflow(project)
-    result = invoke(root, "maintainer", "gen-workflows", ci=True, maintainer=False)
+    result = invoke(root, "maintainer", "gen-workflows", cx=True, maintainer=False)
     assert result.exit_code != 0
     assert not (root / ".github/workflows").exists()
 
@@ -325,7 +325,7 @@ def test_run_action_real_job_exposes_exact_manifest(project, monkeypatch, tmp_pa
     output = tmp_path / "outputs"
     output.touch()
     monkeypatch.setenv("GITHUB_OUTPUT", str(output))
-    monkeypatch.setenv("PTK_CI", "1")
+    monkeypatch.setenv("PTK_CX", "1")
     monkeypatch.setenv(
         "PATH",
         str(Path(__file__).resolve().parents[1] / ".venv/bin")
@@ -455,7 +455,7 @@ def test_vmr_matrix_maps_producer_variants_and_directories(tmp_path):
             },
             "artifactory": {
                 "url": "https://example.invalid/artifactory",
-                "repository": "ci",
+                "repository": "cx",
                 "base_path": alias,
                 "events": {"push": {"path": "branch"}},
             },
@@ -473,7 +473,7 @@ def test_vmr_matrix_maps_producer_variants_and_directories(tmp_path):
         write_project(root / ".main.ptk.yml", model)
         grant_maintainer(root)
     result = invoke(
-        tmp_path, "app", "maintainer", "matrix", "--workflow", "verify", ci=True
+        tmp_path, "app", "maintainer", "matrix", "--workflow", "verify", cx=True
     )
     assert result.exit_code == 0, result.output
     data = json.loads(result.output)

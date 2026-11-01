@@ -156,7 +156,7 @@ def test_validate_uses_framework_schema_without_running_hooks(tmp_path):
     assert not (root / "hook-ran").exists()
 
 
-@pytest.mark.parametrize("mode", ["disabled", "unmanaged", "ci"])
+@pytest.mark.parametrize("mode", ["disabled", "unmanaged", "cx"])
 def test_explicit_checks_work_without_automatic_installation(tmp_path, mode):
     root = repository(tmp_path / "repo", enabled=False)
     if mode == "unmanaged":
@@ -164,8 +164,8 @@ def test_explicit_checks_work_without_automatic_installation(tmp_path, mode):
         data = read_project(path)
         del data["configs"]
         write_project(path, data)
-    if mode == "ci":
-        result = CliRunner(env={"PTK_CI": "1", "PTK_ROLE": "user"}).invoke(
+    if mode == "cx":
+        result = CliRunner(env={"PTK_CX": "1", "PTK_ROLE": "user"}).invoke(
             cli, ["pre-commit", "run", "--all-files"], cwd=root
         )
     else:
@@ -218,7 +218,7 @@ def test_vmr_commands_use_only_the_selected_member(tmp_path, monkeypatch):
     b = repository(tmp_path / "b", alias="beta")
     (tmp_path / ".main.ptk.yml").write_text("virtual_monorepo: true\nmembers: [a, b]\n")
     monkeypatch.chdir(tmp_path)
-    result = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"}).invoke(
+    result = CliRunner(env={"PTK_CX": "0", "PTK_ROLE": "user"}).invoke(
         cli, ["alpha", "pre-commit", "run", "--all-files"], catch_exceptions=False
     )
     assert result.exit_code == 0, result.output

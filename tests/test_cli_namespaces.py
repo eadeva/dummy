@@ -73,7 +73,7 @@ def test_jobs_and_workflows_have_direct_commands_with_safe_previews(
 ):
     base = project(tmp_path)
     namespace = ["maintainer"] if target in {"publish", "release"} else []
-    runner = CliRunner(env={"PTK_ROLE": "", "PTK_CI": "0"})
+    runner = CliRunner(env={"PTK_ROLE": "", "PTK_CX": "0"})
     result = runner.invoke(
         cli, [*base, *namespace, target, "--dry-run"], catch_exceptions=False
     )
@@ -97,7 +97,7 @@ def test_visibility_completion_and_inventory_follow_the_namespace(
 ):
     base = project(tmp_path)
     monkeypatch.setenv("PTK_ROLE", "")
-    runner = CliRunner(env={"PTK_CI": "0"})
+    runner = CliRunner(env={"PTK_CX": "0"})
     complete = BashComplete(cli, {}, "ptk", "_PTK_COMPLETE")
     names = lambda args: {
         item.value for item in complete.get_completions([*base, *args], "")
@@ -141,7 +141,7 @@ def test_visibility_completion_and_inventory_follow_the_namespace(
 
 def test_generated_tasks_preserve_restricted_command_paths(tmp_path):
     base = project(tmp_path)
-    runner = CliRunner(env={"PTK_ROLE": "", "PTK_CI": "0"})
+    runner = CliRunner(env={"PTK_ROLE": "", "PTK_CX": "0"})
     result = runner.invoke(cli, [*base, "maintainer", "sync", "tasks"])
     assert result.exit_code == 0, result.output
     tasks = json.loads((tmp_path / ".vscode/tasks.json").read_text())["tasks"]
@@ -171,7 +171,7 @@ def test_validation_combines_optional_checks_and_handles_missing_projects(
     tmp_path, monkeypatch
 ):
     monkeypatch.chdir(tmp_path)
-    runner = CliRunner(env={"PTK_ROLE": "user", "PTK_CI": "0"})
+    runner = CliRunner(env={"PTK_ROLE": "user", "PTK_CX": "0"})
     missing = runner.invoke(cli, ["validate"])
     assert missing.exit_code == 2
     assert "No PTK project found" in missing.output and "ptk init" in missing.output
@@ -221,7 +221,7 @@ def test_workspace_and_member_workflows_keep_their_namespace(tmp_path, monkeypat
         },
     )
     monkeypatch.chdir(tmp_path)
-    runner = CliRunner(env={"PTK_ROLE": "", "PTK_CI": "0"})
+    runner = CliRunner(env={"PTK_ROLE": "", "PTK_CX": "0"})
     for group in ("self-service", "maintainer"):
         result = runner.invoke(cli, [group], catch_exceptions=False)
         assert result.exit_code == 0 and "Usage:" in result.output, result.output

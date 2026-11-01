@@ -30,7 +30,7 @@ See :doc:`configuration` for job and step fields and
 Local orchestration and CX pipelines
 ------------------------------------
 
-``ptk workflow run`` refuses CX mode, whether detected or forced with ``--ci``.
+``ptk workflow run`` refuses CX mode, whether detected or forced with ``--cx``.
 ``list``, ``show`` and ``dry-run`` are inspection operations and remain available.
 GitHub template generation and a generic PTK GitHub Action for those workflows
 are draft proposals; neither is implemented by this feature. The familiar

@@ -57,7 +57,7 @@ The document contains ``schema_version: 1``, ``matrix: {include: [...]}`` and
 unconfigured, empty, or different between selected rows; each row's ``upload``
 still supplies its own base. See :doc:`artifacts` for routing. Dates use one
 invocation timestamp; ``--event EVENT`` and timezone-aware ``--at`` support
-routing previews. A local maintainer can add ``--ci`` to include CX-only jobs.
+routing previews. A local maintainer can add ``--cx`` to include CX-only jobs.
 
 Output paths are deliberately absent. They belong to the completed producer
 job, where runtime values are known. Existing :doc:`output-reuse` declarations

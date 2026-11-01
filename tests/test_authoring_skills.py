@@ -94,7 +94,7 @@ def test_installed_workflow_skill_supports_a_consumer_pipeline(tmp_path, monkeyp
             },
             "artifactory": {
                 "url": "https://artifacts.example.invalid/artifactory",
-                "repository": "ci",
+                "repository": "cx",
                 "events": {"push": {"path": "checks"}},
             },
         },
@@ -106,7 +106,7 @@ def test_installed_workflow_skill_supports_a_consumer_pipeline(tmp_path, monkeyp
     assert "../../ptk/docs/guides/github-actions.rst" in installed.read_text()
     assert "additional_properties" in installed.read_text()
     monkeypatch.chdir(tmp_path)
-    runner = CliRunner(env={"PTK_CI": "1", "GITHUB_EVENT_NAME": "push", "PTK_ROLE": ""})
+    runner = CliRunner(env={"PTK_CX": "1", "GITHUB_EVENT_NAME": "push", "PTK_ROLE": ""})
     for args in (["validate"], ["maintainer", "gen-workflows", "quality"]):
         result = runner.invoke(cli, args)
         assert result.exit_code == 0, result.output

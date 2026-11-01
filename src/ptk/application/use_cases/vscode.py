@@ -49,7 +49,7 @@ class VSCodeTasks:
                 maintainer=spec.audience == "maintainer",
             )
             for name, spec in config.jobs.items()
-            if visible(spec.audience, audience) and (not spec.only_cx or project.ci)
+            if visible(spec.audience, audience) and (not spec.only_cx or project.cx)
         ]
         variants: list[str] = []
         default_variant = None

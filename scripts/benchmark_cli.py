@@ -92,7 +92,7 @@ def main():
     env = {
         **os.environ,
         "PTK_ROLE": "user",
-        "PTK_CI": "0",
+        "PTK_CX": "0",
         "NO_COLOR": "1",
         "COLUMNS": "100",
     }

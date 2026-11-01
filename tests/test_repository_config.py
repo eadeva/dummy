@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_repository_jobs_and_component_free_default_variant():
     app = create_app()
-    project = app.load_project.execute(config_file=ROOT / ".main.ptk.yml", ci=False)
+    project = app.load_project.execute(config_file=ROOT / ".main.ptk.yml", cx=False)
     assert project.config.repository.alias == "ptk"
     assert set(project.config.jobs) == {"test", "docs", "check", "package", "extension"}
     assert project.config.project.default_job == "test"
@@ -36,7 +36,7 @@ def test_repository_jobs_and_component_free_default_variant():
 
 def test_repository_python_jobs_do_not_sync_the_cli_environment():
     app = create_app()
-    project = app.load_project.execute(config_file=ROOT / ".main.ptk.yml", ci=False)
+    project = app.load_project.execute(config_file=ROOT / ".main.ptk.yml", cx=False)
     environments = set()
     for name in ("test", "check", "docs", "package"):
         prepared = app.prepare_run(project).execute(
@@ -79,13 +79,13 @@ def test_python_groups_are_only_allowed_for_project_mode():
         PythonSpec(project=".", groups=["--no-project"])
 
 
-@pytest.mark.parametrize("ci", [False, True], ids=["local", "ci"])
+@pytest.mark.parametrize("cx", [False, True], ids=["local", "cx"])
 @pytest.mark.parametrize(
     "entry",
     [ROOT / ".main.ptk.yml", *sorted((ROOT / "examples").rglob(".main.ptk.yml"))],
     ids=lambda entry: entry.relative_to(ROOT).as_posix(),
 )
-def test_checked_in_configuration_uses_discovered_schema_fragments(entry, ci):
+def test_checked_in_configuration_uses_discovered_schema_fragments(entry, cx):
     import yaml
 
     metadata = yaml.safe_load(entry.read_text())
@@ -94,7 +94,7 @@ def test_checked_in_configuration_uses_discovered_schema_fragments(entry, ci):
 
         YamlConfigReader().read(entry)
         return
-    project = create_app().load_project.execute(config_file=entry, ci=ci)
+    project = create_app().load_project.execute(config_file=entry, cx=cx)
     assert project.config.repository.alias == metadata["repository"]["alias"]
     assert entry in project.files
     assert all(file.name.endswith((".ptk.yml", ".ptk.yaml")) for file in project.files)

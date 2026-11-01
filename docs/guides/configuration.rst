@@ -322,7 +322,7 @@ parameter references are offered only in step environment values; ``github.*``
 is restricted to Artifactory destination templates.
 
 ``when`` uses the safe expression evaluator, not Python execution. Feature names,
-``COMPONENT_*`` flags, ``variant``, ``os``, ``ci`` and supported namespaces can
+``COMPONENT_*`` flags, ``variant``, ``os``, ``cx`` and supported namespaces can
 be used. Check the resolved values with ``variant show`` and ``variant explain``.
 Variants can inherit through ``extends``, carry aliases and free-form ``data``,
 and mark common parents ``abstract: true``.
@@ -488,7 +488,7 @@ justified. This does not change execution or test outcomes. The dedicated report
 is generated even with an empty ``report_formats`` list. A missing browser prints
 a hint; failed report generation never opens an old report.
 
-Automatic opening is disabled in CX mode (including ``--ci``), and dry runs
+Automatic opening is disabled in CX mode (including ``--cx``), and dry runs
 neither generate nor open reports. Multi-variant runs apply the policy separately
 to each variant. VMR jobs use the owning repository's configuration. Manual
 ``ptk report open`` remains available regardless of the job policy.
@@ -525,7 +525,7 @@ artifact destinations, and all jobs/workflows declared ``audience: maintainer``.
 These commands require a listed maintainer, including their ``--check``,
 ``--diff`` and ``--dry-run`` modes. ``command_audience: all`` cannot relax this
 restriction. Invalid project configuration does not expose maintenance commands.
-The global ``--ci`` / ``--no-ci`` option is also maintainer-only. Automatic CX
+The global ``--cx`` / ``--no-cx`` option is also maintainer-only. Automatic CX
 detection remains available without either switch.
 
 Ordinary users retain tool installation, personal credential management,
@@ -582,7 +582,7 @@ Declare shared tools in ``tools.ptk.yml``. Put global ``requires_tools`` and
 file. Each document owns its fields. Shared defaults are applied after loading;
 job requirements can override or disable individual tools without changing shared
 tool definitions. GitHub Actions is recognized automatically; maintainers can
-inspect either execution mode with ``--ci`` / ``--no-ci``.
+inspect either execution mode with ``--cx`` / ``--no-cx``.
 
 Global ``param_defaults`` supplies defaults only to parameters that a job
 explicitly declares. Job-specific ``default`` values take precedence. An

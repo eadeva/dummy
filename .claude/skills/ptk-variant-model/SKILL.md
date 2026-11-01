@@ -33,5 +33,5 @@ Temporary feature overrides on jobs do not change files. A local workflow select
 mapping selects variants in other repositories. Steps only filter eligibility,
 not variant selection. A generated build graph describes build targets; it is separate from PTK’s step dependency graph and does not create missing `needs` edges. GitHub setup can expand multiple concrete owner variants;
 see [GitHub workflows](../ptk-github-workflows/SKILL.md). Maintainers alone
-can force `--ci`/`--no-ci`; all users retain automatic CX detection. See
+can force `--cx`/`--no-cx`; all users retain automatic CX detection. See
 [configuration](../../../docs/guides/configuration.rst).

@@ -11,7 +11,7 @@ from .options import SuggestedHelp
 from .state import guarded, state_of
 
 
-def can_switch_ci(ctx):
+def can_switch_cx(ctx):
     """Use the current repository's identity, or the VMR root's own list."""
     state = state_of(ctx)
     current = ctx
@@ -36,7 +36,7 @@ class MaintainerOption(click.Option):
     @property
     def hidden(self):
         return self._hidden or (
-            self.access_context is not None and not can_switch_ci(self.access_context)
+            self.access_context is not None and not can_switch_cx(self.access_context)
         )
 
     @hidden.setter
@@ -77,7 +77,7 @@ def allowed(ctx, name):
             role = state.app.workspace_role(root) if root else "user"
         except PtkError:
             role = "user"  # Invalid identity lists never expose mutation commands.
-        if state.app.host.is_ci() and ".".join(parts) in {
+        if state.app.host.is_cx() and ".".join(parts) in {
             "maintainer",
             "maintainer.matrix",
         }:
@@ -88,7 +88,7 @@ def allowed(ctx, name):
     # mutation capability or access to restricted jobs/other maintenance commands.
     if (
         project is not None
-        and project.ci
+        and project.cx
         and ".".join(parts) in {"maintainer", "maintainer.matrix"}
     ):
         return True

@@ -32,7 +32,7 @@ def repository(root, alias="app", *, jobs=None, workflows=None, extra=None):
 
 
 def invoke(root, *args, env=None):
-    return CliRunner(env={"PTK_ROLE": "user", "PTK_CI": "0", **(env or {})}).invoke(
+    return CliRunner(env={"PTK_ROLE": "user", "PTK_CX": "0", **(env or {})}).invoke(
         cli, [*args], catch_exceptions=False, cwd=root
     )
 
@@ -231,7 +231,7 @@ def test_vmr_targets_keep_environment_and_reports_and_have_editor_tasks(
     monkeypatch.chdir(root)
     for target in (root, root / "a", root / "b"):
         grant_maintainer(target)
-    runner = CliRunner(env={"PTK_ROLE": "", "PTK_CI": "0"})
+    runner = CliRunner(env={"PTK_ROLE": "", "PTK_CX": "0"})
     for args in (
         ["workflow", "list"],
         ["workflow", "run", "all"],
@@ -401,7 +401,7 @@ def test_published_example_runs_locally_without_github(tmp_path, monkeypatch):
     target = tmp_path / "local vmr"
     shutil.copytree(source, target)
     monkeypatch.chdir(target)
-    runner = CliRunner(env={"PTK_ROLE": "user", "PTK_CI": "0"})
+    runner = CliRunner(env={"PTK_ROLE": "user", "PTK_CX": "0"})
     for args in (
         ["workflow", "run", "frontend/all"],
         ["workflow", "run", "frontend/verify"],
@@ -414,22 +414,22 @@ def test_published_example_runs_locally_without_github(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "ci_args,env",
+    "cx_args,env",
     [
-        ([], {"PTK_CI": "1"}),
-        ([], {"PTK_CI": "", "GITHUB_ACTIONS": "true"}),
+        ([], {"PTK_CX": "1"}),
+        ([], {"PTK_CX": "", "GITHUB_ACTIONS": "true"}),
     ],
 )
-def test_workflow_execution_is_local_only(tmp_path, ci_args, env, opened_reports):
+def test_workflow_execution_is_local_only(tmp_path, cx_args, env, opened_reports):
     root = repository(
         tmp_path,
         jobs={"build": command("from pathlib import Path; Path('ran').touch()")},
         workflows={"verify": {"jobs": {"build": {"job": "build"}}}},
     )
-    result = invoke(root, *ci_args, "workflow", "run", "verify", env=env)
+    result = invoke(root, *cx_args, "workflow", "run", "verify", env=env)
     assert result.exit_code != 0 and "locally only" in result.output
     assert not (root / "ran").exists()
-    preview = invoke(root, *ci_args, "workflow", "run", "verify", "--dry-run", env=env)
+    preview = invoke(root, *cx_args, "workflow", "run", "verify", "--dry-run", env=env)
     assert preview.exit_code == 0, preview.output
     assert opened_reports == []
 

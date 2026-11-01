@@ -16,7 +16,7 @@ class Host:
         self.variables = variables or {}
         self._identity = (email, user)
 
-    def is_ci(self):
+    def is_cx(self):
         return False
 
     def os_name(self):

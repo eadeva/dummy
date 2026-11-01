@@ -459,7 +459,7 @@ def write_reports(
     """Reports after every run; a reporting problem never changes the run's result."""
     from ...domain.reporting.summary import run_summary
 
-    policy = None if project.ci else project.config.jobs[plan.job].open_report
+    policy = None if project.cx else project.config.jobs[plan.job].open_report
     formats = list(project.config.report_formats)
     if policy and "html" not in formats:
         formats.append("html")
@@ -489,7 +489,7 @@ def write_reports(
         )
     opening = (
         diagnostic
-        if not project.ci and report.has_errors
+        if not project.cx and report.has_errors
         else html
         if policy == "always"
         else None
@@ -578,7 +578,7 @@ class ProjectGroup(AccessGroup):
             {
                 name: spec
                 for name, spec in project.config.jobs.items()
-                if not spec.only_cx or project.ci
+                if not spec.only_cx or project.cx
             }
             if project
             else {}
@@ -645,11 +645,11 @@ class ProjectGroup(AccessGroup):
         except PtkError as exc:
             return _broken(cmd_name, exc)
         spec = project.config.jobs.get(cmd_name)
-        if spec is not None and spec.only_cx and not project.ci:
+        if spec is not None and spec.only_cx and not project.cx:
             return None
         workflow = self._workflows(ctx).get(cmd_name)
         if workflow is not None and (
-            spec is None or (spec.audience != self.audience and not project.ci)
+            spec is None or (spec.audience != self.audience and not project.cx)
         ):
             from .workflows import workflow_command
 
@@ -723,7 +723,7 @@ class ProjectGroup(AccessGroup):
             job = self._jobs(ctx)[name]
             if (
                 not ctx.resilient_parsing
-                and not state.project().ci
+                and not state.project().cx
                 and job.audience == self.audience
                 and not any(arg in ("-h", "--help") for arg in args[1:])
             ):

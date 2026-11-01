@@ -139,7 +139,7 @@ optional literal ``artifact_type`` to that output's declaration:
 
    steps:
      compile:
-       run: python ci/build.py
+       run: python cx/build.py
        outputs:
          - path: dist/application.bin
            artifact_type: binaries

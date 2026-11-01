@@ -9,7 +9,7 @@ import sys
 from collections.abc import Mapping
 from pathlib import Path
 
-CI_VARIABLES = (
+CX_HOST_VARIABLES = (
     "CI",
     "GITHUB_ACTIONS",
     "GITLAB_CI",
@@ -28,14 +28,14 @@ class SystemHost:
     def variables(self) -> Mapping[str, str]:
         return self._environ
 
-    def is_ci(self) -> bool:
-        if self._environ.get("PTK_CI", "").lower() in {"1", "true", "yes"}:
+    def is_cx(self) -> bool:
+        if self._environ.get("PTK_CX", "").lower() in {"1", "true", "yes"}:
             return True
-        if self._environ.get("PTK_CI", "").lower() in {"0", "false", "no"}:
+        if self._environ.get("PTK_CX", "").lower() in {"0", "false", "no"}:
             return False
         return any(
             self._environ.get(name, "").lower() not in ("", "0", "false")
-            for name in CI_VARIABLES
+            for name in CX_HOST_VARIABLES
         )
 
     def is_docker(self) -> bool:

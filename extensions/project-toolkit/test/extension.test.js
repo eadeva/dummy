@@ -364,7 +364,7 @@ test("optional typed parameter overrides retain booleans and literal text", asyn
 
 test("workflow and job name collisions dispatch explicitly and CX allows previews only", async t => {
   const doc = inventory();
-  doc.ci = true;
+  doc.cx = true;
   const h = harness(t, [doc]);
   await h.controller.ready();
   await h.command("run", h.target("workflow"));
@@ -542,7 +542,7 @@ test("tree omits duplicate run and report commands in repositories and workspace
 
 test("report actions target job variants and aggregate workflows without running or prompting", async t => {
   const doc = inventory();
-  doc.ci = true;
+  doc.cx = true;
   doc.mode = "workspace";
   doc.commands = builtinCommands();
   doc.workflows = [{ name: "all", run_options: [], command: ["workflow", "run", "all"] }];
@@ -580,7 +580,7 @@ test("help runs without variant or required-parameter prompts and survives task 
   const doc = inventory();
   doc.projects[0].default_variant = undefined;
   doc.projects[0].jobs[0].params[0].required = true;
-  doc.ci = true;
+  doc.cx = true;
   const h = harness(t, [doc]);
   await h.controller.ready();
   h.api.window.showQuickPick = h.api.window.showInputBox = () => assert.fail("Help must not prompt");

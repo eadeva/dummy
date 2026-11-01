@@ -162,12 +162,12 @@ def test_no_job_and_no_default(write):
 def test_plain_ptk_runs_default_job(write):
     root = write(project_files(PROJECT))
     args = []
-    result = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
+    result = CliRunner(env={"PTK_CX": "0", **HOST}).invoke(
         cli, args, catch_exceptions=False, cwd=root
     )
     assert result.exit_code == 0, result.output
     assert "hello world careful vanilla-plain 1" in result.output
-    dry = CliRunner(env={"PTK_CI": "0"}).invoke(
+    dry = CliRunner(env={"PTK_CX": "0"}).invoke(
         cli, [*args, "-V", "fast", "run", "--dry-run"], catch_exceptions=False, cwd=root
     )
     assert "say  echo hello world quick" in dry.output
@@ -175,7 +175,7 @@ def test_plain_ptk_runs_default_job(write):
 
 def test_plain_ptk_outside_a_project_shows_help(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    result = CliRunner(env={"PTK_CI": "0"}).invoke(cli, [], catch_exceptions=False)
+    result = CliRunner(env={"PTK_CX": "0"}).invoke(cli, [], catch_exceptions=False)
     assert result.exit_code == 0 and "Commands" in result.output
 
 
@@ -184,7 +184,7 @@ def test_demo_toolchain_follows_variant(tmp_path):
 
     demo = shutil.copytree(DEMO, tmp_path / "demo")
     args = []
-    us = CliRunner(env={"PTK_CI": "0"}).invoke(
+    us = CliRunner(env={"PTK_CX": "0"}).invoke(
         cli, [*args, "-V", "b_us", "run", "--dry-run"], catch_exceptions=False, cwd=demo
     )
     assert "-DTOOLCHAIN=arm-clang" in us.output and "build (dry run" in us.output

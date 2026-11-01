@@ -69,7 +69,7 @@ def invoke(write):
     def _invoke(*args: str, role: str = "user"):
         env = {**HOST, "PTK_ROLE": "user" if role == "user" else ""}
         base = []
-        return CliRunner(env={"PTK_CI": "0", **env}).invoke(
+        return CliRunner(env={"PTK_CX": "0", **env}).invoke(
             cli, [*base, *args], catch_exceptions=False, cwd=root
         )
 
@@ -145,11 +145,11 @@ def test_maintainer_jobs_hidden_and_refused_for_users(invoke):
 def test_broken_config_still_shows_help(write):
     root = write(project_files("project: {name: t}\njobs: {build: {stepz: []}}\n"))
     base = []
-    help_out = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
+    help_out = CliRunner(env={"PTK_CX": "0", **HOST}).invoke(
         cli, [*base, "--help"], catch_exceptions=False, cwd=root
     )
     assert help_out.exit_code == 0 and "config" in help_out.output
-    run = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
+    run = CliRunner(env={"PTK_CX": "0", **HOST}).invoke(
         cli, [*base, "build"], catch_exceptions=False, cwd=root
     )
     assert run.exit_code == 2 and "stepz" in run.output

@@ -24,7 +24,7 @@ from .test_installation import hook_path
         ["build"],
     ],
 )
-def test_help_preview_and_ci_do_not_install(tmp_path, monkeypatch, args):
+def test_help_preview_and_cx_do_not_install(tmp_path, monkeypatch, args):
     root = repository(tmp_path / "app")
     write_workflows(
         (root / "config/workflow.ptk.yml").parent / "workflows",
@@ -40,7 +40,7 @@ def test_help_preview_and_ci_do_not_install(tmp_path, monkeypatch, args):
 
     monkeypatch.setattr(GitHooks, "ensure", forbidden)
     if args == ["build"]:
-        result = CliRunner(env={"PTK_CI": "1", "PTK_ROLE": "user"}).invoke(
+        result = CliRunner(env={"PTK_CX": "1", "PTK_ROLE": "user"}).invoke(
             cli, [*args], cwd=root
         )
     else:
@@ -130,7 +130,7 @@ def test_vmr_workflow_checks_each_participant_before_any_job(
 
     monkeypatch.setattr(EnsureHooks, "execute", check)
     monkeypatch.chdir(workspace)
-    result = CliRunner(env={"PTK_ROLE": "user", "PTK_CI": "0"}).invoke(
+    result = CliRunner(env={"PTK_ROLE": "user", "PTK_CX": "0"}).invoke(
         cli, ["verify"], catch_exceptions=False
     )
     assert result.exit_code == (2 if fails else 0), result.output
@@ -158,7 +158,7 @@ def test_vmr_member_job_does_not_inspect_unrelated_repositories(tmp_path, monkey
     (b / ".pre-commit-config.yaml").unlink()
     (root / ".main.ptk.yml").write_text("virtual_monorepo: true\n")
     monkeypatch.chdir(root)
-    result = CliRunner(env={"PTK_ROLE": "user", "PTK_CI": "0"}).invoke(
+    result = CliRunner(env={"PTK_ROLE": "user", "PTK_CX": "0"}).invoke(
         cli, ["a", "build"], catch_exceptions=False
     )
     assert result.exit_code == 0, result.output

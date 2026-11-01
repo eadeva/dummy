@@ -28,7 +28,7 @@ def invoke(write):
         *,
         outcome="passed",
         mode="run",
-        ci=False,
+        cx=False,
         invalid=False,
         child_policy=None,
     ):
@@ -67,8 +67,8 @@ def invoke(write):
         )
         env = {
             "PTK_ROLE": "user",
-            "PTK_CI": "" if ci == "auto" else "1" if ci else "0",
-            "GITHUB_ACTIONS": "true" if ci == "auto" else "false",
+            "PTK_CX": "" if cx == "auto" else "1" if cx else "0",
+            "GITHUB_ACTIONS": "true" if cx == "auto" else "false",
         }
         result = CliRunner(env=env).invoke(
             cli,
@@ -113,13 +113,13 @@ def test_workflow_opens_its_aggregate_report(
     assert "[default][check] report: " in result.output
 
 
-@pytest.mark.parametrize("ci", [False, True, "auto"])
-def test_preview_and_cx_never_open_reports(invoke, opened_reports, ci):
-    preview, root = invoke(mode="dry-run", ci=ci)
+@pytest.mark.parametrize("cx", [False, True, "auto"])
+def test_preview_and_cx_never_open_reports(invoke, opened_reports, cx):
+    preview, root = invoke(mode="dry-run", cx=cx)
     assert preview.exit_code == 0, preview.output
     assert not list(root.rglob("workflow.html"))
-    if ci:
-        result, _ = invoke(ci=ci)
+    if cx:
+        result, _ = invoke(cx=cx)
         assert result.exit_code == 2 and "locally only" in result.output
     assert opened_reports == []
 
@@ -258,7 +258,7 @@ def test_workspace_report_respects_owner_and_member_report_policy(
         )["workflows"],
     )
     monkeypatch.chdir(tmp_path)
-    runner = CliRunner(env={"PTK_ROLE": "user", "PTK_CI": "0"})
+    runner = CliRunner(env={"PTK_ROLE": "user", "PTK_CX": "0"})
     reports = []
     for owner in [tmp_path, tmp_path / "a"]:
         report = owner / "_reports/workflows/verify/run/workflow.html"

@@ -68,7 +68,7 @@ def test_normal_help_html_and_completion_exclude_mutations(tmp_path, monkeypatch
     # Direct Click completion does not run inside CliRunner's cwd/env isolation.
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("PTK_ROLE", "user")
-    monkeypatch.setenv("PTK_CI", "0")
+    monkeypatch.setenv("PTK_CX", "0")
     runner = CliRunner(env={"PTK_ROLE": "user"})
     base = []
     for group, hidden, shown in [
@@ -264,7 +264,7 @@ def test_vmr_workspace_workflow_needs_its_own_list_and_member_roles(
         )["workflows"],
     )
     monkeypatch.chdir(tmp_path)
-    runner = CliRunner(env={"PTK_ROLE": "", "PTK_CI": "0"})
+    runner = CliRunner(env={"PTK_ROLE": "", "PTK_CX": "0"})
     assert "restricted" not in runner.invoke(cli, ["--help"]).output
     result = runner.invoke(cli, ["restricted", "--help"])
     assert result.exit_code != 0 and "maintainer-only" in result.output

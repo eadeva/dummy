@@ -59,7 +59,7 @@ def workflow_matrix(ctx, name, *, at, event):
                         started_at=parent.app.started_at,
                     ),
                     config=entries[alias],
-                    ci=parent.ci,
+                    cx=parent.cx,
                     overrides=parent.overrides,
                 )
             if alias not in owners:

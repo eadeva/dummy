@@ -10,13 +10,13 @@ def test_conventional_documents_and_explicit_overrides(write, load):
     project = load(root)
     assert project.config.vars == {"where": "project", "a": 1}
     assert project.layers == [".main.ptk.yml", "jobs/build.ptk.yml", "project.ptk.yml"]
-    ci = load(
+    cx = load(
         root,
         environ={"GITHUB_ACTIONS": "true"},
         overrides=["vars.where=cli", "vars.n=5"],
     )
-    assert ci.ci and ci.config.vars["where"] == "cli" and ci.config.vars["n"] == 5
-    assert ci.layers[:3] == project.layers
+    assert cx.cx and cx.config.vars["where"] == "cli" and cx.config.vars["n"] == 5
+    assert cx.layers[:3] == project.layers
 
 
 def test_found_from_subdirectory(write, load):
@@ -122,3 +122,25 @@ def test_demo_project_is_valid(load):
     assert set(project.config.jobs) == {"build", "deploy"}
     assert project.config.jobs["deploy"].audience == "maintainer"
     assert project.maintainers is not None
+
+
+@pytest.mark.parametrize(
+    "condition,valid", [("cx", True), ("not cx", True), ("ci", False)]
+)
+def test_cx_condition_name(write, load, condition, valid):
+    root = write(
+        project_files(f"""
+project: {{name: demo}}
+jobs:
+  build:
+    steps:
+      compile:
+        run: echo build
+        when: {condition}
+""")
+    )
+    if valid:
+        load(root)
+    else:
+        with pytest.raises(ConfigError, match="unknown name 'ci' in condition"):
+            load(root)

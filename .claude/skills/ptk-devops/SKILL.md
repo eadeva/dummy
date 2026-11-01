@@ -31,7 +31,7 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 5. For CX, select approved Action/PTK versions and real project-owned images, runners and checkout rules. Generated workflows call the variant-matrix command first; each execution job depends on setup and its producers. Do not run local PTK workflows remotely or use last-finishing matrix outputs as producer identity. Generation does not execute or dispatch a workflow.
 6. Keep artifact destination identity from setup, actual output paths from completed producers, and downloads relative to the producing repository. Direct files and ZIP folders use the shipped Action contract. `artifact_type` is metadata, not a built-in selective-download filter. Never place credentials in URLs, command arguments, manifests or additional properties.
 7. Treat cache as an optional project responsibility: explicit outputs plus `cache: true`, content-based matching, root steps/jobs always run, and `--no-cache-ptk` bypasses PTK reuse. Do not use successful reuse as proof that a remote artifact/service is still available.
-8. Use CX in explanations and documentation. Preserve actual compatibility identifiers such as `CI`, `PTK_CI`, `--ci`, `--no-ci`, expression `ci` and third-party action names. Mise is not currently a built-in PTK installer; do not invent configuration fields or silently change tool managers.
+8. Use CX in explanations and documentation. Use `PTK_CX`, `--cx`, `--no-cx` and expression `cx` for PTK interfaces. Preserve external provider variables such as `CI` and third-party action names. Mise is not currently a built-in PTK installer; do not invent configuration fields or silently change tool managers.
 
 ## Verify and hand off
 

@@ -44,7 +44,7 @@ class Project:
     files: list[Path]
     layers: list[str]
     maintainers: MaintainersSpec | None = None
-    ci: bool = False
+    cx: bool = False
     selected_tools: list[str] | None = None
     warnings: list[Problem] = field(default_factory=list)
     authored_tree: t.Node | None = None
@@ -153,7 +153,7 @@ class LoadProject:
         *,
         config_file: Path | None = None,
         overrides: list[str] | tuple[str, ...] = (),
-        ci: bool | None = None,
+        cx: bool | None = None,
     ) -> Project:
         main = (
             config_file.resolve()
@@ -163,7 +163,7 @@ class LoadProject:
         root = main.parent
         self.editor_main = main
         self.editor_tree = None
-        is_ci = self._host.is_ci() if ci is None else ci
+        is_cx = self._host.is_cx() if cx is None else cx
         self.editor_files = [main]
         main_tree = self._source.read(main)
         marker = t.get(main_tree, ("virtual_monorepo",))
@@ -341,7 +341,7 @@ class LoadProject:
             tree=tree,
             files=list(self.editor_files),
             layers=layers,
-            ci=is_ci,
+            cx=is_cx,
             authored_tree=authored_tree,
             fingerprints=self.fingerprints,
         )

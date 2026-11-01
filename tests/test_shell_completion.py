@@ -22,7 +22,7 @@ from tests.test_workspace import workspace
 @pytest.fixture
 def project(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    monkeypatch.setenv("PTK_CI", "false")
+    monkeypatch.setenv("PTK_CX", "false")
     monkeypatch.setenv("PTK_ROLE", "user")
     return write_project(
         tmp_path / ".main.ptk.yml",
@@ -57,7 +57,7 @@ def project(tmp_path, monkeypatch):
                     "audience": "maintainer",
                     "steps": {"push": {"run": "echo push"}},
                 },
-                "ci-only": {"only_cx": True, "steps": {"push": {"run": "echo push"}}},
+                "cx-only": {"only_cx": True, "steps": {"push": {"run": "echo push"}}},
             },
             "workflows": {
                 "all": {"help": "Build everything", "jobs": {"make": {"job": "build"}}},
@@ -95,7 +95,7 @@ def test_commands_options_and_typed_values(project, shell):
     assert {"build", "all", "self-service", "variant", "workflow"} <= complete(
         shell=shell
     )
-    assert not {"publish", "private", "ci-only", "self-setup"} & complete(shell=shell)
+    assert not {"publish", "private", "cx-only", "self-setup"} & complete(shell=shell)
     assert complete(incomplete="bu", shell=shell) == {"build"}
     assert {"--build-type", "--enabled", "--no-enabled", "--only-step"} <= complete(
         ["build"], "--", shell

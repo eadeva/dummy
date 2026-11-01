@@ -50,7 +50,7 @@ class ExportMatrix:
                     continue
                 if not visible(spec.audience, role):
                     continue
-                if spec.only_cx and not project.ci:
+                if spec.only_cx and not project.cx:
                     continue
                 if variant_restriction(spec, name):
                     continue

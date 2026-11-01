@@ -10,7 +10,7 @@ PTK — project tool kit
    requirements/index
    architecture/index
    reference/index
-   ci/index
+   cx/index
 
 .. container:: ptk-hero
 
@@ -247,7 +247,7 @@ Who is PTK for?
 
    .. grid-item-card:: CX and release engineers
       :class-card: ptk-card
-      :link: ci/index
+      :link: cx/index
       :link-type: doc
       :link-alt: Understand CX and release preparation
 
@@ -313,7 +313,7 @@ Find your next step
 
    .. grid-item-card:: Integrate with CX
       :class-card: ptk-card
-      :link: ci/index
+      :link: cx/index
       :link-type: doc
 
       The verification pipeline, package preparation and the boundary

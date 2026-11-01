@@ -12,7 +12,7 @@ const core = require("../src/core");
 
 const python = process.env.PTK_TEST_PYTHON;
 const repo = path.resolve(__dirname, "../../..");
-const env = { ...process.env, PYTHONPATH: path.join(repo, "src"), PTK_CI: "0", PTK_ROLE: "user", NO_COLOR: "1" };
+const env = { ...process.env, PYTHONPATH: path.join(repo, "src"), PTK_CX: "0", PTK_ROLE: "user", NO_COLOR: "1" };
 
 function invoke(cwd, args, extraEnv = {}) {
   const result = spawnSync(python, ["-m", "ptk", ...args], { cwd, env: { ...env, ...extraEnv }, encoding: "utf8", timeout: 30000 });

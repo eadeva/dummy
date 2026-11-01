@@ -98,7 +98,7 @@ Path('closed').touch()
     configuration(tmp_path, launch)
     env = {
         **os.environ,
-        "PTK_CI": "0",
+        "PTK_CX": "0",
         "PTK_ROLE": "user",
         "PYTHONPATH": str(Path(__file__).resolve().parents[1] / "src"),
     }
@@ -133,7 +133,7 @@ Path('closed').touch()
 
 def test_gui_dry_run_and_step_selection_do_not_launch(tmp_path):
     configuration(tmp_path)
-    runner = CliRunner(env={"PTK_CI": "0"})
+    runner = CliRunner(env={"PTK_CX": "0"})
     result = runner.invoke(cli, ["run", "viewer", "--dry-run"], cwd=tmp_path)
     assert result.exit_code == 0, result.output
     assert "GUI launch: detached" in result.output
@@ -147,7 +147,7 @@ def test_gui_dry_run_and_step_selection_do_not_launch(tmp_path):
 def test_gui_start_failure_and_failed_preparation_are_errors(tmp_path, monkeypatch):
     monkeypatch.setattr("webbrowser.open", lambda *a, **k: True)
     configuration(tmp_path, {"run": ["ptk-nonexistent-gui-executable"]})
-    result = CliRunner(env={"PTK_CI": "0"}).invoke(cli, ["run", "viewer"], cwd=tmp_path)
+    result = CliRunner(env={"PTK_CX": "0"}).invoke(cli, ["run", "viewer"], cwd=tmp_path)
     assert result.exit_code != 0 and "program not found" in result.output
     configuration(
         tmp_path,
@@ -156,7 +156,7 @@ def test_gui_start_failure_and_failed_preparation_are_errors(tmp_path, monkeypat
             "open": {"needs": "prepare", "run": ["ptk-nonexistent-gui-executable"]},
         },
     )
-    result = CliRunner(env={"PTK_CI": "0"}).invoke(cli, ["run", "viewer"], cwd=tmp_path)
+    result = CliRunner(env={"PTK_CX": "0"}).invoke(cli, ["run", "viewer"], cwd=tmp_path)
     assert result.exit_code != 0 and "blocked by needs" in result.output
     assert "program not found" not in result.output
 
@@ -247,11 +247,11 @@ def test_windows_gui_launch_detaches_without_hiding_window_or_using_pipes(
 
 def test_gui_inventory_keeps_job_commands_and_type(tmp_path):
     configuration(tmp_path)
-    result = CliRunner(env={"PTK_CI": "0"}).invoke(
+    result = CliRunner(env={"PTK_CX": "0"}).invoke(
         cli, ["describe", "--json", "--configuration"], cwd=tmp_path
     )
     assert result.exit_code == 0, result.output
     doc = json.loads(result.output)
-    assert doc["schema_version"] == 5
+    assert doc["schema_version"] == 6
     job = doc["projects"][0]["jobs"][0]
     assert job["gui"] is True and job["command"] == ["run", "viewer"]

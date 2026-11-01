@@ -58,7 +58,7 @@ def catalog(ctx):
                 create_app(host=parent.app.host, workspace=discovery),
                 config=entry,
                 overrides=parent.overrides,
-                ci=parent.ci,
+                cx=parent.cx,
                 verbose=parent.verbose,
             )
             owners[alias] = owner
@@ -169,7 +169,7 @@ def open_workflow_report(ctx, name, if_exists=False):
     project = None
     if owner is not None:
         project = create_app(host=parent.app.host).load_project.execute(
-            config_file=entries[owner], overrides=parent.overrides, ci=parent.ci
+            config_file=entries[owner], overrides=parent.overrides, cx=parent.cx
         )
     folder = report_directory(root, name, project)
     reports = [path for path in folder.glob("*/workflow.html") if path.is_file()]
@@ -224,8 +224,8 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False, no_cache_ptk=Fals
         show_graph(root, name, "workflow", spec.jobs, variant=parent.variant)
         if graph and not dry_run:
             return
-    is_ci = parent.app.host.is_ci() if parent.ci is None else parent.ci
-    if is_ci and not dry_run:
+    is_cx = parent.app.host.is_cx() if parent.cx is None else parent.cx
+    if is_cx and not dry_run:
         raise PtkError(
             "workflows run locally only; CX execution uses individual jobs (use ptk maintainer gen-workflows for GitHub templates)"
         )
@@ -236,7 +236,7 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False, no_cache_ptk=Fals
     owner_project = None
     if owner is not None:
         owner_project = create_app(host=parent.app.host).load_project.execute(
-            config_file=entries[owner], overrides=parent.overrides, ci=parent.ci
+            config_file=entries[owner], overrides=parent.overrides, cx=parent.cx
         )
     variants = WorkflowVariants(owner_project, parent.variant)
     bindings = {}
@@ -258,7 +258,7 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False, no_cache_ptk=Fals
             ),
             config=entries[alias],
             overrides=parent.overrides,
-            ci=parent.ci,
+            cx=parent.cx,
             verbose=parent.verbose,
         )
         project = state.project()
@@ -463,7 +463,7 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False, no_cache_ptk=Fals
     except OSError as exc:
         err_console.print(f"[yellow]workflow report not written: {escape(str(exc))}[/]")
     else:
-        if not is_ci and (result.has_errors or spec.open_report == "always"):
+        if not is_cx and (result.has_errors or spec.open_report == "always"):
             open_summary = True
             opening = target / "diagnostics.html" if result.has_errors else path
             try:
@@ -474,7 +474,7 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False, no_cache_ptk=Fals
                 console.print(
                     "[dim]no browser available here - open the workflow report file above[/]"
                 )
-    if not is_ci and not open_summary:
+    if not is_cx and not open_summary:
         for node in plan.jobs:
             if node.id in child_openings:
                 app, child_report = child_openings[node.id]

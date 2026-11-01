@@ -139,7 +139,7 @@ def describe(ctx, as_json, configuration):
             state = CliState(
                 create_app(host=parent.app.host, workspace=parent.app.workspace),
                 config=entry,
-                ci=parent.ci,
+                cx=parent.cx,
                 overrides=parent.overrides,
             )
             try:
@@ -199,12 +199,12 @@ def describe(ctx, as_json, configuration):
                 }
                 projects.append(item)
     result = {
-        "schema_version": 5,
+        "schema_version": 6,
         "ptk_version": parent.app.version,
         "mode": "workspace" if workspace else "repository",
         "root": str(root),
         "role": role,
-        "ci": parent.app.host.is_ci() if parent.ci is None else parent.ci,
+        "cx": parent.app.host.is_cx() if parent.cx is None else parent.cx,
         "projects": projects,
         "workflows": workflows,
         "commands": commands,

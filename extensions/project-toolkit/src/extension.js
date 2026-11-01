@@ -307,7 +307,7 @@ function createController(vscode, context, editorFactory = createEditors) {
   }
 
   function projectNode(project, record) {
-    const common = { project, folder: record.folder, root: project.root, ci: record.inventory.ci };
+    const common = { project, folder: record.folder, root: project.root, cx: record.inventory.cx };
     const groups = [validationNode(common)];
     if (project.error) {
       groups.push(...(project.diagnostics || [{ message: project.error, file: project.entry_file }]).map(issue => ({
@@ -323,7 +323,7 @@ function createController(vscode, context, editorFactory = createEditors) {
         const target = { ...common, kind, name: spec.name, spec };
         const node = { ...target, entityKind: group, label: spec.name, tooltip: [spec.help, spec.gui ? "Launch GUI: preparation finishes first, then the application runs independently of PTK." : ""].filter(Boolean).join("\n"),
           contextValue: core.canOpenReport(target) ? `${kind}-report` : kind,
-          description: [variantDescription(target), kind === "workflow" && common.ci ? "dry-run only on CX" : spec.default ? "default" : ""].filter(Boolean).join(" · "),
+          description: [variantDescription(target), kind === "workflow" && common.cx ? "dry-run only on CX" : spec.default ? "default" : ""].filter(Boolean).join(" · "),
           icon: group === "gui" ? "window" : kind === "job" ? "play-circle" : "git-merge",
           collapsed: true, children: variantChildren(target),
         };
@@ -362,11 +362,11 @@ function createController(vscode, context, editorFactory = createEditors) {
         const children = record.inventory.projects.map(project => projectNode(project, record));
         if (!children.length) children.push(validationNode({ folder: record.folder, root: record.folder.uri.fsPath }));
         if (record.inventory.workflows.length) children.unshift({ label: "Workspace workflows", entityKind: "workflow", icon: "git-merge", children: record.inventory.workflows.map(spec => ({
-          kind: "workflow", name: spec.name, spec, root: record.inventory.root, folder: record.folder, ci: record.inventory.ci,
+          kind: "workflow", name: spec.name, spec, root: record.inventory.root, folder: record.folder, cx: record.inventory.cx,
           label: spec.name, tooltip: spec.help, icon: "git-merge",
           contextValue: core.canOpenReport({ kind: "workflow", commands: record.inventory.commands }) ? "workflow-report" : "workflow",
         })) });
-        if (record.inventory.mode === "workspace") children.push(builtinTree({ root: record.inventory.root, folder: record.folder, ci: record.inventory.ci }, record.inventory.commands));
+        if (record.inventory.mode === "workspace") children.push(builtinTree({ root: record.inventory.root, folder: record.folder, cx: record.inventory.cx }, record.inventory.commands));
         return { label: record.folder.name, description: record.inventory.mode === "workspace" ? "VMR" : "", children, icon: "root-folder" };
       })(), [record.folder.uri.fsPath]));
     },
@@ -380,7 +380,7 @@ function createController(vscode, context, editorFactory = createEditors) {
       item.contextValue = element.contextValue;
       item.command = element.command;
       if (["job", "workflow"].includes(element.kind) && element.project) {
-        item.description = [variantDescription(element), element.kind === "workflow" && element.ci ? "dry-run only on CX" : element.spec.default ? "default" : ""].filter(Boolean).join(" · ");
+        item.description = [variantDescription(element), element.kind === "workflow" && element.cx ? "dry-run only on CX" : element.spec.default ? "default" : ""].filter(Boolean).join(" · ");
       }
       if (element.kind === "variant-choice") {
         const selected = variantsFor(element.target);
@@ -413,7 +413,7 @@ function createController(vscode, context, editorFactory = createEditors) {
     await settled();
     const candidates = records.flatMap(record => (record.inventory?.projects || [])
       .filter(project => !project.error && (!capability || project.capabilities[capability]))
-      .map(project => ({ project, folder: record.folder, root: project.root, ci: record.inventory.ci })));
+      .map(project => ({ project, folder: record.folder, root: project.root, cx: record.inventory.cx })));
     const existing = element?.project && candidates.find(item => item.project.entry_file === element.project.entry_file);
     if (existing) return existing;
     if (element?.project) throw new Error("This operation is no longer available. Refresh projects.");
@@ -507,7 +507,7 @@ function createController(vscode, context, editorFactory = createEditors) {
     trusted();
     const config = settings(target.folder);
     if (options.report && !core.canOpenReport(target)) throw new Error("Report opening is unavailable. Check PTK's version and command permissions.");
-    if (target.kind === "workflow" && target.ci && !options.preview && !options.help && !options.report) throw new Error("Workflows run locally only; CX can dry-run workflows or run individual jobs.");
+    if (target.kind === "workflow" && target.cx && !options.preview && !options.help && !options.report) throw new Error("Workflows run locally only; CX can dry-run workflows or run individual jobs.");
     const definition = { type: "project-toolkit", kind: target.kind, name: target.name, root: target.root };
     if (options.variant) definition.variant = options.variant;
     if (options.preview !== undefined) definition.preview = options.preview;
@@ -645,7 +645,7 @@ function createController(vscode, context, editorFactory = createEditors) {
     async provideTasks() {
       if (!vscode.workspace.isTrusted) return [];
       await settled();
-      return core.availableTargets(records).filter(t => !(t.kind === "workflow" && t.ci) && !(t.spec.params || []).some(p => p.required && !p.env))
+      return core.availableTargets(records).filter(t => !(t.kind === "workflow" && t.cx) && !(t.spec.params || []).some(p => p.required && !p.env))
         .flatMap(t => {
           const variants = t.project ? variantsFor(t) : [];
           return (variants.length ? variants : [undefined]).map(variant => makeTask(t, { variant }));
@@ -657,7 +657,7 @@ function createController(vscode, context, editorFactory = createEditors) {
       const d = task.definition;
       const targets = d.kind === "builtin" ? core.availableBuiltins(records) : core.availableTargets(records);
       const target = targets.find(t => t.kind === d.kind && t.name === d.name && t.root === d.root);
-      if (!target || d.report && !core.canOpenReport(target) || target.ci && target.kind === "workflow" && !d.preview && !d.help && !d.report) return;
+      if (!target || d.report && !core.canOpenReport(target) || target.cx && target.kind === "workflow" && !d.preview && !d.help && !d.report) return;
       if (!d.report && !d.help && !(d.kind === "job" && d.clean === true) && (target.spec.params || []).some(p => p.required && !p.env && !Object.hasOwn(d.kind === "builtin" ? d.inputs || {} : d.params || {}, p.name))) {
         const action = d.kind === "builtin" ? "Run Command with Options" : "Run Job or Workflow with Options";
         output.appendLine(`Use Project Toolkit: ${action} to supply required parameters for ${target.name}.`);

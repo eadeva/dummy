@@ -18,7 +18,7 @@ from tests.test_workspace import workspace
 def project(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("PTK_ROLE", "user")
-    monkeypatch.setenv("PTK_CI", "0")
+    monkeypatch.setenv("PTK_CX", "0")
     write_project(
         tmp_path / ".main.ptk.yml",
         {
@@ -145,7 +145,7 @@ def test_config_option_is_removed_and_nested_cwd_finds_project(
 def test_inventory_routes_members_through_workspace_aliases(tmp_path, monkeypatch):
     workspace(tmp_path)
     monkeypatch.chdir(tmp_path)
-    runner = CliRunner(env={"PTK_ROLE": "user", "PTK_CI": "0"})
+    runner = CliRunner(env={"PTK_ROLE": "user", "PTK_CX": "0"})
     result = runner.invoke(cli, ["describe", "--json"])
     assert result.exit_code == 0, result.output
     projects = json.loads(result.output)["projects"]

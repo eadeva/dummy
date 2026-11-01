@@ -52,8 +52,8 @@ function parseInventory(text) {
   try { doc = JSON.parse(text); } catch {
     throw new Error("PTK did not return JSON. Update PTK and Project Toolkit together.");
   }
-  if (!object(doc) || doc.schema_version !== 5 || !Array.isArray(doc.projects) ||
-      !Array.isArray(doc.workflows) || !doc.workflows.every(item => named(item) && commandPath(item.command) && runOptions(item.run_options)) || !absolute(doc.root) || typeof doc.ci !== "boolean") {
+  if (!object(doc) || doc.schema_version !== 6 || !Array.isArray(doc.projects) ||
+      !Array.isArray(doc.workflows) || !doc.workflows.every(item => named(item) && commandPath(item.command) && runOptions(item.run_options)) || !absolute(doc.root) || typeof doc.cx !== "boolean") {
     throw new Error("Unsupported PTK inventory. Update PTK and Project Toolkit together.");
   }
   if (!validCommands(doc.commands)) throw new Error("Invalid PTK built-in command inventory.");
@@ -239,12 +239,12 @@ function availableTargets(records) {
       if (project.error) continue;
       for (const kind of ["job", "workflow"]) {
         for (const spec of project[`${kind}s`]) {
-          targets.push({ kind, name: spec.name, spec, project, folder, root: project.root, ci: inventory.ci });
+          targets.push({ kind, name: spec.name, spec, project, folder, root: project.root, cx: inventory.cx });
         }
       }
     }
     for (const spec of inventory.workflows) {
-      targets.push({ kind: "workflow", name: spec.name, spec, folder, root: inventory.root, ci: inventory.ci, commands: inventory.commands });
+      targets.push({ kind: "workflow", name: spec.name, spec, folder, root: inventory.root, cx: inventory.cx, commands: inventory.commands });
     }
   }
   return targets;
@@ -265,7 +265,7 @@ function builtinTargets(owner, commands) {
 function availableBuiltins(records) {
   return records.flatMap(({ inventory, folder }) => {
     if (!inventory) return [];
-    const common = { folder, ci: inventory.ci };
+    const common = { folder, cx: inventory.cx };
     return [
       ...inventory.projects.filter(project => !project.error).flatMap(project =>
         builtinTargets({ ...common, project, root: project.root }, project.commands)),

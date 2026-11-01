@@ -86,7 +86,7 @@ def build_commands(root, entries):
                     create_app(workspace=parent.app.workspace),
                     config=entry,
                     overrides=parent.overrides,
-                    ci=parent.ci,
+                    cx=parent.cx,
                     verbose=parent.verbose,
                 ),
             )

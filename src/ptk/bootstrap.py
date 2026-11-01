@@ -96,7 +96,7 @@ class App:
     def prompter(self) -> Prompter:
         from .adapters.credentials.prompt import ConsolePrompter
 
-        return ConsolePrompter(self.host.is_ci)
+        return ConsolePrompter(self.host.is_cx)
 
     @cached_property
     def _uv(self) -> str:
@@ -236,7 +236,7 @@ class App:
                 )
             # A fresh reader avoids leaking another repository's include state.
             return LoadProject(FileConfigSource(), self.host, __version__).execute(
-                config_file=entries[alias], ci=member.ci
+                config_file=entries[alias], cx=member.cx
             )
 
         return VersionService(VersionIO(self.runner, self.host), dependency)

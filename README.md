@@ -206,7 +206,7 @@ and document schemas. See [configuration authoring](docs/guides/configuration.rs
 ## Commands available now
 
 ```
-ptk [-c .main.ptk.yml] [--set PATH=VALUE]... [--ci/--no-ci] [-V VARIANT] [-v|-vv]
+ptk [-c .main.ptk.yml] [--set PATH=VALUE]... [--cx/--no-cx] [-V VARIANT] [-v|-vv]
 ptk                                  run the default job (project.default_job)
 ptk JOB [--PARAM VALUE]... [--only-step STEP] [--to STEP] [--params FILE]
            [-q] [--args-for STEP="ARGS"]... [-- ARGS]
@@ -345,7 +345,7 @@ Dependencies point inwards only; the domain has no I/O.
   show their graphs automatically; `--graph` inspects them without preparing commands.
 - `ptk variant list|show|explain` inspects variants without editing configuration.
   Select a variant before the command: `ptk -V debug build`.
-- `--ci/--no-ci` is maintainer-only. Automatic CX detection remains the default.
+- `--cx/--no-cx` is maintainer-only. Automatic CX detection remains the default.
 
 See [dependency execution and output responsibility](docs/reference/execution.rst) and the [CLI reference](docs/reference/cli.rst).
 

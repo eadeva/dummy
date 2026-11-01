@@ -7,11 +7,11 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
 
 1. Install PTK using `install/install.ps1` or `install/install.sh`. Both install
    the extension bundled in the Python package when VS Code is available. The CLI must
-   support `ptk describe --json --configuration` (inventory version 5 and configuration interface version 5).
+   support `ptk describe --json --configuration` (inventory version 6 and configuration interface version 5).
 2. If PTK was installed directly with uv, run `ptk self-service extension` afterwards.
    Alternatively, in VS Code run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.23.2.vsix`. You can also use
-   `code --install-extension project-toolkit-0.23.2.vsix`.
+   `project-toolkit-0.24.0.vsix`. You can also use
+   `code --install-extension project-toolkit-0.24.0.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -75,7 +75,10 @@ Some action paths and flags are known by the extension, including validation,
 reports, initialization, variants, dry runs and cleanup; the schema alone is
 not the full contract.
 
-Extension 0.23.2 requires inventory `schema_version: 5` and
+PTK now exposes `cx` in inventory data and uses `--cx`, `--no-cx`, and
+`PTK_CX`; replace the former CI-named PTK interfaces when upgrading.
+
+Extension 0.24.0 requires inventory `schema_version: 6` and
 `configuration.version: 5`. These are independent of package/release numbers
 and the project marker's schema version. Unsupported interfaces are rejected;
 there is no legacy parser or runtime schema fallback. Breaking changes must
@@ -99,7 +102,7 @@ Bash/PowerShell/batch scripts, Python scripts/environments/projects, editable
 local packages, uvx tools, modules/inline Python, built-ins or generators.
 Replace example commands and paths before running. Modes and help come from the
 installed PTK schema; missing metadata produces an update instruction, with no
-bundled-schema substitute. Inventory and configuration interface versions stay 5.
+bundled-schema substitute. Inventory interface version is 6; configuration interface version remains 5.
 
 Configuration graphs offer **New step/workflow job** and **New dependent** through
 the same setup. Search names/commands, inspect execution summaries and direct
@@ -325,7 +328,7 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.23.2.vsix`. Use `ptk self-service extension --dry-run`
+`extensions/project-toolkit/project-toolkit-0.24.0.vsix`. Use `ptk self-service extension --dry-run`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:

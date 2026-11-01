@@ -163,7 +163,7 @@ def describe_project(project, role, *, configuration=False, environment_names=()
                 ],
             }
             for name, spec in config.jobs.items()
-            if visible(spec.audience, role) and (not spec.only_cx or project.ci)
+            if visible(spec.audience, role) and (not spec.only_cx or project.cx)
         ],
         "workflows": [
             {

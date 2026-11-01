@@ -285,7 +285,7 @@ def test_defaults_removed_fields_and_real_job_history(tmp_path):
             },
         },
     )
-    runner = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"})
+    runner = CliRunner(env={"PTK_CX": "0", "PTK_ROLE": "user"})
     result = runner.invoke(cli, ["build"], cwd=tmp_path)
     assert result.exit_code == 0, result.output
     report_dir = tmp_path / "_reports/default/build"

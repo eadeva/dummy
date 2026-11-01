@@ -301,7 +301,7 @@ operations and flags, including validation, reports, initialization,
 ``--variant``, ``--dry-run``, ``--param``, ``--clean`` and ``--re-run``.
 Changing those semantics can break compatibility even if the schema is unchanged.
 
-The extension requires inventory ``schema_version: 5`` and per-project
+The extension requires inventory ``schema_version: 6`` and per-project
 ``configuration.version: 5``. These are interface versions, separate from the
 PTK package version, extension version and project marker's ``schema_version``.
 Unsupported interface versions or malformed inventories are rejected with an

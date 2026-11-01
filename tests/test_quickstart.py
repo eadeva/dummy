@@ -17,7 +17,7 @@ def test_quickstart(tmp_path, variant):
     root = tmp_path / "project with spaces"
     shutil.copytree(EXAMPLE, root)
     base = []
-    runner = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"})
+    runner = CliRunner(env={"PTK_CX": "0", "PTK_ROLE": "user"})
     preview = runner.invoke(cli, [*base, "-V", variant, "build", "--dry-run"], cwd=root)
     assert preview.exit_code == 0, preview.output
     assert not (root / "_bin").exists()

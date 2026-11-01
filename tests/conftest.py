@@ -41,7 +41,7 @@ def write(tmp_path: Path):
 
 @pytest.fixture
 def load():
-    """load(root, **kwargs) -> Project, with a clean host environment (no CI)."""
+    """load(root, **kwargs) -> Project, with a clean host environment (no CX)."""
 
     def _load(root: Path, environ: dict[str, str] | None = None, **kwargs):
         app = create_app(environ=environ or {})

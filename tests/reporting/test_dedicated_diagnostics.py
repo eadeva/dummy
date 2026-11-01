@@ -96,7 +96,7 @@ def test_all_importers_share_retained_rules_and_dedicated_output(tmp_path):
 
 
 @pytest.mark.parametrize(
-    "ci,suppressed,level,expected",
+    "cx,suppressed,level,expected",
     [
         (False, False, "error", True),
         (True, False, "error", False),
@@ -105,7 +105,7 @@ def test_all_importers_share_retained_rules_and_dedicated_output(tmp_path):
     ],
 )
 def test_diagnostics_open_on_active_errors_even_without_full_formats(
-    tmp_path, monkeypatch, ci, suppressed, level, expected
+    tmp_path, monkeypatch, cx, suppressed, level, expected
 ):
     opened = []
     monkeypatch.setattr(
@@ -148,7 +148,7 @@ def test_diagnostics_open_on_active_errors_even_without_full_formats(
 
     from ptk.drivers.cli.main import cli
 
-    result = CliRunner(env={"PTK_CI": "1" if ci else "0"}).invoke(
+    result = CliRunner(env={"PTK_CX": "1" if cx else "0"}).invoke(
         cli, ["build"], catch_exceptions=False, cwd=root
     )
     assert result.exit_code == 0, result.output

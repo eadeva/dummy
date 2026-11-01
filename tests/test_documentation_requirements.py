@@ -161,5 +161,5 @@ def test_documentation_navigation_has_all_arc42_chapters():
     index = (ROOT / "docs/architecture/index.rst").read_text(encoding="utf-8")
     assert all(f"   {path.stem}\n" in index for path in chapters)
     root_index = (ROOT / "docs/index.rst").read_text(encoding="utf-8")
-    for section in ("guides", "requirements", "architecture", "reference", "ci"):
+    for section in ("guides", "requirements", "architecture", "reference", "cx"):
         assert f"   {section}/index\n" in root_index

@@ -40,8 +40,8 @@ VARIANT_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 ALIAS_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 ENUM_VALUE_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.+-]*$")
 COMPONENT_PREFIX = "COMPONENT_"
-RESERVED_COMPONENTS = {"params", "vars", "env", "vh", "variant", "os", "ci"}
-RESERVED = {"VARIANT", "PROJECT", "OS", "CI"}
+RESERVED_COMPONENTS = {"params", "vars", "env", "vh", "variant", "os", "cx"}
+RESERVED = {"VARIANT", "PROJECT", "OS", "CX"}
 
 FeatureValue = bool | int | str | None
 

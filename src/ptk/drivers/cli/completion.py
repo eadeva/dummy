@@ -32,7 +32,7 @@ def jobs(ctx, param, incomplete):
             name: spec.help
             for name, spec in project.config.jobs.items()
             if visible(spec.audience, state.role())
-            and (not spec.only_cx or project.ci)
+            and (not spec.only_cx or project.cx)
             and (not execution or (spec.audience == "maintainer") == in_maintainer(ctx))
         },
         incomplete,
@@ -126,7 +126,7 @@ def _job(ctx):
         spec
         if spec
         and visible(spec.audience, state.role())
-        and (not spec.only_cx or project.ci)
+        and (not spec.only_cx or project.cx)
         else None
     )
 

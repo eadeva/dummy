@@ -12,11 +12,11 @@ from ...domain.errors import PtkError
 
 
 class ConsolePrompter:
-    def __init__(self, is_ci: Callable[[], bool]):
-        self._is_ci = is_ci
+    def __init__(self, is_cx: Callable[[], bool]):
+        self._is_cx = is_cx
 
     def interactive(self) -> bool:
-        return sys.stdin.isatty() and not self._is_ci()
+        return sys.stdin.isatty() and not self._is_cx()
 
     def secret(self, question: str) -> str:
         if not self.interactive():

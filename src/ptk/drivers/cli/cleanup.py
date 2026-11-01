@@ -75,7 +75,7 @@ def vmr_clean_all(ctx, yes, dry_run):
             create_app(host=parent.app.host, workspace=parent.app.workspace),
             config=entry,
             overrides=parent.overrides,
-            ci=parent.ci,
+            cx=parent.cx,
         )
         project = state.project()
         from ...application.use_cases.role import command_allowed

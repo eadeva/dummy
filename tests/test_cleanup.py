@@ -142,7 +142,7 @@ def test_mapping_and_invalid_mapping_cleanup_preflight(tmp_path, monkeypatch):
     workspace(tmp_path, {})
     monkeypatch.chdir(tmp_path)
     paths = seed(tmp_path / "a") + seed(tmp_path / "b", "release")
-    runner = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"})
+    runner = CliRunner(env={"PTK_CX": "0", "PTK_ROLE": "user"})
     args = ["-V", "debug", "-c", "a", "workflow", "run", "verify"]
     result = runner.invoke(cli, args)
     assert result.exit_code == 2 and "missing repo_variants" in result.output, (
@@ -167,7 +167,7 @@ def test_mapping_and_invalid_mapping_cleanup_preflight(tmp_path, monkeypatch):
 def test_job_filters_error_steps_skip_and_only_cx_hidden(tmp_path):
     jobs = {
         "build": {**command("pass"), "only_variants": ["release"]},
-        "ci": {**command("pass"), "only_cx": True},
+        "cx": {**command("pass"), "only_cx": True},
         "check": {
             "steps": {
                 "skip": {
@@ -188,7 +188,7 @@ def test_job_filters_error_steps_skip_and_only_cx_hidden(tmp_path):
     result = invoke(tmp_path, "-c", "build")
     assert result.exit_code == 2 and "only_variants" in result.output
     result = invoke(tmp_path, "describe", "--json")
-    assert "ci" not in [
+    assert "cx" not in [
         j["name"] for j in json.loads(result.output)["projects"][0]["jobs"]
     ]
     result = invoke(tmp_path, "check", "--dry-run")
@@ -217,7 +217,7 @@ def test_invalid_mapping_preserves_all_outputs(tmp_path, monkeypatch, mapped):
     write_project(p, data)
     monkeypatch.chdir(tmp_path)
     paths = seed(tmp_path / "a") + seed(tmp_path / "b")
-    result = CliRunner(env={"PTK_CI": "0"}).invoke(cli, ["-c", "a", "verify"])
+    result = CliRunner(env={"PTK_CX": "0"}).invoke(cli, ["-c", "a", "verify"])
     assert result.exit_code == 2, result.output
     assert all(p.exists() for p in paths)
 
@@ -234,7 +234,7 @@ def test_inherited_mapping_and_workflow_rerun(tmp_path, monkeypatch):
     write_project(p, data)
     paths = seed(tmp_path / "a") + seed(tmp_path / "b", "release")
     monkeypatch.chdir(tmp_path)
-    runner = CliRunner(env={"PTK_CI": "0"})
+    runner = CliRunner(env={"PTK_CX": "0"})
     result = runner.invoke(
         cli, ["-V", "debug", "-rr", "workflow", "run", "a/verify", "--dry-run"]
     )
@@ -256,7 +256,7 @@ def test_vmr_all_preflights_last_member_and_cleans_workspace_reports(
     lock = tmp_path / "b/.ptk/locks/debug/build.lock"
     lock.parent.mkdir(parents=True)
     lock.touch()
-    runner = CliRunner(env={"PTK_CI": "0"})
+    runner = CliRunner(env={"PTK_CX": "0"})
     result = runner.invoke(cli, ["vmr-clean-all", "--yes"])
     assert result.exit_code == 2 and "locked" in result.output
     assert all(p.exists() for p in paths)

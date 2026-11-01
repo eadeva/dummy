@@ -59,7 +59,7 @@ def project(tmp_path):
 
 
 def execute(root, **options):
-    app = create_app(environ={"PATH": os.environ.get("PATH", ""), "PTK_CI": "1"})
+    app = create_app(environ={"PATH": os.environ.get("PATH", ""), "PTK_CX": "1"})
     project = app.load_project.execute(root)
     prepared = app.prepare_run(project).execute(
         project, RunRequest(job="build", **options)
@@ -113,7 +113,7 @@ def test_runtime_paths_properties_and_summary_report_roundtrip(project):
 
 def test_cli_prints_outputs_and_upload_configuration(project):
     root, _ = project
-    result = CliRunner(env={"PTK_CI": "1", "PTK_ROLE": "user"}).invoke(
+    result = CliRunner(env={"PTK_CX": "1", "PTK_ROLE": "user"}).invoke(
         cli, ["-V", "dev", "run", "build"], cwd=root
     )
     assert result.exit_code == 0, result.output
@@ -190,7 +190,7 @@ def test_untyped_job_output_and_missing_metadata_remain_explicit(tmp_path):
 
 def test_dry_run_writes_no_upload_configuration(project):
     root, _ = project
-    result = CliRunner(env={"PTK_CI": "1", "PTK_ROLE": "user"}).invoke(
+    result = CliRunner(env={"PTK_CX": "1", "PTK_ROLE": "user"}).invoke(
         cli, ["run", "build", "--dry-run"], cwd=root
     )
     assert result.exit_code == 0, result.output

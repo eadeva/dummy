@@ -71,7 +71,7 @@ def run(root, *, env=None, cancel=None, builtins=None, **options):
 
 
 def invoke(root, *args):
-    result = CliRunner(env={"PTK_ROLE": "user", "PTK_CI": "0"}).invoke(
+    result = CliRunner(env={"PTK_ROLE": "user", "PTK_CX": "0"}).invoke(
         cli, args, cwd=root, catch_exceptions=False
     )
     assert result.exit_code == 0, result.output
@@ -526,7 +526,7 @@ def test_invalid_output_substitution_is_actionable_usage_error(project, scope, o
     job["params"] = {"empty": {"default": ""}}
     (job if scope == "job" else job["steps"]["child"])["outputs"] = [output]
     save(root, model)
-    result = CliRunner(env={"PTK_ROLE": "user", "PTK_CI": "0"}).invoke(
+    result = CliRunner(env={"PTK_ROLE": "user", "PTK_CX": "0"}).invoke(
         cli, ["go", "--dry-run"], cwd=root, catch_exceptions=False
     )
     assert result.exit_code == 2 and "error:" in result.output

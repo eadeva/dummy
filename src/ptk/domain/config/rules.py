@@ -24,7 +24,7 @@ from .tree import Path
 
 PathProblem = tuple[Path, str]
 
-WHEN_FLAT_NAMES = {"variant", "os", "ci"}
+WHEN_FLAT_NAMES = {"variant", "os", "cx"}
 WHEN_NAMESPACES = {"params", "vars", "env", "vh"}
 
 

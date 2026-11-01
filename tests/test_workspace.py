@@ -62,7 +62,7 @@ def test_config_default_directory_execution_root_and_discovery(tmp_path, monkeyp
     write_project(main, data)
     (config / "maintainers.ptk.yml").write_text("maintainers: [alice]")
     (tmp_path / "local.ptk.yml").write_text("vars: {outside_config_dir: ignored}")
-    p = create_app(environ={}).load_project.execute(config, ci=True)
+    p = create_app(environ={}).load_project.execute(config, cx=True)
     assert p.root == tmp_path and p.config_root == config
     assert p.config.vars["value"] == "firmware"
     assert "outside_config_dir" not in p.config.vars

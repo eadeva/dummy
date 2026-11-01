@@ -230,7 +230,7 @@ the older CLI's requirements are not copied into this baseline.
 
 The system layer is intentionally small. There is no software-component
 requirement layer yet; detailed design belongs in :doc:`/architecture/index`.
-Current CX coverage and its limits are documented in :doc:`/ci/index`.
+Current CX coverage and its limits are documented in :doc:`/cx/index`.
 
 Authoring convention
 --------------------
@@ -258,4 +258,4 @@ Implementation coverage is a separate tag: ``implemented``, ``partial``,
 coverage. Source/test paths are candidate evidence; they are not a statement
 that those tests passed on every operating system or that stakeholder acceptance
 has occurred. Verification criteria describe what must be demonstrated. Current
-CX coverage and its limits are in :doc:`/ci/index`.
+CX coverage and its limits are in :doc:`/cx/index`.

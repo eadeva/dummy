@@ -42,11 +42,11 @@ def test_inventory_is_read_only_filters_roles_and_omits_secret_values(tmp_path):
     base = ["describe", "--json"]
     for role, expected in (("user", ["go"]), ("", ["go", "secret-job"])):
         result = CliRunner(
-            env={"PTK_ROLE": role, "PTK_CI": "0", "EXAMPLE_TOKEN": "SECRET_VALUE"}
+            env={"PTK_ROLE": role, "PTK_CX": "0", "EXAMPLE_TOKEN": "SECRET_VALUE"}
         ).invoke(cli, base, cwd=Path(entry).parent)
         assert result.exit_code == 0, result.output
         doc = json.loads(result.output)
-        assert doc["schema_version"] == 5 and doc["mode"] == "repository"
+        assert doc["schema_version"] == 6 and doc["mode"] == "repository"
         project = doc["projects"][0]
         commands = command_paths(project["commands"])
         assert {
@@ -123,7 +123,7 @@ def test_vmr_inventory_retains_healthy_members_when_one_is_invalid(
         "not: a valid project\nrepository: {alias: bootloader, config_path: config}\n"
     )
     monkeypatch.chdir(tmp_path)
-    result = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"}).invoke(
+    result = CliRunner(env={"PTK_CX": "0", "PTK_ROLE": "user"}).invoke(
         cli, ["describe", "--json"]
     )
     assert result.exit_code == 0, result.output
@@ -137,7 +137,7 @@ def test_vmr_inventory_retains_healthy_members_when_one_is_invalid(
         route = member["invocation"]
         assert Path(route["cwd"]).resolve() == tmp_path.resolve()
         assert route["prefix"] == [member["alias"]]
-        child = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"}).invoke(
+        child = CliRunner(env={"PTK_CX": "0", "PTK_ROLE": "user"}).invoke(
             cli, [*route["prefix"], "describe", "--json"], cwd=route["cwd"]
         )
         assert child.exit_code == 0, child.output
@@ -145,7 +145,7 @@ def test_vmr_inventory_retains_healthy_members_when_one_is_invalid(
     healthy = next(p for p in doc["projects"] if p["alias"] == "firmware")
     assert "repos" not in command_paths(healthy["commands"])
     assert "self-service creds set" in command_paths(healthy["commands"])
-    result = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"}).invoke(
+    result = CliRunner(env={"PTK_CX": "0", "PTK_ROLE": "user"}).invoke(
         cli, ["firmware", "describe", "--json"]
     )
     assert result.exit_code == 0, result.output

@@ -319,7 +319,7 @@ def test_job_versions_coexist_and_path_contains_only_selected_tools(
     assert app.tools.status(two, ["selectedtool"])[0].version == "2.0.0"
     assert second_paths[0] not in app.tools.environment(one)["PATH"]
     for job, version in [("one", "1.0.0"), ("two", "2.0.0"), ("one", "1.0.0")]:
-        result = CliRunner(env={"PTK_CI": "0", **env}).invoke(cli, [job], cwd=root)
+        result = CliRunner(env={"PTK_CX": "0", **env}).invoke(cli, [job], cwd=root)
         assert result.exit_code == 0 and f"selectedtool {version}" in result.output, (
             result.output
         )
@@ -329,7 +329,7 @@ def test_job_versions_coexist_and_path_contains_only_selected_tools(
         "PATH": second_paths[0] + ":/usr/bin:/bin"
     }
     write(project_files(yaml.safe_dump(data)))
-    result = CliRunner(env={"PTK_CI": "0", **env}).invoke(cli, ["one"], cwd=root)
+    result = CliRunner(env={"PTK_CX": "0", **env}).invoke(cli, ["one"], cwd=root)
     assert result.exit_code == 1
     assert (
         "tool requirements are not satisfied in the command environment"

@@ -49,7 +49,7 @@ def test_local_collision_prompts_before_parsing_target_options(
         "sys",
         SimpleNamespace(stdin=SimpleNamespace(isatty=lambda: True), exit=sys.exit),
     )
-    result = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"}).invoke(
+    result = CliRunner(env={"PTK_CX": "0", "PTK_ROLE": "user"}).invoke(
         cli, ["verify"], input=choice + "\n", catch_exceptions=False, cwd=root
     )
     assert result.exit_code == 0, result.output
@@ -66,10 +66,10 @@ def test_collision_is_noninteractive_in_help_cx_and_explicit_commands(tmp_path):
     ambiguous = invoke(root, "verify")
     assert ambiguous.exit_code == 2 and "non-interactive" in ambiguous.output
     assert not (root / "job-ran").exists()
-    ci = CliRunner(env={"PTK_CI": "1", "PTK_ROLE": "user"}).invoke(
+    cx = CliRunner(env={"PTK_CX": "1", "PTK_ROLE": "user"}).invoke(
         cli, ["verify"], cwd=root
     )
-    assert ci.exit_code == 0 and (root / "job-ran").is_file(), ci.output
+    assert cx.exit_code == 0 and (root / "job-ran").is_file(), cx.output
     assert not (root / "workflow-ran").exists()
     assert invoke(root, "run", "verify").exit_code == 0
     assert invoke(root, "workflow", "run", "verify").exit_code == 0
@@ -104,7 +104,7 @@ def test_vmr_workspace_and_member_shortcuts(tmp_path, monkeypatch):
         )["workflows"],
     )
     monkeypatch.chdir(tmp_path)
-    runner = CliRunner(env={"PTK_CI": "0", "PTK_ROLE": "user"})
+    runner = CliRunner(env={"PTK_CX": "0", "PTK_ROLE": "user"})
     for args in (["all"], ["app/verify"], ["app", "verify"]):
         result = runner.invoke(cli, args, catch_exceptions=False)
         assert result.exit_code == 0, result.output

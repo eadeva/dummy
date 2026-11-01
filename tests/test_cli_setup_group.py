@@ -31,7 +31,7 @@ jobs:
     grant_maintainer(root)
 
     def call(*args):
-        return CliRunner(env={"PTK_CI": "0", "PTK_ROLE": ""}).invoke(
+        return CliRunner(env={"PTK_CX": "0", "PTK_ROLE": ""}).invoke(
             cli, [*args], catch_exceptions=False, cwd=root
         )
 

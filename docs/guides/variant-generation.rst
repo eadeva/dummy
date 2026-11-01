@@ -45,7 +45,7 @@ configuration. It does not select a product::
 ``src/telemetry/component.variants.ptk.yml`` may independently declare
 ``DEBUG_LEVEL``. Its identity is ``telemetry.DEBUG_LEVEL``. Components use
 lower_snake_case IDs; feature names use UPPER_SNAKE_CASE. Component IDs ``params``,
-``vars``, ``env``, ``vh``, ``variant``, ``os`` and ``ci`` are reserved because they
+``vars``, ``env``, ``vh``, ``variant``, ``os`` and ``cx`` are reserved because they
 name expression namespaces. Exports use uppercase identifiers. Ambiguous exports,
 for example ``a.B_C`` and ``a_b.C``, are rejected during configuration validation.
 

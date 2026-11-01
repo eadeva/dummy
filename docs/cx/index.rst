@@ -5,7 +5,7 @@ CX is the umbrella term used here for automated project pipelines, including
 integration, verification, delivery and deployment. PTK provides jobs that those
 pipelines can invoke; the pipeline host controls orchestration.
 
-The checked-in ``.github/workflows/ci.yml`` defines PTK's verification and package-preparation pipeline.
+The checked-in ``.github/workflows/cx.yml`` defines PTK's verification and package-preparation pipeline.
 It runs PTK's configured jobs; PTK's local workflow executor is not a CX service.
 Local workflows reject CX execution. CX orchestration remains in the host's
 pipeline definition.

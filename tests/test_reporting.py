@@ -83,7 +83,7 @@ def test_importers_scan_step_folders(tmp_path):
 
 SUMMARY = {
     "project": "p",
-    "job": "ci",
+    "job": "cx",
     "variant": "v1",
     "run_id": "r1",
     "status": "failed",
@@ -118,7 +118,7 @@ SUMMARY = {
             "duration": 6,
             "message": "exit code 2",
             "command": "pytest <&>",
-            "log_file": "/w/_logs/v1/ci/test.log",
+            "log_file": "/w/_logs/v1/cx/test.log",
             "needs": [],
         },
         {
@@ -154,7 +154,7 @@ def test_junit_export():
 
 def test_markdown_and_json_export():
     md = exporters.to_markdown(report())
-    assert md.startswith("## Job - ci ❌ — failed")
+    assert md.startswith("## Job - cx ❌ — failed")
     assert "| jobs | `4` | command line |" in md and "failed (allowed)" in md
     assert "**Tests:** 1 passed, 1 failed, 1 error, 1 skipped" in md
     data = json.loads(exporters.to_json(report()))
@@ -167,11 +167,11 @@ def test_markdown_and_json_export():
 
 
 def test_html_export(tmp_path):
-    page = html.render(report(), link_root=Path("/w/_reports/v1/ci"))
-    assert "<h1>Job - ci</h1>" in page
-    assert "<title>Job - ci failed - p</title>" in page
+    page = html.render(report(), link_root=Path("/w/_reports/v1/cx"))
+    assert "<h1>Job - cx</h1>" in page
+    assert "<title>Job - cx failed - p</title>" in page
     assert "pytest &lt;&amp;&gt;" in page and "<&>" not in page
-    assert 'href="../../../_logs/v1/ci/test.log"' in page
+    assert 'href="../../../_logs/v1/cx/test.log"' in page
     assert "What failed" in page and "parser.bad" in page
     assert 'class="bar allowed"' in page and "https://" not in page
     assert "1 (1 allowed)" not in page  # lint allowed, test blocking -> "2 (1 allowed)"
@@ -183,7 +183,7 @@ def test_html_export(tmp_path):
 PROJECT = """\
 project:
   name: rep
-  default_job: ci
+  default_job: cx
 environment:
   keep:
   - JUNIT
@@ -194,7 +194,7 @@ report_formats:
 - markdown
 - github
 jobs:
-  ci:
+  cx:
     steps:
       unit:
         run: printf "%s" "$JUNIT" > "$PTK_STEP_REPORTS_DIR/results.xml"
@@ -225,7 +225,7 @@ def project(write, tmp_path):
 
     def invoke(*args):
         base = []
-        return CliRunner(env={"PTK_CI": "0", **env}).invoke(
+        return CliRunner(env={"PTK_CX": "0", **env}).invoke(
             cli, [*base, *args], catch_exceptions=False, cwd=root
         )
 
@@ -237,7 +237,7 @@ def project(write, tmp_path):
 def test_reports_after_run(project):
     result = project()
     assert result.exit_code == 0, result.output
-    out = project.root / "_reports/default/ci"
+    out = project.root / "_reports/default/cx"
     assert {p.name for p in out.iterdir() if p.is_file()} == {
         "report.json",
         "report.xml",
@@ -254,7 +254,7 @@ def test_reports_after_run(project):
         "tidy-2.sarif",
         "tidy.sarif",
     ]
-    assert project.summary.read_text().startswith("## Job - ci ✅")
+    assert project.summary.read_text().startswith("## Job - cx ✅")
     assert "report: " in result.output
 
 
@@ -275,7 +275,7 @@ jobs:
 """
         )
     )
-    result = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
+    result = CliRunner(env={"PTK_CX": "0", **HOST}).invoke(
         cli, ["go"], catch_exceptions=False, cwd=root
     )
     assert result.exit_code == 1 and "no files matched" in result.output
@@ -283,7 +283,7 @@ jobs:
 
 def test_report_export_and_history(project, monkeypatch):
     project()
-    first = json.loads((project.root / "_logs/default/ci/run.json").read_text())[
+    first = json.loads((project.root / "_logs/default/cx/run.json").read_text())[
         "run_id"
     ]
     import time
@@ -319,7 +319,7 @@ jobs:
 """
         )
     )
-    result = CliRunner(env={"PTK_CI": "0", **HOST}).invoke(
+    result = CliRunner(env={"PTK_CX": "0", **HOST}).invoke(
         cli, ["go"], catch_exceptions=False, cwd=root
     )
     assert (

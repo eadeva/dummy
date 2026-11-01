@@ -25,7 +25,7 @@ def demo_checkout(tmp_path, monkeypatch):
 
 
 def run(*args):
-    return CliRunner(env={"PTK_CI": "0"}).invoke(
+    return CliRunner(env={"PTK_CX": "0"}).invoke(
         cli, [*CONFIG, *args], catch_exceptions=False, cwd=DEMO
     )
 
@@ -75,7 +75,7 @@ def test_variant_commands():
 
 
 def test_errors_exit_2():
-    result = CliRunner(env={"PTK_CI": "0"}).invoke(
+    result = CliRunner(env={"PTK_CX": "0"}).invoke(
         cli, [*CONFIG, "variant", "show", "nope"], cwd=DEMO
     )
     assert result.exit_code == 2
@@ -102,7 +102,7 @@ def test_dry_run_of_demo_shows_plan_without_executing(tmp_path, existing_logs):
         }
 
     before = snapshot()
-    result = CliRunner(env={"PTK_CI": "0"}).invoke(
+    result = CliRunner(env={"PTK_CX": "0"}).invoke(
         cli,
         [
             "-V",
@@ -154,11 +154,11 @@ jobs:
         )
     )
     config = []
-    ok = CliRunner(env={"PTK_CI": "0"}).invoke(
+    ok = CliRunner(env={"PTK_CX": "0"}).invoke(
         cli, [*config, "run", "ok"], catch_exceptions=False, cwd=root
     )
     assert ok.exit_code == 0 and "hi-there" in ok.output
-    bad = CliRunner(env={"PTK_CI": "0"}).invoke(
+    bad = CliRunner(env={"PTK_CX": "0"}).invoke(
         cli, [*config, "run", "bad"], catch_exceptions=False, cwd=root
     )
     assert bad.exit_code == 1 and "exit code 4" in bad.output

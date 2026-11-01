@@ -25,7 +25,7 @@ class EnsureHooks:
 
     def execute(self, project: Project, out: Callable[[str], None]) -> None:
         config = self.config(project)
-        if config is not None and not project.ci:
+        if config is not None and not project.cx:
             self._hooks.ensure(project.root, config, out)
 
     @staticmethod

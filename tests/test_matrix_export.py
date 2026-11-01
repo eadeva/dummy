@@ -76,11 +76,11 @@ def project(tmp_path):
     return tmp_path, model
 
 
-def invoke(root, *args, ci=False, maintainer=True, env=None):
+def invoke(root, *args, cx=False, maintainer=True, env=None):
     return CliRunner(
         env={
             "PTK_ROLE": "" if maintainer else "user",
-            "PTK_CI": "1" if ci else "0",
+            "PTK_CX": "1" if cx else "0",
             "GITHUB_EVENT_NAME": "push",
             "GITHUB_REF_TYPE": "branch",
             "GITHUB_REF_NAME": "feature/reuse",
@@ -146,7 +146,7 @@ def test_local_matrix_exports_only_eligible_pairs_aliases_and_destinations(
 
 def test_cx_exports_without_human_identity_but_does_not_elevate_permissions(project):
     root, _ = project
-    data = export(root, ci=True, maintainer=False)
+    data = export(root, cx=True, maintainer=False)
     assert {r["job"] for r in data["matrix"]["include"]} == {
         "build",
         "test",
@@ -159,7 +159,7 @@ def test_cx_exports_without_human_identity_but_does_not_elevate_permissions(proj
         ("maintainer", "artifacts", "destination", "--job", "build"),
     ]:
         before = snapshot(root)
-        denied = invoke(root, *args, ci=True, maintainer=False)
+        denied = invoke(root, *args, cx=True, maintainer=False)
         assert denied.exit_code != 0 and "maintainer-only" in denied.output
         assert snapshot(root) == before
 
@@ -170,7 +170,7 @@ def test_normal_users_cannot_export_or_force_cx(project):
     for args in [
         ("maintainer", "matrix"),
         ("maintainer", "matrix", "--help"),
-        ("--ci", "maintainer", "matrix"),
+        ("--cx", "maintainer", "matrix"),
     ]:
         result = invoke(root, *args, maintainer=False)
         assert result.exit_code != 0 and "maintainer-only" in result.output
@@ -181,7 +181,7 @@ def test_hidden_from_help_completion_and_editor_inventory(project, monkeypatch):
     root, _ = project
     monkeypatch.chdir(root)
     monkeypatch.setenv("PTK_ROLE", "")
-    monkeypatch.setenv("PTK_CI", "0")
+    monkeypatch.setenv("PTK_CX", "0")
     assert "matrix" not in invoke(root, "maintainer", "--help").output
     complete = BashComplete(cli, {}, "ptk", "_PTK_COMPLETE")
     assert "matrix" not in {
@@ -215,7 +215,7 @@ def test_alias_filters_deduplicate_and_emit_invocable_arguments(project):
 
 def test_github_format_is_exactly_three_safe_output_lines(project):
     root, _ = project
-    expected = export(root, ci=True, maintainer=False)
+    expected = export(root, cx=True, maintainer=False)
     result = invoke(
         root,
         "maintainer",
@@ -224,7 +224,7 @@ def test_github_format_is_exactly_three_safe_output_lines(project):
         AT,
         "--format",
         "github",
-        ci=True,
+        cx=True,
         maintainer=False,
     )
     assert result.exit_code == 0, result.output
@@ -356,7 +356,7 @@ def test_member_alias_routes_to_own_matrix_in_cx(project, tmp_path):
         "build",
         "--at",
         AT,
-        ci=True,
+        cx=True,
         maintainer=False,
     )
     assert result.exit_code == 0, result.output
@@ -395,7 +395,7 @@ def test_matrix_commit_identifies_pr_source_not_synthetic_merge(project):
         "push",
         "--job",
         "build",
-        ci=True,
+        cx=True,
         maintainer=False,
         env=env,
     )["matrix"]["include"]
