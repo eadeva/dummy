@@ -140,6 +140,21 @@ these settings against the installed runtime's schema.
 - [maintainers.ptk.yml](maintainers.ptk.yml): maintainer login IDs, not Git emails.
 
 Keep external synchronized bases unchanged; maintain project overlays separately.
+After configuring external sources and file mappings in `configs.ptk.yml`, use:
+
+```bash
+ptk maintainer sync configs --diff
+ptk maintainer sync configs
+ptk maintainer sync configs --check
+```
+
+`--diff` previews changes, the command without flags synchronizes enabled groups,
+and `--check` validates local files without fetching. This synchronizes external
+base configurations; `ptk maintainer sync agent` updates the README, installers
+and assistant resources. Commit synchronized bases and their provenance record.
+See the [external configuration guide](@ROOT@.github/ptk/docs/guides/shared-configs.rst)
+for source revisions, project overlays and local-edit protection.
+
 CX mode is detected automatically. `PTK_CX` overrides detection, while
 `--cx` / `--no-cx` are maintainer-only switches. See the
 [configuration guide](@ROOT@.github/ptk/docs/guides/configuration.rst) and
