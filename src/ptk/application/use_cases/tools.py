@@ -200,6 +200,10 @@ class ToolService:
                     SetupResult(
                         before.name,
                         before,
+                        f"tool '{before.name}' is "
+                        + ("unavailable" if not before.found else "incompatible")
+                        + f" in the Docker image: {before.problem}. "
+                        "Add or update this tool in the image; "
                         "installation disabled inside Docker (docker: false)",
                     )
                 )

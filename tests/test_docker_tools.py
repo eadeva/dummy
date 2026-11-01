@@ -83,6 +83,10 @@ def test_docker_checks_and_paths_remain_but_install_never_runs(project, output):
         assert result.before.source == "/image/compiler"
     else:
         assert "disabled inside Docker" in result.outcome
+        assert "tool 'compiler'" in result.outcome
+        assert "in the Docker image" in result.outcome
+        assert ("unavailable" if output is None else "incompatible") in result.outcome
+        assert result.before.problem in result.outcome
     [preview] = service.setup(project, ["compiler"], dry_run=True)
     assert preview.ok == result.ok
 
@@ -121,3 +125,17 @@ def test_docker_detection(monkeypatch):
     assert not SystemHost({}).is_docker()
     assert SystemHost({"PTK_DOCKER": "1"}).is_docker()
     assert SystemHost({"container": "docker"}).is_docker()
+
+
+def test_docker_reports_every_unavailable_tool(project):
+    project.config.tools["linker"] = ToolSpec(check="linker --version", version=">=2")
+    installer = Installer()
+    service = ToolService(SystemHost({"PTK_DOCKER": "1"}), Runner(), installer)
+    results = service.setup(project, ["compiler", "linker"])
+    assert [result.name for result in results] == ["compiler", "linker"]
+    for result in results:
+        assert not result.ok
+        assert (
+            f"tool '{result.name}' is unavailable in the Docker image" in result.outcome
+        )
+    assert installer.installed == []
