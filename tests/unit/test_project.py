@@ -144,3 +144,29 @@ jobs:
     else:
         with pytest.raises(ConfigError, match="unknown name 'ci' in condition"):
             load(root)
+
+
+def test_step_only_cx_rejected_but_job_filter_retained(write, load):
+    root = write(
+        project_files("""
+project: {name: demo}
+jobs:
+  build:
+    only_cx: true
+    steps:
+      compile:
+        run: echo build
+        only_cx: true
+""")
+    )
+    with pytest.raises(ConfigError, match="unknown key 'only_cx'"):
+        load(root)
+
+
+def test_schema_exposes_cx_filter_only_on_jobs():
+    from ptk.application.use_cases.project import ExportSchema
+
+    definitions = ExportSchema().execute()["$defs"]
+    assert "only_cx" not in definitions["StepSpec"]["properties"]
+    assert "when" in definitions["StepSpec"]["properties"]
+    assert "only_cx" in definitions["JobSpec"]["properties"]

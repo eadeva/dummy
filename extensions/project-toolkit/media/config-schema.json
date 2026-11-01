@@ -2086,12 +2086,6 @@
           "title": "Generators",
           "type": "array"
         },
-        "only_cx": {
-          "default": false,
-          "description": "Skip this step outside CX execution.",
-          "title": "Only Cx",
-          "type": "boolean"
-        },
         "only_variants": {
           "description": "Run this step only for these variants. Other variants skip it; this does not select a variant.",
           "items": {
@@ -2197,7 +2191,7 @@
             }
           ],
           "default": null,
-          "description": "Condition evaluated against PTK execution symbols. The step is skipped when the expression is false.",
+          "description": "Condition evaluated during planning against PTK execution symbols, before steps run. Use cx for CX-only steps. Cannot inspect prior step results or call functions. The step is skipped when the expression is false.",
           "title": "When"
         },
         "continue_on_error": {
@@ -2577,7 +2571,6 @@
         "outputs",
         "cache",
         "generators",
-        "only_cx",
         "only_variants",
         "omit_variants",
         "needs",

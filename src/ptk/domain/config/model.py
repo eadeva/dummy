@@ -367,9 +367,6 @@ class StepSpec(_Strict):
             raise ValueError("generators must be unique within a step")
         return names
 
-    only_cx: bool = Field(
-        default=False, description="Skip this step outside CX execution."
-    )
     only_variants: list[str] = Field(
         description="Run this step only for these variants. Other variants skip it; this does not select a variant.",
         default_factory=list,
@@ -419,7 +416,7 @@ class StepSpec(_Strict):
     )
     when: str | None = Field(
         default=None,
-        description="Condition evaluated against PTK execution symbols. The step is skipped when the expression is false.",
+        description="Condition evaluated during planning against PTK execution symbols, before steps run. Use cx for CX-only steps. Cannot inspect prior step results or call functions. The step is skipped when the expression is false.",
     )
     continue_on_error: bool = Field(
         default=False, description="Allow execution to continue after this step fails."

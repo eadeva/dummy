@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.24.1
+
+- Remove step-level `only_cx` from configuration forms; use `when: cx`. Keep job-level `only_cx`. Explain planning-time conditions in field help.
+
 ## 0.24.0
 
 - Rename PTK runtime metadata to `cx`, matching `--cx`, `--no-cx`, `PTK_CX`, and the `cx` condition symbol. Legacy PTK CI aliases are removed; external provider environment names remain supported.

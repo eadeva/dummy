@@ -178,7 +178,7 @@ def test_job_filters_error_steps_skip_and_only_cx_hidden(tmp_path):
                 "cx": {
                     "uses": "echo",
                     "with": {"message": "never"},
-                    "only_cx": True,
+                    "when": "cx",
                     "needs": ["skip"],
                 },
             }
@@ -195,7 +195,7 @@ def test_job_filters_error_steps_skip_and_only_cx_hidden(tmp_path):
     assert (
         result.exit_code == 0
         and "omit_variants" in result.output
-        and "only_cx" in result.output
+        and "condition is false: cx" in result.output
     )
 
 

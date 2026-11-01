@@ -835,10 +835,11 @@ folder configuration file for new repositories.
 Execution filters
 -----------------
 
-Jobs and job steps accept ``only_cx: true``, ``only_variants: [debug, release]`` and
-``omit_variants: [debug]``. ``only_cx`` hides a job outside CX, including the
+Jobs accept ``only_cx: true``. Jobs and steps accept
+``only_variants: [debug, release]`` and ``omit_variants: [debug]``. ``only_cx`` hides a job outside CX, including the
 extension inventory, and explicit execution is rejected. Job variant restrictions
-return an error. At step level, these filters skip the step (and nested children).
+return an error. At step level, variant filters skip the step. Use ``when: cx`` for a CX-only
+step; step-level ``only_cx`` is rejected, without a compatibility alias.
 They never select a variant. Variant filters match resolved concrete names;
 ``default`` represents repositories without variants.
 

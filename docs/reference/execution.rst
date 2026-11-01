@@ -94,12 +94,28 @@ branches continue. ``continue_on_error: true`` tolerates a failed step and relea
 its dependents; the failure remains visible in logs and reports. It does not turn
 a skipped or cancelled prerequisite into a success.
 
-``when``, variant restrictions and ``only_cx`` can skip a step. Dependents are
+``when`` and variant restrictions can skip a step. Use ``when: cx`` for
+a CX-only step; ``only_cx`` is supported only on jobs. Dependents are
 then skipped too. For optional checks which must not block another branch,
 author the dependencies accordingly. ``retries`` and ``timeout`` apply to one
 step; retrying a step does not rerun its prerequisites. Python handlers must
 cooperate with cancellation/deadline tokens. Ctrl+C signals active process trees,
 cancels pending work and waits for running work to finish shutting down.
+
+Conditions are resolved while planning the job, before any step starts. They
+read the selected variant, CX mode, OS, parameters, variables, variant features
+and the planned base environment. They are not reevaluated after predecessors
+finish. A preceding step cannot change a later condition by writing a file or
+changing its process environment. ``needs`` controls execution order and failure
+propagation separately from ``when``.
+
+The expression language supports boolean operators, comparisons and membership;
+it rejects function calls such as ``success()`` and ``exists()``, arithmetic and
+arbitrary Python. Put dynamic checks inside a command or Python script, where
+files and runtime results can be inspected. A successful no-op is a success,
+not a PTK skipped result. Do not use ``continue_on_error`` as a failure-only
+condition: it releases dependents after both successful and tolerated failed
+execution.
 
 Working directories, outputs and responsibility
 -----------------------------------------------
