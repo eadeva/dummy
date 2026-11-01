@@ -48,9 +48,9 @@ def project(tmp_path):
                     "dist/${run.variant}/metadata.json",
                 ]
             ),
-            "package": job(only_variants=["release"], outputs=["dist/package.zip"]),
-            "test": job(omit_variants=["release"]),
-            "cx": job(only_cx=True),
+            "package": job(when="variant == 'release'", outputs=["dist/package.zip"]),
+            "test": job(when="variant != 'release'"),
+            "cx": job(when="cx"),
             "private": job(audience="maintainer"),
         },
         "artifactory": {
@@ -208,6 +208,8 @@ def test_alias_filters_deduplicate_and_emit_invocable_arguments(project):
     assert result.exit_code == 0, result.output
     [row] = json.loads(result.output)["matrix"]["include"]
     assert row["variant"] == "release" and row["aliases"] == ["prod"]
+    (root / "dist").mkdir()
+    (root / "dist/package.zip").write_bytes(b"package")
     executed = invoke(root, *row["command"][1:])
     assert executed.exit_code == 0, executed.output
     assert "matrix execution" in executed.output

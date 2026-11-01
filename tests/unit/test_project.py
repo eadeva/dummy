@@ -156,7 +156,7 @@ def test_step_filters_rejected_but_job_filters_retained(write, load, field, valu
 project: {{name: demo}}
 jobs:
   build:
-    only_cx: true
+    when: cx
     steps:
       compile:
         run: echo build
@@ -173,6 +173,6 @@ def test_schema_exposes_cx_filter_only_on_jobs():
     definitions = ExportSchema().execute()["$defs"]
     for field in ("only_cx", "only_variants", "omit_variants"):
         assert field not in definitions["StepSpec"]["properties"]
-        assert field in definitions["JobSpec"]["properties"]
+        assert field not in definitions["JobSpec"]["properties"]
     assert "when" in definitions["StepSpec"]["properties"]
-    assert "only_cx" in definitions["JobSpec"]["properties"]
+    assert "when" in definitions["JobSpec"]["properties"]

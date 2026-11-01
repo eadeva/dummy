@@ -20,6 +20,9 @@ inputs:
     description: Set true for a maintainer job; existing PTK authorization still applies.
     default: 'false'
 outputs:
+  outputs-valid:
+    description: Whether required output validation passed; false must never be tolerated.
+    value: ${{ steps.action.outputs.outputs-valid }}
   uploads-json:
     description: Absolute path of the upload manifest written by this exact job execution.
     value: ${{ steps.action.outputs.uploads-json }}

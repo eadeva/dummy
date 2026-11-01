@@ -22,3 +22,21 @@ A workspace-owned `audience: maintainer` workflow uses `maintainers.ptk.yml` at
 the VMR root. Member jobs retain their own role checks. Lists contain login IDs;
 `PTK_ROLE=maintainer` does not grant access. Editor task generation is maintainer-only;
 use `--users-only` for shared tasks. See [configuration](../../../docs/guides/configuration.rst).
+
+Use `when` for job and step eligibility; never author `only_cx`, `only_variants`
+or `omit_variants`. Job conditions accept only CX and resolved variant context
+(`cx`, `variant`, component/feature symbols and `vh`); use `os`, `env`, `params`
+and `vars` only on steps. Combine migrated filters with `and`. Check enabled and
+disabled variants. False job conditions skip execution and block dependent branches.
+
+Treat every declared output as required. Verify the producer actually creates it;
+missing outputs fail before consumers and cannot be tolerated by `continue_on_error`.
+Partial runs validate executed step outputs only; detached GUI launchers cannot
+promise outputs. Existing files satisfy existence checks, so keep semantic freshness
+and cache correctness project-owned. Never publish an `outputs_valid: false` manifest.
+
+For generated workflows, preserve setup's per-invocation `has_jobs_*` outputs and
+job guards for empty matrices. Matrix export prunes false rows and dependent rows,
+including mapped repository variants. Review existing project-owned workflows
+explicitly; generation never overwrites them. Do not claim hosted execution from
+local validation alone. Read the linked execution and GitHub workflow docs for details.

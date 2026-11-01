@@ -179,6 +179,10 @@ def upload(manifest, root, base, row, scope, extra, transfer):
         manifest.get("files"), list
     ):
         raise ValueError("unsupported upload manifest")
+    if manifest.get("outputs_valid") is False:
+        raise ValueError(
+            "producer failed its required output contract; artifacts cannot be published"
+        )
     row = row or manifest.get("producer", {})
     if manifest.get("repository") != row.get("repository"):
         raise ValueError("upload repository differs from setup matrix")
@@ -360,6 +364,11 @@ def run_job(root, job, variant, params, no_cache=False, maintainer=False):
         )
         if handoff.exists():
             data = json.loads(handoff.read_text(encoding="utf-8"))
+            output(
+                "outputs-valid",
+                bool(data.get("upload_file"))
+                and not data.get("output_contract_failure", False),
+            )
             if data.get("upload_file"):
                 manifest_path = Path(data["upload_file"])
                 document = json.loads(manifest_path.read_text(encoding="utf-8"))

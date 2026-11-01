@@ -17,8 +17,7 @@ Export JSON, select variants/jobs, or publish GitHub step outputs::
    ptk maintainer matrix --format github >> "$GITHUB_OUTPUT"
 
 All concrete variants are included by default; aliases are canonicalized and
-deduplicated. Jobs respect audience, ``only_cx``, ``only_variants`` and
-``omit_variants``. Invalid selected variants fail export. Projects without
+deduplicated. Jobs respect audience and portable job ``when`` conditions. Invalid selected variants fail export. Projects without
 variants use ``variant: null``. Step conditions, tools and required parameters
 are checked when jobs run. Run from a Git checkout for source commit identity.
 

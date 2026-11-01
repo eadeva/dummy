@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.25.0
+
+- Replace job filters with portable `when` conditions, shared by runtime, job discovery and workflow matrix export. Remove all legacy filter fields.
+- Explain required outputs and reject detached GUI output declarations. Missing outputs fail producers before releasing consumers.
+
 ## 0.24.2
 
 - Remove step-level `only_variants` and `omit_variants` from configuration forms. Use `when` expressions for step conditions; job filters remain supported.

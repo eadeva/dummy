@@ -251,7 +251,7 @@ def test_vmr_template_has_only_checkout_todos():
 
 def configure_workflow(project):
     root, model = project
-    model["jobs"]["test"].pop("omit_variants")
+    model["jobs"]["test"].pop("when")
     model["workflows"] = {
         "verify": {
             "jobs": {
@@ -537,3 +537,43 @@ def test_run_action_keeps_failure_and_exposes_completed_manifest(monkeypatch, tm
     assert actions.run_job(tmp_path, "build", "debug", {}) == 7
     assert "uploads-json=" in output.read_text()
     assert "output-paths=[]" in output.read_text()
+
+
+def test_invalid_output_contract_cannot_publish_even_available_files(artifacts):
+    root, row, manifest, store = artifacts
+    manifest["outputs_valid"] = False
+    with pytest.raises(ValueError, match="required output contract"):
+        actions.upload(manifest, root, row["upload"]["url"], row, "run1", {}, store)
+    assert not store.files
+
+
+def test_generated_jobs_remain_defined_and_guard_empty_variant_matrices():
+    document = yaml.safe_load(
+        render_workflow(
+            "verify", spec(), action_repository="eadeva/dummy", action_ref="v1"
+        )
+    )
+    assert set(document["jobs"]) == {"setup", "compile", "check"}
+    for name in ("compile", "check"):
+        assert f"has_jobs_{name}" in document["jobs"]["setup"]["outputs"]
+        assert f"has_jobs_{name} == 'true'" in document["jobs"][name]["if"]
+        assert "fromJSON" in document["jobs"][name]["strategy"]["matrix"]
+    assert "needs.compile.result == 'success'" in document["jobs"]["check"]["if"]
+
+
+def test_tolerated_job_failure_does_not_tolerate_output_contract_failure():
+    workflow = spec()
+    workflow.jobs["compile"].continue_on_error = True
+    document = yaml.safe_load(
+        render_workflow(
+            "verify", workflow, action_repository="eadeva/dummy", action_ref="v1"
+        )
+    )
+    job = document["jobs"]["compile"]
+    assert "continue-on-error" not in job
+    run = next(step for step in job["steps"] if step.get("id") == "run")
+    assert run["continue-on-error"] is True
+    check = job["steps"][-1]
+    assert check["if"] == "${{ !cancelled() }}"
+    assert check["env"]["PTK_OUTPUTS_VALID"] == "${{ steps.run.outputs.outputs-valid }}"
+    assert "exit 1" in check["run"]

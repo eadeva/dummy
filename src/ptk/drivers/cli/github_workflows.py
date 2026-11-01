@@ -41,13 +41,18 @@ def workflow_matrix(ctx, name, *, at, event):
     matrices = {key: [] for key in spec.jobs}
     seen = set()
     bases = []
+    ancestors = spec.ancestors()
+    ordered = sorted(spec.jobs, key=lambda key: len(ancestors[key]))
     for selection in selections:
         variants = WorkflowVariants(owner_project, selection)
         if variants.selected in seen:
             continue
         seen.add(variants.selected)
         rows = {}
-        for invocation, call in spec.jobs.items():
+        for invocation in ordered:
+            call = spec.jobs[invocation]
+            if any(dep not in rows for dep in call.needs):
+                continue
             alias, _, job = call.job.partition(":")
             if not job:
                 alias, job = owner, alias
@@ -86,10 +91,8 @@ def workflow_matrix(ctx, name, *, at, event):
                 at=at,
             )
             eligible = data["matrix"]["include"]
-            if len(eligible) != 1:
-                raise PtkError(
-                    f"{invocation}: job is not eligible for workflow variant {variants.selected!r}"
-                )
+            if not eligible:
+                continue
             row = eligible[0]
             if not row["upload"]:
                 raise PtkError(
@@ -128,8 +131,6 @@ def workflow_matrix(ctx, name, *, at, event):
     # A mapped producer may be shared by several owner variants. Execute it once,
     # but only when its dependency selectors and parameters are identical too.
     for key, rows in matrices.items():
-        if not rows:
-            raise PtkError("workflow has no concrete variants to execute")
         unique = {}
         identities = {}
         for row in rows:
@@ -198,6 +199,10 @@ def render_workflow(
                 f"matrix_{key}": "${{ steps.matrix.outputs.matrix_" + key + " }}"
                 for key in spec.jobs
             },
+            **{
+                f"has_jobs_{key}": "${{ steps.matrix.outputs.has_jobs_" + key + " }}"
+                for key in spec.jobs
+            },
             "upload_base": "${{ steps.matrix.outputs.upload_base }}",
         },
         "steps": [
@@ -259,6 +264,11 @@ def render_workflow(
         jobs[key] = {
             **execution,
             "needs": ["setup", *call.needs],
+            "if": "${{ !cancelled() && needs.setup.result == 'success' && needs.setup.outputs.has_jobs_"
+            + key
+            + " == 'true'"
+            + "".join(" && needs." + dep + ".result == 'success'" for dep in call.needs)
+            + " }}",
             "strategy": {
                 "fail-fast": False,
                 "max-parallel": spec.max_workers,
@@ -267,7 +277,20 @@ def render_workflow(
             "steps": steps,
         }
         if call.continue_on_error:
-            jobs[key]["continue-on-error"] = True
+            next(step for step in steps if step.get("id") == "run")[
+                "continue-on-error"
+            ] = True
+            steps.append(
+                {
+                    "name": "Enforce required output contract",
+                    "if": "${{ !cancelled() }}",
+                    "shell": "bash",
+                    "env": {
+                        "PTK_OUTPUTS_VALID": "${{ steps.run.outputs.outputs-valid }}"
+                    },
+                    "run": 'test "$PTK_OUTPUTS_VALID" = true || { echo "Producer output contract was not satisfied"; exit 1; }',
+                }
+            )
     document = {
         "name": f"PTK {name}",
         "on": {
@@ -320,6 +343,7 @@ def render_workflow(
         "# TODO: configure private Docker registry credentials/mounts if needed.\n"
         "# TODO: review and pin action refs to approved immutable commits.\n"
         "# All jobs depend on setup; only configured producer needs supply artifacts.\n"
+        "# Job definitions remain; when conditions filter variant rows, with guards for empty matrices.\n"
         "# A consumer waits for all variants of each producer, then downloads its matching variant.\n"
         "# Downloads replace declared paths; do not declare source roots or overlapping outputs.\n"
         "# Upload runs after a failed job too, for outputs from successfully completed steps.\n"

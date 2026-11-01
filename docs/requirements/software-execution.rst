@@ -515,3 +515,63 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
 
    **Evidence:** ``src/ptk/adapters/github_actions.py``;
    ``.github/actions``; ``tests/test_github_actions.py``.
+
+.. req-sw:: Unified portable job conditions
+   :id: REQ_Sw_JOB_CONDITIONS
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: under review
+   :verification_criteria: Tests reject legacy filters and runner-specific job symbols, skip disabled execution without required inputs, filter concrete and mapped variants, prune dependent matrix rows and guard empty matrices.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_EXECUTION
+   :tags: implemented
+
+   PTK shall support job and step ``when`` conditions. Job conditions shall use
+   only portable CX/variant context. Removed filter fields shall be rejected.
+   Runtime, discovery, cleanup, local workflow scheduling and matrix export shall
+   apply the same eligibility rule. Disabled jobs shall skip and block dependents;
+   independent branches shall remain eligible. Generated workflows shall export
+   per-invocation presence flags and guard empty matrices before expansion.
+
+   **Origin:** User request to replace all execution filters with when and revisit
+   workflow generation and all execution paths.
+
+   **Implementation:** Implemented and covered by local execution, schema,
+   matrix and generated-workflow tests. Live hosted execution remains unverified.
+
+   **Decision:** :need:`DD_JOB_CONDITIONS_OUTPUTS`.
+
+   **Evidence:** ``tests/test_job_conditions.py``; ``tests/test_github_actions.py``;
+   ``tests/workflows/test_scheduler.py``.
+
+.. req-sw:: Required declared outputs block incomplete producers
+   :id: REQ_Sw_REQUIRED_OUTPUTS
+   :req_type: functional
+   :safety: QM
+   :security: false
+   :legal: false
+   :status: under review
+   :verification_criteria: Tests verify missing step/job outputs fail successful commands, block dependent steps/jobs even with continue_on_error, prohibit publishing invalid contracts, preserve partial-run semantics and reject detached GUI output promises.
+   :verification_level: sw-integration-test
+   :req_satisfies: REQ_Sys_EXECUTION
+   :tags: implemented
+
+   PTK shall validate required declared outputs before releasing consumers or
+   saving cache receipts. Missing, symlink and nonregular outputs shall fail the
+   producer without continue_on_error bypass. Upload shall reject a manifest with
+   an invalid output contract. Dry-run and skipped producers shall not check paths;
+   partial runs shall check executed steps but not whole-job declarations. Detached
+   GUI launchers shall not declare outputs. Existing regular files and directories
+   shall satisfy the existence check; semantic freshness remains project-owned.
+
+   **Origin:** User request to fail producers with missing required outputs.
+
+   **Implementation:** Implemented and covered by local execution, schema,
+   matrix and generated-workflow tests. Live hosted execution remains unverified.
+
+   **Decision:** :need:`DD_JOB_CONDITIONS_OUTPUTS`.
+
+   **Evidence:** ``tests/test_upload_configuration.py``; ``tests/test_output_cache.py``;
+   ``tests/test_github_actions.py``; ``tests/workflows/test_scheduler.py``.

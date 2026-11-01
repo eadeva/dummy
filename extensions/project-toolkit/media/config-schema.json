@@ -821,7 +821,7 @@
       "additionalProperties": false,
       "properties": {
         "outputs": {
-          "description": "Explicit job output files or folders, as strings or {path, artifact_type} objects, relative to the repository root or absolute. Supports PTK variables including steps.<id>.build_dir. Used by workflow dependents; no outputs are inferred from steps or build directories. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. The project owns completeness, validity and the output contract.",
+          "description": "Explicit job output files or folders, as strings or {path, artifact_type} objects, relative to the repository root or absolute. Supports PTK variables including steps.<id>.build_dir. Used by workflow dependents; no outputs are inferred from steps or build directories. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. Every declared output is required after successful full execution. Missing outputs fail the producer before consumers can run. The project owns content validity.",
           "items": {
             "anyOf": [
               {
@@ -848,27 +848,18 @@
           "title": "Gui",
           "type": "boolean"
         },
-        "only_cx": {
-          "default": false,
-          "description": "Expose this job only during CX execution. It is hidden from local command and extension listings.",
-          "title": "Only Cx",
-          "type": "boolean"
-        },
-        "only_variants": {
-          "description": "Allow this job only for these variants. Running it with another variant is a configuration error; this does not select a variant.",
-          "items": {
-            "type": "string"
-          },
-          "title": "Only Variants",
-          "type": "array"
-        },
-        "omit_variants": {
-          "description": "Disallow this job for these variants. Running it with an omitted variant is an error.",
-          "items": {
-            "type": "string"
-          },
-          "title": "Omit Variants",
-          "type": "array"
+        "when": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Portable job eligibility condition: cx, variant, component/feature symbols and vh variant data. False skips execution and excludes matrix rows. Runner-specific os, env, params and vars are step-only.",
+          "title": "When"
         },
         "open_report": {
           "anyOf": [
@@ -1385,9 +1376,7 @@
         "outputs",
         "cache",
         "gui",
-        "only_cx",
-        "only_variants",
-        "omit_variants",
+        "when",
         "open_report",
         "version_dependencies",
         "environment",
@@ -2047,7 +2036,7 @@
       "additionalProperties": false,
       "properties": {
         "outputs": {
-          "description": "Explicit output files or folders, as strings or {path, artifact_type} objects, relative to this step's cwd or absolute. Supports PTK variables; no globs or implicit build directory. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. The project owns completeness and validity. Outputs can provide dependency fingerprints without enabling this step's cache.",
+          "description": "Explicit output files or folders, as strings or {path, artifact_type} objects, relative to this step's cwd or absolute. Supports PTK variables; no globs or implicit build directory. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. Every declared path is required after successful execution; missing or nonregular outputs fail before dependents run. The project owns semantic validity. Outputs can provide dependency fingerprints without enabling this step's cache.",
           "items": {
             "anyOf": [
               {

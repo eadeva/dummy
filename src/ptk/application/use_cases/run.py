@@ -55,6 +55,7 @@ from ..ports import (
     RunObserver,
     SecretResolver,
 )
+from .conditions import job_enabled
 from .project import Project
 from .role import Role, visible
 from .tools import ToolService, tools_for_jobs
@@ -171,8 +172,6 @@ class PrepareRun:
                 f"'{request.job}' is a maintainer-only job "
                 "(login IDs are listed in maintainers.ptk.yml)"
             )
-        if job.only_cx and not project.cx:
-            raise PtkError(f"job {request.job!r} is only available in CX")
         host_env = self._host.variables
         os_name = self._host.os_name()
 
@@ -211,11 +210,36 @@ class PrepareRun:
         elif request.variant:
             raise PtkError(f"--variant {request.variant}: this project has no variants")
 
-        from ...domain.execution.planning import variant_restriction
-
-        reason = variant_restriction(job, variant_name)
-        if reason:
-            raise PtkError(f"job {request.job!r}: {reason}")
+        if not job_enabled(project, job, variant_name, resolved=resolved):
+            layout = layout_of(project)
+            reason = f"job condition is false: {job.when}"
+            plan = JobPlan(
+                project=config.project.name,
+                job=request.job,
+                variant=variant_name,
+                run_id=instant.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8],
+                params={},
+                param_sources={},
+                base_env={},
+                steps=[
+                    PlannedStep((name,), spec, skip_reason=reason)
+                    for name, spec in job.steps.items()
+                ],
+                dirs={
+                    "bin_dir": str(layout.bin_dir(variant_name, request.job)),
+                    "log_dir": str(layout.job_log_dir(variant_name, request.job)),
+                    "reports_dir": str(layout.reports_dir(variant_name, request.job)),
+                },
+                skip_reason=reason,
+            )
+            return PreparedRun(
+                plan,
+                project,
+                layout,
+                set(),
+                dry_run=request.dry_run,
+                resolved_variant=resolved,
+            )
 
         version_snapshot = (
             self._versions.resolve(project, variant_name, request.job)
@@ -424,7 +448,7 @@ class PrepareRun:
 
         symbols.update(
             {
-                "variant": variant_name,
+                "variant": variant_name or lay.NO_VARIANT,
                 "os": os_name,
                 "cx": project.cx,
                 "params": params,
@@ -728,6 +752,9 @@ class RunJob:
             else None
         )
         reused = self._cache_probe("job", job_key, plan.outputs)
+        if reused and any(output_problem(step.outputs) for step in plan.steps):
+            reused = None  # Whole-job reuse must also preserve every step's outputs.
+            self._output_cache.invalidate("job")
         from ..scheduling import schedule
 
         results = (
@@ -764,14 +791,30 @@ class RunJob:
             log_file=str(prepared.layout.run_log(plan.variant, plan.job)),
             report_problems=self._report_problems,
             reused_from=reused,
+            output_contract_failure=any(
+                step.output_contract_failure for step in results
+            ),
         )
+        if (
+            result.status in {Status.PASSED, Status.FAILED}
+            and not prepared.dry_run
+            and not plan.gui_step
+            and not plan.only_step
+            and not plan.report_context.get("selection", {}).get("to")
+        ):
+            problem = output_problem(plan.outputs)
+            if problem:
+                result.status = Status.FAILED
+                result.output_contract_failure = True
+                result.report_problems.append(prepared.mask(problem))
+                self._log(Level.ERROR, prepared.mask(problem))
         if (
             not reused
             and result.ok
             and all(step.status == Status.PASSED for step in results)
         ):
             self._cache_save("job", job_key, plan.outputs)
-        if self._upload_writer and not prepared.dry_run:
+        if self._upload_writer and not prepared.dry_run and not plan.skip_reason:
             try:
                 self._upload_writer(prepared, result)
             except (OSError, ValueError, TypeError, PtkError) as exc:
@@ -1055,10 +1098,25 @@ class RunJob:
         result.duration = time.monotonic() - start
         if result.status is not Status.CANCELLED:
             result.status = Status.PASSED if exit_code == 0 else Status.FAILED
+        output_failure = None
+        if (
+            result.status in {Status.PASSED, Status.FAILED}
+            and result.launched_pid is None
+            and not prepared.dry_run
+        ):
+            output_failure = output_problem(step.outputs)
+            if output_failure:
+                result.status = Status.FAILED
+                result.exit_code = result.exit_code or 1
+                result.output_contract_failure = True
+                result.message = prepared.mask(
+                    "; ".join(filter(None, [result.message, output_failure]))
+                )
+                self._log(Level.ERROR, result.message, step)
         if result.status is Status.FAILED:
             if not result.message:
                 result.message = f"exit code {exit_code}"
-            result.allowed_failure = step.spec.continue_on_error
+            result.allowed_failure = step.spec.continue_on_error and not output_failure
             if result.allowed_failure:
                 self._log(Level.WARNING, "failure allowed by continue_on_error", step)
         self._emit("step_finished", step, result)
@@ -1241,3 +1299,22 @@ def validate_step_resources(plan: JobPlan, root: Path) -> None:
                     f"steps {other!r} and {name!r} can run concurrently and share uv project environment {resource}; "
                     "add a needs dependency or isolate their environments"
                 )
+
+
+def output_problem(paths):
+    """Declared artifacts are required regular files/directories, not symlinks."""
+    unavailable = []
+    for value in paths:
+        path = Path(value)
+        try:
+            valid = not path.is_symlink() and (path.is_file() or path.is_dir())
+        except OSError:
+            valid = False
+        if not valid:
+            unavailable.append(str(path))
+    return (
+        "Required outputs missing or not regular files/directories: "
+        + ", ".join(unavailable)
+        if unavailable
+        else None
+    )

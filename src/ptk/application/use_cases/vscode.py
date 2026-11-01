@@ -9,6 +9,7 @@ from pathlib import Path
 from ...domain import vscode
 from ...domain.variants import rules as vr
 from ..ports import TasksFile
+from .conditions import job_available
 from .project import Project
 from .role import Role, visible
 
@@ -49,7 +50,7 @@ class VSCodeTasks:
                 maintainer=spec.audience == "maintainer",
             )
             for name, spec in config.jobs.items()
-            if visible(spec.audience, audience) and (not spec.only_cx or project.cx)
+            if visible(spec.audience, audience) and job_available(project, spec)
         ]
         variants: list[str] = []
         default_variant = None

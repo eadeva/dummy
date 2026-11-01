@@ -115,6 +115,10 @@ def validate(config: PtkConfig) -> list[PathProblem]:
 
     for name, job in config.jobs.items():
         base: Path = ("jobs", name)
+        if job.when:
+            problems += _check_condition(
+                job.when, base + ("when",), config, job, portable=True
+            )
         for tool in job.requires_tools:
             if tool not in config.tools:
                 problems.append(
@@ -164,7 +168,7 @@ def _variant_symbols(line: ProductLineSpec | None) -> set[str]:
 
 
 def _check_condition(
-    expr: str, path: Path, config: PtkConfig, job: JobSpec
+    expr: str, path: Path, config: PtkConfig, job: JobSpec, *, portable: bool = False
 ) -> list[PathProblem]:
     try:
         used = expressions.names(expr)
@@ -173,6 +177,14 @@ def _check_condition(
     problems: list[PathProblem] = []
     flat_known = _variant_symbols(config.variants) | WHEN_FLAT_NAMES
     for name in sorted(used):
+        if portable and name.split(".")[0] in {"os", "env", "params", "vars"}:
+            problems.append(
+                (
+                    path,
+                    f"{name!r} is step-only; job conditions must be portable across setup and execution runners",
+                )
+            )
+            continue
         if name in flat_known:
             continue
         head, _, rest = name.partition(".")

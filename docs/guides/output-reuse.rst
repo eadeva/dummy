@@ -20,6 +20,11 @@ command's inputs, inspect source dependencies, discover remote changes or
 validate artifact meaning. A matching fingerprint means the declared contents
 match an earlier successful execution; it does not prove a build is current.
 
+Every declared path is required after successful production. Missing outputs fail
+the producer before dependents run or cache receipts are saved; see
+:doc:`/reference/execution` for partial-run, skipped-step and GUI rules. Files
+that already exist satisfy this check; semantic validity remains project-owned.
+
 Both steps and jobs accept:
 
 * ``outputs: [path, ...]`` — explicit literal file or directory paths. Entries

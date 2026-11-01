@@ -1194,3 +1194,36 @@ Known planned product gaps remain in
    Files remain writable; content checks enforce freshness after checkout.
    Maintainers export deviations and modified-base filenames with configs-report. The lock is reviewable provenance, not a trust authority.
    Removed mappings leave files for project review. See :doc:`/guides/shared-configs`.
+
+.. ddec:: Portable job conditions and required producer outputs
+   :id: DD_JOB_CONDITIONS_OUTPUTS
+   :status: accepted
+
+   **Context:** Separate job/step filters duplicated condition expressions, while
+   successful commands could omit declared artifacts and still release consumers.
+
+   **Decision:** Use ``when`` on jobs and steps; reject ``only_cx``,
+   ``only_variants`` and ``omit_variants`` without aliases. Job expressions accept
+   only CX and resolved variant context (features, component flags and vh data).
+   OS, environment, parameters and variables remain step-only because setup and
+   execution runners differ. False jobs skip before runtime prerequisites are
+   resolved. Discovery uses any eligible concrete variant. Matrix export prunes
+   false rows and dependent branches; generated per-invocation guards handle
+   empty matrices. Execution rechecks the condition.
+
+   All declared outputs are required. Validate successful step outputs before
+   dependencies and cache storage, and full-job outputs before workflow consumers.
+   Missing, symlink or nonregular outputs fail without continue_on_error bypass;
+   mark the manifest invalid and refuse publication. Dry-runs, skipped producers
+   and whole-job declarations during partial runs are exempt. Detached GUI jobs
+   and final launch steps cannot declare outputs; preparation steps can.
+
+   **Consequences:** This breaks old configurations and requires review of existing
+   generated GitHub workflows, which remain project-owned and are never overwritten.
+   Existing files satisfy existence checks; semantic validity, freshness and cache
+   correctness remain project responsibilities. Empty directories are valid.
+   Independent workflow branches remain eligible. GitHub waits for whole producer
+   matrices, so one failing variant blocks their consumers. Local preflight can
+   still validate other enabled jobs before scheduling. No arbitrary Python,
+   previous-result or filesystem predicate is introduced. See
+   :doc:`/guides/github-actions` and :doc:`/reference/execution`.

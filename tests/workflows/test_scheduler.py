@@ -17,7 +17,9 @@ from ptk.domain.workflows import WorkflowSpec
 def prepare(node, invocation):
     return "app", SimpleNamespace(
         project=SimpleNamespace(root=Path(".")),
-        plan=SimpleNamespace(variant=None, job=node.job, walk=list, outputs=[]),
+        plan=SimpleNamespace(
+            variant=None, job=node.job, walk=list, outputs=[], skip_reason=None
+        ),
     )
 
 
@@ -284,3 +286,47 @@ def test_invalid_graphs_are_rejected_when_loading(jobs, message):
 def test_invalid_and_removed_workflow_shapes_are_rejected(value):
     with pytest.raises(ValidationError):
         WorkflowSpec.model_validate(value)
+
+
+def test_required_output_failure_blocks_workflow_consumer_even_if_tolerated():
+    prepared = plan(
+        {
+            "producer": {"job": "produce", "continue_on_error": True},
+            "consumer": {"job": "consume", "needs": "producer"},
+        }
+    )
+    calls = []
+
+    def run(node, cancel):
+        calls.append(node.id)
+        return CallOutcome(Status.FAILED, output_contract_failure=True)
+
+    result = RunWorkflow().execute(prepared, run, Cancelled())
+    assert calls == ["producer"]
+    assert result.status == Status.FAILED
+    assert not result.jobs[0].allowed_failure
+    assert result.jobs[1].status == Status.SKIPPED
+
+
+def test_disabled_job_skips_and_blocks_only_its_branch():
+    prepared = plan(
+        {
+            "producer": {"job": "produce"},
+            "consumer": {"job": "consume", "needs": "producer"},
+            "independent": {"job": "other"},
+        }
+    )
+    prepared.jobs[0].prepared.plan.skip_reason = "job condition is false: cx"
+    calls = []
+
+    def run(node, cancel):
+        calls.append(node.id)
+        return CallOutcome(Status.PASSED)
+
+    result = RunWorkflow().execute(prepared, run, Cancelled())
+    assert calls == ["independent"]
+    assert [job.status for job in result.jobs] == [
+        Status.SKIPPED,
+        Status.SKIPPED,
+        Status.PASSED,
+    ]

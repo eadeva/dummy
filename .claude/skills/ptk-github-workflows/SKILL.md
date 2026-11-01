@@ -27,3 +27,21 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 10. Inspect the generated graph and action wiring against the PTK workflow. Preview `matrix --workflow NAME` in an appropriate context only after checking configured version commands: matrix export can execute version discovery. A local maintainer can use `--cx` and `--event EVENT` for a relevant preview. Do not bypass role checks or change maintainers to run validation. Use YAML/action linting when available; a parsed file alone does not prove hosted execution succeeds.
 11. Download restores every output in each selected producer manifest; `artifact_type` labels do not provide a built-in type filter. Do not promise selective download without a project-owned transfer implementation. Verify that files upload directly, directories use ZIP, and downloads restore original relative paths after SHA256/identity checks. Scope defaults to GitHub repository/run ID; use the same explicit scope on both sides when overriding it. Missing manifests, unsafe paths, symlinks and overlapping restores fail. Successful earlier steps may expose artifacts after later failure; whole-job outputs require complete success. Preserve cancellation and failure behavior, and do not claim partial outputs are complete. Project authors own artifact correctness, retention and cache decisions.
 12. Report the workflow path, dependency/variant mapping, declared outputs, completed checks and remaining TODOs. Distinguish generation, local validation and actual hosted execution. Running the pipeline, accessing secrets or uploading artifacts needs to be within the user's requested scope. Do not dispatch a workflow simply to prove the template was written.
+
+Use `when` for job and step eligibility; never author `only_cx`, `only_variants`
+or `omit_variants`. Job conditions accept only CX and resolved variant context
+(`cx`, `variant`, component/feature symbols and `vh`); use `os`, `env`, `params`
+and `vars` only on steps. Combine migrated filters with `and`. Check enabled and
+disabled variants. False job conditions skip execution and block dependent branches.
+
+Treat every declared output as required. Verify the producer actually creates it;
+missing outputs fail before consumers and cannot be tolerated by `continue_on_error`.
+Partial runs validate executed step outputs only; detached GUI launchers cannot
+promise outputs. Existing files satisfy existence checks, so keep semantic freshness
+and cache correctness project-owned. Never publish an `outputs_valid: false` manifest.
+
+For generated workflows, preserve setup's per-invocation `has_jobs_*` outputs and
+job guards for empty matrices. Matrix export prunes false rows and dependent rows,
+including mapped repository variants. Review existing project-owned workflows
+explicitly; generation never overwrites them. Do not claim hosted execution from
+local validation alone. Read the linked execution and GitHub workflow docs for details.

@@ -41,7 +41,7 @@ test("form orders scalar fields first, follows root priorities and preserves ste
   await navigate(["jobs", "build"]);
   assert.deepEqual(await h.page.locator("label.name").allTextContents(), ["help", "audience", "env", "steps"]);
   const options = await h.page.getByRole("combobox", { name: "Optional field", exact: true }).locator("option").allTextContents();
-  assert.ok(options.indexOf("open_report") < options.indexOf("only_variants"));
+  assert.ok(options.indexOf("open_report") < options.indexOf("version_dependencies"));
   await navigate(["jobs", "build", "steps"]);
   assert.deepEqual(await h.page.locator("label.name").allTextContents(), ["zeta", "alpha"]);
   assert.deepEqual(await h.edits(), []);
@@ -58,18 +58,18 @@ test("parameter form names all parallel variants without pre-filling dynamic ove
 });
 
 test("compact rows fit more fields and schema help is accessible without editing", options, async t => {
-  const h = await form(t, { jobs: { build: { help: "Build the project", only_cx: false, audience: "all", open_report: "on_errors", env: {}, params: {}, requires_tools: {}, steps: {compile: { run: "make" }} } } }, ["jobs", "build"]);
+  const h = await form(t, { jobs: { build: { help: "Build the project", cache: false, audience: "all", open_report: "on_errors", env: {}, params: {}, requires_tools: {}, steps: {compile: { run: "make" }} } } }, ["jobs", "build"]);
   const rows = await h.page.locator(".field").evaluateAll(rows => rows.map(row => row.getBoundingClientRect().height));
   assert.ok(rows.every(height => height <= 55), JSON.stringify(rows));
   assert.equal(await h.page.getByRole("button", { name: "Set up new field", exact: true }).isVisible(), true);
-  const toggle = h.page.getByRole("button", { name: "Help for only_cx", exact: true });
+  const toggle = h.page.getByRole("button", { name: "Help for cache", exact: true });
   assert.equal(await toggle.getAttribute("aria-expanded"), "false");
   await toggle.focus(); await toggle.press("Enter");
   assert.equal(await toggle.getAttribute("aria-expanded"), "true");
-  const section = h.page.locator(".field").filter({ has: h.field("only_cx") });
-  assert.match(await section.locator(".field-help").innerText(), /hidden from local command/);
+  const section = h.page.locator(".field").filter({ has: h.field("cache") });
+  assert.match(await section.locator(".field-help").innerText(), /cache correctness/);
   assert.match(await section.locator(".field-help").innerText(), /Default: false/);
-  const described = (await h.field("only_cx").getAttribute("aria-describedby")).split(" ");
+  const described = (await h.field("cache").getAttribute("aria-describedby")).split(" ");
   assert.ok(described.includes(await section.locator(".field-help").getAttribute("id")));
   await h.state();
   assert.equal(await toggle.getAttribute("aria-expanded"), "true");

@@ -4,6 +4,7 @@
 # TODO: configure private Docker registry credentials/mounts if needed.
 # TODO: review and pin action refs to approved immutable commits.
 # All jobs depend on setup; only configured producer needs supply artifacts.
+# Job definitions remain; when conditions filter variant rows, with guards for empty matrices.
 # A consumer waits for all variants of each producer, then downloads its matching variant.
 # Downloads replace declared paths; do not declare source roots or overlapping outputs.
 # Upload runs after a failed job too, for outputs from successfully completed steps.
@@ -53,6 +54,11 @@ jobs:
       matrix_package: ${{ steps.matrix.outputs.matrix_package }}
       matrix_docs: ${{ steps.matrix.outputs.matrix_docs }}
       matrix_extension: ${{ steps.matrix.outputs.matrix_extension }}
+      has_jobs_check: ${{ steps.matrix.outputs.has_jobs_check }}
+      has_jobs_test: ${{ steps.matrix.outputs.has_jobs_test }}
+      has_jobs_package: ${{ steps.matrix.outputs.has_jobs_package }}
+      has_jobs_docs: ${{ steps.matrix.outputs.has_jobs_docs }}
+      has_jobs_extension: ${{ steps.matrix.outputs.has_jobs_extension }}
       upload_base: ${{ steps.matrix.outputs.upload_base }}
     steps:
     - uses: actions/checkout@v4
@@ -76,6 +82,7 @@ jobs:
       image: ${{ inputs.container-image }}
     needs:
     - setup
+    if: ${{ !cancelled() && needs.setup.result == 'success' && needs.setup.outputs.has_jobs_check == 'true' }}
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -109,6 +116,7 @@ jobs:
       image: ${{ inputs.container-image }}
     needs:
     - setup
+    if: ${{ !cancelled() && needs.setup.result == 'success' && needs.setup.outputs.has_jobs_test == 'true' }}
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -145,6 +153,8 @@ jobs:
     - check
     - test
     - extension
+    if: ${{ !cancelled() && needs.setup.result == 'success' && needs.setup.outputs.has_jobs_package == 'true' &&
+      needs.check.result == 'success' && needs.test.result == 'success' && needs.extension.result == 'success' }}
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -186,6 +196,7 @@ jobs:
       image: ${{ inputs.container-image }}
     needs:
     - setup
+    if: ${{ !cancelled() && needs.setup.result == 'success' && needs.setup.outputs.has_jobs_docs == 'true' }}
     strategy:
       fail-fast: false
       max-parallel: 2
@@ -219,6 +230,8 @@ jobs:
       image: ${{ inputs.container-image }}
     needs:
     - setup
+    if: ${{ !cancelled() && needs.setup.result == 'success' && needs.setup.outputs.has_jobs_extension == 'true'
+      }}
     strategy:
       fail-fast: false
       max-parallel: 2

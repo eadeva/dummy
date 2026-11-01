@@ -339,3 +339,36 @@ def test_partial_run_does_not_publish_stale_job_outputs(project):
     assert any(
         item["step"] is None and not item["available"] for item in result.outputs
     )
+
+
+@pytest.mark.parametrize("scope", ["step", "job"])
+def test_missing_required_output_fails_successful_producer(project, scope):
+    root, model = project
+    job = model["jobs"]["build"]
+    producer = job["steps"]["compile"] if scope == "step" else job
+    producer["outputs"].append("required-but-missing.bin")
+    if scope == "step":
+        producer["continue_on_error"] = True
+        job["steps"]["consumer"] = {"uses": "echo", "needs": ["compile"]}
+    write_project(root / ".main.ptk.yml", model)
+    result, _ = execute(root)
+    assert not result.ok and result.output_contract_failure
+    manifest = json.loads(Path(result.upload_file).read_text())
+    assert manifest["outputs_valid"] is False
+    if scope == "step":
+        assert result.steps[0].status.value == "failed"
+        assert not result.steps[0].allowed_failure
+        assert result.steps[1].status.value == "skipped"
+    else:
+        assert result.steps[0].status.value == "passed"
+    assert any(
+        item["reason"] == "missing" for item in result.outputs if "reason" in item
+    )
+
+
+def test_partial_run_does_not_require_whole_job_outputs(project):
+    root, model = project
+    model["jobs"]["build"]["outputs"].append("only-produced-by-full-job.bin")
+    write_project(root / ".main.ptk.yml", model)
+    result, _ = execute(root, only_step="compile")
+    assert result.ok

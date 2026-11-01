@@ -59,7 +59,7 @@ implicit CX/local overlays. An entity cannot be split across files. Unsupported
 entity directories are errors. Entity directories contain files directly, without
 nested configuration folders. Other repository files are not scanned.
 Explicit CLI ``--set`` overrides, shared job defaults and variant inheritance
-retain their model behavior. CX conditions and ``only_cx`` control execution.
+retain their model behavior. Job and step ``when`` conditions control execution.
 
 Components own their feature definitions next to their code. Register their
 repository-relative directories in ``project.ptk.yml``::
@@ -835,19 +835,28 @@ folder configuration file for new repositories.
 Execution filters
 -----------------
 
-Jobs accept ``only_cx: true``, ``only_variants: [debug, release]`` and
-``omit_variants: [debug]``. ``only_cx`` hides a job outside CX, including the
-extension inventory, and explicit execution is rejected. Job variant restrictions
-return an error and filter exported matrix jobs. They never select a variant.
-Variant filters match resolved concrete names; ``default`` represents repositories
-without variants.
+Jobs and steps use ``when``. Removed fields ``only_cx``, ``only_variants`` and
+``omit_variants`` are rejected at both levels; no legacy aliases are supported.
+Migrate them to ``when: cx``, ``when: variant in ['debug', 'release']`` or
+``when: variant not in ['debug']``. Combine simultaneous filters with ``and``.
+Conditions do not select a variant. ``variant`` uses the resolved concrete name;
+``default`` represents a repository without variants.
 
-Steps use ``when`` exclusively: ``when: cx``,
-``when: variant in ['debug', 'release']`` or ``when: variant not in ['debug']``.
-Step-level ``only_cx``, ``only_variants`` and ``omit_variants`` are rejected without
-compatibility aliases. Combine requirements in one expression with ``and``.
-Job filters remain because jobs do not support ``when`` and their restrictions
-reject execution rather than skipping an individual step.
+Job conditions are portable eligibility expressions. They accept ``cx``,
+``variant``, component flags, feature symbols and the ``vh`` variant namespace.
+They reject ``os``, ``env``, ``params`` and ``vars`` because workflow setup and
+execution can run on different machines with different inputs. Use these
+runner-specific values in step conditions. Neither level supports function calls,
+previous results or filesystem checks. Missing variant data evaluates as unset.
+
+A false job condition skips a generic ``ptk run JOB`` execution before parameters,
+tools, credentials or version commands are resolved. Local workflows record the
+job as skipped and block its dependent branch. Job discovery hides a job only
+when no concrete variant is eligible; selecting an ineligible variant still
+produces a skipped run. Cleanup rejects ineligible selections. Matrix export
+excludes ineligible rows, then excludes their dependent rows. Independent branches
+remain. Generated GitHub jobs guard empty matrices using setup outputs. Conditions
+are checked again on the execution runner. See :doc:`github-actions`.
 
 Project-owned outputs and optional caching
 ------------------------------------------

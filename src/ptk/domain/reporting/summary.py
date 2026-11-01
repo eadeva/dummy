@@ -65,6 +65,7 @@ def run_summary(plan: JobPlan, result: RunResult) -> dict[str, Any]:
         "outputs": result.outputs,
         "upload_file": result.upload_file,
         "upload_problem": result.upload_problem,
+        "output_contract_failure": result.output_contract_failure,
         "steps": [
             {**step_dict(r), "report": not any(r.path[: len(p)] == p for p in hidden)}
             for r in result.walk()

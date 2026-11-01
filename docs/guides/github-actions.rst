@@ -37,11 +37,11 @@ IDs are translated to producing PTK job names. The reserved invocation name
 
 Owner ``repo_variants`` mappings apply to VMR producers. Identical mapped calls
 are deduplicated; conflicting parameters/dependencies for the same producer
-identity fail setup and require selecting one owner variant. A configured call
-that is ineligible for a selected variant also fails setup; PTK does not silently
-remove dependency edges. Each execution calls one PTK job, never a PTK workflow.
-``continue_on_error`` and ``max_workers`` map to job ``continue-on-error`` and
-per-matrix ``max-parallel``. The latter is not a workflow-wide concurrency cap.
+identity fail setup and require selecting one owner variant. Ineligible variant rows and their dependent rows are pruned; all configured job
+definitions remain in YAML. Each execution calls one PTK job, never a PTK workflow.
+``continue_on_error`` tolerates the run step, followed by an explicit required-output
+contract check. It does not tolerate output-contract or transfer failures.
+``max_workers`` maps to per-matrix ``max-parallel``, not a workflow-wide concurrency cap.
 
 Project TODOs
 -------------
@@ -188,12 +188,44 @@ See :need:`REQ_Sw_CI_GENERATION`, :need:`REQ_Sw_GITHUB_ARTIFACTS` and
 Declared outputs and dependency checks
 --------------------------------------
 
-``needs`` orders producer and consumer jobs; it does not assert that every
-configured output exists. After producer execution, missing declared outputs are
-reported as unavailable and omitted from the upload candidates. Missing outputs
-alone do not fail an otherwise successful producer job. The uploader checks the
-files included in its manifest; the downloader checks the published manifest,
-identity and payload hashes. Neither reconstructs omitted output declarations.
-A successful empty manifest can therefore result in no restored files. If an
-output is mandatory, have the producer command verify it and fail when missing.
-These runtime artifact checks are separate from planning-time ``when`` conditions.
+All declared outputs are required. PTK fails a successful producer whose declared
+outputs are missing or not regular files/directories; its upload manifest carries
+``outputs_valid: false`` and the upload Action refuses to publish it. Required
+output failures block local workflow consumers even with ``continue_on_error``.
+A job with no declarations may still publish an empty manifest. Downloads validate
+published identity, paths and payload hashes; they are not ``when`` predicates.
+Project commands remain responsible for semantic content and freshness.
+
+Portable job conditions and generated matrices
+----------------------------------------------
+
+Job ``when`` uses only CX and variant context, including feature/component symbols
+and ``vh`` data. Runner OS/environment and job parameter/variable namespaces are
+step-only; evaluating them in setup would not predict another runner correctly.
+Every configured job remains defined in the generated YAML. Conditions filter
+variant rows, never delete job definitions. For each owner variant, setup removes
+false job rows and transitively removes
+consumers needing those rows. Other branches remain. Cross-repository conditions
+use the mapped producer repository's resolved variant. Deduplication and conflicting
+producer-input checks still apply after pruning.
+
+Setup exports ``has_jobs_INVOCATION`` alongside ``matrix_INVOCATION``. Generated
+job guards check setup success, this flag, cancellation and producer success before
+matrix expansion. An empty matrix therefore skips its GitHub job instead of
+attempting an invalid expansion. All jobs still depend on setup. Producer selectors
+contain only eligible dependencies. PTK evaluates the condition again when executing
+the job. Use the same configuration revision and CX context in setup and execution.
+A whole producer matrix must succeed before consumers run; one variant failure
+blocks all of that invocation's consumers, as with GitHub needs semantics.
+
+Existing workflow files are not overwritten. After upgrading, regenerate a template
+in a disposable checkout or review the new setup outputs and guards into the
+project-owned workflow. Existing templates without those guards cannot handle empty
+matrices. Test both enabled and disabled variants. Hosted execution remains a
+project validation step; local YAML tests do not run GitHub Actions.
+
+The run Action also exposes ``outputs-valid``. Generated templates with
+``continue_on_error`` tolerate ordinary run-step failure but explicitly require
+this output to be true; missing or invalid handoffs fail closed. Upload/download
+errors are never tolerated by that option. Do not replace this with job-wide
+GitHub ``continue-on-error``, which could release consumers after missing outputs.

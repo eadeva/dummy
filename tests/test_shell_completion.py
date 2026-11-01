@@ -57,7 +57,7 @@ def project(tmp_path, monkeypatch):
                     "audience": "maintainer",
                     "steps": {"push": {"run": "echo push"}},
                 },
-                "cx-only": {"only_cx": True, "steps": {"push": {"run": "echo push"}}},
+                "cx-only": {"when": "cx", "steps": {"push": {"run": "echo push"}}},
             },
             "workflows": {
                 "all": {"help": "Build everything", "jobs": {"make": {"job": "build"}}},

@@ -83,6 +83,12 @@ def matrix_command(ctx, jobs, event, at, format_, workflow):
     if format_ == "github":
         for invocation, matrix in data.get("jobs", {}).items():
             click.echo("matrix_" + invocation + "=" + encode(matrix))
+            click.echo(
+                "has_jobs_"
+                + invocation
+                + "="
+                + ("true" if matrix["include"] else "false")
+            )
         click.echo("matrix=" + encode(data["matrix"]))
         click.echo("upload_base=" + encode(data["upload_base"]))
         click.echo("has_jobs=" + ("true" if data["matrix"]["include"] else "false"))

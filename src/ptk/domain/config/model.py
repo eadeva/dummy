@@ -347,7 +347,7 @@ class PythonSpec(_Strict):
 class StepSpec(_Strict):
     outputs: list[StrictStr | OutputSpec] = Field(
         default_factory=list,
-        description="Explicit output files or folders, as strings or {path, artifact_type} objects, relative to this step's cwd or absolute. Supports PTK variables; no globs or implicit build directory. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. The project owns completeness and validity. Outputs can provide dependency fingerprints without enabling this step's cache.",
+        description="Explicit output files or folders, as strings or {path, artifact_type} objects, relative to this step's cwd or absolute. Supports PTK variables; no globs or implicit build directory. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. Every declared path is required after successful execution; missing or nonregular outputs fail before dependents run. The project owns semantic validity. Outputs can provide dependency fingerprints without enabling this step's cache.",
     )
     cache: StrictBool = Field(
         default=False,
@@ -480,7 +480,7 @@ class StepSpec(_Strict):
 class JobSpec(_Strict):
     outputs: list[StrictStr | OutputSpec] = Field(
         default_factory=list,
-        description="Explicit job output files or folders, as strings or {path, artifact_type} objects, relative to the repository root or absolute. Supports PTK variables including steps.<id>.build_dir. Used by workflow dependents; no outputs are inferred from steps or build directories. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. The project owns completeness, validity and the output contract.",
+        description="Explicit job output files or folders, as strings or {path, artifact_type} objects, relative to the repository root or absolute. Supports PTK variables including steps.<id>.build_dir. Used by workflow dependents; no outputs are inferred from steps or build directories. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. Every declared output is required after successful full execution. Missing outputs fail the producer before consumers can run. The project owns content validity.",
     )
     cache: StrictBool = Field(
         default=False,
@@ -490,17 +490,9 @@ class JobSpec(_Strict):
         default=False,
         description="Show this job under GUIs. Run prerequisites normally, then launch the single final command in a detached process and let PTK exit. Success means the process started, not that the application finished. The final step cannot use timeout or retries.",
     )
-    only_cx: bool = Field(
-        default=False,
-        description="Expose this job only during CX execution. It is hidden from local command and extension listings.",
-    )
-    only_variants: list[str] = Field(
-        description="Allow this job only for these variants. Running it with another variant is a configuration error; this does not select a variant.",
-        default_factory=list,
-    )
-    omit_variants: list[str] = Field(
-        description="Disallow this job for these variants. Running it with an omitted variant is an error.",
-        default_factory=list,
+    when: str | None = Field(
+        default=None,
+        description="Portable job eligibility condition: cx, variant, component/feature symbols and vh variant data. False skips execution and excludes matrix rows. Runner-specific os, env, params and vars are step-only.",
     )
     open_report: Literal["always", "on_errors"] | None = Field(
         default=None,
@@ -571,6 +563,10 @@ class JobSpec(_Strict):
         if self.gui:
             if self.cache:
                 raise ValueError("GUI jobs cannot enable whole-job cache")
+            if self.outputs:
+                raise ValueError(
+                    "GUI jobs cannot declare job outputs; declare outputs on completed preparation steps"
+                )
             final = self.gui_step
             if final is None or self.steps[final].run is None:
                 raise ValueError(
@@ -579,6 +575,8 @@ class JobSpec(_Strict):
                 )
             if self.steps[final].timeout is not None or self.steps[final].retries:
                 raise ValueError("a gui launch step cannot use timeout or retries")
+            if self.steps[final].outputs:
+                raise ValueError("a detached GUI launch step cannot declare outputs")
             if self.steps[final].cache:
                 raise ValueError("a gui launch step cannot enable cache")
         return self

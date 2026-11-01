@@ -93,6 +93,7 @@ class JobPlan:
     ]  # host/isolated env + config env + generated PTK_/VARIANT_ vars + job env
     dirs: dict[str, str]  # bin_dir, log_dir, reports_dir (job level)
 
+    skip_reason: str | None = None
     max_workers: int = 4
     gui_step: str | None = None
     only_step: str | None = None
@@ -124,6 +125,7 @@ class StepResult:
     log_file: str | None = None
     allowed_failure: bool = False  # failed, but continue_on_error was set
     needs: list[str] = field(default_factory=list)
+    output_contract_failure: bool = False
     launched_pid: int | None = None  # launch receipt, not a monitored application
     reused_from: str = ""
 
@@ -160,6 +162,7 @@ class RunResult:
     outputs: list[dict[str, Any]] = field(default_factory=list)
     upload_file: str | None = None
     upload_problem: str | None = None
+    output_contract_failure: bool = False
 
     @property
     def ok(self) -> bool:

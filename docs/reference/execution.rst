@@ -94,8 +94,8 @@ branches continue. ``continue_on_error: true`` tolerates a failed step and relea
 its dependents; the failure remains visible in logs and reports. It does not turn
 a skipped or cancelled prerequisite into a success.
 
-``when`` can skip a step. Use ``when: cx`` for
-a CX-only step; ``only_cx``, ``only_variants`` and ``omit_variants`` are supported only on jobs. Dependents are
+``when`` can skip a job or step. Use ``when: cx`` for CX-only execution.
+The former filter fields are rejected at both levels. Dependents are
 then skipped too. For optional checks which must not block another branch,
 author the dependencies accordingly. ``retries`` and ``timeout`` apply to one
 step; retrying a step does not rerun its prerequisites. Python handlers must
@@ -180,10 +180,10 @@ inside a job and job invocations inside a workflow.
      - All required ordering. PTK does not discover file reads/writes, infer
        missing edges, or transfer artifacts along an edge.
    * - Inputs and outputs
-     - Configured storage paths, logging, report collection and managed cleanup.
-     - Checks that required inputs exist and are current, and that commands
-       produce the expected files, contents and versions. There is no general
-       step input/output contract or automatic artifact validation.
+     - Configured storage paths, required-output existence/type validation, logging,
+       report collection and managed cleanup.
+     - Checks that required inputs exist and are current, and artifact contents
+       and versions are valid. PTK checks declared output paths, not semantics.
    * - Isolation
      - Per-step storage conventions and composed command environments.
      - Any required filesystem, process, network or device isolation. Commands
@@ -203,13 +203,11 @@ inside a job and job invocations inside a workflow.
        content-addressed artifact caching, automatic output restoration or
        transactional rollback of command side effects.
 
-For example, if ``compile`` returns success without creating the expected binary,
-``package`` can still become eligible through ``needs: compile``. The command or
-handler must check that binary itself or declare a validation step which fails
-when it is missing or invalid. A path such as ``${steps.compile.build_dir}``
-identifies a location; it does not create a dependency or assert that anything
-has been written there. An allowed failure can likewise release a consumer
-without producing its required artifacts.
+If ``compile`` declares a binary in ``outputs`` but fails to create it, PTK fails
+that producer and blocks its dependents. For undeclared files or invalid contents,
+the command or a validation step must report failure. A reference such as
+``${steps.compile.build_dir}`` identifies a location; it does not create a dependency
+or an output declaration. Required-output failures cannot be tolerated.
 
 Distinct step folders and ``environment.isolate: true`` do not prevent a command
 from writing into another step's directory or the repository. Setting ``cwd``
@@ -351,3 +349,31 @@ writes a versioned ``upload.json`` in the job log directory with available
 files/directories and producer properties. Outputs accept strings or
 ``{path: ..., artifact_type: ...}`` entries. This does not transfer files or
 change cache eligibility. See :doc:`/guides/artifacts` for the manifest contract.
+
+Required output validation
+--------------------------
+
+Every declared output is required; there is no optional-output flag or inferred
+build directory. After a successful step, PTK checks its resolved output paths
+before marking the step passed, releasing dependents or saving a cache receipt.
+Missing paths, symlinks and non-file/non-directory paths fail the producer. A
+required-output failure cannot be tolerated with ``continue_on_error``.
+A nonzero command exit does not bypass output checks or release consumers with
+missing required files.
+After full job execution, job outputs are checked before job success, whole-job
+cache storage or workflow consumers. Reports retain the owning paths and failures;
+upload manifests mark a broken output contract and upload refuses publication.
+
+Skipped steps do not have their outputs checked. Dry-runs do not check outputs.
+Partial ``--to`` / ``--only-step`` runs check executed step outputs but do not
+require whole-job outputs. A full job still must produce all declared job outputs
+when an optional step is skipped. Detached GUI jobs and their launch steps cannot
+declare outputs; completed preparation steps can. PTK final report files are exported after execution/output validation; declare
+the report directory for those artifacts rather than a not-yet-exported report file.
+Existing files satisfy existence
+checks: PTK does not prove that this execution created them, inspect their semantic
+content or require nonempty directories. Cache content hashes remain separate from
+this existence contract. Output validation does not retry an otherwise successful
+command; configured retries apply to command/built-in execution failures.
+Whole-job cache reuse also requires every step output to
+remain present. See :doc:`/guides/output-reuse`.

@@ -160,8 +160,13 @@ def test_misses_execute_normally(project, change):
             file.write_text("bad json")
     save(root, model)
     result, _ = run(root)
-    assert result.ok and not result.steps[1].reused_from
-    assert (root / "calls").read_text() == "RCRC"
+    if change == "missing_dependency":
+        assert not result.ok and result.output_contract_failure
+        assert result.steps[1].status.value == "skipped"
+        assert (root / "calls").read_text() == "RCR"
+    else:
+        assert result.ok and not result.steps[1].reused_from
+        assert (root / "calls").read_text() == "RCRC"
 
 
 def test_builtin_operations_use_same_cache(project):
@@ -531,3 +536,25 @@ def test_invalid_output_substitution_is_actionable_usage_error(project, scope, o
     )
     assert result.exit_code == 2 and "error:" in result.output
     assert not (root / "calls").exists()
+
+
+def test_default_variant_condition_works_on_jobs_and_steps_without_variants(project):
+    root, model = project
+    model["jobs"]["go"]["when"] = "variant == 'default'"
+    model["jobs"]["go"]["steps"]["root"]["when"] = "variant == 'default'"
+    save(root, model)
+    result, _ = run(root)
+    assert result.ok
+    assert (root / "calls").read_text() == "RC"
+
+
+def test_failed_command_cannot_tolerate_missing_required_outputs(project):
+    root, model = project
+    model["jobs"]["go"]["steps"]["root"].update(
+        run=command("raise SystemExit(7)"), continue_on_error=True
+    )
+    save(root, model)
+    result, _ = run(root)
+    assert not result.ok and result.output_contract_failure
+    assert result.steps[1].status.value == "skipped"
+    assert not result.steps[0].allowed_failure

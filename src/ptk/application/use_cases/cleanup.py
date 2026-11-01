@@ -47,7 +47,7 @@ def prepare_cleanup(project, job_name, variant, role):
     from types import SimpleNamespace
 
     from ...domain.errors import PtkError
-    from ...domain.execution.planning import variant_restriction
+    from .conditions import job_enabled
     from .role import visible
     from .run import layout_of
     from .variants import VariantService
@@ -58,8 +58,6 @@ def prepare_cleanup(project, job_name, variant, role):
         raise PtkError(f"unknown job {job_name!r}")
     if not visible(job.audience, role):
         raise PtkError(f"{job_name!r} is a maintainer-only job")
-    if job.only_cx and not project.cx:
-        raise PtkError(f"job {job_name!r} is only available in CX")
     service = VariantService(project)
     if service.has_variants:
         resolved = service.resolve(variant)
@@ -72,8 +70,9 @@ def prepare_cleanup(project, job_name, variant, role):
         variant = resolved.name
     elif variant:
         raise PtkError("this project has no variants")
-    reason = variant_restriction(job, variant)
-    if reason:
-        raise PtkError(f"job {job_name!r}: {reason}")
-    plan = SimpleNamespace(job=job_name, variant=variant, base_env={}, walk=list)
+    if not job_enabled(project, job, variant):
+        raise PtkError(f"job {job_name!r}: condition is false: {job.when}")
+    plan = SimpleNamespace(
+        job=job_name, variant=variant, base_env={}, walk=list, skip_reason=None
+    )
     return SimpleNamespace(project=project, plan=plan, layout=layout_of(project))

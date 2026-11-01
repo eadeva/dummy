@@ -78,7 +78,7 @@ not the full contract.
 PTK now exposes `cx` in inventory data and uses `--cx`, `--no-cx`, and
 `PTK_CX`; replace the former CI-named PTK interfaces when upgrading.
 
-Extension 0.24.0 requires inventory `schema_version: 6` and
+Extension 0.25.0 requires inventory `schema_version: 6` and
 `configuration.version: 5`. These are independent of package/release numbers
 and the project marker's schema version. Unsupported interfaces are rejected;
 there is no legacy parser or runtime schema fallback. Breaking changes must

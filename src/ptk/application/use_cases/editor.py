@@ -10,6 +10,7 @@ from ...domain.config.model import JobSpec
 from ...domain.config.template_variables import catalogue
 from ...domain.graphs import describe_graph
 from ...domain.workflows import WorkflowSpec
+from .conditions import job_available
 from .project import ExportSchema
 from .role import command_allowed, visible
 from .variants import VariantService
@@ -163,7 +164,7 @@ def describe_project(project, role, *, configuration=False, environment_names=()
                 ],
             }
             for name, spec in config.jobs.items()
-            if visible(spec.audience, role) and (not spec.only_cx or project.cx)
+            if visible(spec.audience, role) and job_available(project, spec)
         ],
         "workflows": [
             {

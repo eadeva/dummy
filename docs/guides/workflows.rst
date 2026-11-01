@@ -32,10 +32,9 @@ Local orchestration and CX pipelines
 
 ``ptk workflow run`` refuses CX mode, whether detected or forced with ``--cx``.
 ``list``, ``show`` and ``dry-run`` are inspection operations and remain available.
-GitHub template generation and a generic PTK GitHub Action for those workflows
-are draft proposals; neither is implemented by this feature. The familiar
-terminology does not imply that PTK YAML is interchangeable with GitHub Actions
-YAML or that local workflows are executed by a CX runner.
+Use ``ptk maintainer gen-workflows`` for callable GitHub templates with setup
+matrices and separate download/run/upload Actions. PTK YAML is not interchangeable
+with GitHub YAML. See :doc:`github-actions` for the implemented contracts.
 
 Files and commands
 ------------------
@@ -323,14 +322,14 @@ member tasks too; synchronize authoring resources separately with
 working directory to the workspace root. Offline skills and examples are installed
 with the normal authoring bundle; see :doc:`/guides/editor`.
 
-Planned GitHub template generation (not implemented)
-----------------------------------------------------
+GitHub template generation
+---------------------------
 
-Native GitHub workflow generation remains a draft proposal. A future generator
-could map invocation IDs and ``needs`` directly to GitHub jobs and dependencies.
-Checkout, artifact handoff, permissions, variant mapping and exact failure
-semantics would still need a separate design. No generation command or generic
-PTK run-job GitHub Action is currently available.
+``ptk maintainer gen-workflows`` creates callable templates without overwriting
+existing files. Job ``when`` conditions filter per-invocation matrix rows; all job
+definitions remain. Setup emits presence flags so empty matrices are skipped.
+See :doc:`github-actions` for mapped variants, producer selectors, required-output
+validation and project-owned Docker/runner/checkout TODOs.
 
 Owner variant mappings
 ----------------------

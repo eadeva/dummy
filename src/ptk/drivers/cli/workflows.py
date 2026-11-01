@@ -391,6 +391,7 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False, no_cache_ptk=Fals
                 p.run_id,
                 report_errors,
                 reused_from=result.reused_from,
+                output_contract_failure=result.output_contract_failure,
             )
 
     cancel = Cancelled()

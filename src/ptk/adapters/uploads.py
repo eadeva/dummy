@@ -102,7 +102,7 @@ def write_upload(prepared, result):
         and not plan.gui_step
         and not selection.get("only_step")
         and not selection.get("to")
-        and all(step.status == Status.PASSED for step in result.steps)
+        and not result.output_contract_failure
     )
     collect(
         plan.outputs,
@@ -114,6 +114,7 @@ def write_upload(prepared, result):
     result.outputs = records
     document = {
         "schema_version": 1,
+        "outputs_valid": not result.output_contract_failure,
         "run_id": plan.run_id,
         "repository": alias,
         "producer": {

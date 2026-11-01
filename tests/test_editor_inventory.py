@@ -250,7 +250,7 @@ def test_exported_configuration_fields_have_model_owned_help():
         for field, spec in model.get("properties", {}).items():
             assert spec.get("description", "").strip(), f"{name}.{field} has no help"
     for definition, model, field in [
-        ("JobSpec", JobSpec, "only_variants"),
+        ("JobSpec", JobSpec, "when"),
         ("StepSpec", StepSpec, "when"),
         ("ParamSpec", ParamSpec, "env"),
     ]:
@@ -258,7 +258,7 @@ def test_exported_configuration_fields_have_model_owned_help():
             schema["$defs"][definition]["properties"][field]["description"]
             == model.model_fields[field].description
         )
-    assert "error" in JobSpec.model_fields["only_variants"].description
+    assert "Portable" in JobSpec.model_fields["when"].description
     assert "skip" in StepSpec.model_fields["when"].description
 
 

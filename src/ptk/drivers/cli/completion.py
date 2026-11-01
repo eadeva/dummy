@@ -5,6 +5,7 @@ from pathlib import Path
 import rich_click as click
 from click.shell_completion import CompletionItem, get_completion_class
 
+from ...application.use_cases.conditions import job_available
 from ...application.use_cases.role import visible
 from ...bootstrap import create_app
 from ...domain.errors import PtkError
@@ -32,7 +33,7 @@ def jobs(ctx, param, incomplete):
             name: spec.help
             for name, spec in project.config.jobs.items()
             if visible(spec.audience, state.role())
-            and (not spec.only_cx or project.cx)
+            and job_available(project, spec)
             and (not execution or (spec.audience == "maintainer") == in_maintainer(ctx))
         },
         incomplete,
@@ -126,7 +127,7 @@ def _job(ctx):
         spec
         if spec
         and visible(spec.audience, state.role())
-        and (not spec.only_cx or project.cx)
+        and job_available(project, spec)
         else None
     )
 

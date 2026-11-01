@@ -24,6 +24,8 @@ class PlannedCall:
     @property
     def resources(self):
         p = self.prepared
+        if p.plan.skip_reason:
+            return set()
         resources = {
             (
                 "job",
@@ -93,6 +95,7 @@ class CallOutcome:
     run_id: str = ""
     report_errors: bool = False
     reused_from: str = ""
+    output_contract_failure: bool = False
 
 
 @dataclass
@@ -170,7 +173,10 @@ class RunWorkflow:
         def visit(node):
             if cancel.is_set():
                 return record(node, Status.CANCELLED, "workflow cancelled")
+            if node.prepared.plan.skip_reason:
+                return record(node, Status.SKIPPED, node.prepared.plan.skip_reason)
             result = record(node, Status.PENDING)
+            output_failure = False
             try:
                 node.prepared.cache_dependencies = {
                     parent: calls[parent].prepared.plan.outputs
@@ -184,6 +190,7 @@ class RunWorkflow:
                     outcome.reports,
                     outcome.run_id,
                 )
+                output_failure = outcome.output_contract_failure
                 result.report_errors = outcome.report_errors
                 result.reused_from = outcome.reused_from
                 if result.reused_from:
@@ -192,7 +199,9 @@ class RunWorkflow:
                 result.status, result.message = Status.FAILED, str(exc)
             result.duration = time.monotonic() - started - result.start
             result.allowed_failure = (
-                node.spec.continue_on_error and result.status == Status.FAILED
+                node.spec.continue_on_error
+                and result.status == Status.FAILED
+                and not output_failure
             )
             completed[node.id] = result
             return result

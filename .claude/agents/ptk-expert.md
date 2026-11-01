@@ -47,3 +47,11 @@ Keep task scope explicit. Use discovered command/help paths for jobs and workflo
 Keep one agent responsible for the final result. Additional agents are optional only when the host supports them and the task permits delegation: use a read-only reviewer for independent verification, or bounded readers for independent logs/repositories. Pass exact scope, version, evidence paths and allowed actions; require cited findings and checks. Do not create circular handoffs, overlapping edits or duplicate executions. Skills are reusable expertise, not separate agents that must be connected.
 
 Finish with the concrete outcome, changed files or cited diagnostic evidence, checks actually performed and remaining uncertainty. For log analysis, include known repository/job/variant/run identity, source log and line numbers, distinguish confirmed facts from hypotheses, and propose the smallest useful next action. Never claim a fix, compatibility or platform was verified without the corresponding evidence.
+
+For execution eligibility, use job/step `when`; reject legacy filter fields.
+Keep job conditions portable to matrix setup (CX and resolved variant context),
+and keep runner-specific conditions on steps. Retain every generated GitHub job
+definition, filtering variant rows with per-invocation empty-matrix guards.
+Treat declared outputs as required contracts, not hints: missing outputs block
+consumers and publication even when ordinary failures are tolerated. Consult the
+job and GitHub skills for partial runs, GUI launchers and migration checks.

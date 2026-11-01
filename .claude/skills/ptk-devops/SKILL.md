@@ -38,3 +38,21 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 9. Validate the owning configuration, inspect the affected job/workflow preview after considering version-command effects, and run only the checks authorized by the task. For authored GitHub YAML, distinguish local validation from an actual hosted run. Keep platform acceptance separate from checks run on the current host.
 10. When assistant resources are in scope, use `ptk maintainer sync agent --check` and the authorized synchronization. Keep project-specific instructions separately owned; do not patch installed examples or regenerate over custom edits.
 11. Report the concrete change, affected owners/paths, checks actually performed, remaining TODOs and the next operational action. Clearly distinguish reviewed, generated, installed, executed, uploaded and published states. Escalate only a specific missing decision or permission; continue independent authorized work.
+
+Use `when` for job and step eligibility; never author `only_cx`, `only_variants`
+or `omit_variants`. Job conditions accept only CX and resolved variant context
+(`cx`, `variant`, component/feature symbols and `vh`); use `os`, `env`, `params`
+and `vars` only on steps. Combine migrated filters with `and`. Check enabled and
+disabled variants. False job conditions skip execution and block dependent branches.
+
+Treat every declared output as required. Verify the producer actually creates it;
+missing outputs fail before consumers and cannot be tolerated by `continue_on_error`.
+Partial runs validate executed step outputs only; detached GUI launchers cannot
+promise outputs. Existing files satisfy existence checks, so keep semantic freshness
+and cache correctness project-owned. Never publish an `outputs_valid: false` manifest.
+
+For generated workflows, preserve setup's per-invocation `has_jobs_*` outputs and
+job guards for empty matrices. Matrix export prunes false rows and dependent rows,
+including mapped repository variants. Review existing project-owned workflows
+explicitly; generation never overwrites them. Do not claim hosted execution from
+local validation alone. Read the linked execution and GitHub workflow docs for details.

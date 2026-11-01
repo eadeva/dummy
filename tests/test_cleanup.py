@@ -166,8 +166,8 @@ def test_mapping_and_invalid_mapping_cleanup_preflight(tmp_path, monkeypatch):
 
 def test_job_filters_error_steps_skip_and_only_cx_hidden(tmp_path):
     jobs = {
-        "build": {**command("pass"), "only_variants": ["release"]},
-        "cx": {**command("pass"), "only_cx": True},
+        "build": {**command("pass"), "when": "variant == 'release'"},
+        "cx": {**command("pass"), "when": "cx"},
         "check": {
             "steps": {
                 "skip": {
@@ -186,7 +186,7 @@ def test_job_filters_error_steps_skip_and_only_cx_hidden(tmp_path):
     }
     repository(tmp_path, jobs=jobs, extra=variant_config())
     result = invoke(tmp_path, "-c", "build")
-    assert result.exit_code == 2 and "only_variants" in result.output
+    assert result.exit_code == 2 and "condition is false" in result.output
     result = invoke(tmp_path, "describe", "--json")
     assert "cx" not in [
         j["name"] for j in json.loads(result.output)["projects"][0]["jobs"]

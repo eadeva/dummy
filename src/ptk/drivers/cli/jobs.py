@@ -23,6 +23,7 @@ import rich_click as click
 import yaml
 from rich.markup import escape
 
+from ...application.use_cases.conditions import job_available
 from ...domain import run_output as display
 from ...domain.config.model import JobSpec, ParamSpec
 from ...domain.errors import PtkError
@@ -403,6 +404,7 @@ def _execute_one_unlocked(
                 {
                     "upload_file": result.upload_file,
                     "upload_problem": result.upload_problem,
+                    "output_contract_failure": result.output_contract_failure,
                 }
             ),
             encoding="utf-8",
@@ -578,7 +580,7 @@ class ProjectGroup(AccessGroup):
             {
                 name: spec
                 for name, spec in project.config.jobs.items()
-                if not spec.only_cx or project.cx
+                if job_available(project, spec)
             }
             if project
             else {}
@@ -645,7 +647,7 @@ class ProjectGroup(AccessGroup):
         except PtkError as exc:
             return _broken(cmd_name, exc)
         spec = project.config.jobs.get(cmd_name)
-        if spec is not None and spec.only_cx and not project.cx:
+        if spec is not None and not job_available(project, spec):
             return None
         workflow = self._workflows(ctx).get(cmd_name)
         if workflow is not None and (

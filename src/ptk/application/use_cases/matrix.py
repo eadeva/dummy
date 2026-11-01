@@ -1,8 +1,8 @@
 """Minimal execution and artifact metadata for a GitHub workflow setup job."""
 
 from ...domain.errors import PtkError
-from ...domain.execution.planning import variant_restriction
 from ...domain.suggest import did_you_mean
+from .conditions import job_enabled
 from .role import visible
 from .variants import VariantService
 
@@ -50,9 +50,7 @@ class ExportMatrix:
                     continue
                 if not visible(spec.audience, role):
                     continue
-                if spec.only_cx and not project.cx:
-                    continue
-                if variant_restriction(spec, name):
+                if not job_enabled(project, spec, name):
                     continue
                 upload = None
                 if config.artifactory is not None:
