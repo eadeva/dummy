@@ -169,6 +169,10 @@ function builtinArgs(spec, inputs = {}) {
   return [...options, ...(positional.length ? ["--", ...positional] : [])];
 }
 
+/**
+ * @param {any} target
+ * @param {{variant?: string, preview?: boolean, params?: object, help?: boolean, inputs?: object, clean?: boolean, reRun?: boolean, report?: boolean, configDir?: string, runOptions?: Record<string, any>}} [options]
+ */
 function argsFor(target, { variant, preview = false, params = {}, help = false, inputs = {}, clean = false, reRun = false, report = false, configDir, runOptions = {} } = {}) {
   if (typeof clean !== "boolean" || typeof reRun !== "boolean" || clean && reRun) throw new Error("Choose clean or re-run.");
   if ((clean || reRun) && !["job", "workflow"].includes(target.kind)) throw new Error("Cleanup applies to jobs and workflows.");

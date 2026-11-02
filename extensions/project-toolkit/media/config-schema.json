@@ -4,7 +4,8 @@
       "additionalProperties": false,
       "properties": {
         "url": {
-          "description": "Artifactory base URL, including /artifactory when required by the server.",
+          "description": "HTTPS Artifactory base URL, including /artifactory when required by the server.",
+          "pattern": "^https://",
           "title": "Url",
           "type": "string"
         },
@@ -468,7 +469,8 @@
       "additionalProperties": false,
       "properties": {
         "url": {
-          "description": "Download URL for the tool archive or executable.",
+          "description": "HTTPS or file: URL of the tool archive or executable.",
+          "pattern": "^(https|file)://",
           "title": "Url",
           "type": "string"
         },

@@ -83,7 +83,8 @@ def parse(expr: str) -> ast.Expression:
 def _dotted(node: ast.AST) -> str:
     if isinstance(node, ast.Name):
         return node.id
-    assert isinstance(node, ast.Attribute)
+    if not isinstance(node, ast.Attribute):
+        raise ExpressionError(f"unsupported name {type(node).__name__}")
     return f"{_dotted(node.value)}.{node.attr}"
 
 
@@ -103,11 +104,21 @@ def names(expr: str) -> set[str]:
 
 
 def lookup(symbols: Mapping[str, Any], dotted: str) -> Any:
-    """Resolve ``a.b.c`` against nested mappings; missing parts give None."""
+    """Resolve ``a.b.c`` against nested mappings; missing parts give None.
+
+    Accessing a field of a scalar (``params.name.x`` with a string ``name``) is an
+    error rather than a silently false condition."""
     head, *rest = dotted.split(".")
     value: Any = symbols.get(head)
-    for part in rest:
-        value = value.get(part) if isinstance(value, Mapping) else None
+    for index, part in enumerate(rest):
+        if value is None:
+            return None
+        if not isinstance(value, Mapping):
+            owner = ".".join([head, *rest[:index]])
+            raise ExpressionError(
+                f"'{owner}' is a {type(value).__name__}, it has no field '{part}'"
+            )
+        value = value.get(part)
     return value
 
 

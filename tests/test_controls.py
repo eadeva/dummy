@@ -65,6 +65,37 @@ def test_secret_prompt_and_path_param(tmp_path):
     assert summary["params"]["output"] == "two words"
 
 
+def test_external_values_in_shell_strings_are_warned(tmp_path):
+    file, _, _ = project(
+        tmp_path,
+        {
+            "shell": {"run": "echo ${params.who}"},
+            "escaped": {"run": "echo $${params.who}", "needs": "shell"},
+            "listed": {
+                "run": [sys.executable, "-c", "print('${params.who}')"],
+                "needs": "escaped",
+            },
+        },
+        params={"who": {"default": "me"}},
+    )
+    result = CliRunner().invoke(cli, ["go"], cwd=Path(file).parent)
+    assert result.exit_code == 0, result.output
+    assert result.output.count("shell command string") == 1
+
+
+def test_short_secret_param_is_rejected_before_running(tmp_path):
+    file, _, _ = project(
+        tmp_path,
+        {"print": {"run": [sys.executable, "-c", "print('ran')"]}},
+        params={"token": {"type": "secret", "required": True}},
+    )
+    result = CliRunner().invoke(
+        cli, ["go", "--token"], input="abc\n", cwd=Path(file).parent
+    )
+    assert result.exit_code != 0
+    assert "cannot be masked" in result.output and "ran" not in result.output
+
+
 def test_report_false_hides_step_but_retains_run_failure(tmp_path):
     _, app, p = project(
         tmp_path,

@@ -273,7 +273,8 @@ class SystemToolInstaller:
         fetch=None,
     ) -> None:
         source = method.download
-        assert source is not None
+        if source is None:
+            raise ValueError(f"tool '{name}': install method has no download")
         target = self.tools_dir / name / method.identity
         with tempfile.TemporaryDirectory(prefix="ptk-download-") as tmp:
             filename = Path(unquote(urlsplit(source.url).path)).name or "download"
@@ -284,7 +285,8 @@ class SystemToolInstaller:
                     fetch(source.url, file)
                 else:
                     with (
-                        urllib.request.urlopen(source.url, timeout=120) as response,
+                        # The schema allows only https:// and file:// URLs.
+                        urllib.request.urlopen(source.url, timeout=120) as response,  # noqa: S310
                         file.open("wb") as handle,
                     ):
                         shutil.copyfileobj(response, handle)
@@ -343,7 +345,7 @@ def _unzip(file: Path, target: Path) -> None:
             destination = (target / member.filename).resolve()
             if not destination.is_relative_to(target.resolve()):
                 raise PtkError(f"unsafe path in archive: {member.filename}")
-        archive.extractall(target)
+        archive.extractall(target)  # noqa: S202 - member paths checked above
         for member in archive.infolist():  # zip does not restore permissions by itself
             mode = (member.external_attr >> 16) & 0o777
             if mode:

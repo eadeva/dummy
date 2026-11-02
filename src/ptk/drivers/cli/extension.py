@@ -9,7 +9,12 @@ from pathlib import Path
 import rich_click as click
 from packaging.version import Version
 
-from ...extension_bundle import EXTENSION_ID, RESOURCE, inspect_vsix
+from ...extension_bundle import (
+    EXTENSION_ID,
+    LEGACY_EXTENSION_IDS,
+    RESOURCE,
+    inspect_vsix,
+)
 
 
 @contextmanager
@@ -59,8 +64,13 @@ def install_vsix(path, *, code, profile, force):
     _run(code, ["--install-extension", str(path), "--force", *scope])
     # Do not claim success just because the launcher returned zero.
     installed = _run(code, ["--list-extensions", "--show-versions", *scope])
-    if f"{EXTENSION_ID}@{package['version']}" not in installed.lower().splitlines():
+    lines = installed.lower().splitlines()
+    if f"{EXTENSION_ID}@{package['version']}" not in lines:
         raise ValueError("VS Code did not report the requested extension version.")
+    for legacy in LEGACY_EXTENSION_IDS:
+        if any(line.strip().rpartition("@")[0] == legacy for line in lines):
+            _run(code, ["--uninstall-extension", legacy, *scope])
+            click.echo(f"Removed previous extension ID {legacy}.")
     click.echo(f"Installed Project Toolkit {bundled}. Reload your VS Code window.")
 
 

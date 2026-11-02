@@ -5,7 +5,11 @@ Generate a reviewable native GitHub workflow from PTK's configured graph::
 
    ptk maintainer gen-workflows verify
    ptk maintainer gen-workflows
-   ptk maintainer gen-workflows verify --action-repository eadeva/dummy --action-ref COMMIT_SHA
+   ptk maintainer gen-workflows verify --action-repository OWNER/REPO --action-ref COMMIT_SHA
+
+Without ``--action-repository`` and ``--action-ref`` the template references the
+placeholders ``OWNER/REPO`` and ``TODO-pin-commit``; replace them with the
+repository hosting PTK's composite Actions and an approved commit.
 
 The first command writes ``.github/workflows/ptk-verify.yml`` in the repository
 owning ``verify``. With no names, all discovered workflows are generated. Existing

@@ -58,11 +58,11 @@ def source_files(root: Path) -> dict[str, Path]:
     resource = "docs/resources/bazel/ptk_variants.bzl"
     files[resource] = root / resource
     for name in SKILLS:
-        files[f"skills/{name}/SKILL.md"] = root / ".claude/skills" / name / "SKILL.md"
-        metadata = root / ".claude/skills" / name / "agents/openai.yaml"
+        files[f"skills/{name}/SKILL.md"] = root / ".github/skills" / name / "SKILL.md"
+        metadata = root / ".github/skills" / name / "agents/openai.yaml"
         if metadata.is_file():
             files[f"skills/{name}/agents/openai.yaml"] = metadata
-    files["agents/ptk-expert.agent.md"] = root / ".claude/agents/ptk-expert.md"
+    files["agents/ptk-expert.agent.md"] = root / ".github/agents/ptk-expert.md"
     for example in EXAMPLES:
         directory = root / "examples" / example
         for path in directory.rglob("*"):

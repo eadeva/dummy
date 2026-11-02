@@ -24,6 +24,7 @@ function ptkTags(tags) {
   });
 }
 
+/** @returns {any} YAML document; edits use dynamic node shapes. */
 function parse(text) {
   const doc = YAML.parseDocument(text, {
     version: "1.1", schema: "yaml-1.1", intAsBigInt: true,
@@ -38,6 +39,7 @@ function inspect(text) {
   const doc = parse(text);
   const locked = [];
   const annotations = [];
+  /** @param {any} node @param {(string|number)[]} [path] @returns {any} */
   function visit(node, path = []) {
     if (YAML.isAlias(node)) {
       locked.push(path);
@@ -49,7 +51,7 @@ function inspect(text) {
     }
     if (YAML.isMap(node)) {
       const value = Object.create(null);
-      for (const pair of node.items) {
+      for (const pair of /** @type {any[]} */ (node.items)) {
         if (!YAML.isScalar(pair.key) || typeof pair.key.value !== "string" && pair.key.source !== "<<" || forbidden.has(pair.key.value)) {
           locked.push(path);
           return "This mapping uses complex keys. Open Raw YAML to edit it.";
@@ -124,8 +126,9 @@ function edit(text, operations) {
     if (operation.updateNeeds && ["remove", "rename"].includes(op)) {
       if (!YAML.isMap(parent) || !exists) throw new Error("The graph node no longer exists.");
       if (op === "rename" && (!/^(?:[A-Za-z][A-Za-z0-9_-]*:)?[A-Za-z][A-Za-z0-9_-]*$/.test(operation.name) || parent.has(operation.name))) throw new Error("Choose a unique node name starting with a letter.");
-      for (const pair of parent.items) {
+      for (const pair of /** @type {any[]} */ (parent.items)) {
         if (pair.key.value === key || !YAML.isMap(pair.value)) continue;
+        /** @type {any} */
         const needs = pair.value.get("needs", true);
         const needsPath = [...path.slice(0, -1), pair.key.value, "needs"];
         if (state.locked.some(prefix => prefix.every((part, i) => needsPath[i] === part) || needsPath.every((part, i) => prefix[i] === part))) throw new Error("A prerequisite uses complex YAML. Edit it in Raw YAML before changing this node.");
@@ -133,8 +136,9 @@ function edit(text, operations) {
           if (op === "rename") needs.value = operation.name;
           else pair.value.delete("needs");
         } else if (YAML.isSeq(needs)) {
-          if (op === "remove") needs.items = needs.items.filter(item => item.value !== key);
-          else needs.items.forEach(item => { if (item.value === key) item.value = operation.name; });
+          const items = /** @type {any[]} */ (needs.items);
+          if (op === "remove") needs.items = items.filter(item => item.value !== key);
+          else items.forEach(item => { if (item.value === key) item.value = operation.name; });
         }
       }
     }
@@ -151,6 +155,7 @@ function edit(text, operations) {
         dependencies.update(graph, operation.prerequisite, key, operation.remove);
         const target = parent.get(key, true);
         if (!YAML.isMap(target)) throw new Error("The dependent must be a mapping.");
+        /** @type {any} */
         let needs = target.get("needs", true);
         if (YAML.isScalar(needs)) {
           const list = doc.createNode([]);
@@ -165,7 +170,7 @@ function edit(text, operations) {
       else if (op === "rename") {
         if (!YAML.isMap(parent) || typeof operation.name !== "string" || !operation.name.trim() || forbidden.has(operation.name)) throw new Error("Invalid field name.");
         if (parent.has(operation.name)) throw new Error(`Field ${operation.name} already exists.`);
-        parent.items.find(pair => pair.key.value === key).key.value = operation.name;
+        /** @type {any[]} */ (parent.items).find(pair => pair.key.value === key).key.value = operation.name;
       } else if (op === "move") {
         const next = key + operation.direction;
         if (!YAML.isSeq(parent) || ![-1, 1].includes(operation.direction) || next < 0 || next >= parent.items.length) throw new Error("Invalid list move.");

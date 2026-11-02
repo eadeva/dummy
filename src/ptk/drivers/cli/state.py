@@ -53,7 +53,8 @@ class CliState:
             self._loaded = True
         if self._project_error is not None:
             raise self._project_error
-        assert self._project is not None
+        if self._project is None:
+            raise PtkError("no project loaded")
         return self._project
 
     def try_project(self) -> Project | None:

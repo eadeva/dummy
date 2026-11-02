@@ -85,6 +85,13 @@ omit ``python``. See :doc:`/guides/python-tools` for Python script, package,
 module and inline-code choices. Use a dry run to inspect the resolved command
 before execution.
 
+Substitution happens before the shell parses a command string; PTK does not
+quote substituted values. A parameter, environment value or secret containing
+shell syntax therefore changes the command. Callers and CX events can influence
+such values, so PTK warns when ``${params.*}``, ``${env.*}`` or ``${secrets.*}``
+appear in a shell string. Use a list ``run`` to pass them as single arguments,
+or read them from the environment inside a script.
+
 Failure, conditions and cancellation
 ------------------------------------
 

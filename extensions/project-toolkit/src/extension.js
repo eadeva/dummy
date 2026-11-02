@@ -262,7 +262,7 @@ function createController(vscode, context, editorFactory = createEditors) {
         tooltip: source ? `${source.file}:${source.line}` : "Not configured",
         description: value === undefined ? "not configured" : object || typeof configPath.at(-1) === "number" ? "" : String(value),
       };
-      if (object) node.children = schemaTools.orderedEntries(schemaTools.at(config.schema, config.value, configPath, config.schema), value, config.schema).filter(([key]) => !(key === "components" && configPath.length === 1 && ["project", "variants"].includes(configPath[0]))).map(([key, child]) => field(child, [...configPath, Array.isArray(value) ? Number(key) : key], Array.isArray(value) ? presentation.listLabel(child, [...configPath, Number(key)]) : key));
+      if (object) node.children = schemaTools.orderedEntries(schemaTools.at(config.schema, config.value, configPath, config.schema), value, config.schema).filter(([key]) => !(key === "components" && configPath.length === 1 && ["project", "variants"].includes(configPath[0]))).map(([key, child]) => field(child, [...configPath, Array.isArray(value) ? Number(key) : key], Array.isArray(value) ? presentation.listLabel(child) : key));
       const graph = config.graphs.find(item => JSON.stringify(item.path) === JSON.stringify(configPath));
       if (graph && !graph.error) {
         node.icon = "git-merge";
@@ -308,6 +308,7 @@ function createController(vscode, context, editorFactory = createEditors) {
 
   function projectNode(project, record) {
     const common = { project, folder: record.folder, root: project.root, cx: record.inventory.cx };
+    /** @type {any[]} */
     const groups = [validationNode(common)];
     if (project.error) {
       groups.push(...(project.diagnostics || [{ message: project.error, file: project.entry_file }]).map(issue => ({

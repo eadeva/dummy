@@ -9,6 +9,7 @@ side effects, so ``ptk JOB --dry-run`` is simply "prepare and show".
 from __future__ import annotations
 
 import dataclasses
+import re
 import shutil
 import threading
 import time
@@ -58,11 +59,21 @@ from ..ports import (
 from .conditions import job_enabled
 from .project import Project
 from .role import Role, visible
+from .run_cache import RunCache
 from .tools import ToolService, tools_for_jobs
 from .variants import VariantService
 
 MASK = "********"
-MIN_MASK_LENGTH = 4  # shorter values would garble normal output; warned about
+MIN_MASK_LENGTH = 4  # shorter values would garble normal output; rejected
+# Values a caller or CX event can influence; the shell would interpret them as syntax.
+EXTERNAL_IN_SHELL = re.compile(r"(?<!\$)\$\{\s*(?:params|env|secrets)\.")
+
+
+def short_secret(name: str) -> str:
+    return (
+        f"secret '{name}' is shorter than {MIN_MASK_LENGTH} characters "
+        "and cannot be masked in output"
+    )
 
 
 @dataclass
@@ -163,7 +174,8 @@ class PrepareRun:
                     f"(jobs: {names})"
                 )
             request = dataclasses.replace(request, job=config.project.default_job)
-        assert request.job is not None
+        if request.job is None:
+            raise PtkError("no job selected")
         job = self._job(project, request.job)
         project = tools_for_jobs(project, [request.job])
         config = project.config
@@ -308,6 +320,9 @@ class PrepareRun:
         secret_values: set[str] = {
             str(params[n]) for n in secret_params if params.get(n)
         }
+        for name in sorted(secret_params):
+            if params.get(name) and len(str(params[name])) < MIN_MASK_LENGTH:
+                raise PtkError(short_secret(name))
 
         def secret(ref: str) -> str:
             if request.dry_run:
@@ -317,6 +332,8 @@ class PrepareRun:
                     f"secret '{ref}' requested but no credential provider is configured"
                 )
             value = self._secrets(ref)
+            if len(value) < MIN_MASK_LENGTH:
+                raise SubstitutionError(short_secret(ref))
             secret_values.add(value)
             return value
 
@@ -464,7 +481,7 @@ class PrepareRun:
             args_for=dict(request.args_for),
         )
         steps = plan_job(job.steps, ctx, only_step=request.only_step, end=request.end)
-        for step in steps:
+        for step in (s for top in steps for s in top.walk()):
             if step.skip_reason or not step.spec.generators:
                 continue
             if resolved is None:
@@ -732,7 +749,15 @@ class RunJob:
         self._cancel = cancel
         self._report_problems = []
         self._step_results = {}
-        self._cache_available = self._output_cache is not None and not prepared.dry_run
+        self._cache = RunCache(
+            self._output_cache,
+            variant=plan.variant,
+            job=plan.job,
+            run_id=plan.run_id,
+            enabled=not prepared.dry_run,
+            cancel=cancel,
+            log=self._log,
+        )
         started_at = datetime.now().astimezone().isoformat(timespec="seconds")
         start = time.monotonic()
         self._run_start = start
@@ -745,16 +770,20 @@ class RunJob:
         plan.report_context = prepared.mask_context(plan.report_context)
         self._emit("run_started", plan)
         job_key = (
-            self._cache_key(plan.cache_key, prepared.cache_dependencies)
+            self._cache.key(
+                plan.cache_key,
+                prepared.cache_dependencies,
+                skip_ptk_cache=plan.no_cache_ptk,
+            )
             if plan.cache
             and not plan.gui_step
             and not any(step.skip_reason for step in plan.steps)
             else None
         )
-        reused = self._cache_probe("job", job_key, plan.outputs)
+        reused = self._cache.probe("job", job_key, plan.outputs)
         if reused and any(output_problem(step.outputs) for step in plan.steps):
             reused = None  # Whole-job reuse must also preserve every step's outputs.
-            self._output_cache.invalidate("job")
+            self._cache.invalidate("job")
         from ..scheduling import schedule
 
         results = (
@@ -813,7 +842,7 @@ class RunJob:
             and result.ok
             and all(step.status == Status.PASSED for step in results)
         ):
-            self._cache_save("job", job_key, plan.outputs)
+            self._cache.save("job", job_key, plan.outputs)
         if self._upload_writer and not prepared.dry_run and not plan.skip_reason:
             try:
                 self._upload_writer(prepared, result)
@@ -872,81 +901,22 @@ class RunJob:
             for name in step.spec.needs
         }
         key = (
-            self._cache_key(step.cache_key, dependencies)
+            self._cache.key(
+                step.cache_key, dependencies, skip_ptk_cache=plan.no_cache_ptk
+            )
             if step.spec.cache and not plan.only_step and plan.gui_step != step.name
             else None
         )
         identity = "step:" + step.name
-        reused = self._cache_probe(identity, key, step.outputs)
+        reused = self._cache.probe(identity, key, step.outputs)
         if reused:
             result = self._reused(step, reused)
         else:
             result = self._run_leaf(step, cancel)
             if result.status == Status.PASSED:
-                self._cache_save(identity, key, step.outputs)
+                self._cache.save(identity, key, step.outputs)
         self._step_results[step.name] = result
         return result
-
-    def _cache_key(self, configuration, dependencies):
-        from ...domain.execution.cache import input_key
-
-        if not self._cache_available or self._prepared.plan.no_cache_ptk:
-            return None
-        return input_key(
-            configuration,
-            {
-                name: self._output_cache.fingerprint(paths, self._cancel)
-                if paths
-                else None
-                for name, paths in dependencies.items()
-            },
-        )
-
-    def _cache_identity(self, identity):
-        plan = self._prepared.plan
-        return f"{plan.variant or 'default'}:{plan.job}:{identity}"
-
-    def _cache_probe(self, identity, key, outputs):
-        from ...domain.execution.cache import matches
-
-        if not self._cache_available:
-            return ""
-        identity = self._cache_identity(identity)
-        try:
-            record = self._output_cache.read(identity) if key else None
-            if record and matches(
-                record, key, self._output_cache.fingerprint(outputs, self._cancel)
-            ):
-                return record["run_id"]
-            # A new attempt invalidates its previous receipt, including forced
-            # runs. Failed attempts cannot fall back to an older successful run.
-            self._output_cache.invalidate(identity)
-        except OSError as exc:
-            self._cache_available = False
-            self._log(
-                Level.WARNING, f"PTK cache unavailable; executing normally: {exc}"
-            )
-        return ""
-
-    def _cache_save(self, identity, key, outputs):
-        if not key or not self._cache_available or self._cancel.is_set():
-            return
-        digest = self._output_cache.fingerprint(outputs, self._cancel)
-        if digest is None:
-            return
-        try:
-            self._output_cache.write(
-                self._cache_identity(identity),
-                {
-                    "version": 1,
-                    "inputs": key,
-                    "outputs": digest,
-                    "run_id": self._prepared.plan.run_id,
-                },
-            )
-        except OSError as exc:
-            self._cache_available = False
-            self._log(Level.WARNING, f"PTK cache receipt not written: {exc}")
 
     def _reused(self, step, source):
         result = StepResult(
@@ -1027,6 +997,18 @@ class RunJob:
                             plan.report_context["tools"].append(record)
                 result.command = prepared.mask(command.display())
                 self._emit("step_started", step, result.command)
+                if (
+                    command.shell is not None
+                    and isinstance(step.spec.run, str)
+                    and EXTERNAL_IN_SHELL.search(step.spec.run)
+                ):
+                    self._log(
+                        Level.WARNING,
+                        "parameters, environment values or secrets are substituted "
+                        "into a shell command string; use a list 'run' to pass them "
+                        "as arguments",
+                        step,
+                    )
                 self._describe_command(step, command, runtime)
                 exit_code, message = 1, ""
                 for attempt in range(1, step.spec.retries + 2):
@@ -1202,15 +1184,7 @@ class RunJob:
         env.update(step.env)
         for variable, ref in step.secrets.items():
             if not prepared.dry_run:
-                value = prepared.step_secrets[ref]
-                if len(value) < MIN_MASK_LENGTH:
-                    self._log(
-                        Level.WARNING,
-                        f"secret '{ref}' is shorter than {MIN_MASK_LENGTH} characters "
-                        "and cannot be masked in output",
-                        step,
-                    )
-                env[variable] = value
+                env[variable] = prepared.step_secrets[ref]
             else:
                 env[variable] = MASK
         cwd = Path(step.cwd)

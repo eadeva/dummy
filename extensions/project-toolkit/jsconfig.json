@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "checkJs": true,
+    "noEmit": true,
+    "module": "commonjs",
+    "target": "es2022",
+    "lib": ["es2023", "dom"],
+    "types": ["node", "vscode"],
+    "skipLibCheck": true,
+    "strict": false
+  },
+  "include": ["src/**/*.js"]
+}

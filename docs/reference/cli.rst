@@ -174,7 +174,8 @@ end-of-options marker; the registration script preserves that boundary even
 though PowerShell removes trailing whitespace from its command AST. After updating
 PTK, regenerate the persistent registration and reload it in any already-open
 terminal. Native ``TabExpansion2`` tests cover both forms, option prefixes and
-choice values; Windows PowerShell 5.1 still requires verification on Windows.
+choice values. Windows PowerShell 5.1 never calls native completers for a bare
+``--``; type the first letter of the option (``--b``) or use PowerShell 7.
 
 To check candidate generation independently of the Tab key binding, replace
 ``JOB`` below with a configured job name and run::

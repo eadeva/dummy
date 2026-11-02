@@ -136,10 +136,8 @@ class FileLogObserver:
         self._event("run_started", params=plan.params, param_sources=plan.param_sources)
 
     def step_started(self, step: PlannedStep, command: str | None) -> None:
-        assert self._plan is not None
-        path = Path(
-            self._layout.step_log(self._plan.variant, self._plan.job, step.path)
-        )
+        plan = self._started_plan()
+        path = Path(self._layout.step_log(plan.variant, plan.job, step.path))
         path.parent.mkdir(parents=True, exist_ok=True)
         with self._lock:
             self._steps[step.path] = path.open("w", encoding="utf-8")
@@ -178,9 +176,9 @@ class FileLogObserver:
             status=result.status.value,
             duration=round(result.duration, 3),
         )
-        assert self._plan is not None
-        assert self._folder is not None
-        snapshot = self._folder / "report-inputs"
+        self._started_plan()
+        folder = self._started_folder()
+        snapshot = folder / "report-inputs"
         source = Path(self._plan.dirs["reports_dir"])
         from ..reporting import sphinx
 
@@ -224,14 +222,23 @@ class FileLogObserver:
 
     # -- helpers -----------------------------------------------------------------------
 
+    def _started_plan(self) -> JobPlan:
+        if self._plan is None:
+            raise RuntimeError("run log used before run_started")
+        return self._plan
+
+    def _started_folder(self) -> Path:
+        if self._folder is None:
+            raise RuntimeError("run log used before run_started")
+        return self._folder
+
     def _write_summary(self, data: dict[str, Any]) -> None:
-        assert self._folder is not None
         text = json.dumps(data, indent=2, default=str)
-        (self._folder / SUMMARY).write_text(text + "\n", encoding="utf-8")
+        (self._started_folder() / SUMMARY).write_text(text + "\n", encoding="utf-8")
 
     def _event(self, name: str, **fields: Any) -> None:
-        assert self._plan is not None
-        record = {"ts": _timestamp(), "event": name, "run_id": self._plan.run_id}
+        plan = self._started_plan()
+        record = {"ts": _timestamp(), "event": name, "run_id": plan.run_id}
         record.update({k: v for k, v in fields.items() if v is not None})
         with self._lock:
             if self._events:

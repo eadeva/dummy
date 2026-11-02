@@ -48,7 +48,7 @@ def test_workflow_snapshots_steps_hidden_details_and_blocked_jobs(tmp_path):
     child = report_file.parent / "jobs/job_build/report.html"
     assert "Back to workflow verify" in child.read_text()
     log = data["children"]["build"]["steps"][0]["log_file"]
-    assert str(report_file.parent) in log
+    assert str(report_file.parent.resolve()) in log
     config = root / ".main.ptk.yml"
     changed = read_project(config)
     changed["jobs"]["build"]["steps"] = {"replacement": {"run": "echo changed"}}

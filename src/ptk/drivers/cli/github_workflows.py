@@ -363,13 +363,13 @@ def render_workflow(
 @click.argument("names", nargs=-1)
 @click.option(
     "--action-repository",
-    default="eadeva/dummy",
+    default="OWNER/REPO",
     show_default=True,
-    help="Repository containing the three composite Actions.",
+    help="Repository containing the three composite Actions; the default is a placeholder.",
 )
 @click.option(
     "--action-ref",
-    default="codex/decentralized-configuration",
+    default="TODO-pin-commit",
     show_default=True,
     help="Action revision; pin an approved commit before production use.",
 )

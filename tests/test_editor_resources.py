@@ -209,7 +209,7 @@ def test_managed_config_readme_sync_check_update_conflict_and_relocation(
     with pytest.raises(PtkError, match="preserving locally changed"):
         app.setup_authoring.execute(tmp_path, config_path="other/deep/config")
     assert readme.read_text() == "local edit" and manifest.read_bytes() == before
-    readme.write_text(original + "\nNew PTK guidance.\n")
+    readme.write_text(original + "\nNew PTK guidance.\n", newline="")
     app.setup_authoring.execute(tmp_path, config_path="other/deep/config")
     relocated = tmp_path / "other/deep/config/README.md"
     assert not readme.exists()

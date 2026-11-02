@@ -10,6 +10,11 @@ const { canonicalPath } = require("./file-path");
 const fs = require("node:fs/promises");
 const viewType = "project-toolkit.configuration";
 
+/**
+ * @param {any} vscode
+ * @param {any} context
+ * @param {{changed?: () => void, validate?: (uri: any) => Promise<void>, project?: (uri: any, options?: object) => any, configuration?: (uri: any) => any}} [options]
+ */
 function createEditors(vscode, context, { changed = () => {}, validate = async () => {}, project: reloadProject, configuration = () => undefined } = {}) {
   const panels = new Map();
   const selections = new Map();
@@ -172,7 +177,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
             const relative = path.relative(root, file);
             if (!relative || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) throw new Error("Configuration files must stay inside the repository.");
             for (let current = file; path.relative(root, current); current = path.dirname(current)) {
-              const stat = await fs.lstat(current).catch(error => { if (error.code !== "ENOENT") throw error; });
+              const stat = await fs.lstat(current).catch(error => { if (error.code !== "ENOENT") throw error; return undefined; });
               if (stat?.isSymbolicLink()) throw new Error("Configuration paths cannot contain symbolic links.");
               if (current === file && stat && !documents.has(file)) throw new Error("The destination file already exists. Refresh PTK before editing it.");
             }

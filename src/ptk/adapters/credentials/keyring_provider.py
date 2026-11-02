@@ -15,9 +15,6 @@ SERVICE = "ptk"
 def _load() -> tuple[Any | None, str]:
     try:
         import keyring  # type: ignore[import-not-found]
-        from keyring.errors import (
-            KeyringError,  # type: ignore[import-not-found]  # noqa: F401
-        )
     except ImportError:
         return None, 'not installed (uv tool install "ptk[keyring]")'
     try:
@@ -59,21 +56,28 @@ class KeyringProvider:
             return None
         try:
             return keyring.get_password(SERVICE, key.storage_ref) or None
-        except Exception:  # noqa: BLE001 - a broken backend must not stop the chain
+        except Exception:  # noqa: BLE001 - backends raise unrelated types; later providers may still answer
             return None
 
     def store(self, key: SecretKey, value: str) -> None:
         keyring = self._keyring()
         if keyring is None:
             raise PtkError(f"keyring: {self._reason}")
-        keyring.set_password(SERVICE, key.storage_ref, value)
+        try:
+            keyring.set_password(SERVICE, key.storage_ref, value)
+        except Exception as exc:
+            raise PtkError(f"keyring: cannot store secret ({exc})") from exc
 
     def remove(self, key: SecretKey) -> bool:
         keyring = self._keyring()
         if keyring is None:
             return False
+        from keyring.errors import PasswordDeleteError  # type: ignore[import-not-found]
+
         try:
             keyring.delete_password(SERVICE, key.storage_ref)
-        except Exception:  # noqa: BLE001 - not stored
+        except PasswordDeleteError:
             return False
+        except Exception as exc:
+            raise PtkError(f"keyring: cannot remove secret ({exc})") from exc
         return True

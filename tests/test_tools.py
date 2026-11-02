@@ -38,6 +38,27 @@ def test_versions():
     assert check_version("x", spec, "x 2.1.0").ok
 
 
+@pytest.mark.parametrize(
+    "source",
+    [
+        {"download": {"linux": {"url": "http://example.org/tool.tgz"}}},
+        {"download": {"linux": {"url": "ftp://example.org/tool.tgz"}}},
+        {
+            "artifactory": {
+                "url": "http://example.org/artifactory",
+                "repository": "tools",
+                "name": "tool.zip",
+            }
+        },
+    ],
+)
+def test_insecure_download_schemes_are_rejected(source):
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError, match="should match pattern"):
+        ToolSpec(**source)
+
+
 def test_install_order():
     spec = ToolSpec(
         choco={"package": "cmake", "version": "3.30.2"},

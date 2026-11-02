@@ -13,6 +13,7 @@ import pytest
 from ptk.adapters.logging.files import rotate
 from ptk.application.use_cases.run import RunRequest
 from ptk.bootstrap import create_app
+from ptk.domain.errors import PtkError
 from ptk.domain.logging import (
     Level,
     console_level,
@@ -182,11 +183,11 @@ def test_keep_history_zero_keeps_only_latest(write):
     assert (root / LOGS / "run.log").is_file()
 
 
-def test_short_secret_is_not_masked_but_warned(write):
+def test_short_secret_stops_before_anything_runs(write):
     root = project(write)
-    run(root, token="ab")
-    events = (root / LOGS / "events.jsonl").read_text()
-    assert "cannot be masked" in events
+    with pytest.raises(PtkError, match="cannot be masked"):
+        run(root, token="ab")
+    assert not (root / LOGS).exists()
 
 
 # --------------------------------------------------------------------------- console

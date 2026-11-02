@@ -399,6 +399,10 @@ def test_native_powershell_tab_expansion(
     powershell = shutil.which(shell)
     if not powershell:
         pytest.skip(f"requires native {shell}")
+    if shell == "powershell" and line.endswith(" --"):
+        pytest.skip(
+            "Windows PowerShell 5.1 never calls native completers for a bare --"
+        )
     launcher = Path(sys.executable).with_name("ptk.exe" if os.name == "nt" else "ptk")
     if not launcher.exists():
         pytest.skip("requires installed PTK console entry point")

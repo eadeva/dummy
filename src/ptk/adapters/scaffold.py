@@ -39,7 +39,8 @@ class FileProjectScaffold:
                     continue
                 path = target / name
                 path.parent.mkdir(parents=True, exist_ok=True)
-                with path.open("x", encoding="utf-8") as handle:
+                # Bundled files keep their bytes; no CRLF translation on Windows.
+                with path.open("x", encoding="utf-8", newline="") as handle:
                     created.append(path)
                     handle.write(content)
             # Append only missing rules, preserving existing user content.

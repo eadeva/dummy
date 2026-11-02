@@ -88,7 +88,8 @@ class Vault:
     def entries(self) -> dict[str, str]:
         if self._entries is None:
             self._open()
-        assert self._entries is not None
+        if self._entries is None:
+            raise PtkError(f"{self.path} has no readable entries")
         return self._entries
 
     def set(self, name: str, value: str) -> None:
@@ -138,7 +139,8 @@ class Vault:
         self._entries = json.loads(plain.decode("utf-8"))["entries"]
 
     def _save(self) -> None:
-        assert self._key is not None and self._salt is not None
+        if self._key is None or self._salt is None:
+            raise RuntimeError("vault must be opened or created before saving")
         nonce = os.urandom(12)
         plain = json.dumps({"entries": self._entries or {}}).encode("utf-8")
         doc = {

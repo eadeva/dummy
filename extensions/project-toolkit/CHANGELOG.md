@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.0
+
+- First release under the extension ID `bosch-xc-ce.project-toolkit` (previously `eadeva.project-toolkit`). `ptk self-service extension` installs the new ID and removes the old one; after a manual VSIX install, uninstall the old extension yourself.
+- Add the Robert Bosch GmbH proprietary license (`LICENSE.txt`).
+
 ## 0.26.1
 
 - Add a dedicated parameter setup/edit form with readable type choices, descriptions, environment sources, required settings, typed defaults, variable templates and one-choice-per-line editing.

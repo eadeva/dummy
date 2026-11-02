@@ -115,7 +115,8 @@ def scan(reports_dir: Path, steps: Mapping[str, str]) -> list[Contribution]:
                 data = json.loads(file.read_text(encoding="utf-8"))
                 contribution.findings += parse_sarif(data, step)
             elif name.endswith(".xml"):
-                root = ET.parse(file).getroot()
+                # expat resolves no external entities and limits expansion.
+                root = ET.parse(file).getroot()  # noqa: S314
                 if root.tag in ("testsuite", "testsuites"):
                     contribution.suites += parse_junit(root, step, file.name)
                 elif root.tag == "coverage":

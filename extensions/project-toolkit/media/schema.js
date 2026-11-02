@@ -2,7 +2,7 @@
 (function (root, factory) {
   if (typeof module === "object") module.exports = factory();
   else root.PtkSchema = factory();
-})(typeof globalThis === "object" ? globalThis : this, function () {
+})(/** @type {any} */ (typeof globalThis === "object" ? globalThis : this), function () {
   "use strict";
   const type = value => value === null ? "null" : Array.isArray(value) ? "array" : typeof value === "number" ? Number.isInteger(value) ? "integer" : "number" : typeof value;
   function resolve(schema, root) {

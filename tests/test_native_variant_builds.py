@@ -29,6 +29,9 @@ def test_make_consumes_values_without_expanding_project_text(tmp_path):
     make = shutil.which("make")
     if not make:
         pytest.skip("GNU Make not installed")
+    version = execute([make, "--version"], tmp_path).split()[2]
+    if int(version.split(".")[0]) < 4:
+        pytest.skip(f"GNU Make {version} has no $(file) function (needs 4.0+)")
     resolved = variant()
     resolved.features["core.TEXT"].value = 'cost$5#tag "quoted"'
     export(tmp_path, "make", resolved)

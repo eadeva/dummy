@@ -63,7 +63,8 @@ def apply_defaults(tree: t.Node) -> t.Node:
             # This is the already-resolved model default. Keep its ordering and
             # sources without merging it a second time into the authored value.
             result_job = t.get(result, ("jobs", name))
-            assert result_job is not None
+            if result_job is None:
+                raise RuntimeError(f"job '{name}' vanished while applying defaults")
             result_job.value["requires_tools"] = effective
         params = job.value.get("params")
         if (

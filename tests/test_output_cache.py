@@ -439,7 +439,8 @@ def test_declared_step_paths_resolve_against_cwd_and_job_paths_against_repositor
     )
     save(root, model)
     _, prepared = run(root)
-    output_dir = root / "_builds/default/go/child"
+    # The layout resolves the root; Windows may report another letter case.
+    output_dir = root.resolve() / "_builds/default/go/child"
     assert prepared.plan.outputs == [str(output_dir)]
     assert prepared.plan.steps[1].outputs == [str(output_dir / "output")]
     result, _ = run(root)

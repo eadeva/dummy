@@ -12,6 +12,19 @@ from ptk.bootstrap import create_app
 DEMO = Path(__file__).resolve().parents[1] / "examples" / "demo"
 
 
+@pytest.fixture(autouse=True)
+def no_real_browser(monkeypatch):
+    """Report and help opening is recorded, never sent to a real browser."""
+    from ptk.adapters import help_html
+
+    opened: list[Path] = []
+    monkeypatch.setattr(
+        help_html, "open_in_browser", lambda path: opened.append(path) or True
+    )
+    monkeypatch.setattr("webbrowser.open", lambda *args, **kwargs: True)
+    return opened
+
+
 def grant_maintainer(root: Path) -> None:
     """Explicitly authorize the test runner in a temporary project's real list."""
     main = root / ".main.ptk.yml"

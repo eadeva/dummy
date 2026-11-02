@@ -28,7 +28,8 @@ class GopassProvider:
     def _run(
         self, args: list[str], stdin: str | None = None
     ) -> subprocess.CompletedProcess:
-        assert self._exe is not None
+        if self._exe is None:
+            raise PtkError("gopass is not installed")
         return subprocess.run(
             [self._exe, *args],
             input=stdin,

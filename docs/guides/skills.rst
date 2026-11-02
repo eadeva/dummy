@@ -1,74 +1,77 @@
 Authoring skills
 ================
 
-Canonical assistant instructions live in ``.claude/skills``. Sixteen project-facing
-skills use links relative to their SKILL.md files and are bundled with the wheel.
-Two maintainer skills operate on PTK's own source checkout.
+Canonical assistant instructions live in ``.github/skills`` and
+``.github/agents`` so that editors discover them in PTK's own checkout. Sixteen
+project-facing skills use links relative to their SKILL.md files and are bundled
+with the wheel. Two maintainer skills operate on PTK's own source checkout.
+Do not run ``ptk maintainer sync agent`` in PTK's checkout: the canonical sources
+already occupy the managed paths, so synchronization only reports conflicts.
 
 ptk-config-authoring
 --------------------
 
-.. literalinclude:: ../../.claude/skills/ptk-config-authoring/SKILL.md
+.. literalinclude:: ../../.github/skills/ptk-config-authoring/SKILL.md
    :language: markdown
 
 ptk-job-authoring
 --------------------
 
-.. literalinclude:: ../../.claude/skills/ptk-job-authoring/SKILL.md
+.. literalinclude:: ../../.github/skills/ptk-job-authoring/SKILL.md
    :language: markdown
 
 ptk-python-steps
 ----------------
 
-.. literalinclude:: ../../.claude/skills/ptk-python-steps/SKILL.md
+.. literalinclude:: ../../.github/skills/ptk-python-steps/SKILL.md
    :language: markdown
 
 ptk-variant-model
 -----------------
 
-.. literalinclude:: ../../.claude/skills/ptk-variant-model/SKILL.md
+.. literalinclude:: ../../.github/skills/ptk-variant-model/SKILL.md
    :language: markdown
 
 ptk-credentials
 ---------------
 
-.. literalinclude:: ../../.claude/skills/ptk-credentials/SKILL.md
+.. literalinclude:: ../../.github/skills/ptk-credentials/SKILL.md
    :language: markdown
 
 ptk-shared-configs
 ------------------
 
-.. literalinclude:: ../../.claude/skills/ptk-shared-configs/SKILL.md
+.. literalinclude:: ../../.github/skills/ptk-shared-configs/SKILL.md
    :language: markdown
 
 ptk-tools-setup
 ---------------
 
-.. literalinclude:: ../../.claude/skills/ptk-tools-setup/SKILL.md
+.. literalinclude:: ../../.github/skills/ptk-tools-setup/SKILL.md
    :language: markdown
 
 ptk-reporting
 -------------
 
-.. literalinclude:: ../../.claude/skills/ptk-reporting/SKILL.md
+.. literalinclude:: ../../.github/skills/ptk-reporting/SKILL.md
    :language: markdown
 
 ptk-troubleshooting
 -------------------
 
-.. literalinclude:: ../../.claude/skills/ptk-troubleshooting/SKILL.md
+.. literalinclude:: ../../.github/skills/ptk-troubleshooting/SKILL.md
    :language: markdown
 
 ptk-development
 ---------------
 
-.. literalinclude:: ../../.claude/skills/ptk-development/SKILL.md
+.. literalinclude:: ../../.github/skills/ptk-development/SKILL.md
    :language: markdown
 
 ptk-docs-writing
 ----------------
 
-.. literalinclude:: ../../.claude/skills/ptk-docs-writing/SKILL.md
+.. literalinclude:: ../../.github/skills/ptk-docs-writing/SKILL.md
    :language: markdown
 
 
@@ -93,37 +96,37 @@ build the ordinary Python tool example and run its CLI through uv.
 ptk-vmr
 -------
 
-.. literalinclude:: ../../.claude/skills/ptk-vmr/SKILL.md
+.. literalinclude:: ../../.github/skills/ptk-vmr/SKILL.md
    :language: markdown
 
 ptk-workflow-authoring
 ----------------------
 
-.. literalinclude:: ../../.claude/skills/ptk-workflow-authoring/SKILL.md
+.. literalinclude:: ../../.github/skills/ptk-workflow-authoring/SKILL.md
    :language: markdown
 
 ptk-versioning
 ---------------
 
-.. literalinclude:: ../../.claude/skills/ptk-versioning/SKILL.md
+.. literalinclude:: ../../.github/skills/ptk-versioning/SKILL.md
    :language: markdown
 
 ptk-package-preparation
 -----------------------
 
-.. literalinclude:: ../../.claude/skills/ptk-package-preparation/SKILL.md
+.. literalinclude:: ../../.github/skills/ptk-package-preparation/SKILL.md
    :language: markdown
 
 ptk-log-analyzer
 ----------------
 
-.. literalinclude:: ../../.claude/skills/ptk-log-analyzer/SKILL.md
+.. literalinclude:: ../../.github/skills/ptk-log-analyzer/SKILL.md
    :language: markdown
 
 ptk-expert agent
 ----------------
 
-.. literalinclude:: ../../.claude/agents/ptk-expert.md
+.. literalinclude:: ../../.github/agents/ptk-expert.md
    :language: markdown
 
 Project independence and agent selection
@@ -144,7 +147,7 @@ and final verifier. This avoids duplicating PTK rules across specialist agents.
 ptk-github-workflows
 --------------------
 
-.. literalinclude:: ../../.claude/skills/ptk-github-workflows/SKILL.md
+.. literalinclude:: ../../.github/skills/ptk-github-workflows/SKILL.md
    :language: markdown
 
 The local workflow skill authors the PTK graph; the GitHub skill generates and
@@ -174,7 +177,7 @@ execution evidence. Browser/native-Windows acceptance is reported separately.
 ptk-devops
 ----------
 
-.. literalinclude:: ../../.claude/skills/ptk-devops/SKILL.md
+.. literalinclude:: ../../.github/skills/ptk-devops/SKILL.md
    :language: markdown
 
 Use this skill for cross-cutting project maintenance: local onboarding, Docker

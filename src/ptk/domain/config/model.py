@@ -635,7 +635,10 @@ class ChocoSource(_Strict):
 
 
 class DownloadSource(_Strict):
-    url: str = Field(description="Download URL for the tool archive or executable.")
+    url: str = Field(
+        description="HTTPS or file: URL of the tool archive or executable.",
+        pattern=r"^(https|file)://",
+    )
     sha256: str | None = Field(
         default=None, description="Expected SHA-256 digest used to verify the download."
     )
@@ -672,8 +675,9 @@ class ToolbaseSource(_Strict):
 
 class ArtifactorySource(_Strict):
     url: str = Field(
-        description="Artifactory base URL, including /artifactory when required by the server."
-    )  # Artifactory base URL, including /artifactory when applicable
+        description="HTTPS Artifactory base URL, including /artifactory when required by the server.",
+        pattern=r"^https://",
+    )  # tokens are sent to this URL
     repository: str = Field(
         description="Artifactory repository containing the tool.",
         pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]*$",

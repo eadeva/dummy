@@ -4,6 +4,7 @@ __pycache__/
 dist/
 .pytest_cache/
 .ruff_cache/
+pytest.log
 # ptk workspace
 _builds/
 _bin/

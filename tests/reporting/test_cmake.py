@@ -3,7 +3,11 @@
 import json
 import os
 import shutil
+import subprocess
+import tempfile
 from dataclasses import asdict
+from functools import cache
+from pathlib import Path
 
 import pytest
 from tests.workflows.test_cli import invoke, repository
@@ -149,6 +153,29 @@ target_link_libraries(app PRIVATE core)
     (root / "app.c").write_text("int main(void) { return 0; }\n")
 
 
+@cache
+def configures_c(executable: str) -> bool:
+    """Whether the default generator finds a C toolchain (e.g. no MSVC/NMake)."""
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        (root / "CMakeLists.txt").write_text(
+            "cmake_minimum_required(VERSION 3.10)\nproject(Probe C)\n"
+        )
+        result = subprocess.run(
+            [executable, "-S", str(root), "-B", str(root / "build")],
+            capture_output=True,
+            check=False,
+            timeout=120,
+        )
+    return result.returncode == 0
+
+
+def native_cmake(executable: str) -> str:
+    if not configures_c(executable):
+        pytest.skip("CMake's default generator has no usable C toolchain")
+    return executable
+
+
 @pytest.fixture(params=["3", "4"])
 def executable(request):
     if request.param == "4":
@@ -157,10 +184,10 @@ def executable(request):
             pytest.skip(
                 "Set PTK_TEST_CMAKE41 for the optional native CMake 4.1+ integration"
             )
-        return value
+        return native_cmake(value)
     value = shutil.which("cmake")
     assert value, "CMake 3.30 is a development dependency"
-    return value
+    return native_cmake(value)
 
 
 def run_native(root, executable, *, fail=False, before=None):
@@ -445,7 +472,7 @@ def test_unreadable_api_keeps_console_errors_and_does_not_change_process(
 
     monkeypatch.setattr(v3, "read_api", unreadable)
     source(tmp_path / "source")
-    executable = shutil.which("cmake")
+    executable = native_cmake(shutil.which("cmake"))
     build, reports = tmp_path / "build", tmp_path / "reports"
     command = CommandSpec(
         argv=[executable, "-S", str(tmp_path / "source"), "-B", str(build)],

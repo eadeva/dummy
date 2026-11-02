@@ -8,6 +8,10 @@ import tempfile
 from pathlib import Path
 
 
+def _identity(info: os.stat_result) -> tuple[int, int, int, int, int]:
+    return (info.st_dev, info.st_ino, info.st_mode, info.st_size, info.st_mtime_ns)
+
+
 class LocalOutputCache:
     def __init__(self, root: Path):
         self.root = root / ".ptk" / "output-cache" / "v1"
@@ -61,7 +65,9 @@ class LocalOutputCache:
             if stat.S_ISREG(before.st_mode):
                 add(["file", stat.S_IMODE(before.st_mode), before.st_size])
                 with path.open("rb") as file:
-                    if os.fstat(file.fileno()) != before:
+                    # Windows reports different st_ctime via path and handle.
+                    opened = os.fstat(file.fileno())
+                    if _identity(opened) != _identity(before):
                         raise OSError("output changed while opening")
                     while data := file.read(1024 * 1024):
                         if cancel.is_set():

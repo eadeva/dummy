@@ -21,7 +21,7 @@ def vsix(tmp_path):
             "extension/package.json",
             json.dumps(
                 {
-                    "publisher": "eadeva",
+                    "publisher": "bosch-xc-ce",
                     "name": "project-toolkit",
                     "version": "0.7.0",
                     "main": "./dist/extension.js",
@@ -105,6 +105,26 @@ def test_version_policy_and_profile(
     assert result.exit_code == 0, result.output
     assert any("--install-extension" in call for call in calls) == changes
     assert ("Installed" if changes else "Keeping") in result.output
+
+
+def test_legacy_extension_id_is_removed(runner, monkeypatch):
+    calls = []
+    installed = {"eadeva.project-toolkit@0.26.1"}
+    monkeypatch.setattr(extension.shutil, "which", lambda name: "/code")
+
+    def execute(argv, **kwargs):
+        calls.append(argv)
+        if "--install-extension" in argv:
+            installed.add(f"{EXTENSION_ID}@0.7.0")
+        if "--uninstall-extension" in argv:
+            installed.discard("eadeva.project-toolkit@0.26.1")
+        return subprocess.CompletedProcess(argv, 0, "\n".join(installed), "")
+
+    monkeypatch.setattr(extension.subprocess, "run", execute)
+    result = runner.invoke(cli, ["self-service", "extension"])
+    assert result.exit_code == 0, result.output
+    assert ["/code", "--uninstall-extension", "eadeva.project-toolkit"] in calls
+    assert installed == {f"{EXTENSION_ID}@0.7.0"}
 
 
 def test_missing_editor_can_be_skipped(runner, monkeypatch):

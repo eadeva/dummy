@@ -689,6 +689,8 @@ These sources participate in ``ptk self-service tools``, ``--setup`` and
 ``tools.ensure``. Job-level ``requires_tools`` overrides and VMR repository
 selection work as for other tools. Source order is custom installers, Toolbase
 (Windows), Artifactory, Chocolatey (Windows), uv, download, then opt-in apt/dnf.
+``download.url`` accepts only ``https://`` and ``file://`` URLs and
+``artifactory.url`` only ``https://``; plain HTTP is rejected during validation.
 
 Toolbase-only tools are ignored on Linux: they do not trigger version checks or
 installation failures. If a tool also declares a Linux-compatible source, that

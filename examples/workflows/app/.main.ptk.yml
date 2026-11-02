@@ -1,4 +1,5 @@
 # PTK configuration: this file owns its section or named entity.
+schema_version: 1
 repository:
   alias: frontend
   config_path: config

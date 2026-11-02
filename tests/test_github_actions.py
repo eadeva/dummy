@@ -99,7 +99,8 @@ def test_file_and_zip_roundtrip_to_different_checkout(artifacts, tmp_path):
     assert (consumer / "dist/app.bin").read_bytes() == b"firmware\x00"
     assert (consumer / "symbols/empty").is_dir()
     assert not (consumer / "symbols/stale").exists()
-    assert stat.S_IMODE((consumer / "symbols/run.sh").stat().st_mode) == 0o755
+    if os.name != "nt":  # Windows has no executable mode bits
+        assert stat.S_IMODE((consumer / "symbols/run.sh").stat().st_mode) == 0o755
     assert next(p for p in store.properties.values() if p)["quality"] == "checked"
 
 

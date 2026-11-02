@@ -32,6 +32,14 @@ def test_zero_and_empty_string_are_truthy():
     assert ex.evaluate("X", {"X": 0}) and ex.evaluate("X", {"X": ""})
 
 
+def test_field_of_scalar_is_an_error_but_missing_parent_is_unset():
+    symbols = {"params": {"who": "me", "none": None}}
+    with pytest.raises(ex.ExpressionError, match="'params.who' is a str"):
+        ex.evaluate("params.who.name", symbols)
+    assert not ex.evaluate("params.none.name", symbols)
+    assert not ex.evaluate("params.missing.name", symbols)
+
+
 @pytest.mark.parametrize(
     "bad", ["__import__('os')", "A + 1", "A[0]", "f(x)", "(lambda: 1)()", "'a'.upper"]
 )

@@ -297,7 +297,7 @@ def test_generator_escaping(format):
     assert name.startswith("version.")
     if format == "python":
         ns = {}
-        exec(text, ns)  # noqa: S102 - validate our generated Python output
+        exec(text, ns)  # validates the generated Python output
         assert ns["PTK_VERSION_DEMO"] == value
     elif format == "json":
         assert json.loads(text)["PTK_VERSION_DEMO"] == value

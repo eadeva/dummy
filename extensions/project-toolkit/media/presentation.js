@@ -2,7 +2,7 @@
 (function (root, factory) {
   if (typeof module === "object") module.exports = factory();
   else root.PtkPresentation = factory();
-})(typeof globalThis === "object" ? globalThis : this, function () {
+})(/** @type {any} */ (typeof globalThis === "object" ? globalThis : this), function () {
   "use strict";
   const object = value => value !== null && typeof value === "object" && !Array.isArray(value);
   const compact = value => String(value).replace(/\s+/g, " ").trim().slice(0, 90);
@@ -18,7 +18,7 @@
   function pathLabel(value, path) {
     const key = path.at(-1);
     const item = path.reduce((current, part) => current?.[part], value);
-    return typeof key === "number" ? listLabel(item, path) : key ?? "Configuration";
+    return typeof key === "number" ? listLabel(item) : key ?? "Configuration";
   }
   const sections = {
     repository: "repo", project: "project", jobs: "tasklist", workflows: "git-merge",

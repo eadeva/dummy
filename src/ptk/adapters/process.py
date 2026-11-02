@@ -108,7 +108,8 @@ def _path_of(env: dict[str, str]) -> str | None:
 
 
 def _pump(proc: subprocess.Popen, on_output: Callable[[str], None]) -> None:
-    assert proc.stdout is not None
+    if proc.stdout is None:
+        raise RuntimeError("process output pipe is missing")
     for raw in iter(proc.stdout.readline, b""):
         on_output(raw.decode("utf-8", errors="replace").rstrip("\r\n"))
     proc.stdout.close()

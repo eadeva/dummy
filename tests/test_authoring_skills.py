@@ -9,10 +9,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_skills_are_shipped_and_documented():
-    paths = list((ROOT / ".claude/skills").glob("*/SKILL.md"))
+    paths = list((ROOT / ".github/skills").glob("*/SKILL.md"))
     catalog = (ROOT / "docs/guides/skills.rst").read_text(encoding="utf-8")
     documented = set(
-        re.findall(r"literalinclude:: ../../\.claude/skills/([^/]+)/SKILL.md", catalog)
+        re.findall(r"literalinclude:: ../../\.github/skills/([^/]+)/SKILL.md", catalog)
     )
     assert {p.parent.name for p in paths} == documented
     for path in paths:
@@ -132,7 +132,7 @@ def test_installed_workflow_skill_supports_a_consumer_pipeline(tmp_path, monkeyp
 
 
 def test_expert_agent_frontmatter_is_valid():
-    path = ROOT / ".claude/agents/ptk-expert.md"
+    path = ROOT / ".github/agents/ptk-expert.md"
     _, frontmatter, body = path.read_text(encoding="utf-8").split("---", 2)
     metadata = yaml.safe_load(frontmatter)
     assert metadata["name"] == "ptk-expert"

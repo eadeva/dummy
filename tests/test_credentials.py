@@ -177,6 +177,11 @@ def fake_keyring(monkeypatch):
     errors = types.ModuleType("keyring.errors")
     errors.KeyringError = Exception
 
+    class PasswordDeleteError(Exception):
+        pass
+
+    errors.PasswordDeleteError = PasswordDeleteError
+
     class Backend:
         priority = 5
 
@@ -187,6 +192,8 @@ def fake_keyring(monkeypatch):
     )
 
     def delete(service, user):
+        if (service, user) not in store:
+            raise PasswordDeleteError(user)
         del store[(service, user)]
 
     module.delete_password = delete
@@ -215,6 +222,23 @@ def test_keyring_provider(tmp_path, fake_keyring):
         ).resolve("art.token")
         == "kr-secret"
     )
+
+
+def test_keyring_remove_reports_backend_failures(fake_keyring, monkeypatch):
+    from ptk.domain.credentials import SecretKey
+
+    provider = KeyringProvider()
+    key = SecretKey("art", "token", "ART_TOKEN", "ptk/art/token")
+    provider.store(key, "kr-secret")
+    assert provider.remove(key) is True
+    assert provider.remove(key) is False
+
+    def locked(service, user):
+        raise RuntimeError("keyring is locked")
+
+    monkeypatch.setattr(sys.modules["keyring"], "delete_password", locked)
+    with pytest.raises(PtkError, match="keyring is locked"):
+        provider.remove(key)
 
 
 def test_keyring_missing_is_skipped(monkeypatch):

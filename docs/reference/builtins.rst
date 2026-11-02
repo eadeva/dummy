@@ -13,6 +13,8 @@ Basic operations
 * ``wait`` waits for ``with.seconds`` while observing cancellation.
 * ``report.import`` copies supported tool result files into the step report
   folder. Its options and supported formats are in :doc:`/guides/log-analysis`.
+  Patterns may be absolute or resolve outside the repository, for example
+  through Bazel output symlinks. Configuration is trusted like ``run`` commands.
 * ``version.generate`` writes version files; see :doc:`/guides/versioning`.
 
 Variant generators

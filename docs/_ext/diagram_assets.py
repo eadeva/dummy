@@ -40,7 +40,7 @@ def verify():
                 f"Missing or stale diagram: {target.name}. "
                 "Regenerate with python docs/_ext/diagram_assets.py --jar PATH_TO_PLANTUML_JAR."
             )
-        ElementTree.fromstring(text[stamp.end() :])
+        ElementTree.fromstring(text[stamp.end() :])  # noqa: S314 - own committed SVG
 
 
 def render(jar):
@@ -68,7 +68,7 @@ def render(jar):
             timeout=60,
             check=True,
         )
-        ElementTree.fromstring(result.stdout)
+        ElementTree.fromstring(result.stdout)  # noqa: S314 - local PlantUML output
         svg = result.stdout.rstrip() + "\n"
         stamp = (
             f"<!-- PTK PlantUML source={source_digest(source)} svg={digest(svg)} -->\n"

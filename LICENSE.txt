@@ -1,0 +1,9 @@
+Copyright (C) 2026 Robert Bosch GmbH. All rights reserved.
+
+This software is proprietary to Robert Bosch GmbH and is intended for internal
+use only. No part of it may be copied, modified, distributed or disclosed to
+third parties without the prior written permission of Robert Bosch GmbH.
+
+Third-party components are distributed under their own licenses; see
+extensions/project-toolkit/THIRD_PARTY_NOTICES.txt and
+src/ptk/adapters/graph_assets/README.txt.

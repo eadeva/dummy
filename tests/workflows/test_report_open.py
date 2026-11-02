@@ -231,7 +231,7 @@ def test_explicit_workflow_report_opens_latest_aggregate_only(
     )
     assert reopened.exit_code == 0
     assert opened_reports == [latest]
-    assert f"[large][verify] report: {latest}" in reopened.output
+    assert f"[large][verify] report: {latest.resolve()}" in reopened.output
 
 
 def test_workspace_report_respects_owner_and_member_report_policy(
@@ -273,7 +273,7 @@ def test_workspace_report_respects_owner_and_member_report_policy(
             catch_exceptions=False,
         )
         assert result.exit_code == 0, result.output
-        assert f"{identity} report: {path}" in result.output
+        assert f"{identity} report: {path.resolve()}" in result.output
     assert opened_reports == reports
     config = tmp_path / "a/.main.ptk.yml"
     data = read_project(config)

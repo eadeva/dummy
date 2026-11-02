@@ -118,7 +118,8 @@ class UvPythonEnvManager:
                 script_prefix=[sys.executable],
                 path_prepend=str(Path(sys.executable).parent),
             )
-        assert spec.venv is not None
+        if spec.venv is None:
+            raise ValueError("python setting needs 'interpreter' or 'venv'")
         venv = self.venv_path(spec.venv, root)
         if create:
             self._ensure_venv(spec.venv, venv, root, on_output or (lambda _l: None))

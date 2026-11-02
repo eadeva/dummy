@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.24", "pydantic>=2.6", "PyYAML>=6.0", "packaging>=23"]
+requires = ["hatchling==1.33.0", "pydantic==2.14.2", "PyYAML==6.0.3", "packaging==26.3"]
 build-backend = "hatchling.build"
 
 [project]
@@ -7,33 +7,42 @@ name = "ptk"
 dynamic = ["version"]
 description = "ptk (project tool kit): a configuration-driven project CLI with variants, credentials, tool setup, logging and reporting"
 readme = "README.md"
+license = "LicenseRef-Proprietary"
+license-files = ["LICENSE.txt"]
 requires-python = ">=3.12"
+classifiers = [
+  "Private :: Do Not Upload",  # PyPI rejects this; internal index only.
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+]
 dependencies = [
-  "click>=8.5",  # Native PowerShell completion, also Bash/Zsh/Fish.
-  "pydantic>=2.6",
-  "PyYAML>=6.0",
-  "packaging>=23",
-  "rich>=13.7",
-  "rich-click>=1.8",
-  "cryptography>=42",   # built-in credential vault (AES-GCM)
+  "click==8.5.0",  # Native PowerShell completion, also Bash/Zsh/Fish.
+  "pydantic==2.14.2",
+  "PyYAML==6.0.3",
+  "packaging==26.3",
+  "rich==15.0.0",
+  "rich-click==1.9.9",
+  "cryptography==50.0.2",   # built-in credential vault (AES-GCM)
 ]
 
 [project.optional-dependencies]
-keyring = ["keyring>=24"]   # OS keyring provider (Windows Credential Manager, macOS, Secret Service)
+keyring = ["keyring==25.7.0"]   # OS keyring provider (Windows Credential Manager, macOS, Secret Service)
 
 [project.scripts]
 ptk = "ptk.drivers.cli.main:main"
 
 [dependency-groups]
 dev = [
-  "pytest>=8",
-  "ruff>=0.6",
-  "pre-commit>=4,<5",  # Real Git hook installation/execution regression tests.
+  "pytest==9.2.0",
+  "ruff==0.17.3",
+  "pre-commit==4.7.0",  # Real Git hook installation/execution regression tests.
   "cmake==3.30.9",  # Native integration tests use this project's executable.
 ]
 
 docs = ["sphinx==9.1.0", "sphinx-needs==8.5.0", "sphinx-rtd-theme==3.1.0", "sphinx-design==0.7.0"]
-release = ["build>=1.2", "hatchling>=1.24", "editables>=0.3", "twine>=6", "pip>=24"]
+release = ["build==1.6.1", "hatchling==1.33.0", "editables==0.6", "twine==7.0.0", "pip==26.2.2"]
 
 [tool.hatch.build.hooks.custom]
 path = "hatch_build.py"
@@ -44,7 +53,8 @@ path = "hatch_metadata.py"
 [tool.hatch.build.targets.sdist]
 include = [
   "/src", "/tests", "/docs", "/examples", "/scripts", "/config/ptk",
-  "/.claude/skills", "/.claude/agents", "/.main.ptk.yml", "/README.md", "/pyproject.toml",
+  "/.github/skills", "/.github/agents", "/.main.ptk.yml", "/README.md", "/pyproject.toml",
+  "/LICENSE.txt",
   "/.pre-commit-config.yaml",
   "/hatch_build.py", "/hatch_metadata.py", "/install",
 ]
@@ -60,7 +70,7 @@ cache-keys = [
   {file = "config/ptk/**/*.ptk.yml"}, {file = "hatch_*.py"},
   {file = "src/ptk/package_version.py"}, {file = "PKG-INFO"},
   {file = "src/ptk/**/*.py"},
-  {file = ".claude/skills/**"}, {file = ".claude/agents/**"},
+  {file = ".github/skills/**"}, {file = ".github/agents/**"},
   {file = "docs/**"},
   {file = "install/**"},
   {file = "extensions/project-toolkit/package*.json"},
@@ -85,5 +95,13 @@ src = ["src", "tests"]
 extend-exclude = ["reference"]
 
 [tool.ruff.lint]
-# ruff defaults (E4, E7, E9, F; line length 88) plus a few stricter rule sets
-extend-select = ["I", "B", "UP", "SIM"]
+# ruff defaults (E4, E7, E9, F; line length 88) plus stricter and security rule sets
+extend-select = ["I", "B", "UP", "SIM", "S", "PERF"]
+# Running configured commands is PTK's purpose; argv lists never use a shell.
+# PERF401 rewrites readable report builders into long extend() expressions.
+ignore = ["S603", "S607", "PERF401"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "PERF"]
+"scripts/**" = ["S", "PERF"]
+"examples/**" = ["S"]

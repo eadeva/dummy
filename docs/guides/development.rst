@@ -126,11 +126,12 @@ YAML paths and values. Published docs do not include a source-module catalog or
 Python API reference. Internal Python interfaces are implementation details.
 Reusable packages expose commands as described in :doc:`python-tools`.
 
-Eighteen repository-local authoring skills are shipped under ``.claude/skills`` and
+Eighteen repository-local authoring skills are shipped under ``.github/skills`` and
 included in the documentation. Tests check catalog completeness and source links.
 The wheel bundles sixteen project-facing skills, reference docs and examples
 through the allowlist in ``src/ptk/authoring_bundle.py``. Keep the canonical skill
-files in ``.claude/skills``; do not maintain another copy for installed users.
+files in ``.github/skills`` and the agent in ``.github/agents``; do not maintain
+another copy for installed users.
 Consumer skill instructions must not depend on PTK's ``src`` or ``tests`` folders.
 The release smoke check verifies installed Markdown links plus RST document,
 literal-include and download targets within the deployed bundle. Keep these

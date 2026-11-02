@@ -7,7 +7,9 @@ import zipfile
 from pathlib import Path
 
 RESOURCE = "resources/extension/project-toolkit.vsix"
-EXTENSION_ID = "eadeva.project-toolkit"
+EXTENSION_ID = "bosch-xc-ce.project-toolkit"
+# Earlier publisher IDs; a second copy would register duplicate commands and views.
+LEGACY_EXTENSION_IDS = ("eadeva.project-toolkit",)
 
 
 def inspect_vsix(path: Path) -> dict:

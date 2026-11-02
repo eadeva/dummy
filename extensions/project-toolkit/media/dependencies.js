@@ -2,7 +2,7 @@
 (function (root, factory) {
   if (typeof module === "object") module.exports = factory();
   else root.PtkDependencies = factory();
-})(typeof globalThis === "object" ? globalThis : this, function () {
+})(/** @type {any} */ (typeof globalThis === "object" ? globalThis : this), function () {
   "use strict";
   const object = value => value !== null && typeof value === "object" && !Array.isArray(value);
   const at = (value, path) => path.reduce((value, key) => value?.[key], value);

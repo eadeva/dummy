@@ -10,8 +10,8 @@ sidebar, help, variant selection, parameter forms, a configuration editor and re
    support `ptk describe --json --configuration` (inventory version 6 and configuration interface version 5).
 2. If PTK was installed directly with uv, run `ptk self-service extension` afterwards.
    Alternatively, in VS Code run **Extensions: Install from VSIX...** and select
-   `project-toolkit-0.24.0.vsix`. You can also use
-   `code --install-extension project-toolkit-0.24.0.vsix`.
+   `project-toolkit-<version>.vsix`. You can also use
+   `code --install-extension project-toolkit-<version>.vsix`.
 3. Open your PTK repository or VMR workspace, trust its contents, then open
    **Project Toolkit** in the activity bar.
 
@@ -78,7 +78,7 @@ not the full contract.
 PTK now exposes `cx` in inventory data and uses `--cx`, `--no-cx`, and
 `PTK_CX`; replace the former CI-named PTK interfaces when upgrading.
 
-Extension 0.25.0 requires inventory `schema_version: 6` and
+Since 0.25.0 the extension requires inventory `schema_version: 6` and
 `configuration.version: 5`. These are independent of package/release numbers
 and the project marker's schema version. Unsupported interfaces are rejected;
 there is no legacy parser or runtime schema fallback. Breaking changes must
@@ -328,7 +328,8 @@ uv run ptk extension
 
 The job checks Node.js and npm, installs the locked build dependencies and runs
 the package command. The VSIX is written to
-`extensions/project-toolkit/project-toolkit-0.24.0.vsix`. Use `ptk self-service extension --dry-run`
+`extensions/project-toolkit/project-toolkit-<version>.vsix`, using the version in
+`package.json`. Use `ptk extension --dry-run`
 to preview the steps. Node.js must already be installed and available on PATH.
 
 To run the same build directly from this extension folder:

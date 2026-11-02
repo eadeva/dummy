@@ -853,7 +853,7 @@ wheels = [
 
 [[package]]
 name = "ptk"
-version = "0.0.0+93.g3a85036f0597"
+version = "0.0.0+142.gcf7beba0e8c7.dirty"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -893,22 +893,22 @@ release = [
 
 [package.metadata]
 requires-dist = [
-    { name = "click", specifier = ">=8.5" },
-    { name = "cryptography", specifier = ">=42" },
-    { name = "keyring", marker = "extra == 'keyring'", specifier = ">=24" },
-    { name = "packaging", specifier = ">=23" },
-    { name = "pydantic", specifier = ">=2.6" },
-    { name = "pyyaml", specifier = ">=6.0" },
-    { name = "rich", specifier = ">=13.7" },
-    { name = "rich-click", specifier = ">=1.8" },
+    { name = "click", specifier = "==8.5.0" },
+    { name = "cryptography", specifier = "==50.0.2" },
+    { name = "keyring", marker = "extra == 'keyring'", specifier = "==25.7.0" },
+    { name = "packaging", specifier = "==26.3" },
+    { name = "pydantic", specifier = "==2.14.2" },
+    { name = "pyyaml", specifier = "==6.0.3" },
+    { name = "rich", specifier = "==15.0.0" },
+    { name = "rich-click", specifier = "==1.9.9" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "cmake", specifier = "==3.30.9" },
-    { name = "pre-commit", specifier = ">=4,<5" },
-    { name = "pytest", specifier = ">=8" },
-    { name = "ruff", specifier = ">=0.6" },
+    { name = "pre-commit", specifier = "==4.7.0" },
+    { name = "pytest", specifier = "==9.2.0" },
+    { name = "ruff", specifier = "==0.17.3" },
 ]
 docs = [
     { name = "sphinx", specifier = "==9.1.0" },
@@ -917,11 +917,11 @@ docs = [
     { name = "sphinx-rtd-theme", specifier = "==3.1.0" },
 ]
 release = [
-    { name = "build", specifier = ">=1.2" },
-    { name = "editables", specifier = ">=0.3" },
-    { name = "hatchling", specifier = ">=1.24" },
-    { name = "pip", specifier = ">=24" },
-    { name = "twine", specifier = ">=6" },
+    { name = "build", specifier = "==1.6.1" },
+    { name = "editables", specifier = "==0.6" },
+    { name = "hatchling", specifier = "==1.33.0" },
+    { name = "pip", specifier = "==26.2.2" },
+    { name = "twine", specifier = "==7.0.0" },
 ]
 
 [[package]]
