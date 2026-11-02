@@ -1,4 +1,4 @@
-"""OS keyring (optional: ``ptk[keyring]``): Windows Credential Manager, macOS
+"""OS keyring (optional: ``xcce_ptk[keyring]``): Windows Credential Manager, macOS
 Keychain, Secret Service on Linux desktops. Skipped when the package is missing
 or no real backend exists (e.g. Linux servers without a desktop session)."""
 
@@ -16,7 +16,7 @@ def _load() -> tuple[Any | None, str]:
     try:
         import keyring  # type: ignore[import-not-found]
     except ImportError:
-        return None, 'not installed (uv tool install "ptk[keyring]")'
+        return None, 'not installed (uv tool install "xcce_ptk[keyring]")'
     try:
         backend = keyring.get_keyring()
     except Exception as exc:  # noqa: BLE001 - any backend problem means "not usable"

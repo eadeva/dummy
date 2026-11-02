@@ -3,7 +3,10 @@
 from email.parser import Parser
 from pathlib import Path
 
+from packaging.utils import canonicalize_name
 from packaging.version import InvalidVersion, Version
+
+from ptk import DISTRIBUTION
 
 
 def configured_version(root: Path) -> str:
@@ -70,7 +73,10 @@ def package_version(root: Path, *, resolved_version: str | None = None) -> str:
     metadata_file = root / "PKG-INFO"
     if metadata_file.is_file():
         metadata = Parser().parsestr(metadata_file.read_text(encoding="utf-8"))
-        if metadata["Name"] != "ptk" or not metadata["Version"]:
+        if (
+            canonicalize_name(metadata["Name"] or "") != canonicalize_name(DISTRIBUTION)
+            or not metadata["Version"]
+        ):
             raise ValueError("invalid PTK source distribution metadata")
         value = metadata["Version"]
     elif resolved_version is not None:

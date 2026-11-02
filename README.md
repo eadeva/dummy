@@ -165,7 +165,7 @@ credential). `ptk self-service creds set artifactory token` stores a value (type
 built-in vault is an AES-GCM file protected by a master password - no external tool
 needed. Steps get secrets only as environment variables (`secrets: {TOKEN: artifactory.token}`),
 and ptk masks them in its execution output. Child programs must not expand them
-into command-line arguments or write them to report input files. keyring support: `uv tool install "ptk[keyring]"`.
+into command-line arguments or write them to report input files. keyring support: `uv tool install "xcce_ptk[keyring]"`.
 
 ## Configuration files
 

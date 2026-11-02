@@ -244,7 +244,7 @@ def test_keyring_remove_reports_backend_failures(fake_keyring, monkeypatch):
 def test_keyring_missing_is_skipped(monkeypatch):
     monkeypatch.setitem(sys.modules, "keyring", None)  # import fails
     ok, reason = KeyringProvider().available()
-    assert not ok and "ptk[keyring]" in reason
+    assert not ok and "xcce_ptk[keyring]" in reason
 
 
 # --------------------------------------------------------------------------- gopass

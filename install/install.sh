@@ -8,7 +8,7 @@
 #   sh install.sh --no-completion    leave shell completion profiles unchanged
 #
 # Environment:
-#   PTK_SOURCE   what 'uv tool install' installs (default: this checkout, otherwise ptk from your index)
+#   PTK_SOURCE   what 'uv tool install' installs (default: this checkout, otherwise xcce_ptk from your index)
 #   PTK_EXTRAS   optional extras, e.g. "keyring"
 #   UV_INDEX_URL / UV_EXTRA_INDEX_URL   your package index (standard uv variables)
 set -eu
@@ -45,7 +45,7 @@ fi
 
 source="${PTK_SOURCE:-}"
 if [ -z "$source" ]; then
-    source=ptk
+    source=xcce_ptk
     # A downloaded/piped standalone script has no checkout to install.
     if [ -f "$0" ]; then
         script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)

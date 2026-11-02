@@ -32,9 +32,9 @@ Run ``uv run ptk package`` (or ``ptk package`` from this checkout). The job
 selects the uv ``release`` and ``docs`` dependency groups and creates::
 
    _bin/default/package/
-     dist/ptk-VERSION-py3-none-any.whl
-     dist/ptk-VERSION.tar.gz
-     docs/ptk-VERSION-docs.zip
+     dist/xcce_ptk-VERSION-py3-none-any.whl
+     dist/xcce_ptk-VERSION.tar.gz
+     docs/xcce_ptk-VERSION-docs.zip
      SHA256SUMS
      manifest.json
 

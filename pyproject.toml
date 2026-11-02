@@ -3,7 +3,8 @@ requires = ["hatchling==1.33.0", "pydantic==2.14.2", "PyYAML==6.0.3", "packaging
 build-backend = "hatchling.build"
 
 [project]
-name = "ptk"
+# Distribution name only; the import package and the CLI command stay `ptk`.
+name = "xcce_ptk"
 dynamic = ["version"]
 description = "ptk (project tool kit): a configuration-driven project CLI with variants, credentials, tool setup, logging and reporting"
 readme = "README.md"

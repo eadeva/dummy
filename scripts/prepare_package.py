@@ -65,8 +65,8 @@ target = Path(sys.argv[1]).resolve()
 sys.path.insert(0, str(target))
 import ptk
 assert Path(ptk.__file__).resolve().is_relative_to(target), ptk.__file__
-assert ptk.__version__ == distribution('ptk').version
-entry = next(e for e in distribution('ptk').entry_points if e.group == 'console_scripts' and e.name == 'ptk')
+assert ptk.__version__ == distribution(ptk.DISTRIBUTION).version
+entry = next(e for e in distribution(ptk.DISTRIBUTION).entry_points if e.group == 'console_scripts' and e.name == 'ptk')
 sys.argv = ['ptk', *sys.argv[2:]]
 entry.load()()
 """
@@ -220,7 +220,7 @@ def prepare(output: Path) -> Path:
             smoke(wheels[0], Path(consumer))
         html = temporary / "html"
         run("-m", "sphinx", "-W", "--keep-going", "-b", "html", "docs", str(html))
-        docs = staged / "docs" / f"ptk-{version}-docs.zip"
+        docs = staged / "docs" / f"xcce_ptk-{version}-docs.zip"
         docs.parent.mkdir()
         with zipfile.ZipFile(docs, "w", compression=zipfile.ZIP_DEFLATED) as archive:
             for path in sorted(html.rglob("*")):

@@ -7,7 +7,7 @@
 #   .\install.ps1 -ForceExtension reinstall/downgrade the bundled extension explicitly
 #
 # Environment:
-#   PTK_SOURCE   what 'uv tool install' installs (default: this checkout, otherwise ptk from your index)
+#   PTK_SOURCE   what 'uv tool install' installs (default: this checkout, otherwise xcce_ptk from your index)
 #   PTK_EXTRAS   optional extras, e.g. "keyring" (Windows Credential Manager)
 #   UV_INDEX_URL / UV_EXTRA_INDEX_URL   your package index (standard uv variables)
 param([switch]$NoCompletion, [switch]$NoExtension, [switch]$ForceExtension)
@@ -31,7 +31,7 @@ if (-not $uv) {
 $source = $env:PTK_SOURCE
 $fromCheckout = $false
 if (-not $source) {
-    $source = "ptk"
+    $source = "xcce_ptk"
     if ($PSScriptRoot) {
         $checkout = Split-Path -Parent $PSScriptRoot
         if ((Test-Path (Join-Path $checkout "pyproject.toml")) -and

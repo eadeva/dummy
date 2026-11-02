@@ -81,7 +81,9 @@ def test_installer_refreshes_selected_source(tmp_path, mode):
     install = calls[0]
     assert install[:2] == ["tool", "install"]
     assert {"--force", "--reinstall", "--upgrade"}.issubset(install)
-    assert install[-1] == (explicit or ("ptk" if mode == "standalone" else str(repo)))
+    assert install[-1] == (
+        explicit or ("xcce_ptk" if mode == "standalone" else str(repo))
+    )
     assert calls[1] == ["tool", "update-shell"]
 
 

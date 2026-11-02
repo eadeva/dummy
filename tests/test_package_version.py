@@ -142,7 +142,7 @@ def test_package_version_tracks_git_and_configured_fallback(tmp_path):
 
 
 def test_sdist_version_wins_over_environment_and_unavailable_configuration(tmp_path):
-    (tmp_path / "PKG-INFO").write_text("Name: ptk\nVersion: 4.5.6+2.gabc\n")
+    (tmp_path / "PKG-INFO").write_text("Name: xcce-ptk\nVersion: 4.5.6+2.gabc\n")
     assert package_version(tmp_path, resolved_version="9.9.9") == "4.5.6+2.gabc"
 
 

@@ -419,7 +419,7 @@ class LoadProject:
                 [
                     Problem(
                         f"this project needs ptk {config.ptk_version}, but ptk {self._version} is running. "
-                        f'Install the right version with: uv tool install "ptk{config.ptk_version}"',
+                        f'Install the right version with: uv tool install "xcce_ptk{config.ptk_version}"',
                         "ptk_version",
                         loc,
                     )
