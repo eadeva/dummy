@@ -53,7 +53,7 @@ function project(root, alias) {
   });
 }
 
-test("PTK validation failures remain editable inventory and recover without an interface error", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
+test("PTk validation failures remain editable inventory and recover without an interface error", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk invalid graph "));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   project(root, "demo");
@@ -96,7 +96,7 @@ test("PTK validation failures remain editable inventory and recover without an i
   assert.equal(core.parseInventory(invoke(root, ["describe", "--json", "--configuration"])).projects[0].error, undefined);
 });
 
-test("separate variant tasks execute real PTK processes concurrently with isolated outputs", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, async t => {
+test("separate variant tasks execute real PTk processes concurrently with isolated outputs", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, async t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk parallel variants "));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   project(root, "demo");
@@ -132,7 +132,7 @@ test("separate variant tasks execute real PTK processes concurrently with isolat
   for (const result of results) assert.equal(fs.readFileSync(path.join(result.output, "result.txt"), "utf8"), result.parameter);
 });
 
-test("installed PTK supplies the variable catalogue and raw job field capabilities", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
+test("installed PTk supplies the variable catalogue and raw job field capabilities", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk variables "));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   project(root, "demo");
@@ -149,7 +149,7 @@ test("installed PTK supplies the variable catalogue and raw job field capabiliti
   assert.deepEqual(V.available(state, E.schemaForFile(config, file), ["steps", "say", "uses"], S), []);
 });
 
-test("actual PTK inventory, preview, job parameters and variant inspection agree with extension arguments", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
+test("actual PTk inventory, preview, job parameters and variant inspection agree with extension arguments", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk extension "));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   project(root, "demo");
@@ -277,7 +277,7 @@ test("real uv discovery and version-check launch do not sync or alter installed 
 });
 
 
-test("configuration form round-trips PTK YAML scalar types and creates valid jobs", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
+test("configuration form round-trips PTk YAML scalar types and creates valid jobs", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
   const model = require("../src/config-model");
   const S = require("../media/schema");
   const schema = require("../media/config-schema.json");
@@ -486,7 +486,7 @@ test("real maintainer jobs and workflows execute through the discovered namespac
   invoke(root, core.argsFor(targets.find(target => target.name === "release"), { variant: "large" }), { PTK_ROLE: "" });
 });
 
-test("PTK run-option metadata drives a real bounded job execution", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
+test("PTk run-option metadata drives a real bounded job execution", { skip: !python && "Set PTK_TEST_PYTHON to run CLI integration" }, t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk step choices "));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   project(root, "demo");
@@ -501,7 +501,7 @@ test("PTK run-option metadata drives a real bounded job execution", { skip: !pyt
   assert.doesNotMatch(output, /SHOULD_NOT_RUN/);
 });
 
-test("real CLI offers PTK cache bypass for job and workflow tasks", { skip: !python }, t => {
+test("real CLI offers PTk cache bypass for job and workflow tasks", { skip: !python }, t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "ptk-cache-options-"));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   writeProject(root, {
@@ -516,6 +516,6 @@ test("real CLI offers PTK cache bypass for job and workflow tasks", { skip: !pyt
     assert.equal(option.option, "--no-cache-ptk");
     const args = core.argsFor({kind, name, spec, project}, {preview: true, runOptions: {no_cache_ptk: ["true"]}});
     assert.ok(args.includes("--no-cache-ptk"));
-    assert.match(invoke(root, args), /PTK cache: disabled/);
+    assert.match(invoke(root, args), /PTk cache: disabled/);
   }
 });

@@ -1,11 +1,11 @@
 ---
 name: ptk-development
-description: 'Develop PTK itself in its source checkout: core code, adapters, execution, packaging and extension interfaces. Do not use for ordinary configuration changes in a consuming project.'
+description: 'Develop PTk itself in its source checkout: core code, adapters, execution, packaging and extension interfaces. Do not use for ordinary configuration changes in a consuming project.'
 ---
 
 # ptk-development
 
-Use this skill only in PTK's own source checkout. Confirm the checkout, project instructions and declared dependency groups first; do not impose PTK's development layout or test commands on consuming projects. For project-specific configuration, use [configuration authoring](../ptk-config-authoring/SKILL.md).
+Use this skill only in PTk's own source checkout. Confirm the checkout, project instructions and declared dependency groups first; do not impose PTk's development layout or test commands on consuming projects. For project-specific configuration, use [configuration authoring](../ptk-config-authoring/SKILL.md).
 
 1. Read `docs/guides/development.rst`, `docs/architecture/index.rst`, the relevant requirements and tests before changing code. Treat `reference/development-plan.md` as historical context, not a current specification.
 
@@ -17,7 +17,7 @@ Use this skill only in PTK's own source checkout. Confirm the checkout, project 
 
 5. Fix the smallest coherent problem and cover the observable failure rather than duplicating implementation in tests.
 
-6. Run `uv run pytest`, `uv run ruff check`, `uv run ruff format --check` and the Sphinx warning-as-error build.
+6. Run focused tests with `uv run ptk test -- tests/test_x.py -q`, then the checkout's `test`, `check` (Ruff lint and format) and `docs` (Sphinx, warnings as errors) jobs as described in `docs/guides/development.rst`.
 
 7. Exercise Windows-specific paths in Windows CX; do not claim cross-platform success from Linux alone.
 
@@ -25,7 +25,7 @@ Use this skill only in PTK's own source checkout. Confirm the checkout, project 
 
 9. Review CX results before marking a milestone complete; record explicit remaining limitations in the relevant requirements, decisions and guides. Do not assume a PLAN.md exists.
 
-10. Keep PTK Python interfaces internal. Use `docs/reference/builtins.rst` for built-in operations and [reusable Python tools](../../../docs/guides/python-tools.rst) for external commands. Do not introduce plugin discovery or callback registration.
+10. Keep PTk Python interfaces internal. Use `docs/reference/builtins.rst` for built-in operations and [reusable Python tools](../../../docs/guides/python-tools.rst) for external commands. Do not introduce plugin discovery or callback registration.
 
 11. For startup changes, profile before editing and run `scripts/benchmark_cli.py`
     before/after sequentially in the same Python environment. Preserve all command

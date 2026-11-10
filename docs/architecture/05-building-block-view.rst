@@ -60,7 +60,7 @@ Results and integrations
 ------------------------
 
 The report service joins stored execution data with importer contributions.
-Report exporters do not execute jobs. PTK selects its shipped importers,
+Report exporters do not execute jobs. PTk selects its shipped importers,
 exporters, generators, credential providers and installers directly. It does
 not discover or load third-party entry points. Project behavior runs through
 commands and independently packaged Python tools; those packages can use uv's

@@ -1,4 +1,4 @@
-"""Real hook bootstrap and environment-changing hooks must leave PTK intact."""
+"""Real hook bootstrap and environment-changing hooks must leave PTk intact."""
 
 import importlib.metadata
 import os
@@ -125,7 +125,7 @@ def test_hook_sync_cannot_uninstall_callers_packages(root, selector):
     python = str(venv_python(outer))
     wheel = root / "ptk_canary-1.0-py3-none-any.whl"
     files = {
-        "ptk_canary.py": "value = 'PTK installation survives'\n",
+        "ptk_canary.py": "value = 'PTk installation survives'\n",
         "ptk_canary-1.0.dist-info/METADATA": "Metadata-Version: 2.1\nName: ptk-canary\nVersion: 1.0\n",
         "ptk_canary-1.0.dist-info/WHEEL": "Wheel-Version: 1.0\nRoot-Is-Purelib: true\nTag: py3-none-any\n",
     }
@@ -192,7 +192,7 @@ def test_hook_sync_cannot_uninstall_callers_packages(root, selector):
         check=False,
     )
     assert result.returncode == 0, result.stderr
-    assert "PTK installation survives" in result.stdout
+    assert "PTk installation survives" in result.stdout
 
 
 def test_hook_environment_keeps_network_settings_without_caller_python_selectors(root):

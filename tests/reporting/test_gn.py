@@ -288,7 +288,7 @@ def test_manual_project_log_policy_dedup_and_full_dedicated_exports(tmp_path):
     assert not record.has_errors and not record.test_totals()
     assert {f.disposition for f in record.gn[0].diagnostics} == {"ignored", "justified"}
     assert all(
-        "Source: PTK log analysis" in f.context for f in record.gn[0].diagnostics
+        "Source: PTk log analysis" in f.context for f in record.gn[0].diagnostics
     )
     files = service.export(
         record, ["html", "json", "markdown", "junit"], tmp_path / "out"

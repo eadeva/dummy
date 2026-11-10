@@ -266,7 +266,7 @@ def parameters(ctx, param, incomplete):
 @click.option(
     "--executable",
     type=click.Path(exists=True, dir_okay=False, path_type=Path),
-    help="With 'install': shared PTK launcher. Defaults to uv's tool directory.",
+    help="With 'install': shared PTk launcher. Defaults to uv's tool directory.",
 )
 @click.option(
     "--powershell-profile",
@@ -387,7 +387,7 @@ def completion_source(ctx, shell, double_tab=False):
 if (Get-Command Set-PSReadLineKeyHandler -ErrorAction SilentlyContinue) {
     Set-PSReadLineKeyHandler -Key Tab -Function Complete
 } else {
-    Write-Warning 'PTK completion registered. Double-Tab listing requires PSReadLine in an interactive terminal.'
+    Write-Warning 'PTk completion registered. Double-Tab listing requires PSReadLine in an interactive terminal.'
 }
 """
     return text

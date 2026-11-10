@@ -1,4 +1,4 @@
 interface:
-  display_name: "PTK Credentials"
+  display_name: "PTk Credentials"
   short_description: "Configure providers without exposing secret values"
   default_prompt: "Use $ptk-credentials to diagnose this project credential setup without retrieving secret values."

@@ -18,7 +18,7 @@ def artifacts_group():
 
 @artifacts_group.command("destination")
 @click.option(
-    "--job", required=True, shell_complete=complete_jobs, help="Producing PTK job."
+    "--job", required=True, shell_complete=complete_jobs, help="Producing PTk job."
 )
 @click.option("--event", help="Override GITHUB_EVENT_NAME for a local preview.")
 @click.option(

@@ -9,7 +9,7 @@
 #
 # Environment:
 #   PTK_SOURCE   what 'uv tool install' installs (default: this checkout, otherwise xcce_ptk from your index)
-#   PTK_EXTRAS   optional extras, e.g. "keyring"
+#   PTK_EXTRAS   optional extras
 #   UV_INDEX_URL / UV_EXTRA_INDEX_URL   your package index (standard uv variables)
 set -eu
 
@@ -74,20 +74,20 @@ if [ "$no_extension" = 0 ] || [ "$no_completion" = 0 ]; then
     if command -v cygpath >/dev/null 2>&1; then tool_bin=$(cygpath -u "$tool_bin"); fi
     ptk_executable="$tool_bin/ptk"
     if [ -f "$tool_bin/ptk.exe" ]; then ptk_executable="$tool_bin/ptk.exe"; fi
-    if [ ! -x "$ptk_executable" ]; then say "PTK installed, but cannot find its executable in $tool_bin"; exit 1; fi
+    if [ ! -x "$ptk_executable" ]; then say "PTk installed, but cannot find its executable in $tool_bin"; exit 1; fi
 fi
 if [ "$no_extension" = 0 ]; then
     set -- self-service extension --if-available
     if [ "$force_extension" = 1 ]; then set -- "$@" --force; fi
     if ! "$ptk_executable" "$@"; then
-        say 'PTK installed, but extension setup failed; retry: ptk self-service extension'
+        say 'PTk installed, but extension setup failed; retry: ptk self-service extension'
         exit 1
     fi
 fi
 
 if [ "$no_completion" = 0 ]; then
     if ! "$ptk_executable" self-service completion install --executable "$ptk_executable"; then
-        say 'PTK installed, but completion setup failed; retry: ptk self-service completion install'
+        say 'PTk installed, but completion setup failed; retry: ptk self-service completion install'
         exit 1
     fi
 fi

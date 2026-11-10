@@ -1,4 +1,4 @@
-"""Skills installed in consumer repositories must be usable without a PTK checkout."""
+"""Skills installed in consumer repositories must be usable without a PTk checkout."""
 
 import json
 import re
@@ -17,19 +17,15 @@ from tests.conftest import grant_maintainer
 from .test_workspace import repository, workspace
 
 
-def test_vscode_setup_installs_tasks_skills_and_working_offline_links(
-    tmp_path, monkeypatch
-):
+def test_agent_setup_installs_skills_and_working_offline_links(tmp_path, monkeypatch):
     repository(tmp_path, "consumer")
     grant_maintainer(tmp_path)
     monkeypatch.chdir(tmp_path)
     runner = CliRunner()
     assert runner.invoke(cli, ["maintainer", "sync", "agent", "--check"]).exit_code == 1
     assert not (tmp_path / ".github").exists()
-    assert runner.invoke(cli, ["maintainer", "sync", "tasks"]).exit_code == 0
     result = runner.invoke(cli, ["maintainer", "sync", "agent"])
     assert result.exit_code == 0, result.output
-    assert (tmp_path / ".vscode/tasks.json").is_file()
     skills = list((tmp_path / ".github/skills").glob("*/SKILL.md"))
     assert {path.parent.name for path in skills} == set(SKILLS)
     for path in skills:
@@ -53,7 +49,7 @@ def test_vscode_setup_installs_tasks_skills_and_working_offline_links(
 
     assert (
         yaml.safe_load(metadata.read_text())["interface"]["display_name"]
-        == "PTK Log Analyzer"
+        == "PTk Log Analyzer"
     )
     schema = json.loads((tmp_path / ".github/ptk/config-schema.json").read_text())
     assert "StepSpec" in schema["$defs"]
@@ -117,7 +113,6 @@ def test_unowned_conflict_preflights_before_any_file_is_written(tmp_path, monkey
     monkeypatch.chdir(tmp_path)
     result = CliRunner().invoke(cli, ["maintainer", "sync", "agent"])
     assert result.exit_code != 0 and "unowned" in result.output
-    assert not (tmp_path / ".vscode/tasks.json").exists()
     assert not (tmp_path / ".github/ptk/manifest.json").exists()
     assert conflict.read_text() == "custom VMR skill"
 
@@ -145,13 +140,6 @@ def test_vmr_editor_setup_uses_selected_repository(tmp_path, monkeypatch):
     assert result.exit_code == 0, result.output
     assert (a.parent / ".github/skills/ptk-vmr/SKILL.md").exists()
     assert not (b.parent / ".github").exists()
-    assert (
-        CliRunner().invoke(cli, ["firmware", "maintainer", "sync", "tasks"]).exit_code
-        == 0
-    )
-    tasks = json.loads((a.parent / ".vscode/tasks.json").read_text())
-    assert tasks["tasks"][0]["command"] == "ptk"
-    assert tasks["tasks"][0]["args"][:2] == ["firmware", "run"]
 
 
 def test_bundle_ignores_local_config_and_generated_examples(tmp_path):
@@ -195,21 +183,21 @@ def test_managed_config_readme_sync_check_update_conflict_and_relocation(
     readme = tmp_path / "config/ptk/README.md"
     original = readme.read_text()
     monkeypatch.setattr(
-        init_readme, "TEMPLATE", init_readme.TEMPLATE + "\nNew PTK guidance.\n"
+        init_readme, "TEMPLATE", init_readme.TEMPLATE + "\nNew PTk guidance.\n"
     )
     assert app.setup_authoring.execute(
         tmp_path, config_path="config/ptk", check=True
     ).paths
     assert readme.read_text() == original
     app.setup_authoring.execute(tmp_path, config_path="config/ptk")
-    assert "New PTK guidance." in readme.read_text()
+    assert "New PTk guidance." in readme.read_text()
     readme.write_text("local edit")
     manifest = tmp_path / ".github/ptk/manifest.json"
     before = manifest.read_bytes()
     with pytest.raises(PtkError, match="preserving locally changed"):
         app.setup_authoring.execute(tmp_path, config_path="other/deep/config")
     assert readme.read_text() == "local edit" and manifest.read_bytes() == before
-    readme.write_text(original + "\nNew PTK guidance.\n", newline="")
+    readme.write_text(original + "\nNew PTk guidance.\n", newline="")
     app.setup_authoring.execute(tmp_path, config_path="other/deep/config")
     relocated = tmp_path / "other/deep/config/README.md"
     assert not readme.exists()

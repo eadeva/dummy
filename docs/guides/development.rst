@@ -11,7 +11,7 @@ application ports; the domain contains models and pure rules. Wire adapters in
 Local checks
 ------------
 
-Run from the repository root; the project uses its own PTK configuration in
+Run from the repository root; the project uses its own PTk configuration in
 ``config/ptk`` with a ``default`` variant and no components::
 
    uv sync
@@ -29,10 +29,10 @@ locked npm dependencies, runs extension checks and creates the VSIX under
 An installed ``ptk`` can run the same jobs without the ``uv run`` prefix.
 Jobs using a Python runtime always select this checkout's uv project, with
 separate environments under ``.ptk/venvs/<job>``. This prevents a job from
-synchronizing the checkout's ``.venv`` while PTK or an editor is using it.
+synchronizing the checkout's ``.venv`` while PTk or an editor is using it.
 ``test`` and ``check`` select its ``dev`` dependency group; ``docs`` selects
 ``docs``, installing missing dependencies as needed. Groups remain defined in
-``pyproject.toml`` rather than duplicated in PTK tool definitions.
+``pyproject.toml`` rather than duplicated in PTk tool definitions.
 
 The ``dev`` group includes pinned CMake for the native generator integration
 test. uv puts the project's executables first on PATH, so a host CMake launcher
@@ -41,7 +41,7 @@ installed inside the project environment; no machine-wide installation is needed
 
 ``ptk test -- tests/test_init.py -q`` selects tests and forwards pytest options.
 JUnit results go to ``_reports/default/test/pytest/pytest.xml`` and are included
-in PTK's report, even when pytest fails. HTML docs go to
+in PTk's report, even when pytest fails. HTML docs go to
 ``_builds/default/docs/sphinx/html/index.html``. The default job is ``test``; the dummy hello
 and header-generation jobs are not part of this repository configuration.
 
@@ -52,19 +52,19 @@ variables remain filtered.
 
 This repository enables pre-commit through ``config/ptk/configs.ptk.yml``.
 Local jobs/workflows automatically install or repair the hooks. The committed
-``.pre-commit-config.yaml`` combines PTK's base with its repository overlay;
+``.pre-commit-config.yaml`` combines PTk's base with its repository overlay;
 Ruff uses the existing ``pyproject.toml`` settings. Run
 ``uv run ptk pre-commit run --all-files`` to check the whole checkout. The CX quality
 job runs those hooks and checks that the generated configuration is current.
-PTK-run hooks clear caller Python environment selectors such as ``VIRTUAL_ENV``
-and ``UV_PROJECT_ENVIRONMENT`` and remove PTK's own virtualenv bin directory
+PTk-run hooks clear caller Python environment selectors such as ``VIRTUAL_ENV``
+and ``UV_PROJECT_ENVIRONMENT`` and remove PTk's own virtualenv bin directory
 from the hook PATH. This prevents inherited settings from redirecting a hook's
-``uv sync`` into PTK's installation. Index, proxy, certificate and cache settings
+``uv sync`` into PTk's installation. Index, proxy, certificate and cache settings
 are retained. Hooks should declare their required runtime/dependencies.
 After changing the overlay, a maintainer runs
 ``ptk maintainer sync configs pre-commit`` and commits both files.
 
-Package builds and job runs use the same Git-managed PTK version configuration.
+Package builds and job runs use the same Git-managed PTk version configuration.
 Reachable ``v*`` tags take precedence; untagged/shallow checkouts use the explicit
 development fallback in ``versioning.ptk.yml``. Source distributions freeze their
 resolved version in metadata, so rebuilding them does not require Git.
@@ -119,7 +119,7 @@ Read the Docs theme 3.1.0 and Sphinx-Design 0.7.0. Sphinx-Design supplies
 RST grids and cards. Three PlantUML sources provide the architecture diagrams;
 their generated SVGs are committed so normal documentation builds need no Java
 or network renderer. Requirement overview counts come from Sphinx-Needs filters. Keep
-documentation authoring conventions separate from PTK product requirements.
+documentation authoring conventions separate from PTk product requirements.
 
 The configuration reference is generated from the validation schema and uses
 YAML paths and values. Published docs do not include a source-module catalog or
@@ -132,11 +132,11 @@ The wheel bundles sixteen project-facing skills, reference docs and examples
 through the allowlist in ``src/ptk/authoring_bundle.py``. Keep the canonical skill
 files in ``.github/skills`` and the agent in ``.github/agents``; do not maintain
 another copy for installed users.
-Consumer skill instructions must not depend on PTK's ``src`` or ``tests`` folders.
+Consumer skill instructions must not depend on PTk's ``src`` or ``tests`` folders.
 The release smoke check verifies installed Markdown links plus RST document,
 literal-include and download targets within the deployed bundle. Keep these
 checks complete when adding references. Raw RST schema directives refer readers
-to the bundled JSON schema; consumers do not build PTK's documentation to use it.
+to the bundled JSON schema; consumers do not build PTk's documentation to use it.
 
 ``ptk package`` selects the release/docs groups, builds the wheel from an sdist,
 checks metadata, and smoke-tests an installed wheel in a separate project before

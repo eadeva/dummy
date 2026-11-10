@@ -337,6 +337,8 @@ class PrepareRun:
             secret_values.add(value)
             return value
 
+        tool_bins: dict[str, dict[str, str]] = {}  # filled once the job PATH is known
+
         def scope(env: Mapping[str, str], step_path: tuple[str, ...] = ()) -> Scope:
             run_ns = {
                 "id": run_id,
@@ -367,6 +369,7 @@ class PrepareRun:
                     "version": version_scope,
                     "date": dates,
                     "git": git,
+                    "tools": tool_bins,
                     "steps": {
                         name: {
                             "build_dir": str(
@@ -462,6 +465,16 @@ class PrepareRun:
                     f"  install them with: ptk self-service tools --job {request.job} "
                     f"(or run the job with --setup)"
                 )
+
+        if self._tools is not None and job.required_tool_names:
+            found = self._tools.bin_dirs_by_name(
+                project, list(job.required_tool_names), base
+            )
+            for name in job.required_tool_names:
+                if name in found:
+                    tool_bins[name] = {"bin": found[name]}
+                elif request.dry_run:
+                    tool_bins[name] = {"bin": f"<{name} not installed>"}
 
         symbols.update(
             {
@@ -1056,7 +1069,7 @@ class RunJob:
                         result.launched_pid = outcome.launched_pid
                         message = (
                             f"GUI launched (PID {outcome.launched_pid}); "
-                            "runs independently of PTK, application exit is not monitored"
+                            "runs independently of PTk, application exit is not monitored"
                         )
                     expired = scope.deadline is not None and (
                         time.monotonic() - outcome.reporting_duration >= scope.deadline
@@ -1190,6 +1203,10 @@ class RunJob:
         cwd = Path(step.cwd)
         if not cwd.is_absolute():
             cwd = prepared.project.root / cwd
+        if step.cmake_build_dir:
+            env["PTK_CMAKE_BUILD_DIR"] = str(
+                prepared.project.root / step.cmake_build_dir
+            )
         plain = self._python.runtime(None, prepared.project.root, create=False)
         command = build_command(
             step,

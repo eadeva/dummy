@@ -1,12 +1,12 @@
 System scope and context
 ========================
 
-The system boundary includes the installed PTK CLI, its packaged resources and
+The system boundary includes the installed PTk CLI, its packaged resources and
 the optional installer that configures the current user's environment. Repository
 configuration is input; child processes and external tools perform project work.
 
 .. figure:: ../_static/diagrams/system-context.svg
-   :alt: Callers enter the PTK command interface; project configuration feeds preparation. Prepared contexts enter workflow, job and step execution, which delegates project work and sends evidence to logging and reporting. Run outputs are retained outside the CLI.
+   :alt: Callers enter the PTk command interface; project configuration feeds preparation. Prepared contexts enter workflow, job and step execution, which delegates project work and sends evidence to logging and reporting. Run outputs are retained outside the CLI.
    :figclass: ptk-diagram
    :target: ../_static/diagrams/system-context.svg
 
@@ -25,8 +25,8 @@ boundary describes ownership, not process isolation.
    :widths: 25 40 35
 
    * - Partner
-     - PTK receives
-     - PTK produces
+     - PTk receives
+     - PTk produces
    * - Developer / shell
      - Commands, options and completion requests
      - Help, candidates, diagnostics and exit status
@@ -57,4 +57,4 @@ bounded direct-child discovery. See :doc:`/guides/workflows`.
 
 System requirements specify observable contracts across these boundaries.
 Software requirements refine the loader, command, execution and reporting
-behavior inside PTK; they do not create artificial hardware requirements.
+behavior inside PTk; they do not create artificial hardware requirements.

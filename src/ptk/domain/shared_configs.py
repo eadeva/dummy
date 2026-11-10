@@ -7,6 +7,9 @@ from typing import Any
 
 
 def relative_path(value: str) -> str:
+    folder = value.endswith("/") and len(value) > 1
+    if folder:
+        value = value[:-1]
     if (
         not value
         or value.startswith("/")
@@ -16,26 +19,26 @@ def relative_path(value: str) -> str:
         or any(ord(c) < 32 or ord(c) == 127 for c in value)
     ):
         raise ValueError("expected a portable repository-relative file path")
-    return value
+    return value + "/" if folder else value
 
 
 def destination_path(value: str) -> str:
     relative_path(value)
-    path = PurePosixPath(value)
+    path = PurePosixPath(value.rstrip("/"))
     if (
         any(part.casefold() in {".git", ".ptk"} for part in path.parts)
         or path.name.casefold() == ".ptk-configs.lock.json"
         or value.endswith((".ptk.yml", ".ptk.yaml"))
     ):
         raise ValueError(
-            "destination cannot replace Git metadata, PTK state or authored PTK configuration"
+            "destination cannot replace Git metadata, PTk state or authored PTk configuration"
         )
     return value
 
 
 def valid_revision(value: str) -> str:
     if not re.fullmatch(
-        r"(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64}|v?\d+\.\d+(?:\.\d+)?(?:[-+][A-Za-z0-9.-]+)?)",
+        r"(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64}|v?\d+(?:\.\d+){1,3}(?:[-+][A-Za-z0-9.-]+)?)",
         value,
     ):
         raise ValueError(

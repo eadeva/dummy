@@ -15,7 +15,7 @@ Configured external dependencies, ordinary Python tools and maintenance.
    :req_satisfies: REQ_Sys_TOOLS
    :tags: implemented
 
-   PTK shall check declared tool versions, provision through configured supported sources/installers when explicitly requested, and recheck availability after installation.
+   PTk shall check declared tool versions, provision through configured supported sources/installers when explicitly requested, and recheck availability after installation.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -30,12 +30,12 @@ Configured external dependencies, ordinary Python tools and maintenance.
    :security: false
    :legal: false
    :status: under review
-   :verification_criteria: Provider tests cover environment/vault/keyring or mocked optional stores, unavailable providers and masked output without revealing stored values.
+   :verification_criteria: Provider tests cover environment and vault providers, unavailable providers and masked output without revealing stored values.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_TOOLS
    :tags: implemented
 
-   PTK shall provision and resolve declared credentials through supported providers and mask known secret values in its logging path.
+   PTk shall provision and resolve declared credentials through supported providers and mask known secret values in its logging path.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -55,7 +55,7 @@ Configured external dependencies, ordinary Python tools and maintenance.
    :req_satisfies: REQ_Sys_VMR
    :tags: implemented
 
-   PTK shall combine identical workspace credential definitions, disambiguate conflicts, and namespace storage by definition/workspace unless an explicit namespace is provided.
+   PTk shall combine identical workspace credential definitions, disambiguate conflicts, and namespace storage by definition/workspace unless an explicit namespace is provided.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -75,7 +75,7 @@ Configured external dependencies, ordinary Python tools and maintenance.
    :req_satisfies: REQ_Sys_TOOLS
    :tags: implemented
 
-   PTK shall provide header, CMake, Bazel, Make, GN, Yocto, Robot and Sphinx variant generators using uppercase VARIANT_<COMPONENT>_<FEATURE> symbols and step-local output files. Bazel shall receive schema-versioned JSON; its optional repository helper shall be a project-owned documentation resource outside PTK runtime. GN shall receive a .gni file, not plain Ninja rules.
+   PTk shall provide header, CMake, Bazel, Make, GN, Yocto, Robot and Sphinx variant generators using uppercase VARIANT_<COMPONENT>_<FEATURE> symbols and step-local output files. Bazel shall receive schema-versioned JSON; its optional repository helper shall be a project-owned documentation resource outside PTk runtime. GN shall receive a .gni file, not plain Ninja rules.
 
    **Origin:** Accepted reusable-component counterproposal and explicit Make/CMake/Bazel/GN integration request.
 
@@ -98,7 +98,7 @@ Configured external dependencies, ordinary Python tools and maintenance.
    :req_satisfies: REQ_Sys_TOOLS
    :tags: implemented
 
-   PTK shall resolve configured artifact destination paths from runtime context and execute only explicitly requested artifact operations.
+   PTk shall resolve configured artifact destination paths from runtime context and execute only explicitly requested artifact operations.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -118,7 +118,7 @@ Configured external dependencies, ordinary Python tools and maintenance.
    :req_satisfies: REQ_Sys_TOOLS
    :tags: implemented
 
-   PTK shall compose explicitly mapped external pre-commit/clang bases and project-owned overlays into separate generated files and expose offline drift validation. It shall not ship base policy.
+   PTk shall compose explicitly mapped external pre-commit/clang bases and project-owned overlays into separate generated files and expose offline drift validation. It shall not ship base policy.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -138,7 +138,7 @@ Configured external dependencies, ordinary Python tools and maintenance.
    :req_satisfies: REQ_Sys_TOOLS
    :tags: implemented
 
-   PTK shall expose hook install/uninstall/status and apply configured local hook setup without leaking PTK virtualenv selectors into hook commands.
+   PTk shall expose hook install/uninstall/status and apply configured local hook setup without leaking PTk virtualenv selectors into hook commands.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -146,31 +146,31 @@ Configured external dependencies, ordinary Python tools and maintenance.
 
    **Evidence:** ``src/ptk/application/use_cases/hooks.py``; ``tests/hooks/test_installation.py``.
 
-.. req-sw:: Run reusable Python tools without a third-party PTK plugin API
+.. req-sw:: Run reusable Python tools without a third-party PTk plugin API
    :id: REQ_Sw_EXTERNAL_TOOLS
    :req_type: functional
    :safety: QM
    :security: false
    :legal: false
    :status: accepted
-   :verification_criteria: A built ordinary wheel executes through PTK and uv with correct success/failure status; retired plugin settings and custom hook names produce editable configuration errors; installed PTK entry points are never discovered or imported; supported built-ins remain available.
+   :verification_criteria: A built ordinary wheel executes through PTk and uv with correct success/failure status; retired plugin settings and custom hook names produce editable configuration errors; installed PTk entry points are never discovered or imported; supported built-ins remain available.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_TOOLS
    :tags: implemented
 
-   PTK shall execute reusable Python tools through its normal command/Python modes
-   and shall not discover or load third-party PTK entry points. It shall reject
+   PTk shall execute reusable Python tools through its normal command/Python modes
+   and shall not discover or load third-party PTk entry points. It shall reject
    removed plugins/custom installers fields and unsupported operation, generator,
    provider and report-format names through normal configuration validation.
    It shall retain its shipped integrations and editable invalid configuration.
 
    **Origin:** Explicit user decision to remove plugin complexity and Python API
    version coupling in favor of ordinary packages distributed through Artifactory
-   and executed with uv. PTK has not been rolled out; no migration code, legacy
+   and executed with uv. PTk has not been rolled out; no migration code, legacy
    implementation or fallback behavior shall be retained.
 
    **Implementation:** Implemented; compatibility is defined by CLI/configuration
-   and documented data contracts, not public PTK Python callbacks. Project tools
+   and documented data contracts, not public PTk Python callbacks. Project tools
    remain responsible for their own dependencies, side effects and versioning.
 
    **Evidence:** ``tests/test_no_plugins.py``;

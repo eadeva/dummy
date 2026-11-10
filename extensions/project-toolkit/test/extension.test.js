@@ -301,7 +301,7 @@ test("activation discovers projects and runs jobs as processes with global varia
   assert.deepEqual(h.errors, []);
 });
 
-test("untrusted workspaces never discover or run PTK", async t => {
+test("untrusted workspaces never discover or run PTk", async t => {
   const h = harness(t, [inventory()], false);
   await h.controller.ready();
   await h.command("run", h.target());
@@ -706,7 +706,7 @@ test("clean bypasses required parameters and survives saved-task restoration", a
 });
 
 
-test("configuration tree follows PTK schema and opens logical fields", async t => {
+test("configuration tree follows PTk schema and opens logical fields", async t => {
   const h = harness(t);
   await h.controller.ready();
   const config = h.controller.provider.getChildren()[0].children[0].children.find(node => node.label === "Configuration");
@@ -947,7 +947,7 @@ test("a step removed while the run form is open prevents the entire variant batc
 });
 
 
-test("configuration graph trees use PTK metadata for job and workflow joins", async t => {
+test("configuration graph trees use PTk metadata for job and workflow joins", async t => {
   const doc = inventory(), config = doc.projects[0].configuration;
   config.value = {jobs: {build: {steps: {start: {uses: "echo"}, left: {uses: "echo", needs: "start"}, right: {uses: "echo", needs: "start"}, join: {uses: "echo", needs: ["left", "right"]}}}}, workflows: {verify: {jobs: {start: {}, left: {job: "build", needs: "start"}, right: {job: "build", needs: "start"}, join: {job: "build", needs: ["left", "right"]}}}}};
   const nodes = [{id: "start", needs: []}, {id: "left", needs: ["start"]}, {id: "right", needs: ["start"]}, {id: "join", needs: ["left", "right"]}];

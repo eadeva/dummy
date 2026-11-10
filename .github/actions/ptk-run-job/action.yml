@@ -1,11 +1,11 @@
 name: ptk-run-job
-description: Run exactly one installed PTK job and expose its manifest and relative outputs.
+description: Run exactly one installed PTk job and expose its manifest and relative outputs.
 inputs:
   working-directory:
     description: Repository root for relative output paths.
     default: .
   job:
-    description: One PTK job name (never a workflow).
+    description: One PTk job name (never a workflow).
     required: true
   variant:
     description: One concrete variant or alias; omit for the project default.
@@ -14,10 +14,10 @@ inputs:
     description: JSON object with typed job parameters. Secret parameters should use configured environment variables.
     default: '{}'
   no-cache:
-    description: Set true to disable PTK output reuse.
+    description: Set true to disable PTk output reuse.
     default: 'false'
   maintainer:
-    description: Set true for a maintainer job; existing PTK authorization still applies.
+    description: Set true for a maintainer job; existing PTk authorization still applies.
     default: 'false'
 outputs:
   outputs-valid:

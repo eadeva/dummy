@@ -1,7 +1,7 @@
 Introduction and goals
 ======================
 
-PTK provides a repository-defined CLI for recurring engineering work: building,
+PTk provides a repository-defined CLI for recurring engineering work: building,
 testing, generating files, preparing packages and collecting results. Teams
 write jobs once and expose typed parameters and variant choices through the
 terminal. CX pipelines invoke the same jobs while retaining their own orchestration.

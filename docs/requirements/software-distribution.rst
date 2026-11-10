@@ -16,7 +16,7 @@ items are explicitly marked and must not be presented as supported commands.
    :req_satisfies: REQ_Sys_DISTRIBUTION
    :tags: implemented
 
-   PTK release preparation shall bundle the matching VSIX in the Python package so self-service extension can install it without rebuilding from source.
+   PTk release preparation shall bundle the matching VSIX in the Python package so self-service extension can install it without rebuilding from source.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -36,7 +36,7 @@ items are explicitly marked and must not be presented as supported commands.
    :req_satisfies: REQ_Sys_DISTRIBUTION
    :tags: implemented
 
-   PTK installers shall install the selected Python source and then invoke supported completion and optional editor setup, reporting installation failure instead of claiming success.
+   PTk installers shall install the selected Python source and then invoke supported completion and optional editor setup, reporting installation failure instead of claiming success.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -56,7 +56,7 @@ items are explicitly marked and must not be presented as supported commands.
    :req_satisfies: REQ_Sys_DISTRIBUTION
    :tags: implemented
 
-   PTK self-service extension shall preserve an installed newer extension unless replacement is explicitly forced.
+   PTk self-service extension shall preserve an installed newer extension unless replacement is explicitly forced.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -76,9 +76,9 @@ items are explicitly marked and must not be presented as supported commands.
    :req_satisfies: REQ_Sys_UPGRADE
    :tags: planned
 
-   PTK installers shall compare the installed and selected PTK Python package versions and retain the installed package when it is newer, across supported package sources.
+   PTk installers shall compare the installed and selected PTk Python package versions and retain the installed package when it is newer, across supported package sources.
 
-   **Origin:** Accepted user request to keep the newest installed PTK; current installers still refresh the selected source and no package downgrade guard is implemented.
+   **Origin:** Accepted user request to keep the newest installed PTk; current installers still refresh the selected source and no package downgrade guard is implemented.
 
    **Implementation:** Not implemented. No passing verification result is claimed.
 
@@ -96,7 +96,7 @@ items are explicitly marked and must not be presented as supported commands.
    :req_satisfies: REQ_Sys_DISTRIBUTION
    :tags: implemented
 
-   PTK package preparation shall validate the sdist/wheel, documentation and editor artifact and stage a manifest without uploading, tagging or publishing.
+   PTk package preparation shall validate the sdist/wheel, documentation and editor artifact and stage a manifest without uploading, tagging or publishing.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -116,7 +116,7 @@ items are explicitly marked and must not be presented as supported commands.
    :req_satisfies: REQ_Sys_AUTHORING
    :tags: implemented
 
-   PTK maintainer sync agent shall distribute the expert agent, project-facing skills including DevOps maintenance, log analysis and native GitHub workflow authoring, offline references and examples from the installed package.
+   PTk maintainer sync agent shall distribute the expert agent, project-facing skills including DevOps maintenance, log analysis and native GitHub workflow authoring, offline references and examples from the installed package.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -136,7 +136,7 @@ items are explicitly marked and must not be presented as supported commands.
    :req_satisfies: REQ_Sys_AUTHORING
    :tags: implemented
 
-   PTK shall track synchronized resources and preserve local changes on repeat sync unless an explicit force update is requested.
+   PTk shall track synchronized resources and preserve local changes on repeat sync unless an explicit force update is requested.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -156,7 +156,7 @@ items are explicitly marked and must not be presented as supported commands.
    :req_satisfies: REQ_Sys_AUTHORING
    :tags: implemented
 
-   PTK distributed skills shall obtain current commands and configuration from the consuming project and installed CLI and shall not require PTK's own development tree.
+   PTk distributed skills shall obtain current commands and configuration from the consuming project and installed CLI and shall not require PTk's own development tree.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -176,10 +176,10 @@ items are explicitly marked and must not be presented as supported commands.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall generate commented callable GitHub workflows in the owning
+   PTk shall generate commented callable GitHub workflows in the owning
    repository's .github/workflows directory. Setup shall run the matrix command
    first; every execution job shall depend on it and its configured producers,
-   download producer outputs, run one PTK job and upload available outputs.
+   download producer outputs, run one PTk job and upload available outputs.
    Generation shall never overwrite existing files and shall warn instead.
    Runner selection, Docker images and caller events remain project TODOs.
    A detected VMR shall replace normal checkout with VMR checkout TODOs.

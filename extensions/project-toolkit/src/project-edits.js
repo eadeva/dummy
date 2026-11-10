@@ -1,6 +1,6 @@
 "use strict";
 
-// PTK supplies document ownership and schemas. This module applies form edits to
+// PTk supplies document ownership and schemas. This module applies form edits to
 // those documents; it does not discover files or compose configuration.
 const YAML = require("yaml");
 const model = require("./config-model");
@@ -53,13 +53,13 @@ function plan(snapshot, documents, operations) {
     const affected = bindings.filter(binding => !equal(at(value, binding.path), at(next, binding.path)));
     function checkOwned(before, after, path = []) {
       if (equal(before, after) || bindings.some(binding => prefix(binding.path, path))) return;
-      if (!bindings.some(binding => prefix(path, binding.path))) throw new Error("PTK did not provide a configuration file for this field. Register component directories in project settings first.");
+      if (!bindings.some(binding => prefix(path, binding.path))) throw new Error("PTk did not provide a configuration file for this field. Register component directories in project settings first.");
       for (const key of new Set([...Object.keys(before || {}), ...Object.keys(after || {})])) checkOwned(before?.[key], after?.[key], [...path, key]);
     }
     checkOwned(value, next);
     const oldBinding = operation.op === "rename" && bindings.find(binding => equal(binding.path, path) && !binding.document_path.length);
     const renamedText = oldBinding && result.get(oldBinding.file);
-    if (!affected.length && !equal(value, next)) throw new Error("PTK did not provide a configuration file for this field. Register component directories in project settings first.");
+    if (!affected.length && !equal(value, next)) throw new Error("PTk did not provide a configuration file for this field. Register component directories in project settings first.");
     for (const binding of affected) {
       const replacement = at(next, binding.path);
       const local = [...binding.document_path, ...path.slice(binding.path.length)];

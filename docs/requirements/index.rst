@@ -17,7 +17,7 @@ Requirements
    traceability
    decisions-and-gaps
 
-Explore what PTK is expected to do, how those expectations are refined, and
+Explore what PTk is expected to do, how those expectations are refined, and
 which decisions still need review. These are requirements for the CLI and its
 installation/integration boundaries. Documentation layout, theme and authoring
 instructions are maintained as guidance, not as product requirements.
@@ -41,7 +41,7 @@ instructions are maintained as guidance, not as product requirements.
 
          :need_count:`type in ['req-stkh', 'req-sys', 'req-sw'] and not is_part and 'superseded' not in tags and type == 'req-stkh'`
 
-      The outcomes people need from PTK.
+      The outcomes people need from PTk.
 
    .. grid-item-card:: System contracts
       :class-card: ptk-card ptk-metric
@@ -72,7 +72,7 @@ From a need to observable behavior
 ----------------------------------
 
 Features group stakeholder needs. System requirements describe the contracts
-PTK exposes to people, shells, repositories and tools. Software requirements
+PTk exposes to people, shells, repositories and tools. Software requirements
 refine those contracts into behavior that can be checked. Follow a requirement's
 **Satisfies** links upward or **Satisfied by** links downward.
 
@@ -147,7 +147,7 @@ Open work worth knowing about
    .. grid-item-card:: Accepted, not implemented
       :class-card: ptk-card ptk-amber
 
-      Keeping a newer installed PTK Python package when an installer selects
+      Keeping a newer installed PTk Python package when an installer selects
       an older version remains outstanding. The extension's existing version
       protection is a separate behavior.
 
@@ -223,7 +223,7 @@ Browse the specification
 Scope and evidence
 ------------------
 
-This baseline covers PTK's CLI, installer/package behavior and CLI-owned
+This baseline covers PTk's CLI, installer/package behavior and CLI-owned
 integration metadata. It does not specify the VS Code extension's user interface.
 Requirements were reconstructed from the project discussion and current code;
 the older CLI's requirements are not copied into this baseline.

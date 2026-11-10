@@ -205,3 +205,40 @@ jobs:
     output = result.stdout.decode("cp1252")
     assert "caf\u00e9" in output and "\\U0001f9ea" in output
     assert "passed" in output
+
+
+class ChunkedOutput:
+    """A pipe returning the given chunks, like ``read1`` on a busy process."""
+
+    def __init__(self, *chunks: bytes):
+        self.chunks = list(chunks)
+
+    def read1(self, _size: int) -> bytes:
+        return self.chunks.pop(0) if self.chunks else b""
+
+    def close(self) -> None:
+        pass
+
+
+def test_carriage_return_progress_is_flushed_every_few_seconds():
+    from ptk.adapters.process import _pump
+
+    times = iter([0.0, 1.0, 2.0, 7.0, 8.0, 9.0])
+    lines: list[str] = []
+    proc = SimpleNamespace(
+        stdout=ChunkedOutput(
+            b"start\r\nwriting output... ",
+            b"\r[ 25%] a",
+            b"\r[ 50%] b",
+            b"\r[ 75%] c",
+            b"\r[100%] d\ndone\nno newline",
+        )
+    )
+    _pump(proc, lines.append, clock=lambda: next(times))
+    assert lines == [
+        "start",
+        "writing output... \r[ 25%] a",
+        "\r[ 50%] b\r[ 75%] c\r[100%] d",
+        "done",
+        "no newline",
+    ]

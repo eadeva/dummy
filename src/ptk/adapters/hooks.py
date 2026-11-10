@@ -47,7 +47,7 @@ HOOK_TYPES = frozenset(
         "pre-rebase",
     }
 )
-# A PTK invocation inside a Git hook must not redirect VMR member Git commands
+# A PTk invocation inside a Git hook must not redirect VMR member Git commands
 # back to the caller's repository. Keep ordinary Git configuration/auth settings.
 GIT_PATH_VARIABLES = frozenset(
     {
@@ -63,7 +63,7 @@ GIT_PATH_VARIABLES = frozenset(
 )
 
 # Hooks must choose their own project environment. Inheriting these selectors
-# lets a language: system hook (e.g. uv sync) uninstall PTK from the environment
+# lets a language: system hook (e.g. uv sync) uninstall PTk from the environment
 # that launched it, even though pre-commit itself has a separate interpreter.
 # Keep package indexes, proxies, certificates and caches available.
 PYTHON_ENV_VARIABLES = frozenset(
@@ -92,7 +92,7 @@ def hook_environment(environ: Mapping[str, str]) -> dict[str, str]:
     blocked = GIT_PATH_VARIABLES | PYTHON_ENV_VARIABLES
     env = {k: v for k, v in environ.items() if k.upper() not in blocked}
     if sys.prefix != sys.base_prefix:
-        # uv tool run and activated environments can put PTK's own interpreter
+        # uv tool run and activated environments can put PTk's own interpreter
         # first on PATH. Do not expose that interpreter to bare python/pip hooks.
         binary = venv_python(Path(sys.prefix)).parent.resolve()
         for key, value in env.items():
@@ -296,7 +296,7 @@ class GitHooks:
             target = self._target(root, config)
             if self._status(target).installed:
                 return
-            # Serialize independent PTK processes and worktrees sharing Git hooks.
+            # Serialize independent PTk processes and worktrees sharing Git hooks.
             with file_lock(target.common / "ptk" / "pre-commit.lock", timeout=600):
                 if self._status(target).installed:
                     return

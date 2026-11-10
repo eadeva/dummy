@@ -88,6 +88,8 @@ def _plan(
             node.env = {k: _text(scope(v)) for k, v in step.env.items()}
             node.with_ = scope(step.with_)
             node.outputs = resolve_outputs(step.outputs, scope)
+            if step.cmake_build_dir:
+                node.cmake_build_dir = _text(scope(step.cmake_build_dir))
         except SubstitutionError as exc:
             raise PlanError(f"step '{label}': {exc}") from None
     return node

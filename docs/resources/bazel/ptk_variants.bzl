@@ -1,10 +1,10 @@
-"""Project-owned Bazel adapter for PTK's variant.bazel.json data contract.
+"""Project-owned Bazel adapter for PTk's variant.bazel.json data contract.
 
-Copy this resource into the consuming repository. PTK neither loads nor
+Copy this resource into the consuming repository. PTk neither loads nor
 executes it. See the variant-generation guide for MODULE.bazel and CLI setup.
 """
 
-_SETTINGS = '''"""Typed, non-command-line settings supplied by the resolved PTK variant."""
+_SETTINGS = '''"""Typed, non-command-line settings supplied by the resolved PTk variant."""
 def _value_impl(ctx):
     return []
 
@@ -21,7 +21,7 @@ def _ptk_variants_impl(ctx):
     # the repository even when its path stays unchanged.
     document = json.decode(ctx.read(ctx.path(source)))
     if type(document) != "dict" or document.get("schema_version") != 1:
-        fail("Expected PTK Bazel variant schema_version 1")
+        fail("Expected PTk Bazel variant schema_version 1")
     values = document.get("values")
     if type(values) != "dict" or type(values.get("VARIANT_NAME")) != "string":
         fail("Expected a values dictionary with VARIANT_NAME")
@@ -32,18 +32,18 @@ def _ptk_variants_impl(ctx):
     ]
     for name, value in values.items():
         if not name.startswith("VARIANT_") or not name or any([c not in "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_" for c in name.elems()]):
-            fail("Invalid PTK variant symbol: " + name)
+            fail("Invalid PTk variant symbol: " + name)
         if value == None:
             # Inactive non-boolean features have no typed setting; components
             # should gate their targets with VARIANT_COMPONENT_<COMPONENT>.
             continue
         kind = type(value)
         if kind not in ["bool", "int", "string"]:
-            fail("Unsupported PTK variant value for " + name + ": " + kind)
+            fail("Unsupported PTk variant value for " + name + ": " + kind)
         declarations.append("%s_value(name = %s, build_setting_default = %s)" % (kind, repr(name), repr(value)))
     ctx.file("BUILD.bazel", "\n".join(declarations) + "\n")
     ctx.file("settings.bzl", _SETTINGS)
-    ctx.file("variant.bzl", "# Resolved PTK configuration.\nVARIANT = " + repr(values) + "\n")
+    ctx.file("variant.bzl", "# Resolved PTk configuration.\nVARIANT = " + repr(values) + "\n")
 
 ptk_variants = repository_rule(
     implementation = _ptk_variants_impl,

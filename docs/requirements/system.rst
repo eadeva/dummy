@@ -17,7 +17,7 @@ level or repeat every software rule. Derived formulations remain under review.
    :req_satisfies: REQ_Stkh_CONFIG
    :tags: implemented
 
-   PTK shall discover one project marker, assemble only the conventional documents it owns, and reject invalid configuration with source diagnostics.
+   PTk shall discover one project marker, assemble only the conventional documents it owns, and reject invalid configuration with source diagnostics.
 
    **Origin:** Refinement of the linked stakeholder requirement; review this system-level formulation.
 
@@ -37,7 +37,7 @@ level or repeat every software rule. Derived formulations remain under review.
    :req_satisfies: REQ_Stkh_CLI
    :tags: implemented
 
-   PTK shall expose built-in diagnostic/setup groups and authorized configured jobs/workflows, with typed options, help, completion and process exit status.
+   PTk shall expose built-in diagnostic/setup groups and authorized configured jobs/workflows, with typed options, help, completion and process exit status.
 
    **Origin:** Refinement of the linked stakeholder requirement; review this system-level formulation.
 
@@ -52,12 +52,12 @@ level or repeat every software rule. Derived formulations remain under review.
    :security: false
    :legal: false
    :status: under review
-   :verification_criteria: Profile setup is repeatable; an independent shell resolves PTK on PATH and obtains command and value candidates.
+   :verification_criteria: Profile setup is repeatable; an independent shell resolves PTk on PATH and obtains command and value candidates.
    :verification_level: system-verification
    :req_satisfies: REQ_Stkh_COMPLETION
    :tags: implemented
 
-   PTK shall install shell-specific completion for the current user without requiring activation of the PTK Python environment.
+   PTk shall install shell-specific completion for the current user without requiring activation of the PTk Python environment.
 
    **Origin:** Refinement of the linked stakeholder requirement; review this system-level formulation.
 
@@ -77,7 +77,7 @@ level or repeat every software rule. Derived formulations remain under review.
    :req_satisfies: REQ_Stkh_EXECUTION, REQ_Stkh_VARIANTS
    :tags: implemented
 
-   PTK shall execute selected job/variant plans with declared inputs, controlled environments, bounded concurrency and cancellation, and return an outcome reflecting execution failure.
+   PTk shall execute selected job/variant plans with declared inputs, controlled environments, bounded concurrency and cancellation, and return an outcome reflecting execution failure.
 
    **Origin:** Refinement of the linked stakeholder requirement; review this system-level formulation.
 
@@ -97,7 +97,7 @@ level or repeat every software rule. Derived formulations remain under review.
    :req_satisfies: REQ_Stkh_DISTRIBUTION
    :tags: implemented
 
-   PTK shall provide installable Python artifacts containing version-matched optional editor and authoring resources, with explicit per-user setup operations.
+   PTk shall provide installable Python artifacts containing version-matched optional editor and authoring resources, with explicit per-user setup operations.
 
    **Origin:** Refinement of the linked stakeholder requirement; review this system-level formulation.
 
@@ -117,7 +117,7 @@ level or repeat every software rule. Derived formulations remain under review.
    :req_satisfies: REQ_Stkh_KEEP_NEWER
    :tags: planned
 
-   When a selected package is older than the installed PTK, the installer shall preserve the newer Python package and report the decision.
+   When a selected package is older than the installed PTk, the installer shall preserve the newer Python package and report the decision.
 
    **Origin:** Direct refinement of the accepted keep-newer request; not implemented.
 
@@ -137,7 +137,7 @@ level or repeat every software rule. Derived formulations remain under review.
    :req_satisfies: REQ_Stkh_RESULTS
    :tags: implemented
 
-   PTK shall capture execution evidence and normalize supported result formats for current and historical export without rerunning the job.
+   PTk shall capture execution evidence and normalize supported result formats for current and historical export without rerunning the job.
 
    **Origin:** Refinement of the linked stakeholder requirement; review this system-level formulation.
 
@@ -157,7 +157,7 @@ level or repeat every software rule. Derived formulations remain under review.
    :req_satisfies: REQ_Stkh_LOG_ANALYSIS
    :tags: implemented
 
-   PTK shall preserve severity, disposition, reason and source location for recognized log findings while leaving process and test outcomes unchanged.
+   PTk shall preserve severity, disposition, reason and source location for recognized log findings while leaving process and test outcomes unchanged.
 
    **Origin:** Refinement of the linked stakeholder requirement; review this system-level formulation.
 
@@ -177,7 +177,7 @@ level or repeat every software rule. Derived formulations remain under review.
    :req_satisfies: REQ_Stkh_CONTEXT
    :tags: implemented
 
-   PTK shall resolve documented runtime context at execution preparation using local metadata, distinguish source/checkout Git identity, and avoid repeated unnecessary queries.
+   PTk shall resolve documented runtime context at execution preparation using local metadata, distinguish source/checkout Git identity, and avoid repeated unnecessary queries.
 
    **Origin:** Refinement of the linked stakeholder requirement; review this system-level formulation.
 
@@ -197,7 +197,7 @@ level or repeat every software rule. Derived formulations remain under review.
    :req_satisfies: REQ_Stkh_INTEGRATION
    :tags: implemented
 
-   PTK shall select declared tools, built-in credential providers and ordinary Python commands, report unmet prerequisites, and keep project-specific behavior in configuration.
+   PTk shall select declared tools, built-in credential providers and ordinary Python commands, report unmet prerequisites, and keep project-specific behavior in configuration.
 
    **Origin:** Refinement of the linked stakeholder requirement; review this system-level formulation.
 
@@ -217,7 +217,7 @@ level or repeat every software rule. Derived formulations remain under review.
    :req_satisfies: REQ_Stkh_VMR
    :tags: implemented
 
-   PTK shall discover bounded workspace membership and route a repository alias to its own configuration and output context.
+   PTk shall discover bounded workspace membership and route a repository alias to its own configuration and output context.
 
    **Origin:** Refinement of the linked stakeholder requirement; review this system-level formulation.
 
@@ -237,7 +237,7 @@ level or repeat every software rule. Derived formulations remain under review.
    :req_satisfies: REQ_Stkh_AUTHORING
    :tags: implemented
 
-   PTK shall synchronize version-aligned skills, agent instructions and CLI reference resources into a consuming project without silently overwriting local edits.
+   PTk shall synchronize version-aligned skills, agent instructions and CLI reference resources into a consuming project without silently overwriting local edits.
 
    **Origin:** Refinement of the linked stakeholder requirement; review this system-level formulation.
 

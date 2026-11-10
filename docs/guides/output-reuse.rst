@@ -1,4 +1,4 @@
-Declared outputs and PTK cache
+Declared outputs and PTk cache
 ==============================
 
 Outputs belong to the project
@@ -13,9 +13,9 @@ covered in :doc:`artifacts`. Use :doc:`cx-matrix` to export execution metadata a
 destinations for a GitHub workflow's setup job. Output paths are obtained after
 producer execution; GitHub ``needs`` identifies the producer jobs to download.
 
-PTK's built-in cache is an **optional aid** that can also use these declarations.
+PTk's built-in cache is an **optional aid** that can also use these declarations.
 The project owns the cache configuration, the completeness and validity of its
-outputs, and the decision that reusing them is correct. PTK does not infer a
+outputs, and the decision that reusing them is correct. PTk does not infer a
 command's inputs, inspect source dependencies, discover remote changes or
 validate artifact meaning. A matching fingerprint means the declared contents
 match an earlier successful execution; it does not prove a build is current.
@@ -29,7 +29,7 @@ Both steps and jobs accept:
 
 * ``outputs: [path, ...]`` — explicit literal file or directory paths. Entries
   may also be ``{path: ..., artifact_type: ...}`` to label artifacts for uploads. Directories
-  include their contents recursively. PTK variables are supported; globs are not
+  include their contents recursively. PTk variables are supported; globs are not
   expanded. Blank paths and duplicate declarations are rejected.
 * ``cache: true`` — opt into local output reuse; default ``false``. Enabling it
   requires a nonempty ``outputs`` list. Outputs alone never enable caching.
@@ -37,9 +37,9 @@ Both steps and jobs accept:
 Step paths are relative to the resolved step ``cwd`` (repository root by
 default); job paths are relative to the repository root. Absolute paths are
 allowed. There is **no implicit run.build_dir fallback** and no inference from
-step outputs to job outputs. You can explicitly select a PTK-managed location
+step outputs to job outputs. You can explicitly select a PTk-managed location
 with ``${run.build_dir}`` on a step or ``${steps.compile.build_dir}`` on a job.
-Prefer stable build artifacts over PTK log/report directories, which PTK rotates
+Prefer stable build artifacts over PTk log/report directories, which PTk rotates
 or recreates for each invocation.
 
 Completed jobs print their output paths and write an ``upload.json`` manifest
@@ -69,7 +69,7 @@ does not need ``cache: true`` to supply dependency fingerprints. The project
 must ensure its declarations and commands account for every change relevant to
 ``compile``. For example, if the compilation also reads source files outside
 ``generated``, have the always-running preparation step produce a content
-manifest covering those sources, or keep compilation's PTK cache disabled.
+manifest covering those sources, or keep compilation's PTk cache disabled.
 
 A dependent step is reused only when all of these conditions hold:
 
@@ -136,12 +136,12 @@ For upload/download jobs, consider remote state explicitly. Local artifacts
 cannot establish whether a remote upload still exists or whether a downloadable
 artifact has changed. Keep transfer steps/jobs uncached when the transfer must
 occur, or make the project's always-running prerequisite establish the relevant
-remote state. PTK does not assume this responsibility.
+remote state. PTk does not assume this responsibility.
 
 Force execution
 ---------------
 
-``--no-cache-ptk`` disables PTK's built-in cache throughout the invocation,
+``--no-cache-ptk`` disables PTk's built-in cache throughout the invocation,
 including every job and step in a workflow. It is available globally and on job
 and workflow run commands and their shortcuts::
 
@@ -153,11 +153,11 @@ and workflow run commands and their shortcuts::
 
 The extension exposes the same option in job/workflow parameter forms and saved
 tasks. Tool-native caching (CMake, Bazel, Ninja, compiler caches and other tools)
-is untouched; PTK does not add cache-related arguments to those commands.
+is untouched; PTk does not add cache-related arguments to those commands.
 
 A forced execution bypasses cache reads and output hashing, invalidates old
 receipts for attempted work, and does not write new reusable receipts. A later
-normal invocation establishes fresh receipts. ``--re-run`` also bypasses PTK
+normal invocation establishes fresh receipts. ``--re-run`` also bypasses PTk
 reuse after its normal cleanup. ``--only-step`` runs the selected step without
 reuse because prerequisites were not executed. ``--to`` retains normal rules
 for the selected dependency subgraph. Dry runs show configuration and eligibility
@@ -171,10 +171,10 @@ the GUI always launches the program.
 Storage, matching and reports
 -----------------------------
 
-PTK stores only small versioned receipts in ``.ptk/output-cache/v1`` beneath each
+PTk stores only small versioned receipts in ``.ptk/output-cache/v1`` beneath each
 consumer repository. They contain hashes and the original successful run ID;
 there are **no artifact copies, downloads or restoration operations**. Remove
-this directory to reset PTK caching. Deleting or changing an output causes a miss
+this directory to reset PTk caching. Deleting or changing an output causes a miss
 and normal execution, not restoration. Cleanup does not gain permission to
 delete arbitrary declared paths outside its existing managed directories.
 
@@ -184,11 +184,11 @@ force dependent execution. Missing, unreadable, symbolic-link or special-file
 outputs are misses. Files changing during hashing also cause a miss. Hashing
 large directories has a cost; declare meaningful artifacts and avoid overly
 broad trees. External processes and concurrent unrelated jobs still need project
-coordination; PTK does not lock or sandbox arbitrary output paths.
+coordination; PTk does not lock or sandbox arbitrary output paths.
 
-Keys include PTK/platform/repository/job/variant identity, resolved parameters,
+Keys include PTk/platform/repository/job/variant identity, resolved parameters,
 features and relevant execution settings, environment and secrets. Secret values
-are hashed and are never stored in receipts. Per-invocation PTK run IDs and the
+are hashed and are never stored in receipts. Per-invocation PTk run IDs and the
 generated version-file location are excluded from the inherited environment key;
 explicit run-specific substitutions in commands or declarations still change
 the key. Files containing scripts, undeclared inputs and remote state are not

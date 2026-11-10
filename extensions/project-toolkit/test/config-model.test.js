@@ -80,7 +80,7 @@ test("parameter types, required values, environment fallback and secret exclusio
   assert.deepEqual(validateParameters([{ name: "optional", type: "int", default: 42 }], {}), {});
 });
 
-test("YAML scalar semantics match PTK and large integers and timestamps stay intact", () => {
+test("YAML scalar semantics match PTk and large integers and timestamps stay intact", () => {
   const text = "enabled: yes\ny: single-letter key\nlarge: 9007199254740993\ncreated: 2024-01-01\nproject: {name: old}\n";
   const state = model.inspect(text);
   assert.equal(state.value.enabled, true);

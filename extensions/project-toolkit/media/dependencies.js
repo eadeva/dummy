@@ -80,7 +80,7 @@
     if (item.uses) return { kind: "builtin", label: "Built-in", command: item.uses };
     const command = Array.isArray(item.run) ? item.run.map(value => /\s/.test(String(value)) ? JSON.stringify(value) : String(value)).join(" ") : String(item.run || "");
     if (item.python) {
-      const mode = item.python.project !== undefined ? "Python project" : item.python.venv !== undefined ? "Python environment" : item.python.uvx !== undefined ? "Python tool" : "PTK Python";
+      const mode = item.python.project !== undefined ? "Python project" : item.python.venv !== undefined ? "Python environment" : item.python.uvx !== undefined ? "Python tool" : "PTk Python";
       return { kind: "python", label: mode, command };
     }
     if (!item.run && Array.isArray(item.generators) && item.generators.length) return { kind: "generator", label: "Generate files", command: item.generators.join(", ") };

@@ -18,7 +18,7 @@ hide stereotype
 top to bottom direction
 actor "Developer / CX\nEditor / assistant" as Client
 artifact "Project configuration\nJobs, variants, tools, policies" as Config #FFF6E6
-package "PTK CLI" {
+package "PTk CLI" {
   component "Command interface\nHelp, options, completion, JSON" as CLI
   component "Project preparation\nConfig, variants, tools, credentials" as Prepare
   component "Execution\nWorkflows, jobs, steps" as Execute

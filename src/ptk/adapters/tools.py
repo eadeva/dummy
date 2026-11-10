@@ -156,7 +156,7 @@ class SystemToolInstaller:
         }[method.kind]
         if method.kind in {"download", "uv_tool", "artifactory"}:
             target = self.tools_dir / name / method.identity
-            with file_lock(target.with_suffix(".lock"), timeout=1800):
+            with file_lock(target.with_suffix(".lock"), timeout=1800, waiting=out):
                 if (target / MARKER).is_file():
                     return
                 handler(name, method, out)
@@ -211,7 +211,7 @@ class SystemToolInstaller:
                 name,
                 replace(method, download=joined),
                 out,
-                fetch=lambda _url, file: client.fetch_volumes(volumes, file),
+                fetch=lambda _url, file: client.fetch_volumes(volumes, file, out),
                 verified=True,
             )
             return
@@ -337,6 +337,8 @@ class SystemToolInstaller:
                 out(f"warning: no sha256 configured for {name} (got {digest})")
             staging = Path(tmp) / "unpacked"
             staging.mkdir()
+            if source.extract:
+                out(f"extracting {filename}")
             if source.extract and zipfile.is_zipfile(file):
                 _unzip(file, staging)
             elif source.extract and tarfile.is_tarfile(file):

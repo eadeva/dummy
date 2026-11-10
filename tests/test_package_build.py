@@ -68,12 +68,12 @@ def test_tagged_build_and_frozen_sdist_rebuild(tmp_path):
         )
 
     git("init", "-q")
-    git("config", "user.name", "PTK Test")
+    git("config", "user.name", "PTk Test")
     git("config", "user.email", "test@example.invalid")
     git("add", ".")
     git("commit", "-qm", "initial")
     git("tag", "v4.5.6")
-    # An unrelated local configuration error must not prevent installing PTK.
+    # An unrelated local configuration error must not prevent installing PTk.
     # This reproduces the install.ps1 failure during Hatch metadata generation.
     (checkout / "config/ptk/artifactory_structure.ptk.yml").write_text(
         "artifactory: {}"

@@ -54,13 +54,13 @@ The extension's step choices produce these ordinary configurations:
      - Platform shell syntax: normally ``/bin/sh`` on POSIX or ``cmd.exe`` on Windows.
    * - Bash file
      - ``[tools/check.sh, --verbose]``
-     - PTK invokes ``bash``; Bash must be available on the host.
+     - PTk invokes ``bash``; Bash must be available on the host.
    * - PowerShell file
      - ``[tools/check.ps1, -Verbose]``
      - Available ``pwsh``, otherwise ``powershell``, with ``-NoProfile -ExecutionPolicy Bypass -File``.
    * - Windows batch file
      - ``[tools/check.cmd]`` or ``[tools/check.bat]``
-     - PTK invokes ``cmd /c``; requires a Windows host.
+     - PTk invokes ``cmd /c``; requires a Windows host.
    * - Explicit Bash expression
      - ``[bash, -c, "echo Hello"]``
      - The expression is one argument interpreted by Bash.
@@ -78,17 +78,17 @@ tools and scripts are responsible for supporting the host OS. Naming a shell
 does not install it or translate its syntax.
 
 A command string starting with a recognized script path and containing no shell
-operators is split into arguments and uses PTK's script dispatch. Adding a
+operators is split into arguments and uses PTk's script dispatch. Adding a
 ``python`` setting also selects argument execution rather than the platform
 shell. For explicit shell semantics, name the interpreter as shown above and
 omit ``python``. See :doc:`/guides/python-tools` for Python script, package,
 module and inline-code choices. Use a dry run to inspect the resolved command
 before execution.
 
-Substitution happens before the shell parses a command string; PTK does not
+Substitution happens before the shell parses a command string; PTk does not
 quote substituted values. A parameter, environment value or secret containing
 shell syntax therefore changes the command. Callers and CX events can influence
-such values, so PTK warns when ``${params.*}``, ``${env.*}`` or ``${secrets.*}``
+such values, so PTk warns when ``${params.*}``, ``${env.*}`` or ``${secrets.*}``
 appear in a shell string. Use a list ``run`` to pass them as single arguments,
 or read them from the environment inside a script.
 
@@ -120,7 +120,7 @@ The expression language supports boolean operators, comparisons and membership;
 it rejects function calls such as ``success()`` and ``exists()``, arithmetic and
 arbitrary Python. Put dynamic checks inside a command or Python script, where
 files and runtime results can be inspected. A successful no-op is a success,
-not a PTK skipped result. Do not use ``continue_on_error`` as a failure-only
+not a PTk skipped result. Do not use ``continue_on_error`` as a failure-only
 condition: it releases dependents after both successful and tolerated failed
 execution.
 
@@ -141,15 +141,15 @@ Inside a step, ``${run.build_dir}``, ``${run.reports_dir}`` and
 step's files, use ``${steps.ID.build_dir}``, ``${steps.ID.reports_dir}`` or
 ``${steps.ID.log_file}`` and declare the corresponding dependency. Dots in IDs
 are supported. These references describe paths in the current run layout;
-they do not prove that a prerequisite ran or that a file exists. PTK does not
+they do not prove that a prerequisite ran or that a file exists. PTk does not
 publish arbitrary ``steps.ID.outputs.NAME`` values or restore previous-run outputs.
 
 Job binaries are shared within the job/variant. Project authors must declare
 ordering or isolate paths for shared files, caches, generated sources, hardware,
-services and external systems. PTK rejects unordered ``python.project`` steps
+services and external systems. PTk rejects unordered ``python.project`` steps
 that resolve to the same uv project environment, even with one worker. Separate
 ``UV_PROJECT_ENVIRONMENT`` values or a ``needs`` edge resolve that conflict.
-PTK cannot infer every resource accessed by arbitrary commands.
+PTk cannot infer every resource accessed by arbitrary commands.
 
 .. _execution-boundaries:
 
@@ -160,11 +160,11 @@ Project responsibility and execution boundaries
 for projects.** Projects choose their languages, build tools, artifact layouts,
 checks, caching, resource coordination and recovery policies. They can reuse
 existing scripts and integrate hardware or external services without adapting
-their internals to one PTK-specific build model.
+their internals to one PTk-specific build model.
 
-PTK provides common orchestration and records the outcomes reported by those
+PTk provides common orchestration and records the outcomes reported by those
 implementations. Project scripts, Python packages and selected tools own the correctness
-of their operations. PTK does not inspect or control their arbitrary internal
+of their operations. PTk does not inspect or control their arbitrary internal
 file and resource operations. Projects decide which validation and isolation
 guarantees their work requires, implement them, and report failure when their
 contracts are not met. This is the intended division of responsibility.
@@ -179,22 +179,22 @@ inside a job and job invocations inside a workflow.
    :widths: 20 35 45
 
    * - Area
-     - PTK provides
+     - PTk provides
      - Project implementation owns
    * - Dependencies
      - Validation of declared IDs and edges; scheduling after prerequisites pass
        or their failures are explicitly allowed.
-     - All required ordering. PTK does not discover file reads/writes, infer
+     - All required ordering. PTk does not discover file reads/writes, infer
        missing edges, or transfer artifacts along an edge.
    * - Inputs and outputs
      - Configured storage paths, required-output existence/type validation, logging,
        report collection and managed cleanup.
      - Checks that required inputs exist and are current, and artifact contents
-       and versions are valid. PTK checks declared output paths, not semantics.
+       and versions are valid. PTk checks declared output paths, not semantics.
    * - Isolation
      - Per-step storage conventions and composed command environments.
      - Any required filesystem, process, network or device isolation. Commands
-       and Python tools execute with the user's permissions; PTK does not sandbox
+       and Python tools execute with the user's permissions; PTk does not sandbox
        them or restrict them to their step directories.
    * - Concurrent resources
      - Worker limits, job/variant run locks, and preflight checks for known
@@ -206,11 +206,11 @@ inside a job and job invocations inside a workflow.
      - Explicit partial-run selection, retries, cancellation and retained run
        evidence.
      - Input freshness, safe reuse, repeatable side effects and recovery from
-       partial writes. PTK does not perform dependency-based up-to-date checks,
+       partial writes. PTk does not perform dependency-based up-to-date checks,
        content-addressed artifact caching, automatic output restoration or
        transactional rollback of command side effects.
 
-If ``compile`` declares a binary in ``outputs`` but fails to create it, PTK fails
+If ``compile`` declares a binary in ``outputs`` but fails to create it, PTk fails
 that producer and blocks its dependents. For undeclared files or invalid contents,
 the command or a validation step must report failure. A reference such as
 ``${steps.compile.build_dir}`` identifies a location; it does not create a dependency
@@ -218,15 +218,15 @@ or an output declaration. Required-output failures cannot be tolerated.
 
 Distinct step folders and ``environment.isolate: true`` do not prevent a command
 from writing into another step's directory or the repository. Setting ``cwd``
-only changes the starting directory. Cleanup path checks protect PTK's own
+only changes the starting directory. Cleanup path checks protect PTk's own
 cleanup operation; they do not restrict what an executed command can delete.
 Use an explicitly configured external container, VM or other execution boundary
-when isolation is required. Build tools invoked by PTK can enforce their own
-input/output, caching or sandboxing rules; PTK does not add those guarantees.
+when isolation is required. Build tools invoked by PTk can enforce their own
+input/output, caching or sandboxing rules; PTk does not add those guarantees.
 
 Worker counts limit scheduled work, not total system load or exclusive resource
 ownership. Workflow and job limits compose, invoked tools can start their own
-workers, and other PTK runs or external processes may run concurrently.
+workers, and other PTk runs or external processes may run concurrently.
 ``max_workers: 1`` is not a substitute for correct ``needs`` relationships.
 Retries may repeat writes or remote actions; cancellation cannot undo completed
 side effects. Project commands must handle those cases explicitly.
@@ -234,7 +234,7 @@ side effects. Project commands must handle those cases explicitly.
 A graph preview therefore cannot prove that a build will work or that independent
 branches are safe to run together. A green report node records the outcome
 reported by the project implementation. The project is responsible for making
-that outcome reflect its required artifact checks; PTK performs no independent
+that outcome reflect its required artifact checks; PTk performs no independent
 general validation of artifact correctness or reproducibility. See the
 project-flexibility decision :need:`DD_EXECUTION_BOUNDARIES` and
 :need:`DD_ROOT_CWD`.
@@ -259,7 +259,7 @@ Selecting part of a job
 step IDs. There is no ``--from`` option. ``--only-step`` does not bypass the
 selected step's conditions, parameter validation, credentials or tool checks.
 Its preview and report list the omitted prerequisites. A fresh or cleaned checkout
-may lack required files; PTK never silently reads a historical run to repair this.
+may lack required files; PTk never silently reads a historical run to repair this.
 Current report inputs are reset for each run, so do not use retained reports as
 an implicit build cache. Keep reusable build artifacts in explicit build locations.
 
@@ -310,7 +310,7 @@ alone shows authored topology, not the outcome of runtime conditions.
 The graph does not discover or verify artifact dependencies; see
 :ref:`execution-boundaries`.
 
-The extension consumes the same PTK-provided tree projection. Expand
+The extension consumes the same PTk-provided tree projection. Expand
 prerequisites to inspect their dependents; both canonical nodes and shared
 references edit the same configuration definition. There are no dependency-level
 navigation groups. See :doc:`/guides/editor` for configuration graph controls.
@@ -338,12 +338,12 @@ prerequisite edges remain as a **Details hidden** node, so the graph cannot impl
 that a dependency did not exist. Its message, command, duration, logs and result
 are not exposed by the graph. The graph does not execute or rerun anything.
 
-PTK output reuse
+PTk output reuse
 ----------------
 
 Jobs and steps support project-owned ``outputs`` and opt-in ``cache: true``.
 Every root runs, and only dependents can reuse unchanged existing declared
-outputs. ``--no-cache-ptk`` on a job or workflow disables all PTK reuse in that
+outputs. ``--no-cache-ptk`` on a job or workflow disables all PTk reuse in that
 invocation without changing tool-native caches. ``--re-run`` also bypasses reuse;
 ``--only-step`` never reuses the selected step. See :doc:`/guides/output-reuse`
 for the complete matching, storage and reporting contract.
@@ -351,7 +351,7 @@ for the complete matching, storage and reporting contract.
 Completed-job artifacts
 -----------------------
 
-After execution, summaries list resolved output paths and availability. PTK
+After execution, summaries list resolved output paths and availability. PTk
 writes a versioned ``upload.json`` in the job log directory with available
 files/directories and producer properties. Outputs accept strings or
 ``{path: ..., artifact_type: ...}`` entries. This does not transfer files or
@@ -361,7 +361,7 @@ Required output validation
 --------------------------
 
 Every declared output is required; there is no optional-output flag or inferred
-build directory. After a successful step, PTK checks its resolved output paths
+build directory. After a successful step, PTk checks its resolved output paths
 before marking the step passed, releasing dependents or saving a cache receipt.
 Missing paths, symlinks and non-file/non-directory paths fail the producer. A
 required-output failure cannot be tolerated with ``continue_on_error``.
@@ -375,10 +375,10 @@ Skipped steps do not have their outputs checked. Dry-runs do not check outputs.
 Partial ``--to`` / ``--only-step`` runs check executed step outputs but do not
 require whole-job outputs. A full job still must produce all declared job outputs
 when an optional step is skipped. Detached GUI jobs and their launch steps cannot
-declare outputs; completed preparation steps can. PTK final report files are exported after execution/output validation; declare
+declare outputs; completed preparation steps can. PTk final report files are exported after execution/output validation; declare
 the report directory for those artifacts rather than a not-yet-exported report file.
 Existing files satisfy existence
-checks: PTK does not prove that this execution created them, inspect their semantic
+checks: PTk does not prove that this execution created them, inspect their semantic
 content or require nonempty directories. Cache content hashes remain separate from
 this existence contract. Output validation does not retry an otherwise successful
 command; configured retries apply to command/built-in execution failures.

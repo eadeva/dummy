@@ -10,7 +10,7 @@ import yaml
 from ...domain.errors import PtkError
 from ..ports import HostEnvironment, ProjectScaffold, WorkspaceMember
 
-IGNORE = """# PTK generated workspace
+IGNORE = """# PTk generated workspace
 .ptk/
 _builds/
 _bin/
@@ -174,7 +174,7 @@ class InitProject:
         }
         notes = {
             "project.ptk.yml": "Project settings and component directories (relative to the repository root).",
-            "folder_structure.ptk.yml": "Output folders; these are also PTK's defaults when this file is absent.",
+            "folder_structure.ptk.yml": "Output folders; these are also PTk's defaults when this file is absent.",
             "workflows/verify.ptk.yml": "Local orchestration: ptk workflow run verify. The filename supplies the workflow name.",
             "jobs/hello.ptk.yml": 'Try: ptk hello --message "Hello" -V debug. The filename supplies the job name.',
             "jobs/build.ptk.yml": "Portable starter: ptk build -V release. Replace these steps with your build.",

@@ -1,4 +1,4 @@
-"""PTK documentation. Requirement conventions are declared here, never loaded from YAML."""
+"""PTk documentation. Requirement conventions are declared here, never loaded from YAML."""
 
 import sys
 from pathlib import Path
@@ -6,15 +6,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent / "_ext"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-project = "PTK"
-author = "PTK contributors"
+project = "PTk"
+author = "PTk contributors"
 extensions = ["schema_reference", "diagram_assets", "sphinx_needs", "sphinx_design"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 html_theme = "sphinx_rtd_theme"
 html_theme_options = {"navigation_depth": 3, "collapse_navigation": False}
 html_static_path = ["_static"]
 html_css_files = ["custom.css", "ptk-docs.css"]
-html_title = "PTK documentation"
+html_title = "PTk documentation"
 html_show_sourcelink = True
 
 # This small, explicit subset follows the supplied requirements meta-model.

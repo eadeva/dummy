@@ -1,4 +1,4 @@
-"""An ordinary wheel runs through uv without importing PTK into its environment."""
+"""An ordinary wheel runs through uv without importing PTk into its environment."""
 
 import shutil
 import subprocess

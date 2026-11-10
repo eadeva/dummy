@@ -86,7 +86,7 @@ def _listify(value: Any) -> Any:
 
 class OutputSpec(_Strict):
     path: StrictStr = Field(
-        description="Literal output file or folder path. Supports the same PTK variables as a string output."
+        description="Literal output file or folder path. Supports the same PTk variables as a string output."
     )
     artifact_type: StrictStr | None = Field(
         default=None,
@@ -112,7 +112,7 @@ class RepositorySpec(_Strict):
         pattern=r"^[a-z][a-z0-9_-]*$",
     )
     config_path: str = Field(
-        description="Configuration directory relative to .main.ptk.yml. PTK loads the conventional configuration files from this directory.",
+        description="Configuration directory relative to .main.ptk.yml. PTk loads the conventional configuration files from this directory.",
         min_length=1,
     )
 
@@ -157,7 +157,7 @@ class ProjectSpec(_Strict):
     )
     default_job: str | None = Field(
         default=None,
-        description="Job used when PTK is invoked without a command. Choose a job defined in this repository.",
+        description="Job used when PTk is invoked without a command. Choose a job defined in this repository.",
     )
     components: dict[str, ComponentRegistration] = Field(
         description="Register component names and their source directories. Each component owns its local variant and feature definitions.",
@@ -185,7 +185,7 @@ class ParamSpec(_Strict):
     )
     default: Any = Field(
         default=None,
-        description="Value used when no explicit argument or environment value is supplied. Supports PTK variables resolved when the job runs. Required and secret parameters cannot have defaults.",
+        description="Value used when no explicit argument or environment value is supplied. Supports PTk variables resolved when the job runs. Required and secret parameters cannot have defaults.",
     )
     choices: list[str] | None = Field(
         default=None,
@@ -310,7 +310,7 @@ class PythonSpec(_Strict):
     )  # dependency groups for project mode
     interpreter: Literal["cli"] | None = Field(
         default=None,
-        description="Use cli to run with PTK’s own Python environment. Choose exactly one Python execution mode.",
+        description="Use cli to run with PTk’s own Python environment. Choose exactly one Python execution mode.",
     )  # ptk's own environment
 
     @field_validator("with_", "groups", mode="before")
@@ -347,11 +347,11 @@ class PythonSpec(_Strict):
 class StepSpec(_Strict):
     outputs: list[StrictStr | OutputSpec] = Field(
         default_factory=list,
-        description="Explicit output files or folders, as strings or {path, artifact_type} objects, relative to this step's cwd or absolute. Supports PTK variables; no globs or implicit build directory. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. Every declared path is required after successful execution; missing or nonregular outputs fail before dependents run. The project owns semantic validity. Outputs can provide dependency fingerprints without enabling this step's cache.",
+        description="Explicit output files or folders, as strings or {path, artifact_type} objects, relative to this step's cwd or absolute. Supports PTk variables; no globs or implicit build directory. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. Every declared path is required after successful execution; missing or nonregular outputs fail before dependents run. The project owns semantic validity. Outputs can provide dependency fingerprints without enabling this step's cache.",
     )
     cache: StrictBool = Field(
         default=False,
-        description="PTK cache is an optional aid; cache correctness is the project’s responsibility. Reuse existing outputs after unchanged successful dependencies. Requires explicit outputs. Steps without needs always execute; --no-cache-ptk disables reuse throughout the execution. No files are copied or restored.",
+        description="PTk cache is an optional aid; cache correctness is the project’s responsibility. Reuse existing outputs after unchanged successful dependencies. Requires explicit outputs. Steps without needs always execute; --no-cache-ptk disables reuse throughout the execution. No files are copied or restored.",
     )
     generators: list[
         Literal["header", "make", "cmake", "bazel", "gn", "yocto", "robot", "sphinx"]
@@ -408,7 +408,7 @@ class StepSpec(_Strict):
     )
     when: str | None = Field(
         default=None,
-        description="Condition evaluated during planning against PTK execution symbols, before steps run. Use cx for CX-only steps. Cannot inspect prior step results or call functions. The step is skipped when the expression is false.",
+        description="Condition evaluated during planning against PTk execution symbols, before steps run. Use cx for CX-only steps. Cannot inspect prior step results or call functions. The step is skipped when the expression is false.",
     )
     continue_on_error: bool = Field(
         default=False, description="Allow execution to continue after this step fails."
@@ -425,10 +425,10 @@ class StepSpec(_Strict):
     )
     cwd: str | None = Field(
         default=None,
-        description="Working directory for this step; defaults to the repository root. Supports PTK variable expressions.",
+        description="Working directory for this step; defaults to the repository root. Supports PTk variable expressions.",
     )
     env: dict[str, str] = Field(
-        description="Environment variables added or overridden for this step. Values support PTK variables.",
+        description="Environment variables added or overridden for this step. Values support PTk variables.",
         default_factory=dict,
     )
     secrets: dict[str, str] = Field(
@@ -445,6 +445,10 @@ class StepSpec(_Strict):
     )
     report: bool = Field(
         default=True, description="Include this step in the job report."
+    )
+    cmake_build_dir: str | None = Field(
+        default=None,
+        description="CMake build directory configured by a script or wrapper in this run step, relative to the repository root or absolute. PTk requests CMake File API replies there before the step and imports the changed cache, File API replies and console diagnostics afterwards. Direct cmake configure commands need no setting. Supports PTk variables.",
     )
 
     @field_validator("env", mode="before")
@@ -467,6 +471,8 @@ class StepSpec(_Strict):
             raise ValueError("'with' is only allowed together with uses")
         if self.passthrough and self.run is None:
             raise ValueError("'passthrough' is only allowed together with run")
+        if self.cmake_build_dir is not None and self.run is None:
+            raise ValueError("'cmake_build_dir' is only allowed together with run")
         return self
 
     @property
@@ -480,15 +486,15 @@ class StepSpec(_Strict):
 class JobSpec(_Strict):
     outputs: list[StrictStr | OutputSpec] = Field(
         default_factory=list,
-        description="Explicit job output files or folders, as strings or {path, artifact_type} objects, relative to the repository root or absolute. Supports PTK variables including steps.<id>.build_dir. Used by workflow dependents; no outputs are inferred from steps or build directories. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. Every declared output is required after successful full execution. Missing outputs fail the producer before consumers can run. The project owns content validity.",
+        description="Explicit job output files or folders, as strings or {path, artifact_type} objects, relative to the repository root or absolute. Supports PTk variables including steps.<id>.build_dir. Used by workflow dependents; no outputs are inferred from steps or build directories. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. Every declared output is required after successful full execution. Missing outputs fail the producer before consumers can run. The project owns content validity.",
     )
     cache: StrictBool = Field(
         default=False,
-        description="PTK cache is an optional aid; cache correctness is the project’s responsibility. Allow whole-job output reuse in workflows after unchanged successful needs. Requires explicit outputs. Standalone jobs and workflow roots always run; --no-cache-ptk disables this and all step caches. Existing outputs are reused in place.",
+        description="PTk cache is an optional aid; cache correctness is the project’s responsibility. Allow whole-job output reuse in workflows after unchanged successful needs. Requires explicit outputs. Standalone jobs and workflow roots always run; --no-cache-ptk disables this and all step caches. Existing outputs are reused in place.",
     )
     gui: StrictBool = Field(
         default=False,
-        description="Show this job under GUIs. Run prerequisites normally, then launch the single final command in a detached process and let PTK exit. Success means the process started, not that the application finished. The final step cannot use timeout or retries.",
+        description="Show this job under GUIs. Run prerequisites normally, then launch the single final command in a detached process and let PTk exit. Success means the process started, not that the application finished. The final step cannot use timeout or retries.",
     )
     variant_independent: StrictBool = Field(
         default=False,
@@ -707,12 +713,12 @@ class ArtifactorySource(_Strict):
     )  # bearer token; never store the value in YAML
     token: str | None = Field(
         default=None,
-        description="Credential reference credential.field for the bearer token, resolved through PTK's credential providers when installing. Alternative to token_env.",
+        description="Credential reference credential.field for the bearer token, resolved through PTk's credential providers when installing. Alternative to token_env.",
         pattern=r"^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$",
     )
     split: bool = Field(
         default=False,
-        description="The archive is stored as numbered volumes name.001, name.002, ... (byte-split). PTK downloads all volumes in order, verifies each against Artifactory's sha256 and joins them before extraction. name is the base name without the volume suffix.",
+        description="The archive is stored as numbered volumes name.001, name.002, ... (byte-split). PTk downloads all volumes in order, verifies each against Artifactory's sha256 and joins them before extraction. name is the base name without the volume suffix.",
     )
     sha256: str | None = Field(
         description="Expected 64-character SHA-256 digest used to verify the download.",
@@ -788,11 +794,7 @@ class ToolSpec(_Strict):
     )
 
 
-ProviderName = Literal["env", "keyring", "gopass", "vault", "prompt"]
-
-
-class GopassSpec(_Strict):
-    path: str = Field(description="Entry path in the gopass password store.")
+ProviderName = Literal["env", "vault", "prompt"]
 
 
 class CredentialSpec(_Strict):
@@ -807,24 +809,21 @@ class CredentialSpec(_Strict):
         description="Named values belonging to this credential, for example token, username or password.",
         default_factory=lambda: ["token"],
     )
-    providers: list[Literal["env", "keyring", "gopass", "vault", "prompt"]] = Field(
-        description="Credential providers to try, in order. Default: env, keyring, gopass, vault, prompt; on Windows env, vault, keyring, gopass, prompt.",
-        default_factory=lambda: ["env", "keyring", "gopass", "vault", "prompt"],
+    providers: list[ProviderName] = Field(
+        description="Credential providers to try, in order: env (<PROJECT>_<USER>_<CREDENTIAL>_<FIELD>), the built-in encrypted vault, then a terminal prompt.",
+        default_factory=lambda: ["env", "vault", "prompt"],
     )
     env: dict[str, str] = Field(
         description="Map credential field names to environment variable names. Store names, not secret values.",
         default_factory=dict,
     )  # field: ENV_VAR
-    gopass: GopassSpec | None = Field(
-        default=None, description="Location of this credential in the gopass store."
-    )
     user_field: str | None = Field(
         default=None,
-        description="Field holding the account name. Outside CX it is the user running PTK (lowercase); in CX it comes from the env provider.",
+        description="Field holding the account name. Outside CX it is the user running PTk (lowercase); in CX it comes from the env provider.",
     )
     remember: bool = Field(
         default=True,
-        description="Store values entered at the prompt in the first writable provider (by default the encrypted vault on Windows, gopass or keyring on Linux). Set false to ask every run.",
+        description="Store values entered at the prompt in the encrypted vault. Set false to ask every run.",
     )
     test: str | None = Field(
         default=None, description="Command used to verify that the credential works."
@@ -905,6 +904,14 @@ class ConfigFileMapping(_Strict):
             raise ValueError(
                 "overlay and output must be declared together; destination is always the unchanged external base"
             )
+        if self.source.endswith("/") != self.destination.endswith("/"):
+            raise ValueError(
+                "a folder mapping needs a trailing '/' on both source and destination"
+            )
+        if self.source.endswith("/") and self.overlay:
+            raise ValueError("folder mappings cannot have an overlay")
+        if any(p and p.endswith("/") for p in (self.overlay, self.output)):
+            raise ValueError("overlay and output must be files")
         return self
 
     overlay: str | None = Field(
@@ -920,10 +927,10 @@ class ConfigFileMapping(_Strict):
         return relative_path(value) if value is not None else None
 
     source: str = Field(
-        description="Literal file path in the source repository, relative to its root."
+        description="Literal path in the source repository, relative to its root. A trailing '/' copies that folder recursively (all regular files)."
     )
     destination: str = Field(
-        description="Literal destination relative to this repository. Unchanged byte-for-byte copy of the external base; never edit it. An overlay produces a separate output."
+        description="Literal destination relative to this repository; a folder (trailing '/') for a folder source. Unchanged byte-for-byte copy of the external base; never edit it. An overlay produces a separate output."
     )
 
     @field_validator("source")
@@ -1012,7 +1019,7 @@ class SharedConfigsSpec(BaseModel):
                 for destination in (item.destination, item.output):
                     if destination is None:
                         continue
-                    target = destination.casefold()
+                    target = destination.rstrip("/").casefold()
                     if any(
                         target == old
                         or target.startswith(old + "/")
@@ -1188,11 +1195,11 @@ class PtkConfig(_Strict):
         description="Entry-only discovery flag: omit for automatic Git membership, false for standalone, true for a workspace marker.",
     )
     schema_version: Literal[1] = Field(
-        default=1, description="PTK configuration schema version."
+        default=1, description="PTk configuration schema version."
     )
     ptk_version: str | None = Field(
         default=None,
-        description="Required PTK package version range, for example >=0.7,<1.",
+        description="Required PTk package version range, for example >=0.7,<1.",
     )  # required ptk version range, e.g. ">=0.1,<0.2"
     project: ProjectSpec = Field(
         description="Project identity, default job and registered component directories."

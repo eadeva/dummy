@@ -1,7 +1,7 @@
 GitHub Actions and callable workflow templates
 ==============================================
 
-Generate a reviewable native GitHub workflow from PTK's configured graph::
+Generate a reviewable native GitHub workflow from PTk's configured graph::
 
    ptk maintainer gen-workflows verify
    ptk maintainer gen-workflows
@@ -9,11 +9,11 @@ Generate a reviewable native GitHub workflow from PTK's configured graph::
 
 Without ``--action-repository`` and ``--action-ref`` the template references the
 placeholders ``OWNER/REPO`` and ``TODO-pin-commit``; replace them with the
-repository hosting PTK's composite Actions and an approved commit.
+repository hosting PTk's composite Actions and an approved commit.
 
 The first command writes ``.github/workflows/ptk-verify.yml`` in the repository
 owning ``verify``. With no names, all discovered workflows are generated. Existing
-files are never overwritten, including on repeated generation: PTK prints a
+files are never overwritten, including on repeated generation: PTk prints a
 warning. Generation is maintainer-only and does not execute jobs or contact
 Artifactory. Review and commit the template; it is project-owned from then on.
 
@@ -35,7 +35,7 @@ selected for their producers, including job-specific suffixes.
 Every execution job declares ``needs: [setup, ...configured_producers]``. Each
 has a separate variant matrix. A consumer waits for all variants of its producer
 jobs, then downloads only its selected producer variant. This deliberately avoids
-using a matrix job's last-finishing output as an artifact selector. Workflow job keys identify producing PTK jobs directly. GitHub IDs are generated
+using a matrix job's last-finishing output as an artifact selector. Workflow job keys identify producing PTk jobs directly. GitHub IDs are generated
 as ``job_<jobname>`` for local jobs and
 ``repo_<reponame>_job_<jobname>`` for qualified jobs. Existing underscores remain
 unchanged. Workflow validation rejects combinations that produce the same ID,
@@ -43,7 +43,7 @@ naming both targets and asking for a repository alias or job rename. For example
 ``a_job_b:c`` and ``a:b_job_c`` both produce ``repo_a_job_b_job_c`` and cannot
 share a workflow. This also protects local report directories. These IDs also
 name per-job matrix outputs; display names retain the original keys. The setup
-job remains ``setup``, so a PTK job named ``setup`` is allowed.
+job remains ``setup``, so a PTk job named ``setup`` is allowed.
 
 Existing generated workflows must be updated to use the new IDs consistently
 in jobs, needs and setup output references; generation continues to leave
@@ -52,7 +52,7 @@ existing files unchanged.
 Owner ``repo_variants`` mappings apply to VMR producers. Identical mapped calls
 are deduplicated; conflicting parameters/dependencies for the same producer
 identity fail setup and require selecting one owner variant. Ineligible variant rows and their dependent rows are pruned; all configured job
-definitions remain in YAML. Each execution calls one PTK job, never a PTK workflow.
+definitions remain in YAML. Each execution calls one PTk job, never a PTk workflow.
 ``continue_on_error`` tolerates the run step, followed by an explicit required-output
 contract check. It does not tolerate output-contract or transfer failures.
 ``max_workers`` maps to per-matrix ``max-parallel``, not a workflow-wide concurrency cap.
@@ -61,15 +61,15 @@ Project TODOs
 -------------
 
 * Supply a Linux Docker-capable ``runner`` and ``container-image``. The image
-  must already provide the matching PTK release, Python 3.12+, Bash, curl and
-  required project tools. Actions do not install PTK. Configure registry
+  must already provide the matching PTk release, Python 3.12+, Bash, curl and
+  required project tools. Actions do not install PTk. Configure registry
   credentials, volumes and container permissions as needed.
 * Create a caller workflow with the project's events (push, pull requests,
   schedules, etc.). The generated workflow does not choose events or runners.
 * Pass ``PTK_ARTIFACT_USER`` and ``PTK_ARTIFACT_TOKEN`` as workflow secrets.
   Optional inputs are ``variants``, ``project-directory``, ``no-cache-ptk`` and
   ``additional-properties`` (a JSON object). Maintainer jobs still require the
-  runner identity to be authorized by PTK.
+  runner identity to be authorized by PTk.
 * Review and pin action references to approved immutable commits. The default
   action repository/ref points at this implementation branch and is a template
   choice, not an automatic release-management policy.
@@ -82,7 +82,7 @@ Project TODOs
   Empty output declarations publish an empty manifest, not inferred build
   folders. Project authors own output completeness and cache correctness.
 
-The checked-in ``.github/workflows/ptk-verify.yml`` is generated from PTK's own
+The checked-in ``.github/workflows/ptk-verify.yml`` is generated from PTk's own
 ``verify`` workflow. It remains callable-only and requires the project inputs
 above; generation does not dispatch a remote workflow. All five verify jobs
 explicitly declare their final report directory. The test report directory
@@ -95,11 +95,11 @@ cache remains disabled unless the project explicitly enables it.
 Action contracts
 ----------------
 
-The three composite actions live under ``.github/actions`` in the selected PTK
+The three composite actions live under ``.github/actions`` in the selected PTk
 Action repository, not automatically in the consuming repository. The generator
 writes references to that repository/ref; ``sync agent`` does not copy Actions.
 Their runtime is
-part of the installed PTK package; use matching Action/PTK versions.
+part of the installed PTk package; use matching Action/PTk versions.
 
 ``ptk-run-job``
 ~~~~~~~~~~~~~~~
@@ -107,14 +107,14 @@ part of the installed PTK package; use matching Action/PTK versions.
 Inputs: ``job`` (required), ``variant`` (one variant), ``working-directory``
 (default ``.``), ``params`` (typed JSON object), ``no-cache`` and ``maintainer``
 (boolean strings, default false). Job parameters use a temporary parameter file,
-not shell interpolation. Configure secret job parameters through PTK environment
+not shell interpolation. Configure secret job parameters through PTk environment
 sources rather than literal workflow JSON.
 
 Outputs: ``uploads-json`` is the exact completed execution's manifest path;
 ``output-paths`` is a JSON array of available repository-relative output paths.
 The filename remains ``upload.json``; upload accepts any manifest filename.
 A private result handoff connects the action to the completed job: it never
-searches for a potentially stale "latest" log. The PTK exit status is preserved.
+searches for a potentially stale "latest" log. The PTk exit status is preserved.
 A successful job without a usable manifest fails the Action. The manifest and
 available earlier-step outputs are exposed even when a later step fails.
 
@@ -202,7 +202,7 @@ See :need:`REQ_Sw_CI_GENERATION`, :need:`REQ_Sw_GITHUB_ARTIFACTS` and
 Declared outputs and dependency checks
 --------------------------------------
 
-All declared outputs are required. PTK fails a successful producer whose declared
+All declared outputs are required. PTk fails a successful producer whose declared
 outputs are missing or not regular files/directories; its upload manifest carries
 ``outputs_valid: false`` and the upload Action refuses to publish it. Required
 output failures block local workflow consumers even with ``continue_on_error``.
@@ -227,7 +227,7 @@ Setup exports ``has_jobs_INVOCATION`` alongside ``matrix_INVOCATION``. Generated
 job guards check setup success, this flag, cancellation and producer success before
 matrix expansion. An empty matrix therefore skips its GitHub job instead of
 attempting an invalid expansion. All jobs still depend on setup. Producer selectors
-contain only eligible dependencies. PTK evaluates the condition again when executing
+contain only eligible dependencies. PTk evaluates the condition again when executing
 the job. Use the same configuration revision and CX context in setup and execution.
 A whole producer matrix must succeed before consumers run; one variant failure
 blocks all of that invocation's consumers, as with GitHub needs semantics.

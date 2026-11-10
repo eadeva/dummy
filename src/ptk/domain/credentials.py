@@ -6,7 +6,6 @@ field defaults to the credential's first field. Where each provider looks:
 * env:    ``credentials.<name>.env.<field>``, else ``<PROJECT>_<USER>_<NAME>_<FIELD>``
           (``<PROJECT>_<USER>_<FIELD>`` when field and name are equal; in CX any user
           ID matches), else ``PTK_CRED_<NAME>_<FIELD>``
-* gopass: ``credentials.<name>.gopass.path`` + ``/<field>`` (default ``ptk/<name>/<field>``)
 * vault:  the key ``<name>.<field>`` (one vault per user, shared by all projects)
 """
 
@@ -22,16 +21,6 @@ from .suggest import did_you_mean
 
 def _ident(text: str) -> str:
     return re.sub(r"[^0-9A-Za-z_]", "_", text).upper()
-
-
-WINDOWS_PROVIDERS = ("env", "vault", "keyring", "gopass", "prompt")
-
-
-def provider_chain(spec: CredentialSpec, os_name: str) -> list[str]:
-    """Configured providers; without an explicit list Windows prefers the vault."""
-    if os_name == "windows" and "providers" not in spec.model_fields_set:
-        return list(WINDOWS_PROVIDERS)
-    return list(spec.providers)
 
 
 def default_variable(credential: str, field: str) -> str:
@@ -64,7 +53,6 @@ class SecretKey:
     credential: str
     field: str
     env_var: str
-    gopass_path: str
     namespace: str | None = None
     env_pattern: str | None = None  # convention variable of any user (CX)
     env_fallbacks: tuple[str, ...] = ()
@@ -91,7 +79,6 @@ def key_for(
     user: str | None = None,
 ) -> SecretKey:
     scoped_name = f"{spec.namespace}/{name}" if spec.namespace else name
-    base = spec.gopass.path.rstrip("/") if spec.gopass else f"ptk/{scoped_name}"
     fallback = default_variable(scoped_name, field)
     if field in spec.env:
         env_var, pattern, fallbacks = spec.env[field], None, ()
@@ -105,7 +92,6 @@ def key_for(
         credential=name,
         field=field,
         env_var=env_var,
-        gopass_path=f"{base}/{field}",
         env_pattern=pattern,
         env_fallbacks=fallbacks,
     )

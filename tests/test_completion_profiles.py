@@ -146,7 +146,7 @@ if os.environ.get('TEST_PROFILE'):
     if sys.platform == "win32":
         launcher = Path(sys.executable).parent / "ptk.exe"
         if not launcher.exists():
-            pytest.skip("requires PTK's installed Windows launcher")
+            pytest.skip("requires PTk's installed Windows launcher")
         shutil.copyfile(launcher, target)
     else:
         target.write_text(

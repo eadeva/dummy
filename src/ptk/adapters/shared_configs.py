@@ -142,25 +142,41 @@ class GitConfigFiles:
         contents = {}
         for path in dict.fromkeys(paths):
             relative_path(path)
+            if path.endswith("/"):
+                listing = self.git(
+                    cache, "ls-tree", "-r", "-z", commit, "--", path[:-1]
+                ).stdout
+                entries = [e for e in listing.split(b"\0") if e]
+                if not entries:
+                    raise PtkError(f"configuration source folder not found: {path}")
+                for entry in entries:
+                    metadata, actual = entry.split(b"\t", 1)
+                    mode, kind, blob = metadata.decode().split()
+                    name = actual.decode()
+                    if not name.startswith(path):
+                        raise PtkError(f"configuration source folder not found: {path}")
+                    contents[name] = self._blob(cache, name, mode, kind, blob)
+                continue
             tree = self.git(cache, "ls-tree", "-z", commit, "--", path).stdout
             entries = tree.split(b"\0")
             if len(entries) != 2 or not entries[0]:
                 raise PtkError(f"configuration source file not found: {path}")
             metadata, actual = entries[0].split(b"\t", 1)
             mode, kind, blob = metadata.decode().split()
-            if (
-                actual.decode() != path
-                or kind != "blob"
-                or mode not in {"100644", "100755"}
-            ):
-                raise PtkError(
-                    f"configuration source must be a regular Git file, not a link/directory/submodule: {path}"
-                )
-            size = int(self.git(cache, "cat-file", "-s", blob).stdout)
-            if size > MAX_FILE:
-                raise PtkError(f"configuration source exceeds 100 MiB: {path}")
-            contents[path] = (
-                self.git(cache, "cat-file", "blob", blob).stdout,
-                int(mode, 8) & 0o777,
-            )
+            if actual.decode() != path:
+                raise PtkError(f"configuration source file not found: {path}")
+            contents[path] = self._blob(cache, path, mode, kind, blob)
         return commit, contents
+
+    def _blob(self, cache, path, mode, kind, blob):
+        if kind != "blob" or mode not in {"100644", "100755"}:
+            raise PtkError(
+                f"configuration source must be a regular Git file, not a link/directory/submodule: {path}"
+            )
+        size = int(self.git(cache, "cat-file", "-s", blob).stdout)
+        if size > MAX_FILE:
+            raise PtkError(f"configuration source exceeds 100 MiB: {path}")
+        return (
+            self.git(cache, "cat-file", "blob", blob).stdout,
+            int(mode, 8) & 0o777,
+        )

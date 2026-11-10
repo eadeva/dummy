@@ -52,7 +52,6 @@ if TYPE_CHECKING:
     from .application.use_cases.setup import Doctor, Environment
     from .application.use_cases.tools import ToolService
     from .application.use_cases.variants import VariantService
-    from .application.use_cases.vscode import VSCodeTasks
 
 
 @dataclass
@@ -159,13 +158,6 @@ class App:
         from .application.use_cases.help import BuildHelp
 
         return BuildHelp(self.version)
-
-    @cached_property
-    def vscode_tasks(self) -> VSCodeTasks:
-        from .adapters.vscode_file import TasksFile
-        from .application.use_cases.vscode import VSCodeTasks
-
-        return VSCodeTasks(TasksFile)
 
     @cached_property
     def setup_authoring(self) -> SetupAuthoring:
@@ -422,9 +414,8 @@ def default_secret_providers(
     environ: Mapping[str, str], prompter: Prompter
 ) -> dict[str, SecretProvider]:
     from .adapters.credentials.env import EnvProvider
-    from .adapters.credentials.gopass import GopassProvider
-    from .adapters.credentials.keyring_provider import KeyringProvider
     from .adapters.credentials.prompt import PromptProvider
+    from .adapters.credentials.session import VaultSession
     from .adapters.credentials.vault import Vault, VaultProvider, default_vault_file
 
     def vault_password(confirm: bool) -> str:
@@ -439,11 +430,12 @@ def default_secret_providers(
             raise PtkError("the passwords do not match")
         return password
 
-    vault = Vault(default_vault_file(environ), vault_password)
+    path = default_vault_file(environ)
+    # Automation supplies the password itself; only people get an unlocked session.
+    session = None if environ.get("PTK_VAULT_PASSWORD") else VaultSession(path, environ)
+    vault = Vault(path, vault_password, session)
     return {
         "env": EnvProvider(environ),
-        "keyring": KeyringProvider(),
-        "gopass": GopassProvider(),
         "vault": VaultProvider(vault),
         "prompt": PromptProvider(prompter),
     }

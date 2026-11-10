@@ -3,7 +3,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-// Match PTK's resolved filesystem paths, including Windows short directory names.
+// Match PTk's resolved filesystem paths, including Windows short directory names.
 // New entity files and {name} templates resolve through their existing ancestor.
 function canonicalPath(file) {
   let current = path.resolve(file);

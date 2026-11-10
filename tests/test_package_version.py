@@ -55,7 +55,7 @@ def test_package_version_does_not_load_unrelated_configuration(
     file.parent.mkdir(parents=True, exist_ok=True)
     file.write_text(contents)
     assert package_version(tmp_path) == "1.2.3"
-    # Installing PTK must remain possible so users can diagnose/repair the project.
+    # Installing PTk must remain possible so users can diagnose/repair the project.
     # Ordinary project loading still rejects the same invalid document.
     with pytest.raises(ConfigError):
         load(tmp_path)
@@ -126,7 +126,7 @@ def test_package_version_tracks_git_and_configured_fallback(tmp_path):
         return subprocess.check_output(["git", *args], cwd=tmp_path, text=True).strip()
 
     git("init", "-q")
-    git("config", "user.name", "PTK Test")
+    git("config", "user.name", "PTk Test")
     git("config", "user.email", "test@example.invalid")
     git("add", ".")
     git("commit", "-qm", "initial")
@@ -150,5 +150,5 @@ def test_invalid_package_version_fails_clearly(tmp_path):
     with pytest.raises(ValueError, match="not a valid Python package version"):
         package_version(tmp_path, resolved_version="release banana")
     (tmp_path / "PKG-INFO").write_text("Name: unrelated\nVersion: 1.0\n")
-    with pytest.raises(ValueError, match="invalid PTK source distribution metadata"):
+    with pytest.raises(ValueError, match="invalid PTk source distribution metadata"):
         package_version(tmp_path)

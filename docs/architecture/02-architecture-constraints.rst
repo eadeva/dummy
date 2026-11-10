@@ -1,7 +1,7 @@
 Architecture constraints
 ========================
 
-PTK is a Python package requiring Python 3.12 or newer. Click supplies the CLI,
+PTk is a Python package requiring Python 3.12 or newer. Click supplies the CLI,
 Pydantic supplies configuration validation and JSON Schema, and YAML is the
 human-authored configuration format. Linux and Windows are exercised by CX;
 PowerShell and Bash/Git Bash have explicit installation and completion paths.
@@ -18,7 +18,7 @@ Jobs execute local commands and trusted Python code with the user's permissions.
 Environment filtering and Python dependency isolation do not make them a sandbox.
 Platform installers, external executables, network repositories and credentials
 remain external dependencies. A configured tool can have platform-specific
-requirements even when PTK itself runs on both platforms.
+requirements even when PTk itself runs on both platforms.
 
 The requirements use the supplied directive names, attributes and relations as
 an authoring convention. All authored requirements use ``safety: QM``, ``security: false`` and ``legal: false``; these

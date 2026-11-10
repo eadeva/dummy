@@ -155,6 +155,21 @@ def test_base_environment_isolation_and_path():
     assert env == {"PATH": "/opt/bin:/usr/bin", "HOME": "/h", "KEEPME": "1", "A": "1"}
 
 
+def test_isolated_windows_environment_keeps_the_git_home():
+    host = {"Path": r"C:\Windows", "HOME": r"C:\Users\me", "HOMEDRIVE": "U:"}
+    env = envs.base_environment(
+        host,
+        os_name="windows",
+        isolate=True,
+        keep=[],
+        set_={},
+        unset=[],
+        path_prepend=[],
+        path_append=[],
+    )
+    assert env["HOME"] == r"C:\Users\me" and env["HOMEDRIVE"] == "U:"
+
+
 def test_windows_path_is_case_insensitive():
     env = envs.base_environment(
         {"Path": r"C:\Windows", "Temp": "t"},

@@ -139,15 +139,16 @@ def configure_command(command, os_name):
     return words, build
 
 
-def prepare_query(build, version):
-    if version < (3, 20, 0):
+def prepare_query(build, version=None):
+    """Request File API replies; without a known version request every supported kind."""
+    if version is not None and version < (3, 20, 0):
         return
     folder = build / ".cmake/api/v1/query/client-ptk"
     if not folder.resolve().is_relative_to(build.resolve()):
         raise ValueError("CMake File API query directory escapes the build directory")
     folder.mkdir(parents=True, exist_ok=True)
     names = ["codemodel-v2", "toolchains-v1"]
-    if version >= (3, 26, 0):
+    if version is None or version >= (3, 26, 0):
         names.append("configureLog-v1")
     for name in names:
         (folder / name).touch()
@@ -159,6 +160,10 @@ class CMakeReportingRunner:
 
     def run(self, command, on_output, cancel=None, *, mask, on_problem):
         build_root = Path(command.env["PTK_BUILD_DIR"]).resolve()
+        declared = command.env.get("PTK_CMAKE_BUILD_DIR")
+        roots = [build_root]
+        if declared:
+            roots.append(Path(declared).resolve())
         target = Path(command.env["PTK_STEP_REPORTS_DIR"]) / SNAPSHOT
         step = command.env["PTK_STEP"]
         problems, records = [], []
@@ -169,6 +174,10 @@ class CMakeReportingRunner:
         try:
             before = watch(build_root)
             direct = configure_command(command, self.os_name)
+            if declared and not direct:
+                # The wrapper's CMake version is unknown until its cache is written.
+                before.update(watch(roots[1]))
+                prepare_query(roots[1])
             if direct:
                 words, build = direct
                 path = next(
@@ -257,15 +266,19 @@ class CMakeReportingRunner:
             if direct and version:
                 builds.append((direct[1], version, executable))
             elif not direct:
-                after = watch(build_root)
-                for name, current in after.items():
+                after = {
+                    name: (root, current)
+                    for root in roots
+                    for name, current in watch(root).items()
+                }
+                for name, (root, current) in after.items():
                     if (
                         Path(name).name != "CMakeCache.txt"
                         or before.get(name) == current
                     ):
                         continue
                     cache = Path(name)
-                    values = cache_values(text_file(cache, build_root))
+                    values = cache_values(text_file(cache, root))
                     detected = cache_version(values)
                     if not detected:
                         problems.append(

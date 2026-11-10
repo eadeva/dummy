@@ -1,4 +1,4 @@
-"""A reusable command with no dependency on PTK's Python interfaces."""
+"""A reusable command with no dependency on PTk's Python interfaces."""
 
 import argparse
 from pathlib import Path

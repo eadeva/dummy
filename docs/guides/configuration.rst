@@ -13,7 +13,7 @@ Keep ``.main.ptk.yml`` at the repository root::
 
 The marker owns repository metadata and optional ``ptk_version`` requirements.
 ``config_path`` is an existing relative configuration directory inside the repository.
-PTK loads only the following conventional documents there. Files are optional
+PTk loads only the following conventional documents there. Files are optional
 except ``project.ptk.yml``, which must define the project name.
 
 .. list-table:: Conventional configuration directory
@@ -41,6 +41,8 @@ except ``project.ptk.yml``, which must define the project name.
      - One named variant
    * - ``jobs/<name>.ptk.yml``
      - One named job
+   * - ``guis/<name>.ptk.yml``
+     - One named GUI job (must set ``gui: true``); same job namespace as ``jobs/``
    * - ``workflows/<name>.ptk.yml``
      - One named workflow
    * - ``maintainers.ptk.yml``
@@ -53,7 +55,7 @@ Documents contain their section body; filenames supply entity names::
      compile:
        run: make
 
-PTK assembles this as ``jobs.build``. There are no includes, file precedence or
+PTk assembles this as ``jobs.build``. There are no includes, file precedence or
 implicit CX/local overlays. An entity cannot be split across files. Unsupported
 ``.ptk.yml`` or ``.ptk.yaml`` filenames at the configuration root or in the owned
 entity directories are errors. Entity directories contain files directly, without
@@ -70,7 +72,7 @@ repository-relative directories in ``project.ptk.yml``::
      networking: {path: src/networking}
      diagnostics: {path: src/diagnostics}
 
-PTK reads ``src/networking/component.variants.ptk.yml`` next to that component's
+PTk reads ``src/networking/component.variants.ptk.yml`` next to that component's
 ``CMakeLists.txt`` or Bazel module::
 
    description: Network stack
@@ -101,7 +103,7 @@ checked. Git-repo workspaces use ``.repo/project.list``. A project can set
 cannot be overridden through CLI settings. Workspace orchestration uses
 ``workflows/<name>.ptk.yml`` at the VMR root; see :doc:`/guides/workflows`.
 
-The extension consumes PTK's schemas, document ownership, source locations and
+The extension consumes PTk's schemas, document ownership, source locations and
 validation errors through ``describe --json --configuration``. It creates the
 owning file when needed and uses the correct section schema for raw-file forms.
 The root schema from ``ptk maintainer config schema`` describes the assembled model;
@@ -131,30 +133,30 @@ selected variant; the extension then offers no variant selection.
 
 An optional preparation graph must lead through explicit ``needs`` to one final
 ``run`` step. All preparation runs normally and can log, fail, time out or retry.
-PTK detaches only that final command. Multiple final steps or a final built-in
+PTk detaches only that final command. Multiple final steps or a final built-in
 operation are invalid. The launch step cannot set ``timeout`` or ``retries``:
-PTK does not wait for the application's lifetime. Dry runs never launch anything;
+PTk does not wait for the application's lifetime. Dry runs never launch anything;
 ``--to`` and ``--only-step`` retain their usual dependency-selection semantics.
 A workflow depending on a GUI job proceeds after launch, not after GUI exit.
 
-After a successful OS process creation, PTK records a launch PID and completes
+After a successful OS process creation, PTk records a launch PID and completes
 the job/report. This receipt describes the launcher process, which may itself
 spawn a program or Python runtime; it is not a health/readiness check. Missing
 executables and other process-creation failures fail the launch. With a shell
 string, successfully starting the shell does not confirm that its command exists;
 prefer an argument list. Later output and exit codes cannot be collected after
-PTK exits. Standard input/output/error are disconnected from the terminal; use
-the application's own logging if needed. Closing PTK's terminal does not close
+PTk exits. Standard input/output/error are disconnected from the terminal; use
+the application's own logging if needed. Closing PTk's terminal does not close
 the application. Stop it through its own UI. Close it before cleanup or re-run
-if it still uses job output folders; PTK does not manage already launched GUIs.
+if it still uses job output folders; PTk does not manage already launched GUIs.
 
-On POSIX, PTK creates a new process session. On Windows it starts the command
+On POSIX, PTk creates a new process session. On Windows it starts the command
 with a hidden console in a new process group: console launchers such as a
 venv's ``python.exe`` open no terminal window, and the GUI window stays visible. GUI jobs retain
 ``DISPLAY``, ``WAYLAND_DISPLAY``, ``XAUTHORITY``, ``XDG_RUNTIME_DIR``,
 ``DBUS_SESSION_BUS_ADDRESS`` and ``XDG_SESSION_TYPE`` from the host even with
 environment isolation; explicit ``unset``/``set`` and job/step overrides still
-win. Unrelated host variables stay isolated. The program runs on PTK's host;
+win. Unrelated host variables stay isolated. The program runs on PTk's host;
 remote/headless environments need their own desktop/display setup.
 
 Git substitutions
@@ -200,7 +202,7 @@ Only locally available tags are considered, except for the matching tag event's
 own tag. A shallow checkout can therefore have no known tag. If a PR head object
 is not present locally, its hash and branch still come from the event and its
 tag list is empty. Missing or invalid PR head metadata produces an explicit
-error; PTK never substitutes the merge/base hash for it. GitHub context is scoped
+error; PTk never substitutes the merge/base hash for it. GitHub context is scoped
 to the workflow repository, not unrelated VMR members. Projects without a Git
 checkout still work unless they request Git variables.
 
@@ -240,7 +242,7 @@ machine; use ``date.utc`` for a common timezone across developer and CX machines
 Jobs and parameters
 ----------------------
 
-PTK calls executable units **jobs**. Use ``jobs:`` for definitions,
+PTk calls executable units **jobs**. Use ``jobs:`` for definitions,
 ``project.default_job`` for the default. Workflow ``jobs`` keys are directly the
 job names, optionally qualified as ``REPO:JOB``.
 For example::
@@ -312,10 +314,13 @@ Use ``${vars.name}``, ``${params.name}``, ``${env:NAME}``,
 ``${vh.features.component.FEATURE}``, ``${vh.data.name}``, and run paths such as
 ``${run.build_dir}``. Escape literal substitutions with ``$${...}``.
 Unknown references are errors. The run paths are per step where applicable.
+In steps, ``${tools.<name>.bin}`` is the absolute folder of a required tool's
+executable on the job PATH (the tool must be in the job's ``requires_tools``),
+for programs that need an installation path, e.g. ``--qac_bin_path``.
 
 The configuration editor offers **Insert variable…** and completion after
 ``${`` in template-capable text fields. Its catalogue and field capabilities
-come from the installed PTK via ``describe --json --configuration``. That
+come from the installed PTk via ``describe --json --configuration``. That
 catalogue contains names, descriptions, context restrictions and availability
 notes, never resolved environment or credential values. Literal fields such as
 project names, built-in operation names and file discovery paths do not offer interpolation.
@@ -332,12 +337,13 @@ and mark common parents ``abstract: true``.
 Credentials
 -----------
 
-Declare credential fields and provider order under ``credentials``. The default
-chain is env, keyring, gopass, vault, prompt; on Windows it is env, vault,
-keyring, gopass, prompt, so prompted values (including passwords) are stored in
-the encrypted vault, created with a master password on first use. Existing
-keyring entries keep working as a fallback. An explicit ``providers`` list is
-used unchanged. Keyring is optional; prompting is
+Declare credential fields under ``credentials``. Secrets are looked up in the
+same order on Windows and Linux: environment variables
+(``<PROJECT>_<USER>_<CREDENTIAL>_<FIELD>``, or the name mapped under ``env``),
+then PTk's built-in encrypted vault, then a terminal prompt. Values typed at the
+prompt (including passwords) are stored in the vault, which is created with a
+master password on first use, unless ``remember: false``. ``providers`` may
+narrow this chain; no other stores exist. Prompting is
 unavailable in CX. Supply secrets to individual steps using::
 
    secrets: {TOKEN: service.token}
@@ -345,9 +351,20 @@ unavailable in CX. Supply secrets to individual steps using::
 Never interpolate secrets into command arguments, URLs or shared config files.
 A shell command that expands a secret environment variable into an argument
 still exposes that secret in the child's command line. Have the child program
-read its environment directly. Use ``self-service creds setup``, ``self-service creds list``, and
+read its environment directly. Use ``self-service creds setup`` (creates the vault
+when missing), ``self-service creds list``, and
 ``self-service creds set NAME FIELD`` to diagnose or provision values. Do not include real
 credentials in examples, fixtures or documentation.
+
+After the master password is entered, the vault stays unlocked for following
+runs for ``PTK_VAULT_UNLOCK_HOURS`` (default 8; ``0`` asks every run). Only the
+derived key is kept: on Windows in ``%LOCALAPPDATA%\ptk\sessions`` encrypted with
+DPAPI for the current user, on Linux in ``$XDG_RUNTIME_DIR/ptk`` (owner-only,
+removed at logout; without ``XDG_RUNTIME_DIR`` nothing is kept). With
+``PTK_VAULT_PASSWORD`` no session is kept. ``self-service creds lock`` locks the
+vault immediately. A forgotten master password cannot be recovered:
+``self-service creds reset`` deletes the vault and its secrets after
+confirmation (``--yes`` without a terminal), then provision the values again.
 
 Tools, configs and outputs
 --------------------------
@@ -377,7 +394,7 @@ file mappings and have a maintainer synchronize them. Optional ``hook_config``
 changes the file used by hook installation. Enabling hooks alone does not declare
 external files. Ordinary job execution never synchronizes configuration.
 
-Before a local job runs, PTK checks the configured hooks and installs or repairs
+Before a local job runs, PTk checks the configured hooks and installs or repairs
 them when necessary. This is available to every developer, including
 non-maintainers. A local workflow checks each participating repository once,
 before starting any sequential or parallel jobs. Unrelated VMR repositories are
@@ -386,23 +403,23 @@ CX job execution do not install hooks. ``self-service hooks install`` uses the s
 ``self-service doctor`` reports hook status without installing anything.
 
 Detection uses Git's repository/common-directory queries, supporting ordinary
-checkouts, ``.git`` symlinks, ``gitdir:`` pointer files and linked worktrees. PTK
+checkouts, ``.git`` symlinks, ``gitdir:`` pointer files and linked worktrees. PTk
 checks the generated hook, its configured file and its executable Python runtime,
 including whether that interpreter can actually import pre-commit. A usable
 existing installation is kept without package installation. Hook changes are
-serialized across PTK processes sharing a Git directory.
+serialized across PTk processes sharing a Git directory.
 
 When installation is needed, uv creates a dedicated environment at
-``<git-common-dir>/ptk/pre-commit`` using PTK's Python interpreter and installs
+``<git-common-dir>/ptk/pre-commit`` using PTk's Python interpreter and installs
 ``pre-commit>=4,<5`` through the configured uv package indexes. The environment is
 reused, independent of job environments and uv's disposable tool cache. Hook
 tool versions still come from the generated configuration's ``rev`` fields.
 All ``default_install_hook_types`` are installed (default: ``pre-commit``).
-The first Git commit may download the individual hook environments; PTK startup
+The first Git commit may download the individual hook environments; PTk startup
 installs hook scripts but does not run linting or download every hook's tools.
 
 Existing ordinary hooks are preserved by pre-commit's migration mode as
-``<hook>.legacy`` and still run. PTK refuses a collision with an existing backup,
+``<hook>.legacy`` and still run. PTk refuses a collision with an existing backup,
 hook-file symlinks, and a configured ``core.hooksPath``; it does not overwrite or
 unset these configurations. Resolve such conflicts with the repository's
 maintainer. Installation, validation or verification failures stop the job or
@@ -415,18 +432,18 @@ files. ``ptk pre-commit validate`` checks the hook configuration. These commands
 honor a custom ``configs.pre-commit.hook_config`` and also work when automatic
 installation is disabled. See :doc:`/reference/cli` for file/ref selection and exit codes.
 
-PTK's pre-commit commands remove inherited Python environment selectors such as
+PTk's pre-commit commands remove inherited Python environment selectors such as
 ``VIRTUAL_ENV``, ``UV_PROJECT_ENVIRONMENT``, ``UV_PYTHON`` and pip/uv installation
-targets. They also remove PTK's own virtual-environment bin directory from the
+targets. They also remove PTk's own virtual-environment bin directory from the
 hook PATH. A ``language: system`` hook must select its project environment
-explicitly (for example, ``uv run --project .``); it must not synchronize PTK's
+explicitly (for example, ``uv run --project .``); it must not synchronize PTk's
 installation. Package-index, proxy, certificate and cache settings are retained.
 The dedicated pre-commit interpreter does not by itself isolate the environments
 used by hook subprocesses. Hooks launched directly by Git or pre-commit retain
 that launcher's environment; explicit paths in hook commands remain the author's
 responsibility.
 
-If a previous hook removed PTK, pull the fixed checkout and rerun
+If a previous hook removed PTk, pull the fixed checkout and rerun
 ``install/install.ps1`` on Windows or ``sh install/install.sh`` on Linux.
 Then check ``ptk --version`` and refresh the Project Toolkit extension.
 
@@ -449,7 +466,7 @@ are imported into configured JSON, HTML, JUnit, Markdown or GitHub reports.
 Report summaries
 ----------------
 
-HTML reports start with the recorded PTK/project versions, repository alias,
+HTML reports start with the recorded PTk/project versions, repository alias,
 selected variant description, inheritance, active components and feature values.
 Declared tool dependencies show detected versions and their resolved check
 executable paths in the command environment. Unknown versions/sources are labeled
@@ -513,7 +530,7 @@ a list of login IDs, without name/email/user objects::
      - alice
      - bob
 
-Locally PTK compares the OS login name with this list, case-insensitively. On
+Locally PTk compares the OS login name with this list, case-insensitively. On
 GitHub Actions it uses ``GITHUB_TRIGGERING_ACTOR`` (the user starting a rerun),
 falling back to ``GITHUB_ACTOR``. Other CX systems use the OS login name. Git
 author names and email addresses do not grant maintainer status. Add both login
@@ -548,9 +565,7 @@ as their initial maintainer, and refuses to overwrite existing configuration.
 In VMR initialization, configured repositories continue to be skipped.
 
 A job or workflow with ``audience: maintainer`` is likewise hidden and refused
-for normal users; maintainer jobs/workflows are excluded from user editor tasks.
-Use ``maintainer sync tasks --users-only`` as a maintainer when committing shared
-tasks. For VMR workspace-level editor commands and workspace-owned restricted
+for normal users. For VMR workspace-level maintainer commands and workspace-owned restricted
 workflows, place a separate ``maintainers.ptk.yml`` at the VMR root. Workspace
 membership grants no privileges in member repositories, or vice versa. Workspace synchronization preflights permissions for every member before writing anything.
 
@@ -682,7 +697,7 @@ requirement. System binaries on the OS path are version-checked. Chocolatey,
 apt/dnf installers are shared host operations and cannot
 provide the same side-by-side isolation. Prefer managed downloads or Python
 tools for incompatible repository versions. Host PATH entries pointing into
-PTK's managed cache are removed before the selected installations are added.
+PTk's managed cache are removed before the selected installations are added.
 
 The complete ``examples/authoring`` starter is exercised by the skill tests.
 
@@ -721,16 +736,16 @@ check command runs and ``check``/``version`` are not used; the folder already
 pins the release. On other systems, the tool's remaining sources use the
 normal ``check``/``version`` rules.
 
-PTK enables the exact ``package/version`` and runs ``TBUpdate -e`` only if that
+PTk enables the exact ``package/version`` and runs ``TBUpdate -e`` only if that
 version's directory is missing. Nonzero exits fail installation. Enable/update
-is serialized across PTK processes sharing the tools directory. ``bin`` lists
+is serialized across PTk processes sharing the tools directory. ``bin`` lists
 relative executable directories (default ``[.]``); for Python, configure
 ``[., Scripts]`` explicitly. Only those directories enter the selected job's
-PATH. Inherited paths below ``TB_HOMEDIR`` are removed before activation. PTK
+PATH. Inherited paths below ``TB_HOMEDIR`` are removed before activation. PTk
 writes neither global PATH nor ``GITHUB_ENV`` nor a shared ``.env`` file.
 Toolbase itself controls its installation location and update side effects.
 Validate this integration with your local Toolbase environment; it is not
-exercised by PTK's pytest suite.
+exercised by PTk's pytest suite.
 
 Artifactory uses an installed ``curl`` executable, HTTPS and a bearer token from
 an optional environment variable. No JFrog CLI or legacy downloader is required::
@@ -751,10 +766,10 @@ an optional environment variable. No JFrog CLI or legacy downloader is required:
 ``url`` is the Artifactory base URL, not the repository URL. ``path`` defaults
 to ``.`` (repository root). ``artifactory`` may also map ``windows`` and ``linux``
 to separate source definitions. No token values belong in YAML. With
-``token_env``, the token must be available in PTK's caller environment when setup
+``token_env``, the token must be available in PTk's caller environment when setup
 runs. Alternatively, ``token: credential.field`` names a declared credential;
-setup resolves it through the credential providers (environment, keyring,
-gopass, vault, prompt) only when the tool is actually installed. Use one of the
+setup resolves it through the credential chain (environment, vault, prompt) only
+when the tool is actually installed. Use one of the
 two. curl receives the token through a temporary
 configuration file, removed after the request, rather than command arguments.
 TLS certificate verification remains enabled; curl's normal CA/proxy environment
@@ -768,14 +783,14 @@ For property or wildcard selection, replace the exact selection with::
      rb_version: "12.3.0"
    select: unique
 
-PTK queries Artifactory AQL. Property values match exactly; ``path`` and ``name``
+PTk queries Artifactory AQL. Property values match exactly; ``path`` and ``name``
 support AQL wildcard patterns. The default ``unique`` rejects multiple matches.
 ``select: latest`` explicitly chooses the newest creation timestamp, with stable
 path/name tie-breaking. This is not semantic-version sorting. AQL's SHA-256 is
-used when ``sha256`` is not configured; without either, installation fails.
-Exact URL downloads require an explicit checksum.
+used when ``sha256`` is not configured, also for exact names; without either,
+installation fails. Exact ``download`` URLs require an explicit checksum.
 
-ZIP and tar archives use PTK's existing extraction support. Standalone files use
+ZIP and tar archives use PTk's existing extraction support. Standalone files use
 ``extract: false``. Convert legacy 7z bundles to ZIP/tar before using this source.
 Archives stored as byte-split volumes (``name.001``, ``name.002``, ...) use
 ``split: true`` with the literal base name::
@@ -791,7 +806,7 @@ Archives stored as byte-split volumes (``name.001``, ``name.002``, ...) use
          token: artifactory.token
          bin: common/bin
 
-PTK lists the volumes with AQL, requires them in one folder and numbered
+PTk lists the volumes with AQL, requires them in one folder and numbered
 consecutively from ``.001``, verifies each against Artifactory's SHA-256, joins
 them in order and extracts the result. ``sha256`` is not used with ``split``.
 Downloads are checksum-verified before entering the managed tools directory;
@@ -815,11 +830,11 @@ Set ``docker: false`` on a tool to disable its installation inside Docker::
      apt: gcc
 
 The default is ``docker: false``: tools must normally be supplied by the image.
-Set ``docker: true`` on a tool to allow PTK to install it inside Docker. With ``false``,
-PTK still checks the tool and its version, includes it in reports, and activates
+Set ``docker: true`` on a tool to allow PTk to install it inside Docker. With ``false``,
+PTk still checks the tool and its version, includes it in reports, and activates
 any existing managed installation. Only installation is blocked, including
 ``self-service tools``, ``--setup`` and ``tools.ensure``. A missing or incompatible
-tool remains an error; PTK explains that installation is disabled in Docker.
+tool remains an error; PTk explains that installation is disabled in Docker.
 Prepare the required tool in the image or mount an existing managed cache.
 If using an image tool outside the default OS PATH, add its directory to the
 job's environment configuration. No Docker daemon or Docker CLI is needed.
@@ -840,7 +855,7 @@ mapping and explicit ``needs`` dependencies. Independent invocations can run
 concurrently; VMR targets use ``REPO:JOB``. Workflows load
 from the repository configuration directory; VMR roots can also own a workflow
 file. See :doc:`/guides/workflows` for complete syntax, command examples, preflight,
-reports, VS Code tasks and the explicit local-only execution boundary.
+reports and the explicit local-only execution boundary.
 
 Output folder configuration
 ---------------------------
@@ -853,9 +868,9 @@ Place ``folder_structure.ptk.yml`` in each repository's ``repository.config_path
    logs: _logs
    reports: _reports
 
-PTK discovers this file automatically. Define each layout field in one file;
+PTk discovers this file automatically. Define each layout field in one file;
 duplicate definitions are errors.
-Absent this file, these four PTK defaults apply; there is no VMR-level inheritance.
+Absent this file, these four PTk defaults apply; there is no VMR-level inheritance.
 Folder values are plain directory names. ``layout.root`` defaults to the repository
 root; cleanup requires its output directories to remain inside the repository.
 The report folder selected by ``layout.reports`` is included in cleanup.

@@ -18,11 +18,11 @@ not imply that every related future capability has been implemented.
 
    **Context:** Projects need a familiar interface without centralizing every build tool.
 
-   **Decision:** PTK standardizes variants, parameters, setup, credentials, execution, logging and reporting. Projects own the commands and domain-specific behavior. Workflow/job/step names follow GitHub terminology; PTK supports cross-functional CX automation.
+   **Decision:** PTk standardizes variants, parameters, setup, credentials, execution, logging and reporting. Projects own the commands and domain-specific behavior. Workflow/job/step names follow GitHub terminology; PTk supports cross-functional CX automation.
 
    **Alternatives considered:** A monolithic CLI containing each project tool would couple their release cycles.
 
-   **Consequences:** PTK provides stable orchestration and contracts; projects remain responsible for their scripts and external tools.
+   **Consequences:** PTk provides stable orchestration and contracts; projects remain responsible for their scripts and external tools.
 
    **Related requirement:** :need:`REQ_Stkh_INTEGRATION`.
 
@@ -54,13 +54,13 @@ not imply that every related future capability has been implemented.
 
    **Related requirement:** :need:`REQ_Sw_FIXED_LAYOUT`.
 
-.. ddec:: PTK is the loading and metadata authority
+.. ddec:: PTk is the loading and metadata authority
    :id: DD_ONE_LOADER
    :status: accepted
 
    **Context:** An independent editor loader can disagree with the executable version.
 
-   **Decision:** PTK supplies loaded values, schemas, provenance, file ownership, option choices, variable catalogues and dependency graphs. The extension consumes that versioned interface.
+   **Decision:** PTk supplies loaded values, schemas, provenance, file ownership, option choices, variable catalogues and dependency graphs. The extension consumes that versioned interface.
 
    **Alternatives considered:** Duplicating parsing and graph inference in the extension was rejected.
 
@@ -72,7 +72,7 @@ not imply that every related future capability has been implemented.
    :id: DD_NO_LEGACY
    :status: accepted
 
-   **Context:** PTK has no deployed installed base requiring compatibility with experimental formats.
+   **Context:** PTk has no deployed installed base requiring compatibility with experimental formats.
 
    **Decision:** Reject superseded syntax and unsupported editor protocol versions. Do not ship conversion parsers, migration layers or legacy rendering paths.
 
@@ -92,7 +92,7 @@ not imply that every related future capability has been implemented.
 
    **Alternatives considered:** Keeping every setup and authoring command at the root was rejected.
 
-   **Consequences:** Explicit run/workflow run routes remain useful for scripts and name collisions; role checks still happen in PTK.
+   **Consequences:** Explicit run/workflow run routes remain useful for scripts and name collisions; role checks still happen in PTk.
 
    **Related requirement:** :need:`REQ_Sw_NAMESPACES`.
 
@@ -137,7 +137,7 @@ not imply that every related future capability has been implemented.
 
    **Alternatives considered:** Changing default cwd to the step build folder was explicitly rejected.
 
-   **Consequences:** Commands can write elsewhere. Authors must coordinate shared writes and external resources; PTK catches known uv environment conflicts but cannot infer arbitrary script behavior. Composed environments and cleanup path guards do not sandbox executed commands; see :need:`DD_EXECUTION_BOUNDARIES`.
+   **Consequences:** Commands can write elsewhere. Authors must coordinate shared writes and external resources; PTk catches known uv environment conflicts but cannot infer arbitrary script behavior. Composed environments and cleanup path guards do not sandbox executed commands; see :need:`DD_EXECUTION_BOUNDARIES`.
 
    **Related requirement:** :need:`REQ_Sw_ENVIRONMENT`.
 
@@ -147,22 +147,22 @@ not imply that every related future capability has been implemented.
 
    **Context:** Projects use different languages, build systems, artifact layouts,
    caches, hardware and remote services. They need to integrate existing scripts
-   and choose the execution guarantees appropriate to their work. PTK cannot
+   and choose the execution guarantees appropriate to their work. PTk cannot
    infer the meaning or correctness of arbitrary project script operations from
    a command, dependency edge or output path.
 
    **Decision:** Deliberately assign project-specific script behavior and its
-   correctness to the **project implementation**. PTK validates
+   correctness to the **project implementation**. PTk validates
    declared dependency graphs, schedules their nodes, composes environments,
    provides storage conventions, guards managed cleanup and records outcomes.
    It detects specific known storage/uv environment conflicts and applies
    job/variant run locks. Project implementations own their commands, Python packages and
    selected build tools, including input/output validation, shared-resource
    coordination, retry safety, recovery and any required isolation. They report
-   success or failure according to their own contracts; PTK uses those outcomes
-   for scheduling and reporting. PTK does not inspect or control arbitrary
+   success or failure according to their own contracts; PTk uses those outcomes
+   for scheduling and reporting. PTk does not inspect or control arbitrary
    internal file and resource operations performed by project scripts.
-   PTK supplies no general step input/output contract, file-access discovery,
+   PTk supplies no general step input/output contract, file-access discovery,
    inferred freshness tracking, artifact restoration store or filesystem/process/network
    sandbox. The opt-in output-reuse aid in :need:`DD_OUTPUT_REUSE` compares only
    project-declared outputs and preserves project ownership of cache correctness.
@@ -171,7 +171,7 @@ not imply that every related future capability has been implemented.
 
    **Rationale:** Preserve flexibility for projects. Projects can reuse existing
    implementations, choose tools and languages, and define artifact, caching,
-   isolation and recovery policies suited to their needs. PTK supplies common
+   isolation and recovery policies suited to their needs. PTk supplies common
    orchestration without imposing one build model or taking ownership of those
    project-specific semantics. This is an intentional division of responsibility,
    not an incomplete implementation of promised script monitoring or validation.
@@ -282,7 +282,7 @@ not imply that every related future capability has been implemented.
    :status: accepted
 
    **Context:** Join edges and wide graphs need a layout engine. Generated files
-   must remain useful when copied to a machine without PTK or network access.
+   must remain useful when copied to a machine without PTk or network access.
 
    **Decision:** Vendor the pinned Dagre browser bundle and its MIT notices with
    the Python package. Embed it and the shared viewer in each HTML file. Lay out
@@ -329,7 +329,7 @@ not imply that every related future capability has been implemented.
    allowance for sequential repeated calls to one job.
 
    **Validation boundary:** Installed schema metadata marks graph fields.
-   Client checks assist editing; they do not duplicate PTK's full configuration
+   Client checks assist editing; they do not duplicate PTk's full configuration
    validation or substitute a bundled schema. The host checks requested edge
    changes against the current authored graph and existing source-version
    guards before writing. Cycles, self-links and duplicate additions are
@@ -337,7 +337,7 @@ not imply that every related future capability has been implemented.
    while fields and Raw YAML remain available. Removal may repair missing or
    cyclic references incrementally. Other validation errors remain visible and
    do not prevent repair. Loop diagnostics are also refreshed when needs fields
-   are edited, without waiting for a run. PTK still validates the whole project
+   are edited, without waiting for a run. PTk still validates the whole project
    on reload/run.
 
    **Alternatives considered:** Reordering a list cannot represent joins and
@@ -386,7 +386,7 @@ not imply that every related future capability has been implemented.
    loses it. Back preserves values unless the user changes the initial field,
    mode or type. Creation uses normal ownership, version and duplicate guards;
    a rejected edit remains reviewable. Schema checks are entry assistance, not
-   a second implementation of complete PTK validation. Placeholder paths and
+   a second implementation of complete PTk validation. Placeholder paths and
    commands need project customization. No setup action executes tools or installs
    dependencies. Existing fields remain editable in forms and Raw YAML. Large
    graphs still depend on browser layout capacity; manual node positioning and
@@ -430,7 +430,7 @@ not imply that every related future capability has been implemented.
 
    **Context:** Jobs and workflows may need to run for several concrete variants.
 
-   **Decision:** Keep selections per job/workflow in the extension, allow multiple/all variants, and automatically check the configured default when the selection is empty. Launch separate PTK tasks for each variant.
+   **Decision:** Keep selections per job/workflow in the extension, allow multiple/all variants, and automatically check the configured default when the selection is empty. Launch separate PTk tasks for each variant.
 
    **Alternatives considered:** A separate global Variants tree and a synthetic default checkbox were rejected.
 
@@ -508,14 +508,14 @@ not imply that every related future capability has been implemented.
    :id: DD_AUTHORING_AGENTS
    :status: accepted
 
-   **Context:** Assistance must not bake PTK repository names and defaults into consuming projects.
+   **Context:** Assistance must not bake PTk repository names and defaults into consuming projects.
 
-   **Decision:** Use one PTK expert entry point with focused authoring, troubleshooting and log-analysis skills. Discover the actual project, installed CLI, permissions and supported contracts before acting.
+   **Decision:** Use one PTk expert entry point with focused authoring, troubleshooting and log-analysis skills. Discover the actual project, installed CLI, permissions and supported contracts before acting.
 
    Ship sixteen project-facing skills plus the expert with self-contained offline
-   references; retain PTK development/docs-writing skills only in its checkout.
+   references; retain PTk development/docs-writing skills only in its checkout.
    Label checkout-only procedures, resolve links relative to installed resources,
-   and use the deployed schema rather than requiring PTK source. Validate Markdown
+   and use the deployed schema rather than requiring PTk source. Validate Markdown
    and RST resource closure during release smoke checks and exercise realistic
    consumer tasks without the packaging checkout. Keep local onboarding separate
    from native workflow generation and preserve project-owned instructions.
@@ -546,15 +546,15 @@ not imply that every related future capability has been implemented.
    selects values in CMake. Projects also use Make, Bazel and GN, and independent
    components may legitimately use the same local feature name.
 
-   **Decision:** Keep the declaration in each registered component's PTK YAML.
+   **Decision:** Keep the declaration in each registered component's PTk YAML.
    Identify a feature as component.FEATURE, with an uppercase local name. Product
-   variants select those values using PTK's inheritance/default/constraint model.
+   variants select those values using PTk's inheritance/default/constraint model.
    Export VARIANT_<COMPONENT>_<FEATURE>, VARIANT_COMPONENT_<COMPONENT> and
    VARIANT_NAME. Reject export collisions. Preserve typed enum strings instead of
    inventing numeric IDs from option order. Qualified substitutions are
    ${vh.features.component.FEATURE}; the environment adds VARIANT_COMPONENTS.
 
-   **Alternatives considered:** Maintaining duplicate CMake and PTK declarations
+   **Alternatives considered:** Maintaining duplicate CMake and PTk declarations
    would create competing authorities. Globally unique feature names would couple
    reusable components unnecessarily. Implicit feature qualification and legacy
    export aliases would hide incomplete migrations.
@@ -602,22 +602,22 @@ not imply that every related future capability has been implemented.
 
    **Context:** Make/CMake/GN can include generated assignments. Bazel loads
    Starlark through labels and needs repository integration for a snapshot located
-   in a PTK step folder. The user explicitly requested GN, not plain Ninja, and
+   in a PTk step folder. The user explicitly requested GN, not plain Ninja, and
    required any Bazel helper to live with the consuming project.
 
    **Decision:** Generate variant.mk, variant.cmake, variant.gni and versioned
    variant.bazel.json. CMake needs only include(); a project adapter may map values
    onto targets without redefining the feature model. Publish a downloadable
    Bzlmod repository-rule resource that reads Bazel JSON and exposes a constant
-   dictionary plus typed settings for config_setting/select(). PTK runtime does
+   dictionary plus typed settings for config_setting/select(). PTk runtime does
    not import or execute this resource. GN itself generates Ninja files.
 
    **Alternatives considered:** Loading an absolute external .bzl path as a Bazel
    label is not a valid integration. Mutating MODULE.bazel/BUILD files for each run
    or retaining CMake-owned selection would duplicate state. Bundling the helper
-   as a PTK runtime builtin would violate project ownership.
+   as a PTk runtime builtin would violate project ownership.
 
-   **Consequences:** Bazel gets one PTK configuration per invocation; projects use
+   **Consequences:** Bazel gets one PTk configuration per invocation; projects use
    separate output bases and manage workspace symlinks/lockfiles/shared caches.
    The helper tracks snapshot content and repo_env, rejects unsupported schema
    versions, and does not expose command-line variant flags. Inactive non-boolean
@@ -631,9 +631,9 @@ not imply that every related future capability has been implemented.
    :status: accepted
 
    **Context:** Python packages can expose commands and be distributed through
-   Artifactory and executed with uv. PTK's six plugin hooks duplicate much of that
+   Artifactory and executed with uv. PTk's six plugin hooks duplicate much of that
    integration while adding discovery, validation, dynamic service wiring and
-   coupling to internal Python models and callback signatures. PTK has not been
+   coupling to internal Python models and callback signatures. PTk has not been
    rolled out and has no external plugin consumers requiring compatibility.
 
    **Decision:** Remove all third-party step, generator, report-contributor,
@@ -646,17 +646,17 @@ not imply that every related future capability has been implemented.
    **Alternatives considered:** Retaining only selected plugin hooks would still
    require a public Python compatibility surface without a demonstrated need.
    Keeping migration code, a disabled/legacy loader, compatibility aliases or
-   fallback behavior would preserve complexity with no installed user base to serve. Requiring every reusable tool to live in PTK's interpreter would
+   fallback behavior would preserve complexity with no installed user base to serve. Requiring every reusable tool to live in PTk's interpreter would
    retain dependency conflicts and unnecessary release coupling.
 
    **Consequences:** Built-in generators, supported result import/export, tool
    setup and credential providers remain. The editor consumes the updated schema
    and retains invalid documents for repair. Obsolete configuration fails rather
-   than silently converting; installed old PTK entry points are inert. Internal
+   than silently converting; installed old PTk entry points are inert. Internal
    dependency injection and built-in callbacks remain implementation details,
    not a third-party API. No automatic external generator or converter protocol
    is introduced. External tools own CLI/file contracts and their versions;
-   PTK still versions its CLI, configuration, report and editor contracts. Project
+   PTk still versions its CLI, configuration, report and editor contracts. Project
    responsibility for side effects and outputs remains intentional for flexibility.
 
    **Related requirements:** :need:`REQ_Sw_EXTERNAL_TOOLS` supersedes
@@ -670,14 +670,14 @@ not imply that every related future capability has been implemented.
 
    **Context:** Projects need to execute local scripts, develop reusable packages
    and run published tools with different dependencies. Requiring those packages
-   in PTK's own environment would couple their dependencies and release cycles.
+   in PTk's own environment would couple their dependencies and release cycles.
    This record describes the existing execution modes; it adds no new runtime API.
 
    **Decision:** Route a standalone leading Python script through uv without
    project discovery. Offer mutually exclusive project, requirements-environment,
-   uvx and PTK-interpreter modes, while preserving ordinary explicit-interpreter
+   uvx and PTk-interpreter modes, while preserving ordinary explicit-interpreter
    commands. Use uv's existing editable-project installation for local development
-   rather than introducing a separate PTK editable-install operation. Keep package
+   rather than introducing a separate PTk editable-install operation. Keep package
    entry points and module execution ordinary process commands.
 
    **Consequences:** Projects own dependency declarations, build metadata and
@@ -687,7 +687,7 @@ not imply that every related future capability has been implemented.
    source or dependency state. Matching declarations share environments. uv
    availability, downloads, index/authentication and shared-environment ordering
    remain explicit constraints. Editable Python source changes are visible when
-   the command executes, but do not automatically invalidate PTK's output cache;
+   the command executes, but do not automatically invalidate PTk's output cache;
    the cache bypass does not recreate Python environments. Documentation covers
    these boundaries alongside examples for every mode.
 
@@ -753,7 +753,7 @@ not imply that every related future capability has been implemented.
    Reuse prepared, masked project version and variant metadata; do not run extra
    discovery to decorate output. Workflow headers list actual participating
    repositories, versions and variants, without inventing a single workspace
-   project version. Job headers include project/repository identity, project/PTK
+   project version. Job headers include project/repository identity, project/PTk
    versions, variant description and counts, run ID and execution limits.
    Verbose console output and debug file logs include resolved variant details.
    Job summaries list steps; workflow summaries list qualified job identities,
@@ -814,7 +814,7 @@ not imply that every related future capability has been implemented.
    and execution entries share navigation targets. Child reports link to their
    aggregate and retain captured evidence links.
 
-   **Alternatives considered:** A test-only dashboard would obscure PTK's build,
+   **Alternatives considered:** A test-only dashboard would obscure PTk's build,
    packaging and documentation jobs. Flattening jobs into a single step graph
    would misrepresent job readiness and confuse equal step names. Reading current
    YAML or fetching child reports in the browser would break historical fidelity
@@ -838,7 +838,7 @@ not imply that every related future capability has been implemented.
    :status: accepted
 
    **Context:** Sphinx 9.1.0 and Sphinx-Needs 8.5.0 produce needs.json and
-   schema_violations.json in documentation build outputs, outside PTK's log
+   schema_violations.json in documentation build outputs, outside PTk's log
    directories. Users need charts, tables and violations within the established
    job/workflow reports, plus access to successfully built documentation.
 
@@ -866,7 +866,7 @@ not imply that every related future capability has been implemented.
    Link to a recorded local documentation index only if the producing step
    passed and the index exists. Preserve structured evidence even when its step failed,
    but do not label that build successful. The documentation site itself stays
-   in the project build output; PTK copies JSON evidence, not an entire website.
+   in the project build output; PTk copies JSON evidence, not an entire website.
 
    **Alternatives considered:** Reading live build folders when opening old
    reports would replace historical evidence. Parsing only console logs would
@@ -904,7 +904,7 @@ not imply that every related future capability has been implemented.
    diagnostic dispositions. Exact matching SARIF/console/log findings merge with
    contributing sources; uncertain matches remain source-labelled.
 
-   **Consequences:** CMake 3.2 has less structured information. PTK requests its
+   **Consequences:** CMake 3.2 has less structured information. PTk requests its
    complete File API metadata set from 3.20. Wrappers and presets without explicit
    build paths must prepare structured outputs themselves. Probe negatives and
    optional packages never become failed tests. Profiling and compiler-specific
@@ -1024,7 +1024,7 @@ not imply that every related future capability has been implemented.
    :id: DD_GUI_JOBS
    :status: accepted
 
-   **Context:** GUI programs and Python GUI tools must remain open after PTK
+   **Context:** GUI programs and Python GUI tools must remain open after PTk
    exits, with their own extension branch and recognizable appearance.
 
    **Decision:** Add ``gui: true`` to the existing job model, not a parallel
@@ -1033,18 +1033,18 @@ not imply that every related future capability has been implemented.
    variants, Python/tool setup and report policies. Return a launch PID and
    explicitly describe the unmonitored application lifetime. Use a new POSIX
    session or Windows detached process/group, no captured pipes and no hidden
-   GUI startup flag. A daemon reaper releases the child while PTK is alive but
-   does not delay PTK exit. Retain only desktop session connection variables in
+   GUI startup flag. A daemon reaper releases the child while PTk is alive but
+   does not delay PTk exit. Retain only desktop session connection variables in
    an isolated GUI environment; normal override precedence remains in force.
 
    **Alternatives considered:** Detaching every step would race preparation
    against launch and invalidate dependencies. Waiting for the GUI would keep
-   PTK alive. A separate GUI command family would duplicate job configuration,
+   PTk alive. A separate GUI command family would duplicate job configuration,
    permission, parameter and task behavior. Per-value rainbow colors in the
    editor make ordinary configuration compete with execution/status signals.
 
    **Consequences:** Detached launch success confirms process creation only.
-   Later application output, health and exit codes are outside PTK's report;
+   Later application output, health and exit codes are outside PTk's report;
    workflows continue after launch. The launch step rejects timeout/retries.
    Closing a terminal does not stop the GUI; cleanup/re-run does not stop it
    either. A remote/headless host still needs a working desktop setup.
@@ -1116,7 +1116,7 @@ not imply that every related future capability has been implemented.
 
    **Context:** Workflow setup knows execution identity and upload destinations;
    actual artifact paths belong to producer execution. Consumers identify
-   producers using native GitHub needs, without a separate PTK inputs mapping.
+   producers using native GitHub needs, without a separate PTk inputs mapping.
 
    **Decision:** Accept optional path/artifact_type output objects alongside
    string paths. After execution, record declared-path availability in summaries
@@ -1146,7 +1146,7 @@ not implemented by the dependency graph change. The optional in-place reuse
 aid in :need:`DD_OUTPUT_REUSE` is the explicit, limited exception for declared
 output fingerprint comparisons. Nor is GitHub workflow generation implemented.
 These boundaries preserve project freedom to choose its tools and guarantees;
-they do not represent a promise that PTK will take over script behavior. A
+they do not represent a promise that PTk will take over script behavior. A
 diagram or separate step folders do not change that responsibility. Future
 proposals need their own decisions and verification.
 Known planned product gaps remain in
@@ -1156,13 +1156,13 @@ Known planned product gaps remain in
    :id: DD_GITHUB_ACTIONS
    :status: accepted
 
-   **Context:** Projects need reusable GitHub templates following PTK variants
+   **Context:** Projects need reusable GitHub templates following PTk variants
    and needs, with actual output locations resolved only after producer execution.
 
    **Decision:** Generate callable-only workflows with a first setup matrix job
    required by every other job. Use separate per-invocation matrices and exact
    producer selectors, not last-finishing matrix job outputs. Ship composite
-   Actions using preinstalled PTK and curl. ZIP folders, upload files directly,
+   Actions using preinstalled PTk and curl. ZIP folders, upload files directly,
    publish the remote manifest last, and restore repository-relative paths after
    identity/SHA256 validation. Use the GitHub run ID as the default artifact scope.
    Keep producer properties in Artifactory and manifests; extra properties cannot

@@ -1,4 +1,4 @@
 interface:
-  display_name: "PTK Troubleshooting"
+  display_name: "PTk Troubleshooting"
   short_description: "Diagnose configuration, environment and run failures"
-  default_prompt: "Use $ptk-troubleshooting to diagnose this PTK failure using existing project evidence."
+  default_prompt: "Use $ptk-troubleshooting to diagnose this PTk failure using existing project evidence."

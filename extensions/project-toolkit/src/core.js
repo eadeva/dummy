@@ -50,27 +50,27 @@ function validGraph(graph) {
 function parseInventory(text) {
   let doc;
   try { doc = JSON.parse(text); } catch {
-    throw new Error("PTK did not return JSON. Update PTK and Project Toolkit together.");
+    throw new Error("PTk did not return JSON. Update PTk and Project Toolkit together.");
   }
   if (!object(doc) || doc.schema_version !== 6 || !Array.isArray(doc.projects) ||
       !Array.isArray(doc.workflows) || !doc.workflows.every(item => named(item) && commandPath(item.command) && runOptions(item.run_options)) || !absolute(doc.root) || typeof doc.cx !== "boolean") {
-    throw new Error("Unsupported PTK inventory. Update PTK and Project Toolkit together.");
+    throw new Error("Unsupported PTk inventory. Update PTk and Project Toolkit together.");
   }
-  if (!validCommands(doc.commands)) throw new Error("Invalid PTK built-in command inventory.");
+  if (!validCommands(doc.commands)) throw new Error("Invalid PTk built-in command inventory.");
   for (const project of doc.projects) {
     if (!object(project) || typeof project.alias !== "string" || !absolute(project.root) || !absolute(project.entry_file) || !object(project.invocation) || !absolute(project.invocation.cwd) ||
         !Array.isArray(project.invocation.prefix) || project.invocation.prefix.length > 1 || project.invocation.prefix.some(word => typeof word !== "string" || !/^[a-z][a-z0-9_-]*$/.test(word))) {
-      throw new Error("Invalid repository paths in PTK inventory.");
+      throw new Error("Invalid repository paths in PTk inventory.");
     }
     const config = project.configuration;
     if (!object(config) || config.version !== 5 || !object(config.schema) || !Array.isArray(config.graphs) || !config.graphs.every(validGraph) || config.value !== null && !object(config.value) ||
         !Array.isArray(config.bindings) || !Array.isArray(config.documents) || !Array.isArray(config.files) || !config.files.every(absolute) ||
         !Array.isArray(config.sources) || !config.sources.every(source => object(source) && absolute(source.file) &&
           Array.isArray(source.path) && source.path.every(key => typeof key === "string" || Number.isSafeInteger(key) && key >= 0))) {
-      throw new Error("Invalid PTK configuration interface. Update PTK and Project Toolkit together.");
+      throw new Error("Invalid PTk configuration interface. Update PTk and Project Toolkit together.");
     }
     if (project.error) continue;
-    if (!validCommands(project.commands)) throw new Error("Invalid PTK built-in command inventory.");
+    if (!validCommands(project.commands)) throw new Error("Invalid PTk built-in command inventory.");
     if (![project.jobs, project.workflows, project.variants].every(items => Array.isArray(items) && items.every(named)) ||
         !object(project.capabilities) || !["validate", "variants", "reports"].every(key => typeof project.capabilities[key] === "boolean") ||
         !Array.isArray(project.config_files) || !project.config_files.every(absolute) ||
@@ -78,7 +78,7 @@ function parseInventory(text) {
         !project.jobs.every(job => typeof job.gui === "boolean" && typeof job.variant_independent === "boolean" && runOptions(job.run_options) && commandPath(job.command) && commandPath(job.help_command) && Array.isArray(job.params) && job.params.every(param => named(param) &&
           ["str", "int", "float", "bool", "path", "choice", "list"].includes(param.type) &&
           typeof param.required === "boolean" && Array.isArray(param.choices) && param.choices.every(c => typeof c === "string")))) {
-      throw new Error("Incomplete PTK project inventory.");
+      throw new Error("Incomplete PTk project inventory.");
     }
   }
   return doc;
@@ -99,7 +99,7 @@ function ignoreConfigEvent(file, roots, configFiles = []) {
   const paths = /^[A-Za-z]:[\\/]|^\\\\/.test(file) ? path.win32 : path;
   const normalize = value => paths === path.win32 ? paths.resolve(value).toLowerCase() : paths.resolve(value);
   if (paths.basename(file).toLowerCase() === ".gen.version.ptk.yml") return true;
-  // PTK-reported source files always trigger a refresh.
+  // PTk-reported source files always trigger a refresh.
   if (configFiles.some(config => normalize(config) === normalize(file))) return false;
   const runtimeDirs = new Set([".venv", "venv", ".ptk", ".git", "node_modules", "site-packages", "__pycache__", "_builds", "_bin", "_logs", "_reports", "dist"]);
   return roots.some(root => {
@@ -119,7 +119,7 @@ function readInventory(settings, cwd) {
     }, (error, stdout, stderr) => {
       if (error) {
         const reason = error.killed ? "Discovery timed out." : error.code === "ENOENT"
-          ? "PTK executable not found. Install PTK or configure projectToolkit.executable."
+          ? "PTk executable not found. Install PTk or configure projectToolkit.executable."
           : (stderr.trim() || stdout.trim() || error.message).slice(-4000);
         reject(new Error(reason));
         return;
@@ -181,7 +181,7 @@ function argsFor(target, { variant, preview = false, params = {}, help = false, 
     throw new Error("Dry-run mode must be a boolean and parameters must be string values.");
   }
   if (target.kind === "job" && Object.keys(params).some(key => !target.spec.params.some(p => p.name === key))) {
-    throw new Error("Task contains an unknown or secret parameter. Use PTK's credential environment or terminal prompt for secrets.");
+    throw new Error("Task contains an unknown or secret parameter. Use PTk's credential environment or terminal prompt for secrets.");
   }
   if (target.kind === "job") {
     for (const [key, value] of Object.entries(params)) {
@@ -228,7 +228,7 @@ function argsFor(target, { variant, preview = false, params = {}, help = false, 
       break;
     case "variant": args.push("variant", "show", target.name); break;
     case "report": args.push("report", "open", target.name); break;
-    default: throw new Error(`Unsupported PTK operation: ${target.kind}`);
+    default: throw new Error(`Unsupported PTk operation: ${target.kind}`);
   }
   return args;
 }

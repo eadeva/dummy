@@ -2,10 +2,10 @@ Authoring skills
 ================
 
 Canonical assistant instructions live in ``.github/skills`` and
-``.github/agents`` so that editors discover them in PTK's own checkout. Sixteen
+``.github/agents`` so that editors discover them in PTk's own checkout. Sixteen
 project-facing skills use links relative to their SKILL.md files and are bundled
-with the wheel. Two maintainer skills operate on PTK's own source checkout.
-Do not run ``ptk maintainer sync agent`` in PTK's checkout: the canonical sources
+with the wheel. Two maintainer skills operate on PTk's own source checkout.
+Do not run ``ptk maintainer sync agent`` in PTk's checkout: the canonical sources
 already occupy the managed paths, so synchronization only reports conflicts.
 
 ptk-config-authoring
@@ -79,15 +79,15 @@ Using these skills
 ------------------
 
 Run ``ptk maintainer sync agent`` to install project-facing skills in a consuming
-repository. It also installs the PTK expert custom agent at
+repository. It also installs the PTk expert custom agent at
 ``.github/agents/ptk-expert.agent.md``. The installer
 copies skills into ``.github/skills`` and version-matched offline documentation,
 examples and the schema into ``.github/ptk``. It rewrites relative links for that
-layout; no PTK source checkout is required. See :doc:`/guides/editor` for update and check
+layout; no PTk source checkout is required. See :doc:`/guides/editor` for update and check
 behavior. Installing the wheel alone does not modify any consuming repository.
 
 The development and docs-writing skills remain checkout-only. Point an assistant
-working on PTK itself to those source skills explicitly.
+working on PTk itself to those source skills explicitly.
 
 Tests validate the catalog, agent/skill Markdown links and offline RST document,
 include and download targets inside the installed bundle, execute the authoring starter and
@@ -134,15 +134,15 @@ Project independence and agent selection
 
 All project-facing skills share :doc:`/guides/agent-guide`. They discover the selected
 runtime, schema, file ownership, execution routes and run evidence instead of
-assuming example configuration. They can diagnose supplied artifacts when PTK is
+assuming example configuration. They can diagnose supplied artifacts when PTk is
 unavailable, but must state which runtime validation could not be performed.
-PTK core development and documentation-writing skills remain checkout-only.
+PTk core development and documentation-writing skills remain checkout-only.
 
 Keep one ``ptk-expert`` agent and load focused skills on demand. A separate
 read-only reviewer can be useful for independent validation of substantial
 changes; parallel readers can help with unrelated repositories or logs. Neither
 is required, and links do not automatically launch agents. Keep one edit owner
-and final verifier. This avoids duplicating PTK rules across specialist agents.
+and final verifier. This avoids duplicating PTk rules across specialist agents.
 
 ptk-github-workflows
 --------------------
@@ -150,16 +150,16 @@ ptk-github-workflows
 .. literalinclude:: ../../.github/skills/ptk-github-workflows/SKILL.md
    :language: markdown
 
-The local workflow skill authors the PTK graph; the GitHub skill generates and
+The local workflow skill authors the PTk graph; the GitHub skill generates and
 reviews callable native pipelines, matrix setup, Docker/VMR checkout TODOs and
 artifact Actions. It includes output declarations and never assumes a consumer
-project has PTK's own verify jobs or packaging scripts. Synchronization includes
+project has PTk's own verify jobs or packaging scripts. Synchronization includes
 the matching GitHub, matrix, output-reuse and reporting reference guides.
 
 Keep project instructions separate
 ----------------------------------
 
-The installed bundle is version-matched reference material, not a copy of PTK's
+The installed bundle is version-matched reference material, not a copy of PTk's
 source project. A consumer can have different job names, no variants, no Python
 package and any valid configuration directory. Start with the runtime discovery
 contract in :doc:`agent-guide` and the local onboarding flow in :doc:`local-setup`.

@@ -1,7 +1,7 @@
 Solution strategy
 =================
 
-PTK separates a validated model from effects. Configuration adapters discover
+PTk separates a validated model from effects. Configuration adapters discover
 owned files and attach locations; application loading assembles and validates
 the model. Domain rules resolve variants, parameter values, substitutions and
 execution plans. Concrete adapters perform filesystem, process and service I/O.
@@ -23,7 +23,7 @@ severity and disposition, keeping suppression decisions separate from process
 and test failures. Stored run inputs support later exports without silently
 reinterpreting past results using today's configuration.
 
-PTK exports schema and inventory from the same models and loader used by the
+PTk exports schema and inventory from the same models and loader used by the
 CLI. Packaged authoring resources follow the installed version. This minimizes
 duplicate rules in integrations, although an incompatible CLI protocol change
 still needs coordinated client work. See :doc:`/guides/editor`.

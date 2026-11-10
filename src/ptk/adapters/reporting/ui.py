@@ -203,11 +203,11 @@ def page(
         + "</dl>"
     )
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(title)}</title><style>{css}</style></head>
-<body><main><header class="run-header {e(kind)}"><p class="eyebrow">PTK · {e(kind.title())} report</p><div class="title-row"><h1>{e(kind.title())} - {e(name)}</h1><span class="execution-status">Execution {badge(status)}</span></div>{metadata_html}</header>
+<body><main><header class="run-header {e(kind)}"><p class="eyebrow">PTk · {e(kind.title())} report</p><div class="title-row"><h1>{e(kind.title())} - {e(name)}</h1><span class="execution-status">Execution {badge(status)}</span></div>{metadata_html}</header>
 <nav class="section-nav" aria-label="Report sections">{navigation}</nav>
 <section id="overview"><h2>Overview</h2>{overview}<p class="meta">Execution status and diagnostic evidence are independent. Test totals come from imported test results; log occurrences are not additional tests.</p></section>
 {failures}{execution_html}<section id="graph">{graph}</section>{timeline_html}{diagnostics}{tests}{needs}{cmake}{bazel}{gn}
 <section id="evidence"><h2>Evidence</h2>{evidence}</section>
 <section id="configuration"><h2>Configuration</h2>{configuration}</section>
-<footer>PTK records execution and project-supplied evidence. Project implementations own artifact correctness, validation, side effects and isolation; this flexibility lets each project choose its tools and checks.</footer>
+<footer>PTk records execution and project-supplied evidence. Project implementations own artifact correctness, validation, side effects and isolation; this flexibility lets each project choose its tools and checks.</footer>
 </main><script>{script}</script>{graph_html.assets()}</body></html>"""

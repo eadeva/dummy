@@ -1,4 +1,4 @@
-"""Bounded discovery of the conventional PTK configuration directory."""
+"""Bounded discovery of the conventional PTk configuration directory."""
 
 from pathlib import Path
 

@@ -15,7 +15,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_LOGS
    :tags: implemented
 
-   PTK shall prefix each streamed logical console step line with [variant][job][step],
+   PTk shall prefix each streamed logical console step line with [variant][job][step],
    matching the output folder order,
    including output, start/finish records and step messages. It shall use the
    selected variant or the established default name when no variant is selected.
@@ -46,7 +46,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_LOGS
    :tags: implemented
 
-   PTK shall separate workflow, job and step start/finish records with labelled
+   PTk shall separate workflow, job and step start/finish records with labelled
    boundaries. Workflow/job headers shall expose prepared project versions,
    variants, run identity and execution limits without additional version
    discovery. Verbose console output shall include resolved variant details.
@@ -62,12 +62,12 @@ Canonical results, retained evidence and diagnostic interpretation.
    shall identify the failed step, or the job if no step result exists, and retain
    permitted failures even when their parent passes.
 
-   PTK shall use purple workflow, cyan job and blue step headings, retain
+   PTk shall use purple workflow, cyan job and blue step headings, retain
    independent status colors and provide readable output without color. It
    shall show passed results in green, failed in red, skipped in gray and
    cancelled in amber. Zero counts shall be neutral; allowed failures shall
    retain their failed status with an amber annotation. These presentation
-   choices shall not alter execution outcomes. PTK shall write matching
+   choices shall not alter execution outcomes. PTk shall write matching
    plain-text aggregate job logs and an immutable workflow
    transcript alongside workflow reports, without adding presentation prefixes
    to raw captured step output or exposing resolved secrets.
@@ -99,7 +99,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_REPORTS
    :tags: implemented
 
-   PTK shall default report_formats to HTML and logging_history_backups to three, with these logical root fields authored in project.ptk.yml.
+   PTk shall default report_formats to HTML and logging_history_backups to three, with these logical root fields authored in project.ptk.yml.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -119,7 +119,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_REPORTS
    :tags: implemented
 
-   PTK shall import JUnit, aggregate Cobertura line coverage, SARIF, log diagnostics
+   PTk shall import JUnit, aggregate Cobertura line coverage, SARIF, log diagnostics
    and Sphinx-Needs, CMake, Bazel and GN evidence into its canonical report model.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
@@ -140,7 +140,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_REPORTS
    :tags: implemented
 
-   PTK shall discover needs.json and schema_violations.json in executed,
+   PTk shall discover needs.json and schema_violations.json in executed,
    report-visible step build directories and retain their evidence with the run.
    It shall import the declared current version, restore exported defaults when
    omitted, preserve custom fields and nested violations, and distinguish an
@@ -187,7 +187,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_REPORTS
    :tags: implemented
 
-   PTK shall export HTML, JSON, JUnit and Markdown, support GitHub step-summary output when available.
+   PTk shall export HTML, JSON, JUnit and Markdown, support GitHub step-summary output when available.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -207,7 +207,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_REPORTS
    :tags: implemented
 
-   PTK shall snapshot report inputs, execution context and log-analysis policy for retained runs and workflow children so later exports use the original evidence.
+   PTk shall snapshot report inputs, execution context and log-analysis policy for retained runs and workflow children so later exports use the original evidence.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -227,7 +227,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_LOGS
    :tags: implemented
 
-   PTK shall recognize documented GCC/Clang, MSVC, CMake, prefixed/bracketed severity, Python-style exception and pytest per-test failure/error summary diagnostics without treating arbitrary occurrences of error/warning as findings or counting pytest traceback lines and aggregate totals again.
+   PTk shall recognize documented GCC/Clang, MSVC, CMake, prefixed/bracketed severity, Python-style exception and pytest per-test failure/error summary diagnostics without treating arbitrary occurrences of error/warning as findings or counting pytest traceback lines and aggregate totals again.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -247,7 +247,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_LOGS
    :tags: implemented
 
-   PTK shall apply the first matching configured rule by step, optional severity and message expression, requiring unique IDs and nonblank reasons while retaining the original severity and evidence.
+   PTk shall apply the first matching configured rule by step, optional severity and message expression, requiring unique IDs and nonblank reasons while retaining the original severity and evidence.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -267,7 +267,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_LOGS
    :tags: implemented
 
-   PTK shall not change command exit status or test outcomes when a diagnostic is ignored or justified.
+   PTk shall not change command exit status or test outcomes when a diagnostic is ignored or justified.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -287,7 +287,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_LOGS
    :tags: implemented
 
-   PTK shall analyze only visible recorded step logs within the run directory and report symlink/external or over-50-MiB inputs as problems rather than silently reading them.
+   PTk shall analyze only visible recorded step logs within the run directory and report symlink/external or over-50-MiB inputs as problems rather than silently reading them.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -307,7 +307,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_LOGS
    :tags: implemented
 
-   PTK HTML reports shall integrate log analysis with execution, test, static
+   PTk HTML reports shall integrate log analysis with execution, test, static
    analysis and report-collection evidence, showing log occurrence-count cards
    and expandable diagnostic entries with severity, disposition, step, message, source log/location and
    count, with choice filters for severity and disposition. Log occurrence counts
@@ -333,7 +333,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_LOGS
    :tags: implemented
 
-   PTK HTML reports shall default disposition filtering to active findings and restore that default when filters are reset while retaining suppressed findings for inspection.
+   PTk HTML reports shall default disposition filtering to active findings and restore that default when filters are reset while retaining suppressed findings for inspection.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -353,7 +353,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_REPORTS
    :tags: implemented
 
-   PTK shall open the dedicated diagnostics report for local active errors, independently of the full report opening preference, and shall never open a browser automatically in CX. Suppressed imported diagnostics alone shall not trigger opening. Full reports on runs without active errors shall follow the configured always policy.
+   PTk shall open the dedicated diagnostics report for local active errors, independently of the full report opening preference, and shall never open a browser automatically in CX. Suppressed imported diagnostics alone shall not trigger opening. Full reports on runs without active errors shall follow the configured always policy.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -373,7 +373,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_REPORTS
    :tags: implemented
 
-   PTK shall embed a collapsible dependency diagram, initially closed, in job
+   PTk shall embed a collapsible dependency diagram, initially closed, in job
    and workflow HTML reports. It shall use recorded run topology and outcomes,
    display shared invocations once with all edges, distinguish passed, failed,
    skipped, cancelled and allowed-failure states using text and colour, and expose
@@ -406,7 +406,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_REPORTS
    :tags: implemented
 
-   PTK shall present job/workflow reports with compact identity, linked overview,
+   PTk shall present job/workflow reports with compact identity, linked overview,
    a failure recap before configuration, searchable execution records and shared
    diagnostic controls. Tests, execution records and log occurrences shall remain
    separate metrics. Selection and evidence links shall reveal the corresponding
@@ -439,7 +439,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_REPORTS
    :tags: implemented
 
-   PTK shall select cmake-3.2 for CMake versions from 3.2 up to but excluding 4.1,
+   PTk shall select cmake-3.2 for CMake versions from 3.2 up to but excluding 4.1,
    and cmake-4.1 from 4.1 onward, using the producing executable or changed-cache
    provenance rather than today's unrelated PATH. It shall capture supported
    configuration metadata, checks, toolchains, targets, diagnostics and package
@@ -470,7 +470,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_REPORTS
    :tags: implemented
 
-   PTK shall import newline-delimited JSON BEP with version and invocation identity
+   PTk shall import newline-delimited JSON BEP with version and invocation identity
    supplied by the producing stream. It shall instrument supported direct Bazel and
    Bazelisk build/test/coverage/run commands without changing execution semantics,
    reuse explicit JSON destinations, and capture changed conventionally named BEP
@@ -521,7 +521,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_REPORTS
    :tags: implemented
 
-   PTK shall collect GN generation diagnostics and native JSON target models.
+   PTk shall collect GN generation diagnostics and native JSON target models.
    Direct gen commands shall use the step's executable and environment, record
    the producing revision, and enable JSON only when capability detection and
    existing IDE/script/output options permit it. Added output paths shall remain
@@ -561,7 +561,7 @@ Canonical results, retained evidence and diagnostic interpretation.
    :req_satisfies: REQ_Sys_REPORTS
    :tags: implemented
 
-   PTK shall write diagnostics.html for all job exports and workflow aggregates,
+   PTk shall write diagnostics.html for all job exports and workflow aggregates,
    including when no full report format is requested. It shall include findings
    from all importers and collection problems, preserve original severity and
    reasons, and apply saved first-match ignore/justify rules to imported findings.

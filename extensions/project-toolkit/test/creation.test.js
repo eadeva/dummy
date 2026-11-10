@@ -16,7 +16,7 @@ test("every schema-owned creation mode yields an independent ordinary configurat
     }
   }
   assert.throws(() => S.stepInitial(schema.$defs.StepSpec, schema, ""), /Choose a step mode/);
-  assert.throws(() => S.stepModes({}, schema), /Update PTK/);
+  assert.throws(() => S.stepModes({}, schema), /Update PTk/);
 });
 
 test("wizard field checks catch missing values, ranges, forbidden names and duplicate additions", () => {

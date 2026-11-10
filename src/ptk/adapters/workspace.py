@@ -98,7 +98,7 @@ class WorkspaceDiscovery:
         return path
 
     def member_paths(self, root: Path) -> tuple[Path, ...]:
-        """List all bounded members, including repositories without PTK yet."""
+        """List all bounded members, including repositories without PTk yet."""
         root = root.resolve()
         if root not in self._paths:
             self._paths[root] = self._read_member_paths(root)
@@ -120,7 +120,7 @@ class WorkspaceDiscovery:
                 except (PtkError, OSError, UnicodeError):
                     pass
                 result.append(
-                    WorkspaceMember(directory, alias, "PTK config already exists")
+                    WorkspaceMember(directory, alias, "PTk config already exists")
                 )
             else:
                 result.append(WorkspaceMember(directory))

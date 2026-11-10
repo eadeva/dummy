@@ -1,4 +1,4 @@
-PTK offline graph assets
+PTk offline graph assets
 
 Layout engine: @dagrejs/dagre 3.1.3 (includes @dagrejs/graphlib 4.0.6)
 Upstream: https://github.com/dagrejs/dagre
@@ -17,13 +17,13 @@ To update: npm pack the exact chosen version with --ignore-scripts; extract
 package/dist/dagre.min.js, package/LICENSE and
 package/dist/dagre.min.js.LEGAL.txt; remove the sourceMappingURL line; update
 this record and run graph-ui.test.js, Python graph/report tests and package tests.
-No npm dependency resolution occurs when producing or opening PTK reports.
+No npm dependency resolution occurs when producing or opening PTk reports.
 
 The VS Code extension's prepare:graph build step copies this same pinned engine
 and both license notices into media/graph-engine for offline graphical editing.
 That generated directory is not a second source copy. Run graph-editor-ui.test.js
 and the package tests when changing these assets.
 
-graph.js and graph.css are PTK's viewer, shared by standalone graph previews,
+graph.js and graph.css are PTk's viewer, shared by standalone graph previews,
 job reports and workflow reports. Graph text is inserted with textContent and
 serialized JSON escapes HTML delimiters. No external assets are referenced.

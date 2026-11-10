@@ -22,6 +22,7 @@ WINDOWS_ESSENTIAL = {
     "TEMP",
     "TMP",
     "USERPROFILE",
+    "HOME",  # set by many users; Git for Windows otherwise uses HOMEDRIVE+HOMEPATH
     "HOMEDRIVE",
     "HOMEPATH",
     "COMPUTERNAME",

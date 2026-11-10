@@ -1,11 +1,11 @@
 Local setup and job preflight
 =============================
 
-This guide applies to a repository using PTK, including a fresh checkout.
-Use the team's installed PTK executable or documented launcher. Do not assume
-this repository is PTK's own source or run ``uv sync`` unless the project actually
-uses a uv environment for PTK. ``uv.lock`` belongs beside its Python project's
-``pyproject.toml``; PTK does not relocate that lock into its configuration folder.
+This guide applies to a repository using PTk, including a fresh checkout.
+Use the team's installed PTk executable or documented launcher. Do not assume
+this repository is PTk's own source or run ``uv sync`` unless the project actually
+uses a uv environment for PTk. ``uv.lock`` belongs beside its Python project's
+``pyproject.toml``; PTk does not relocate that lock into its configuration folder.
 
 Start without running a job::
 
@@ -41,7 +41,7 @@ What a real local job checks
      - Prepare the selected Python runtime when its step starts; recheck required tools in the actual command environment.
 
 These checks do not prove arbitrary input files, remote services or hardware are
-ready. Put project-specific readiness checks in explicit steps. PTK does not
+ready. Put project-specific readiness checks in explicit steps. PTk does not
 infer tools from executable names in commands. It does not run lint hooks simply
 because a job starts, or automatically synchronize/check external configuration
 freshness. Use ``ptk validate --generated`` when that check is wanted.
@@ -65,7 +65,7 @@ fails with that error. To preview or request installation explicitly::
    ptk JOB --setup
 
 Installation requires a supported configured source and access to it. System
-package managers and Chocolatey bootstrap require their explicit options. PTK
+package managers and Chocolatey bootstrap require their explicit options. PTk
 supports configured Chocolatey, uv-tool, downloads, apt/dnf, Toolbase and Artifactory
 sources with platform-specific limits; mise is not currently a built-in installer.
 See :doc:`configuration` for the exact schema and tool source contracts.
@@ -78,7 +78,7 @@ An undeclared command's missing executable is detected when that command runs.
 Inside Docker
 -------------
 
-PTK checks tools and versions inside the container. Per-tool ``docker: false``
+PTk checks tools and versions inside the container. Per-tool ``docker: false``
 (the default) disables installation there, not validation. Even with ``--setup``,
 the image must already provide an acceptable tool unless installation is explicitly
 allowed. Each affected tool is reported, for example::
@@ -107,7 +107,7 @@ When enabled, every real local job verifies hook installation and repairs it
 when necessary.
 Local workflows check participating repositories before starting jobs. A working
 installation is reused. All developers can use this behavior without maintainer
-rights. PTK creates a dedicated pre-commit environment under the Git common
+rights. PTk creates a dedicated pre-commit environment under the Git common
 directory; hook-tool environments may be downloaded on first use.
 
 For explicit installation and inspection::
@@ -115,13 +115,13 @@ For explicit installation and inspection::
    ptk self-service hooks install
    ptk self-service hooks status
 
-A fresh clone alone cannot run PTK's setup. Opening the extension alone does not
+A fresh clone alone cannot run PTk's setup. Opening the extension alone does not
 install hooks; running a job through it uses the normal check. Help and dry runs
 also do not install hooks. For developers who commit before their first job,
 include explicit hook installation in the team's local onboarding instructions.
 To execute checks immediately, use ``ptk pre-commit run --all-files``.
 
-Missing configuration or conflicting Git hook settings block setup. PTK preserves
+Missing configuration or conflicting Git hook settings block setup. PTk preserves
 existing hooks where supported and refuses unsafe collisions; see
 :doc:`configuration` for worktrees, custom hook paths and conflict handling.
 

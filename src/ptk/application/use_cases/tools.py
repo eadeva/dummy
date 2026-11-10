@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
+from pathlib import Path
 
 from ...domain.config.model import ToolSpec
 from ...domain.errors import PtkError
@@ -120,6 +121,22 @@ class ToolService:
 
     def clean_environment(self, env):
         return self._installer.clean_environment(env)
+
+    def bin_dirs_by_name(
+        self, project: Project, names: list[str], env: Mapping[str, str]
+    ) -> dict[str, str]:
+        """Folder of each tool's executable on the PATH of ``env`` (``${tools.NAME.bin}``)."""
+        path = next((v for k, v in env.items() if k.upper() == "PATH"), "")
+        result = {}
+        for name in names:
+            spec = project.config.tools.get(name)
+            if spec is None or not tool_applies(spec, self._host.os_name()):
+                continue
+            argv = split_words(check_command(name, spec), self._host.os_name())
+            found = self._runner.which(argv[0], path=path) if argv else None
+            if found:
+                result[name] = str(Path(found).resolve().parent)
+        return result
 
     def environment(self, project: Project) -> dict[str, str]:
         spec = project.config.environment

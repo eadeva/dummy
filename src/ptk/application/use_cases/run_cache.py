@@ -58,7 +58,7 @@ class RunCache:
             # runs. Failed attempts cannot fall back to an older successful run.
             self.invalidate(identity)
         except OSError as exc:
-            self._disable(f"PTK cache unavailable; executing normally: {exc}")
+            self._disable(f"PTk cache unavailable; executing normally: {exc}")
         return ""
 
     def invalidate(self, identity: str) -> None:
@@ -82,7 +82,7 @@ class RunCache:
                 },
             )
         except OSError as exc:
-            self._disable(f"PTK cache receipt not written: {exc}")
+            self._disable(f"PTk cache receipt not written: {exc}")
 
     def _disable(self, message: str) -> None:
         self._available = False

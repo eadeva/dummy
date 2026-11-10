@@ -316,6 +316,13 @@ def _check_dotted(
             return f"unknown step reference {ref!r}"
         if attribute not in {"build_dir", "reports_dir", "log_file"}:
             return f"unavailable step field {ref!r}; only current-run step directories are provided"
+    elif in_substitution and ns == "tools":
+        name, _, attribute = rest.partition(".")
+        required = job.required_tool_names if job else []
+        if name not in required:
+            return f"{ref!r} needs '{name}' in the job's requires_tools{did_you_mean(name, required)}"
+        if attribute != "bin":
+            return f"unknown tool field {ref!r}; use tools.{name}.bin"
     elif in_substitution and ns == "run":
         if first not in RUN_KEYS:
             return f"unknown name '{ref}'{did_you_mean(first, RUN_KEYS)}"
@@ -331,6 +338,7 @@ def _check_dotted(
             "version",
             "date",
             "git",
+            "tools",
         ]
         return f"unknown namespace '{ns}'{did_you_mean(ns, known)}"
     return None

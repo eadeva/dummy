@@ -447,6 +447,6 @@ def page(items, *, name, identity, status, full_report=None, root=None):
     ]
     backlink = link(full_report, root, "Open full report") if full_report else ""
     return f"""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{e(name)} diagnostics</title><style>{css}</style></head>
-<body><main><header class="run-header"><p class="eyebrow">PTK · Diagnostics report</p><h1>{e(name)} — diagnostics</h1><p>{e(identity)} · Execution {badge(status)}</p>{backlink}</header>
+<body><main><header class="run-header"><p class="eyebrow">PTk · Diagnostics report</p><h1>{e(name)} — diagnostics</h1><p>{e(identity)} · Execution {badge(status)}</p>{backlink}</header>
 <section id="overview"><h2>Overview</h2>{overview}<p class="meta">Counts are diagnostic records, not failed tests. Sources identify imported evidence and execution failures. Ignored and justified findings retain their original severity and reason.</p></section>
 {failures(dedicated)}{render(dedicated, analysis_enabled=None)}</main><script>{script}</script></body></html>"""

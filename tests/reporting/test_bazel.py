@@ -613,7 +613,7 @@ def test_raw_bep_import_policy_deduplication_and_all_export_formats(tmp_path):
     )
     assert len(report.bazel[0].diagnostics) == 2
     assert all(
-        "Source: PTK log analysis" in f.context for f in report.bazel[0].diagnostics
+        "Source: PTk log analysis" in f.context for f in report.bazel[0].diagnostics
     )
     assert {f.disposition for f in report.bazel[0].diagnostics} == {
         "ignored",

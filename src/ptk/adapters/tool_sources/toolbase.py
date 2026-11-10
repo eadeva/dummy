@@ -1,4 +1,4 @@
-"""Toolbase bridge; activation stays local to the selected PTK job."""
+"""Toolbase bridge; activation stays local to the selected PTk job."""
 
 from pathlib import Path
 

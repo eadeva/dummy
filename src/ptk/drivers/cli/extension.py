@@ -1,4 +1,4 @@
-"""Install the extension shipped with this PTK; never load project configuration."""
+"""Install the extension shipped with this PTk; never load project configuration."""
 
 import shutil
 import subprocess
@@ -24,7 +24,7 @@ def bundled_vsix():
         raise ValueError(
             "This editable/source installation has no bundled VSIX. Build it with "
             "'uv run ptk extension', then use 'ptk self-service extension --vsix PATH --force', "
-            "or install a PTK wheel."
+            "or install a PTk wheel."
         )
     with as_file(resource) as path:
         yield path
@@ -105,7 +105,7 @@ def install_vsix(path, *, code, profile, force):
 def extension_command(code, profile, force, if_available, vsix, output):
     """Install the bundled Project Toolkit extension (no project required).
 
-    Available to every user. This does not generate project tasks or skills.
+    Available to every user. This does not install project skills.
     """
     if output and (profile or force or if_available or code != "code"):
         raise click.UsageError("--output cannot be combined with installation options.")

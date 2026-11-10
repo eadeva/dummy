@@ -14,24 +14,24 @@ skinparam sequenceGroupBorderColor #9BB1C0
 hide footbox
 
 participant "Caller" as Caller
-participant "PTK orchestration" as PTK
+participant "PTk orchestration" as PTk
 participant "Step execution" as Steps #EFF8F5
 participant "Results / history" as Reports #FFF6E6
 
-Caller -> PTK : job + variants + parameters
-PTK -> PTK : load, validate, prepare
+Caller -> PTk : job + variants + parameters
+PTk -> PTk : load, validate, prepare
 alt configuration / preparation failed
-  PTK --> Caller : error; no job starts
+  PTk --> Caller : error; no job starts
 else dry run
-  PTK --> Caller : graph + prepared preview
+  PTk --> Caller : graph + prepared preview
 else run
   group Per selected variant
-    PTK -> PTK : acquire job / variant lock
-    PTK -> Steps : schedule ready steps by needs
-    Steps --> PTK : status + logs + tool results
-    PTK -> Reports : retain evidence; import and export
-    Reports --> PTK : report paths and report problems
+    PTk -> PTk : acquire job / variant lock
+    PTk -> Steps : schedule ready steps by needs
+    Steps --> PTk : status + logs + tool results
+    PTk -> Reports : retain evidence; import and export
+    Reports --> PTk : report paths and report problems
   end
-  PTK --> Caller : exit status
+  PTk --> Caller : exit status
 end
 @enduml

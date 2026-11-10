@@ -105,7 +105,7 @@ def test_visibility_completion_and_inventory_follow_the_namespace(
     assert {"build", "verify", "self-service", "maintainer"} <= names([])
     assert not {"publish", "release", "describe", "run"} & names([])
     assert {"publish", "release", "sync", "config"} <= names(["maintainer"])
-    assert names(["maintainer", "sync"]) == {"configs", "tasks", "agent"}
+    assert names(["maintainer", "sync"]) == {"configs", "agent"}
     assert names(["run"]) == {"build"}
     assert names(["maintainer", "run"]) == {"publish"}
     assert names(["workflow", "run"]) == {"verify"}
@@ -139,34 +139,6 @@ def test_visibility_completion_and_inventory_follow_the_namespace(
     assert not (tmp_path / "private-result").exists()
 
 
-def test_generated_tasks_preserve_restricted_command_paths(tmp_path):
-    base = project(tmp_path)
-    runner = CliRunner(env={"PTK_ROLE": "", "PTK_CX": "0"})
-    result = runner.invoke(cli, [*base, "maintainer", "sync", "tasks"])
-    assert result.exit_code == 0, result.output
-    tasks = json.loads((tmp_path / ".vscode/tasks.json").read_text())["tasks"]
-    by_label = {task["label"]: task["args"] for task in tasks}
-    assert by_label["ptk: publish"][-3:] == ["maintainer", "run", "publish"]
-    assert by_label["ptk: workflow release"] == [
-        "maintainer",
-        "workflow",
-        "run",
-        "release",
-    ]
-    assert (
-        runner.invoke(cli, [*base, "maintainer", "sync", "tasks", "--check"]).exit_code
-        == 0
-    )
-    assert (
-        runner.invoke(
-            cli, [*base, "maintainer", "sync", "tasks", "--users-only"]
-        ).exit_code
-        == 0
-    )
-    tasks = json.loads((tmp_path / ".vscode/tasks.json").read_text())["tasks"]
-    assert {task["label"] for task in tasks} == {"ptk: build", "ptk: workflow verify"}
-
-
 def test_validation_combines_optional_checks_and_handles_missing_projects(
     tmp_path, monkeypatch
 ):
@@ -174,7 +146,7 @@ def test_validation_combines_optional_checks_and_handles_missing_projects(
     runner = CliRunner(env={"PTK_ROLE": "user", "PTK_CX": "0"})
     missing = runner.invoke(cli, ["validate"])
     assert missing.exit_code == 2
-    assert "No PTK project found" in missing.output and "ptk init" in missing.output
+    assert "No PTk project found" in missing.output and "ptk init" in missing.output
     base = project(tmp_path)
     result = runner.invoke(
         cli, [*base, "validate", "--variants", "--versions", "--generated"]
@@ -185,7 +157,7 @@ def test_validation_combines_optional_checks_and_handles_missing_projects(
         assert runner.invoke(cli, [*base, "validate", *args]).exit_code == 2
     (tmp_path / "project.ptk.yml").write_text("name: demo\nunknown: broken\n")
     invalid = runner.invoke(cli, [*base, "validate"])
-    assert "unknown" in invalid.output and "No PTK project found" not in invalid.output
+    assert "unknown" in invalid.output and "No PTk project found" not in invalid.output
 
 
 def test_validation_preserves_misplaced_marker_diagnostic(tmp_path, monkeypatch):
@@ -197,7 +169,7 @@ def test_validation_preserves_misplaced_marker_diagnostic(tmp_path, monkeypatch)
     result = CliRunner().invoke(cli, ["validate"])
     assert result.exit_code == 2
     assert "must be at repository root" in result.output
-    assert "No PTK project found" not in result.output
+    assert "No PTk project found" not in result.output
 
 
 def test_workspace_and_member_workflows_keep_their_namespace(tmp_path, monkeypatch):

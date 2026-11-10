@@ -62,7 +62,7 @@ def merge_log_evidence(report):
             retained.append(finding)
             continue
         target = matches[0]
-        target.context.append("Source: PTK log analysis")
+        target.context.append("Source: PTk log analysis")
         target.source_log = finding.source_log
         target.log_line = finding.log_line
         target.log_lines = finding.log_lines

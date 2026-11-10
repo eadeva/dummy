@@ -31,6 +31,7 @@ SECTION_FILES = {
 }
 ENTITY_DIRECTORIES = {
     "jobs": ("jobs",),
+    "guis": ("jobs",),  # GUI jobs (gui: true), listed apart from normal jobs
     "workflows": ("workflows",),
     "variants": ("variants", "variants"),
 }

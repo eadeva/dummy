@@ -23,13 +23,13 @@ class CMake32Importer:
             )
         log = None
         if version >= (3, 20, 0):
-            # 3.20 supplies all codemodel/cache/toolchains versions requested by PTK.
+            # 3.20 supplies all codemodel/cache/toolchains versions requested by PTk.
             try:
                 log = read_api(report, build, before, problems)
             except (OSError, ValueError, TypeError, KeyError, AttributeError) as exc:
                 problems.append(f"{report.step}: cannot import CMake File API: {exc}")
         else:
-            report.availability["targets"] = "PTK File API capture requires CMake 3.20+"
+            report.availability["targets"] = "PTk File API capture requires CMake 3.20+"
         if version >= (3, 26, 0):
             attempt(
                 report,

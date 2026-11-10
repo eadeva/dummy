@@ -53,6 +53,7 @@ class PlannedStep:
     with_: dict[str, Any] = field(default_factory=dict)  # uses parameters (substituted)
     secrets: dict[str, str] = field(default_factory=dict)  # ENV_VAR: credential.field
     outputs: list[str] = field(default_factory=list)
+    cmake_build_dir: str | None = None  # substituted
     cache_key: str = ""
 
     @property

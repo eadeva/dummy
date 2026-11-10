@@ -15,7 +15,7 @@ Command organization, diagnostics, parameter metadata and shell integration.
    :req_satisfies: REQ_Sys_CLI
    :tags: implemented
 
-   PTK shall expose permitted jobs and workflows directly, maintenance commands below maintainer, user setup below self-service and project creation as init.
+   PTk shall expose permitted jobs and workflows directly, maintenance commands below maintainer, user setup below self-service and project creation as init.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -35,7 +35,7 @@ Command organization, diagnostics, parameter metadata and shell integration.
    :req_satisfies: REQ_Sys_CLI
    :tags: implemented
 
-   PTK shall make validate available without a loaded project and, when no marker is found, report no PTK project and suggest init.
+   PTk shall make validate available without a loaded project and, when no marker is found, report no PTk project and suggest init.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -55,7 +55,7 @@ Command organization, diagnostics, parameter metadata and shell integration.
    :req_satisfies: REQ_Sys_CLI
    :tags: implemented
 
-   PTK shall select projects by working directory and workspace alias rather than exposing a global --config or -C option.
+   PTk shall select projects by working directory and workspace alias rather than exposing a global --config or -C option.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -75,7 +75,7 @@ Command organization, diagnostics, parameter metadata and shell integration.
    :req_satisfies: REQ_Sys_CLI
    :tags: implemented
 
-   PTK shall convert declared job parameters to typed CLI options with help, choices and required/default rules, applying explicit CLI values before file, environment and default values.
+   PTk shall convert declared job parameters to typed CLI options with help, choices and required/default rules, applying explicit CLI values before file, environment and default values.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -95,7 +95,7 @@ Command organization, diagnostics, parameter metadata and shell integration.
    :req_satisfies: REQ_Sys_CLI
    :tags: implemented
 
-   PTK shall offer eligible variants and step names for variant/from/to options and expose declared choices or help for configured parameters.
+   PTk shall offer eligible variants and step names for variant/from/to options and expose declared choices or help for configured parameters.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -110,12 +110,12 @@ Command organization, diagnostics, parameter metadata and shell integration.
    :security: false
    :legal: false
    :status: accepted
-   :verification_criteria: Repeated install does not duplicate managed blocks; profile setup does not require an active PTK virtualenv.
+   :verification_criteria: Repeated install does not duplicate managed blocks; profile setup does not require an active PTk virtualenv.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_COMPLETION
    :tags: implemented
 
-   PTK shall install idempotent per-user completion hooks for Bash/Git Bash and PowerShell profiles, using the PTK executable resolved by the shell.
+   PTk shall install idempotent per-user completion hooks for Bash/Git Bash and PowerShell profiles, using the PTk executable resolved by the shell.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -130,12 +130,12 @@ Command organization, diagnostics, parameter metadata and shell integration.
    :security: false
    :legal: false
    :status: accepted
-   :verification_criteria: PowerShell profile/script tests verify the managed Tab handler and native PTK candidate protocol.
+   :verification_criteria: PowerShell profile/script tests verify the managed Tab handler and native PTk candidate protocol.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_COMPLETION
    :tags: implemented
 
-   PTK shall configure PowerShell completion so an ambiguous completion can list candidates on a second Tab without opening an interactive command prompt replacement.
+   PTk shall configure PowerShell completion so an ambiguous completion can list candidates on a second Tab without opening an interactive command prompt replacement.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -155,7 +155,7 @@ Command organization, diagnostics, parameter metadata and shell integration.
    :req_satisfies: REQ_Sys_CLI
    :tags: implemented
 
-   PTK shall use configured maintainer identity to control restricted command visibility and execution consistently across help, completion and description.
+   PTk shall use configured maintainer identity to control restricted command visibility and execution consistently across help, completion and description.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -175,7 +175,7 @@ Command organization, diagnostics, parameter metadata and shell integration.
    :req_satisfies: REQ_Sys_CLI
    :tags: implemented
 
-   PTK shall provide self-service doctor to report host and project prerequisite problems without treating a missing optional editor as a job failure.
+   PTk shall provide self-service doctor to report host and project prerequisite problems without treating a missing optional editor as a job failure.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 

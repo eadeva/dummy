@@ -18,7 +18,6 @@ MUTATIONS = [
     ["maintainer", "configs-report"],
     ["maintainer", "sync", "configs"],
     ["maintainer", "sync", "configs", "--diff"],
-    ["maintainer", "sync", "tasks"],
     ["maintainer", "sync", "agent", "--check"],
     ["maintainer", "config", "show"],
     ["maintainer", "version", "generate"],
@@ -228,24 +227,21 @@ def test_vmr_roles_do_not_leak_between_members_or_to_workspace(tmp_path, monkeyp
     before = snapshot(tmp_path)
     for prefix in ([], ["bootloader"]):
         assert "maintainer" not in runner.invoke(cli, [*prefix, "--help"]).output
-        result = runner.invoke(cli, [*prefix, "maintainer", "sync", "tasks"])
+        result = runner.invoke(cli, [*prefix, "maintainer", "sync", "configs"])
         assert result.exit_code != 0 and "maintainer-only" in result.output
     assert snapshot(tmp_path) == before
-    result = runner.invoke(cli, ["firmware", "maintainer", "sync", "tasks"])
+    result = runner.invoke(cli, ["firmware", "maintainer", "sync", "configs"])
     assert result.exit_code == 0, result.output
-    assert (a.parent / ".vscode/tasks.json").exists()
-    assert not (b.parent / ".vscode").exists()
     grant_maintainer(tmp_path)
     before = snapshot(tmp_path)
-    result = runner.invoke(cli, ["maintainer", "sync", "tasks"])
+    result = runner.invoke(cli, ["maintainer", "sync", "configs"])
     assert result.exit_code != 0 and "bootloader" in result.output, result.output
     assert (
         snapshot(tmp_path) == before
     )  # preflight before writing even permitted members
     grant_maintainer(b.parent)
-    result = runner.invoke(cli, ["maintainer", "sync", "tasks"])
+    result = runner.invoke(cli, ["maintainer", "sync", "configs"])
     assert result.exit_code == 0, result.output
-    assert (tmp_path / ".vscode/tasks.json").exists()
 
 
 def test_vmr_workspace_workflow_needs_its_own_list_and_member_roles(

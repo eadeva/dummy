@@ -1,11 +1,11 @@
-# PTK configuration: this file owns its section or named entity.
-help: Run PTK's pytest suite and collect JUnit results
+# PTk configuration: this file owns its section or named entity.
+help: Run PTk's pytest suite and collect JUnit results
 open_report: always
 env:
   UV_PROJECT_ENVIRONMENT: ${project.root}/.ptk/venvs/test
 environment:
   inherit_path: true
-# Explicit report artifact; PTK completes its contents before the upload Action runs.
+# Explicit report artifact; PTk completes its contents before the upload Action runs.
 outputs:
 - path: ${run.reports_dir}
   artifact_type: test-reports

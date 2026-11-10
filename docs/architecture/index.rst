@@ -1,7 +1,7 @@
 Architecture
 ============
 
-Understand how PTK turns repository configuration into prepared runs and
+Understand how PTk turns repository configuration into prepared runs and
 traceable results. The CLI owns loading and execution metadata; external
 integrations consume that interface. Application use cases coordinate the work,
 domain rules describe behavior, and adapters perform I/O.

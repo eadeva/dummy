@@ -6,6 +6,7 @@ import hashlib
 import json
 import re
 import tempfile
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import quote, urlsplit
@@ -13,6 +14,10 @@ from urllib.parse import quote, urlsplit
 from ...domain.config.model import ArtifactorySource, DownloadSource
 from ...domain.errors import PtkError
 from ...domain.execution.model import CommandSpec
+
+
+def _mib(size: int) -> str:
+    return f"{size / (1024 * 1024):.0f} MiB"
 
 
 def _url(base: str, *parts: str) -> str:
@@ -43,6 +48,7 @@ def _url(base: str, *parts: str) -> str:
 class Volume:
     url: str
     sha256: str
+    size: int | None = None
 
 
 class CurlArtifactory:
@@ -119,6 +125,10 @@ class CurlArtifactory:
             outcome = self.runner.run(
                 CommandSpec(argv=argv, env=self.environ, timeout=1800), lambda _: None
             )
+            if outcome.exit_code == 22:
+                raise PtkError(
+                    "Artifactory rejected the request with an HTTP error (e.g. 401/403/404); check the token and access to the configured repository/path"
+                )
             if outcome.exit_code != 0:
                 raise PtkError(
                     f"Artifactory curl request failed (exit code {outcome.exit_code}); check credentials, URL and connectivity"
@@ -126,8 +136,10 @@ class CurlArtifactory:
 
     def resolve(self) -> DownloadSource:
         source = self.source
-        lookup = bool(source.properties) or any(
-            c in source.path + source.name for c in "*?"
+        lookup = (
+            bool(source.properties)
+            or any(c in source.path + source.name for c in "*?")
+            or not source.sha256
         )
         digest = source.sha256
         path, name = source.path, source.name
@@ -191,7 +203,7 @@ class CurlArtifactory:
         criteria.update({f"@{k}": {"$eq": v} for k, v in source.properties.items()})
         query = (
             "items.find(" + json.dumps(criteria) + ")"
-            '.include("repo","path","name","sha256")'
+            '.include("repo","path","name","sha256","size")'
         )
         with tempfile.TemporaryDirectory(prefix="ptk-aql-") as tmp:
             result = Path(tmp) / "result.json"
@@ -224,23 +236,38 @@ class CurlArtifactory:
                 r"[a-fA-F0-9]{64}", digest
             ):
                 raise PtkError(f"Artifactory reports no sha256 for {row['name']}")
+            size = row.get("size")
             volumes.append(
                 Volume(
                     _url(source.url, source.repository, row["path"], row["name"]),
                     digest,
+                    size if isinstance(size, int) else None,
                 )
             )
         return volumes
 
-    def fetch_volumes(self, volumes: list[Volume], destination: Path) -> None:
+    def fetch_volumes(
+        self,
+        volumes: list[Volume],
+        destination: Path,
+        out: Callable[[str], None] = lambda _line: None,
+    ) -> None:
         """Download and verify each volume, appending it to ``destination``."""
+        total = sum(v.size or 0 for v in volumes)
+        done = 0
         with (
             tempfile.TemporaryDirectory(prefix="ptk-volume-") as tmp,
             destination.open("wb") as joined,
         ):
             part = Path(tmp) / "volume"
-            for volume in volumes:
+            for number, volume in enumerate(volumes, 1):
+                name = volume.url.rsplit("/", 1)[-1]
+                size = f" ({_mib(volume.size)})" if volume.size else ""
+                out(f"downloading volume {number}/{len(volumes)}: {name}{size}")
                 self.fetch(volume.url, part)
+                done += volume.size or 0
+                if total:
+                    out(f"  {_mib(done)} of {_mib(total)} downloaded")
                 with part.open("rb") as handle:
                     digest = hashlib.file_digest(handle, "sha256").hexdigest()
                 if digest.lower() != volume.sha256.lower():

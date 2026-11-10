@@ -1,1 +1,1 @@
-"""External tool sources used by PTK's installation adapter."""
+"""External tool sources used by PTk's installation adapter."""

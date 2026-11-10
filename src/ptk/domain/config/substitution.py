@@ -40,6 +40,7 @@ NAMESPACES = (
     "date",
     "git",
     "steps",
+    "tools",
 )
 
 

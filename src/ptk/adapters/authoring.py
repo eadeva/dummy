@@ -30,7 +30,7 @@ class AuthoringFiles:
                 }
             except (OSError, ValueError) as exc:
                 raise PtkError(
-                    f"PTK authoring resources are unavailable: {exc}"
+                    f"PTk authoring resources are unavailable: {exc}"
                 ) from None
         result = {}
 
@@ -106,7 +106,7 @@ class AuthoringFiles:
                 if MANIFEST in previous:
                     raise ValueError("manifest cannot manage itself")
             except (OSError, ValueError, KeyError, TypeError) as exc:
-                raise PtkError(f"invalid PTK authoring manifest: {exc}") from None
+                raise PtkError(f"invalid PTk authoring manifest: {exc}") from None
         changes, conflicts = [], []
         for name in sorted(set(files) | set(previous)):
             path = safe(name)

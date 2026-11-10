@@ -14,7 +14,7 @@ from ptk.domain.reporting.model import (
 )
 
 summary = {
-    "project": "PTK",
+    "project": "PTk",
     "job": "test",
     "variant": "debug",
     "status": "failed",

@@ -1,4 +1,4 @@
-"""Workspace init fills missing PTK configurations without changing existing ones."""
+"""Workspace init fills missing PTk configurations without changing existing ones."""
 
 import os
 from unittest.mock import patch
@@ -123,13 +123,13 @@ def test_workspace_init_prompts_once_for_config_directory(tmp_path, monkeypatch)
     with patch("click.testing._NamedTextIOWrapper.isatty", return_value=True):
         result = CliRunner().invoke(cli, ["init"], input="config/toolkit\n")
     assert result.exit_code == 0, result.output
-    assert result.output.count("PTK configuration directory") == 1
+    assert result.output.count("PTk configuration directory") == 1
     for name in ("a", "b"):
         assert (tmp_path / name / "config/toolkit/project.ptk.yml").is_file()
     with patch("click.testing._NamedTextIOWrapper.isatty", return_value=True):
         result = CliRunner().invoke(cli, ["init"])
     assert result.exit_code == 0, result.output
-    assert "PTK configuration directory" not in result.output
+    assert "PTk configuration directory" not in result.output
 
 
 def test_workspace_init_preflights_all_repositories_before_writing(

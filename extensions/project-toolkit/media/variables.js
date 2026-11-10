@@ -1,4 +1,4 @@
-/* Field capabilities and names come exclusively from the installed PTK. */
+/* Field capabilities and names come exclusively from the installed PTk. */
 (function (root, factory) {
   if (typeof module === "object") module.exports = factory();
   else root.PtkVariables = factory();

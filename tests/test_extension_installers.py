@@ -1,4 +1,4 @@
-"""Exercise both installers against isolated uv/PTK launchers."""
+"""Exercise both installers against isolated uv/PTk launchers."""
 
 import json
 import os

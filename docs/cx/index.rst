@@ -2,11 +2,11 @@ CX pipelines and release preparation
 ====================================
 
 CX is the umbrella term used here for automated project pipelines, including
-integration, verification, delivery and deployment. PTK provides jobs that those
+integration, verification, delivery and deployment. PTk provides jobs that those
 pipelines can invoke; the pipeline host controls orchestration.
 
-The checked-in ``.github/workflows/cx.yml`` defines PTK's verification and package-preparation pipeline.
-It runs PTK's configured jobs; PTK's local workflow executor is not a CX service.
+The checked-in ``.github/workflows/cx.yml`` defines PTk's verification and package-preparation pipeline.
+It runs PTk's configured jobs; PTk's local workflow executor is not a CX service.
 Local workflows reject CX execution. CX orchestration remains in the host's
 pipeline definition.
 
@@ -47,7 +47,7 @@ establish Windows support by itself.
 Running the checks locally
 --------------------------
 
-From PTK's source checkout::
+From PTk's source checkout::
 
    uv sync --group docs --group release
    uv run ptk validate --generated
@@ -57,7 +57,7 @@ From PTK's source checkout::
    uv run ptk docs
    uv run ptk package
 
-These are PTK's own configured jobs, not commands automatically available in
+These are PTk's own configured jobs, not commands automatically available in
 all consuming projects. See :doc:`/guides/development` for test prerequisites
 and selecting individual tests. The documentation job builds RST with warnings
 as errors. Requirements checks verify identifiers, mandatory attributes,
@@ -76,14 +76,14 @@ rebuild it without repository history. See :doc:`/guides/packaging`.
 
 Preparation does **not** publish to a Python index, upload releases, create tags
 or install a package for teammates. Those operations require the team's release
-process. The supplied installer selects a Python package source, installs PTK
+process. The supplied installer selects a Python package source, installs PTk
 for the current user, and invokes its completion/editor setup. Consumers need
 neither Node.js nor Sphinx to run a prepared package.
 
 Future pipeline generation
 --------------------------
 
-Generating GitHub workflow files from PTK configuration is a draft roadmap item,
+Generating GitHub workflow files from PTk configuration is a draft roadmap item,
 not a supported command. It is recorded as :need:`REQ_Sw_CI_GENERATION` rather
 than described as part of the current release pipeline.
 The implemented matrix export supplies metadata; it does not generate a workflow.

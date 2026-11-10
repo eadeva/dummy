@@ -456,7 +456,7 @@ def test_storage_failure_falls_back_without_failing_work(project, monkeypatch):
     monkeypatch.setattr(LocalOutputCache, "write", unavailable)
     result, _ = run(root)
     assert result.ok and (root / "calls").read_text() == "RC"
-    assert "PTK cache receipt not written" in Path(result.log_file).read_text()
+    assert "PTk cache receipt not written" in Path(result.log_file).read_text()
 
 
 def test_gui_launch_and_whole_job_cannot_be_cached():

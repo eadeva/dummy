@@ -16,7 +16,7 @@ stakeholder decision.
      - A conventional file contains an invalid value; validation identifies its source and fails before execution.
      - Loader/model tests and :need:`REQ_Sw_SOURCE_ERRORS`.
    * - Responsiveness
-     - A template uses only a commit hash; PTK avoids tag/worktree queries and reuses resolved metadata within the operation.
+     - A template uses only a commit hash; PTk avoids tag/worktree queries and reuses resolved metadata within the operation.
      - Git call-count tests; :need:`REQ_Sw_GIT_LAZY`. No universal wall-clock guarantee.
    * - Portability
      - A supported job runs in a path containing spaces on Linux or Windows with correct arguments and cancellation.

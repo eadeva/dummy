@@ -164,7 +164,7 @@
       required.addEventListener("change", () => { value.required = required.checked; if (value.required) delete value.default; render(); });
       add("Require a value", required, "The developer must supply a value through an argument or environment variable. Enabling this removes the default.");
       text("env", "Environment variable (optional)", "Enter the variable name, not its value. Priority: explicit argument → environment → default.");
-      if (kind === "secret") target.append(el("p", "Secrets cannot have saved defaults. Use an environment variable or PTK’s hidden terminal prompt; do not store a secret here.", { class: "notice" }));
+      if (kind === "secret") target.append(el("p", "Secrets cannot have saved defaults. Use an environment variable or PTk’s hidden terminal prompt; do not store a secret here.", { class: "notice" }));
       else if (!value.required) {
         const hasDefault = value.default !== undefined && value.default !== null;
         const enabled = el("input", undefined, { id: `${prefix}-has-default`, type: "checkbox" }); enabled.checked = hasDefault;
@@ -178,7 +178,7 @@
         if (hasDefault) {
           const template = typeof value.default === "string" && value.default.replaceAll("$${", "").includes("${");
           const mode = el("select", undefined, { id: `${prefix}-default-mode` });
-          mode.append(el("option", "Literal value", { value: "literal" }), el("option", "PTK variable / template", { value: "template" }));
+          mode.append(el("option", "Literal value", { value: "literal" }), el("option", "PTk variable / template", { value: "template" }));
           // Keep template mode selected while typing even before the opening token is complete.
           const modeKey = JSON.stringify(keys);
           const isTemplate = defaultModes.get(modeKey) ?? template;

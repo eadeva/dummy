@@ -1,7 +1,7 @@
 External configuration bases
 ============================
 
-PTK ships no base configurations. A project selects one external Git repository
+PTk ships no base configurations. A project selects one external Git repository
 and an immutable commit hash or version tag, then maps individual source files
 into its own repository. Only maintainers synchronize these files::
 
@@ -33,21 +33,32 @@ Paths are literal repository-relative paths, not globs. Source paths are relativ
 to the external repository. Destinations, overlays and outputs are relative to the
 consuming repository. Overlapping managed paths and overlays are rejected.
 
+A ``source`` and ``destination`` that both end in ``/`` map a whole folder
+recursively: every regular file below the source folder at the pinned revision
+is copied to the same relative path below the destination, and recorded per file
+in the lock (with its ``mapping``). Folder mappings cannot have overlays. Files
+removed upstream stay in the project until you delete them::
+
+   helix:
+     files:
+       - source: tools/perforce_qac/2025.4/config/
+         destination: build_environment/ptk/helix/config/
+
 Ownership
 ---------
 
 ``destination`` is an unchanged external base. Do not edit it in the project.
-PTK leaves it writable and records its repository, requested revision, resolved
+PTk leaves it writable and records its repository, requested revision, resolved
 commit, source path and SHA-256 contents in ``.ptk-configs.lock.json`` inside
 ``repository.config_path``. For ``config_path: config/ptk``, the lock is
 ``config/ptk/.ptk-configs.lock.json``, beside ``configs.ptk.yml``. All sync, check
 and deviation-report commands use this location; no root-level fallback is read.
 Keep bases
 in a visibly named directory such as ``config/external``. Binary files remain
-byte-for-byte copies too; PTK does not inject comments into external files.
+byte-for-byte copies too; PTk does not inject comments into external files.
 
 ``overlay`` belongs to the project. Only pre-commit, clang-format, clang-tidy and
-clangd support YAML merging. An overlay requires a separate ``output``; PTK never
+clangd support YAML merging. An overlay requires a separate ``output``; PTk never
 merges into the base. Generated outputs remain writable and carry provenance and
 an instruction to edit the overlay. Maps merge recursively, lists/scalars replace,
 and null removes keys. Pre-commit merges repositories by URL and hooks by ID;
@@ -55,10 +66,10 @@ clang-tidy combines check expressions and merges CheckOptions.
 
 Ruff and arbitrary groups only copy files. The project authors its own
 ``ruff.toml``, using Ruff's native ``extend`` to reference the copied base.
-PTK does not create or update this project file.
+PTk does not create or update this project file.
 
 Commit bases, overlays, generated outputs, mapping configuration and the lock.
-PTK does not apply filesystem write protection. Ownership is documented and
+PTk does not apply filesystem write protection. Ownership is documented and
 checked using content hashes; a locally modified file still blocks synchronization.
 Validation ignores write permissions and checks executable status where supported.
 Synchronization writes normal writable files, including files made read-only by
@@ -84,7 +95,7 @@ JSON with these sections:
   or comparisons omitted because their base was modified.
 
 The report includes source/revision and the pinned commit. Differences use
-normalized YAML, ignoring comments, key ordering and formatting, including PTK's
+normalized YAML, ignoring comments, key ordering and formatting, including PTk's
 provenance comments. Lists retain their order. Comparisons use the current output
 on disk, not a newly merged overlay: synchronize after editing overlays to review
 new effective settings. ``output_matches_sync: false`` identifies output content
@@ -112,12 +123,12 @@ Example (diff shortened)::
 
 Only enabled, explicitly mapped configurations are inspected. A missing file is
 reported as unavailable, not as modified. Unsynchronized source changes require
-synchronization first. PTK never uses a modified base as the reference for a diff.
+synchronization first. PTk never uses a modified base as the reference for a diff.
 Ruff's project-owned ``ruff.toml`` and arbitrary native inheritance mechanisms are
-outside this report: PTK checks their copied bases but does not infer their
+outside this report: PTk checks their copied bases but does not infer their
 project-specific effective configuration.
 
-An existing PTK deviation report can be replaced. Authored files and mapped bases,
+An existing PTk deviation report can be replaced. Authored files and mapped bases,
 overlays or outputs cannot be report destinations. Successful report generation
 returns success even when findings exist; use ``ptk validate --generated`` for a
 freshness gate. Reporting neither repairs nor synchronizes configuration files.
@@ -142,7 +153,7 @@ The first synchronization resolves a version tag to a commit; subsequent syncs
 keep that commit even if the tag moves. Change the revision explicitly to upgrade.
 A source/revision change requires a full sync, not a selected group. Branch names
 are rejected. Full 40/64-character hashes and version tags such as ``v2.4.0`` are
-supported. Upgrading PTK does not change external bases.
+supported. Upgrading PTk does not change external bases.
 
 Constraints
 -----------
@@ -150,7 +161,7 @@ Constraints
 Git must be installed. HTTPS, SSH and local repositories use existing Git
 credentials; do not embed HTTPS credentials or tokens in the URL. Git objects are
 cached under ``.ptk/config-sources`` and exact cached commits work offline.
-Preview may populate this cache. PTK reads regular Git blobs without checkout,
+Preview may populate this cache. PTk reads regular Git blobs without checkout,
 filters, hooks or submodules. Symlinks, directory mappings and path traversal are
 rejected. Each file is limited to 100 MiB; each Git operation has a 120-second timeout.
 

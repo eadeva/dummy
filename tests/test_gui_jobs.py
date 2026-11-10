@@ -68,7 +68,7 @@ def wait_for(path, timeout=5):
 
 @pytest.mark.parametrize("shell", [False, True])
 def test_cli_exits_and_gui_survives_with_preparation_and_python(tmp_path, shell):
-    # The child stays alive until the *test*, after PTK exits, releases it.
+    # The child stays alive until the *test*, after PTk exits, releases it.
     script = tmp_path / "viewer.py"
     script.write_text(
         """

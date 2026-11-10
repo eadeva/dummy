@@ -129,7 +129,7 @@ class ConsoleObserver:
         prefix = Text(
             self._run_prefix + (f"[{step.name}]" if step else "") + " ", style="dim"
         )
-        # Expand relative to the tool's text, not the variable-width PTK prefix.
+        # Expand relative to the tool's text, not the variable-width PTk prefix.
         text.expand_tabs(8)
         self._print(
             Text("\n").join(
@@ -170,9 +170,9 @@ def dry_run(
         head += f"  variant [bold]{escape(plan.variant)}[/]"
     tree = Tree(head)
     tree.add(
-        "PTK cache: disabled for this invocation"
+        "PTk cache: disabled for this invocation"
         if plan.no_cache_ptk
-        else "PTK cache: opt-in; reuse is checked after prerequisites run"
+        else "PTk cache: opt-in; reuse is checked after prerequisites run"
     )
     if plan.params:
         params = tree.add("[bold]parameters[/]")
@@ -197,7 +197,7 @@ def dry_run(
         details = []
         if plan.gui_step == step.name:
             details.append(
-                "GUI launch: detached; PTK exits without waiting for the application"
+                "GUI launch: detached; PTk exits without waiting for the application"
             )
         if step.spec.generators:
             folder = prepared.layout.build_dir(plan.variant, plan.job, step.path)

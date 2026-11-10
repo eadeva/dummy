@@ -11,7 +11,7 @@ from xml.etree import ElementTree
 DOCS = Path(__file__).resolve().parents[1]
 VERSION = "1.2026.9"
 JAR_SHA256 = "aa4a1d06f8911c4b842beff4828dd955be431692b631a312d04c0e9fab9581de"
-STAMP = re.compile(r"<!-- PTK PlantUML source=([a-f0-9]{64}) svg=([a-f0-9]{64}) -->\n")
+STAMP = re.compile(r"<!-- PTk PlantUML source=([a-f0-9]{64}) svg=([a-f0-9]{64}) -->\n")
 
 
 def digest(text):
@@ -71,7 +71,7 @@ def render(jar):
         ElementTree.fromstring(result.stdout)  # noqa: S314 - local PlantUML output
         svg = result.stdout.rstrip() + "\n"
         stamp = (
-            f"<!-- PTK PlantUML source={source_digest(source)} svg={digest(svg)} -->\n"
+            f"<!-- PTk PlantUML source={source_digest(source)} svg={digest(svg)} -->\n"
         )
         target = DOCS / "_static/diagrams" / source.with_suffix(".svg").name
         target.write_text(stamp + svg, encoding="utf-8", newline="\n")

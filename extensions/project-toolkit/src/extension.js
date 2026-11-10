@@ -44,17 +44,17 @@ function createController(vscode, context, editorFactory = createEditors) {
       else {
         await settled();
         const record = records.find(record => record.inventory?.projects.some(project => project.entry_file === entry));
-        if (!record) throw new Error("PTK project is no longer available.");
+        if (!record) throw new Error("PTk project is no longer available.");
         const inventory = await core.readInventory(settings(record.folder), record.folder.uri.fsPath);
         const project = inventory.projects.find(project => project.entry_file === entry);
-        if (!project) throw new Error("PTK project is no longer available.");
+        if (!project) throw new Error("PTk project is no longer available.");
         return { project, folder: record.folder, root: project.root };
       }
       for (const record of records) {
         const project = record.inventory?.projects.find(project => project.entry_file === entry);
         if (project) return { project, folder: record.folder, root: project.root };
       }
-      throw new Error("PTK project is no longer available.");
+      throw new Error("PTk project is no longer available.");
     },
     configuration: async uri => {
       await settled();
@@ -66,7 +66,7 @@ function createController(vscode, context, editorFactory = createEditors) {
   });
 
   function trusted() {
-    if (!vscode.workspace.isTrusted) throw new Error("Trust this workspace before running PTK.");
+    if (!vscode.workspace.isTrusted) throw new Error("Trust this workspace before running PTk.");
   }
 
   function settings(folder) {
@@ -182,7 +182,7 @@ function createController(vscode, context, editorFactory = createEditors) {
 
   function variantChanged(target) {
     // Only refresh the affected job/workflow, keeping the configuration editor
-    // and other expanded branches undisturbed. No PTK discovery is needed.
+    // and other expanded branches undisturbed. No PTk discovery is needed.
     changed.fire(targetNodes.get(variantKey(target)));
   }
 
@@ -318,7 +318,7 @@ function createController(vscode, context, editorFactory = createEditors) {
       const kind = group === "gui" ? "job" : group;
       const children = project[`${kind}s`].filter(spec => kind !== "job" || Boolean(spec.gui) === (group === "gui")).map(spec => {
         const target = { ...common, kind, name: spec.name, spec };
-        const node = { ...target, entityKind: group, label: spec.name, tooltip: [spec.help, spec.gui ? "Launch GUI: preparation finishes first, then the application runs independently of PTK." : ""].filter(Boolean).join("\n"),
+        const node = { ...target, entityKind: group, label: spec.name, tooltip: [spec.help, spec.gui ? "Launch GUI: preparation finishes first, then the application runs independently of PTk." : ""].filter(Boolean).join("\n"),
           contextValue: group === "gui" ? "gui" : core.canOpenReport(target) ? `${kind}-report` : kind,
           description: [variantDescription(target), kind === "workflow" && common.cx ? "dry-run only on CX" : spec.default ? "default" : ""].filter(Boolean).join(" · "),
           icon: group === "gui" ? "window" : kind === "job" ? "play-circle" : "git-merge",
@@ -348,12 +348,12 @@ function createController(vscode, context, editorFactory = createEditors) {
     getChildren(element) {
       if (element) return element.children || [];
       targetNodes.clear();
-      if (loading && !records.length) return [{ label: "Loading PTK configuration…", icon: "sync" }];
-      // Folders without PTK configuration are not listed; PTK init stays in the command palette.
+      if (loading && !records.length) return [{ label: "Loading PTk configuration…", icon: "sync" }];
+      // Folders without PTk configuration are not listed; PTk init stays in the command palette.
       return records.filter(record => record.error || record.inventory.projects.length || record.inventory.workflows.length).map(record => identified((() => {
         if (record.error) return {
-          label: record.folder.name, description: "PTK unavailable", tooltip: `${record.error}\nClick to show the discovery error.`, icon: "warning",
-          command: { command: "project-toolkit.showOutput", title: "Show PTK Discovery Error" },
+          label: record.folder.name, description: "PTk unavailable", tooltip: `${record.error}\nClick to show the discovery error.`, icon: "warning",
+          command: { command: "project-toolkit.showOutput", title: "Show PTk Discovery Error" },
           children: (record.previous?.projects || []).map(project => projectNode({ ...project, error: record.error }, { ...record, inventory: record.previous })),
         };
         const children = record.inventory.projects.map(project => projectNode(project, record));
@@ -412,7 +412,7 @@ function createController(vscode, context, editorFactory = createEditors) {
     const existing = element?.project && candidates.find(item => item.project.entry_file === element.project.entry_file);
     if (existing) return existing;
     if (element?.project) throw new Error("This operation is no longer available. Refresh projects.");
-    const selected = await vscode.window.showQuickPick(candidates.map(item => ({ label: item.project.alias, description: item.root, item })), { placeHolder: "Choose a PTK repository" });
+    const selected = await vscode.window.showQuickPick(candidates.map(item => ({ label: item.project.alias, description: item.root, item })), { placeHolder: "Choose a PTk repository" });
     return selected?.item;
   }
 
@@ -425,7 +425,7 @@ function createController(vscode, context, editorFactory = createEditors) {
       if (!found) throw new Error("This job or workflow is no longer available. Refresh projects.");
       return found;
     }
-    const selected = await vscode.window.showQuickPick(targets.map(target => ({ label: title(target), description: target.spec.help, target })), { placeHolder: "Choose a PTK job or workflow" });
+    const selected = await vscode.window.showQuickPick(targets.map(target => ({ label: title(target), description: target.spec.help, target })), { placeHolder: "Choose a PTk job or workflow" });
     return selected?.target;
   }
 
@@ -438,7 +438,7 @@ function createController(vscode, context, editorFactory = createEditors) {
       if (!found) throw new Error("This command is no longer available. Refresh projects.");
       return found;
     }
-    const selected = await vscode.window.showQuickPick(targets.map(target => ({ label: title(target), description: target.spec.help, target })), { placeHolder: "Choose a PTK command" });
+    const selected = await vscode.window.showQuickPick(targets.map(target => ({ label: title(target), description: target.spec.help, target })), { placeHolder: "Choose a PTk command" });
     return selected?.target;
   }
 
@@ -468,7 +468,7 @@ function createController(vscode, context, editorFactory = createEditors) {
     if (editOptional) {
       const picked = await vscode.window.showQuickPick(specs.map(param => ({
         label: param.option || param.name.toUpperCase(), description: param.help, param, picked: param.required,
-      })), { canPickMany: true, placeHolder: "Arguments and options to supply; omitted options keep PTK defaults" });
+      })), { canPickMany: true, placeHolder: "Arguments and options to supply; omitted options keep PTk defaults" });
       if (!picked) return;
       for (const item of picked) selected.add(item.param.name);
     }
@@ -501,7 +501,7 @@ function createController(vscode, context, editorFactory = createEditors) {
   function makeTask(target, options = {}) {
     trusted();
     const config = settings(target.folder);
-    if (options.report && !core.canOpenReport(target)) throw new Error("Report opening is unavailable. Check PTK's version and command permissions.");
+    if (options.report && !core.canOpenReport(target)) throw new Error("Report opening is unavailable. Check PTk's version and command permissions.");
     if (target.kind === "workflow" && target.cx && !options.preview && !options.help && !options.report) throw new Error("Workflows run locally only; CX can dry-run workflows or run individual jobs.");
     const definition = { type: "project-toolkit", kind: target.kind, name: target.name, root: target.root };
     if (options.variant) definition.variant = options.variant;
@@ -594,8 +594,8 @@ function createController(vscode, context, editorFactory = createEditors) {
   async function initializeProject(folder) {
     trusted();
     folder = folder || vscode.workspace.workspaceFolders?.[0];
-    if (!folder) { await vscode.window.showInformationMessage("Open a folder before running PTK init."); return; }
-    const configDir = await vscode.window.showInputBox({ title: "PTK init", prompt: "Configuration folder relative to the repository root", value: "config/ptk" });
+    if (!folder) { await vscode.window.showInformationMessage("Open a folder before running PTk init."); return; }
+    const configDir = await vscode.window.showInputBox({ title: "PTk init", prompt: "Configuration folder relative to the repository root", value: "config/ptk" });
     if (!configDir?.trim()) return;
     return vscode.tasks.executeTask(makeTask({ folder, root: folder.uri.fsPath, kind: "init", name: "project" }, { configDir: configDir.trim() }));
   }

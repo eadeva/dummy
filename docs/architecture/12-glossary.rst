@@ -34,7 +34,7 @@ Glossary
       value.
 
    Canonical report
-      PTK's format-independent representation of execution and imported results.
+      PTk's format-independent representation of execution and imported results.
 
    Importer / contributor
       A reader that converts tool output or captured logs into report data.
@@ -51,7 +51,7 @@ Glossary
       This controls CLI availability; it is not an operating-system privilege.
 
    Self-service
-      Commands that configure the current user's PTK environment, tools,
+      Commands that configure the current user's PTk environment, tools,
       credentials, completion, hooks or editor integration.
 
    QM

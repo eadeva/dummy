@@ -8,37 +8,37 @@ organizational, not requirements or implementation statuses.
 .. feature:: Predictable project configuration
    :id: FEAT_CONFIG
 
-   Grouping for the associated PTK stakeholder needs.
+   Grouping for the associated PTk stakeholder needs.
 
 .. feature:: Repeatable job execution
    :id: FEAT_EXECUTION
 
-   Grouping for the associated PTK stakeholder needs.
+   Grouping for the associated PTk stakeholder needs.
 
 .. feature:: Discoverable command-line interface
    :id: FEAT_USABILITY
 
-   Grouping for the associated PTK stakeholder needs.
+   Grouping for the associated PTk stakeholder needs.
 
 .. feature:: Team distribution and self-service
    :id: FEAT_DISTRIBUTION
 
-   Grouping for the associated PTK stakeholder needs.
+   Grouping for the associated PTk stakeholder needs.
 
 .. feature:: Diagnosable execution results
    :id: FEAT_RESULTS
 
-   Grouping for the associated PTK stakeholder needs.
+   Grouping for the associated PTk stakeholder needs.
 
 .. feature:: Project and tool integration
    :id: FEAT_INTEGRATION
 
-   Grouping for the associated PTK stakeholder needs.
+   Grouping for the associated PTk stakeholder needs.
 
 .. feature:: Version-aligned project authoring
    :id: FEAT_AUTHORING
 
-   Grouping for the associated PTK stakeholder needs.
+   Grouping for the associated PTk stakeholder needs.
 
 
 .. req-stkh:: Conventional project configuration
@@ -52,7 +52,7 @@ organizational, not requirements or implementation statuses.
    :clustered_by: FEAT_CONFIG
    :tags: implemented
 
-   PTK shall organize configuration through known files and explicit ownership, retaining the .main.ptk.yml marker and keeping component feature definitions beside their component code.
+   PTk shall organize configuration through known files and explicit ownership, retaining the .main.ptk.yml marker and keeping component feature definitions beside their component code.
 
    **Origin:** Accepted replacement of decentralized loading and include chains.
 
@@ -69,7 +69,7 @@ organizational, not requirements or implementation statuses.
    :clustered_by: FEAT_USABILITY
    :tags: implemented
 
-   PTK shall expose project jobs and workflows directly, group maintainer operations under maintainer, and group user installation/setup operations under self-service while keeping init separate.
+   PTk shall expose project jobs and workflows directly, group maintainer operations under maintainer, and group user installation/setup operations under self-service while keeping init separate.
 
    **Origin:** Accepted command-group simplification.
 
@@ -86,7 +86,7 @@ organizational, not requirements or implementation statuses.
    :clustered_by: FEAT_USABILITY
    :tags: implemented
 
-   PTK shall provide persistent per-user completion for PowerShell and Bash, including Git Bash on Windows, with command, option and contextual value suggestions.
+   PTk shall provide persistent per-user completion for PowerShell and Bash, including Git Bash on Windows, with command, option and contextual value suggestions.
 
    **Origin:** Accepted completion discussion; per-user installation replaced the initial machine-wide request.
 
@@ -103,7 +103,7 @@ organizational, not requirements or implementation statuses.
    :clustered_by: FEAT_EXECUTION
    :tags: implemented
 
-   PTK shall allow a job to run for several selected variants in parallel and preserve variant selection for workflow calls.
+   PTk shall allow a job to run for several selected variants in parallel and preserve variant selection for workflow calls.
 
    **Origin:** Accepted request to support multichoice job variants and workflows.
 
@@ -120,7 +120,7 @@ organizational, not requirements or implementation statuses.
    :clustered_by: FEAT_EXECUTION
    :tags: implemented
 
-   PTK shall provide reusable configured jobs with typed inputs, selected tools and controlled execution environments.
+   PTk shall provide reusable configured jobs with typed inputs, selected tools and controlled execution environments.
 
    **Origin:** Consolidated requirement derived from current execution capabilities; review the detailed software requirements.
 
@@ -137,13 +137,13 @@ organizational, not requirements or implementation statuses.
    :clustered_by: FEAT_DISTRIBUTION
    :tags: implemented
 
-   PTK shall distribute its Python package, installer and matching editor artifact so team members can install and configure them without building the editor themselves.
+   PTk shall distribute its Python package, installer and matching editor artifact so team members can install and configure them without building the editor themselves.
 
    **Origin:** Accepted proposal to bundle the VSIX as a Python package resource.
 
    **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
 
-.. req-stkh:: Preserve newer PTK installations
+.. req-stkh:: Preserve newer PTk installations
    :id: REQ_Stkh_KEEP_NEWER
    :req_type: stakeholder technical requirement
    :safety: QM
@@ -154,7 +154,7 @@ organizational, not requirements or implementation statuses.
    :clustered_by: FEAT_DISTRIBUTION
    :tags: planned
 
-   PTK installers shall retain a newer installed PTK Python package when asked to install an older version.
+   PTk installers shall retain a newer installed PTk Python package when asked to install an older version.
 
    **Origin:** Accepted installation simplification request; implementation remains outstanding.
 
@@ -171,7 +171,7 @@ organizational, not requirements or implementation statuses.
    :clustered_by: FEAT_RESULTS
    :tags: implemented
 
-   PTK shall import supported execution/tool results into a canonical model and export reports that preserve the evidence needed to diagnose failures.
+   PTk shall import supported execution/tool results into a canonical model and export reports that preserve the evidence needed to diagnose failures.
 
    **Origin:** Accepted reporting/importer/exporter discussion.
 
@@ -188,7 +188,7 @@ organizational, not requirements or implementation statuses.
    :clustered_by: FEAT_RESULTS
    :tags: implemented
 
-   PTK shall identify warning/error diagnostics, support reasoned ignore/justify policies and show filterable findings with source logs in HTML reports.
+   PTk shall identify warning/error diagnostics, support reasoned ignore/justify policies and show filterable findings with source logs in HTML reports.
 
    **Origin:** Accepted log-analysis and HTML presentation requests.
 
@@ -205,7 +205,7 @@ organizational, not requirements or implementation statuses.
    :clustered_by: FEAT_INTEGRATION
    :tags: implemented
 
-   PTK shall provide documented built-in template values, including source Git identity, a short commit hash, exact tag values and environment variables, without unnecessary Git queries.
+   PTk shall provide documented built-in template values, including source Git identity, a short commit hash, exact tag values and environment variables, without unnecessary Git queries.
 
    **Origin:** Accepted runtime-variable and Git performance discussion.
 
@@ -222,7 +222,7 @@ organizational, not requirements or implementation statuses.
    :clustered_by: FEAT_INTEGRATION
    :tags: implemented
 
-   PTK shall support project tools, credentials, build generators, artifact destinations and ordinary Python tools through declared configuration.
+   PTk shall support project tools, credentials, build generators, artifact destinations and ordinary Python tools through declared configuration.
 
    **Origin:** Derived from the present public CLI and configuration model; stakeholder review remains required.
 
@@ -239,7 +239,7 @@ organizational, not requirements or implementation statuses.
    :clustered_by: FEAT_INTEGRATION
    :tags: implemented
 
-   PTK shall route virtual-monorepo commands to independently configured repositories using automatic bounded discovery rather than a required global configuration-path option.
+   PTk shall route virtual-monorepo commands to independently configured repositories using automatic bounded discovery rather than a required global configuration-path option.
 
    **Origin:** Accepted VMR discovery discussion; detailed routing is implementation-derived.
 
@@ -256,7 +256,7 @@ organizational, not requirements or implementation statuses.
    :clustered_by: FEAT_AUTHORING
    :tags: implemented
 
-   PTK shall provide an expert agent and task-specific skills, including log analysis, using the installed CLI and project context rather than assumptions about PTK's own repository.
+   PTk shall provide an expert agent and task-specific skills, including log analysis, using the installed CLI and project context rather than assumptions about PTk's own repository.
 
    **Origin:** Accepted authoring-agent, skill review and independence requests.
 

@@ -58,7 +58,7 @@ def test_authoring_starter_runs_from_its_configuration_directory(tmp_path, monke
 
 
 def test_installed_workflow_skill_supports_a_consumer_pipeline(tmp_path, monkeypatch):
-    """Exercise the documented flow without PTK's own jobs or source layout."""
+    """Exercise the documented flow without PTk's own jobs or source layout."""
     import json
 
     from ptk.adapters.authoring import AuthoringFiles

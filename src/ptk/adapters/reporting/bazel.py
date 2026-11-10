@@ -326,7 +326,7 @@ def read(reports, step):
                 result.bazel.append(BazelReport(**item))
         except READ_ERRORS as exc:
             result.problems.append(f"{step}: cannot read Bazel snapshot: {exc}")
-    # report.import can copy a BEP file here without running Bazel in PTK.
+    # report.import can copy a BEP file here without running Bazel in PTk.
     for path in sorted(reports.glob("*")):
         if path.name.endswith(SUFFIXES) and path.name not in captured:
             try:

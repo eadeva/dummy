@@ -405,7 +405,7 @@ def test_native_powershell_tab_expansion(
         )
     launcher = Path(sys.executable).with_name("ptk.exe" if os.name == "nt" else "ptk")
     if not launcher.exists():
-        pytest.skip("requires installed PTK console entry point")
+        pytest.skip("requires installed PTk console entry point")
     source = CliRunner().invoke(cli, ["self-service", "completion", "powershell"])
     assert source.exit_code == 0, source.output
     script = tmp_path / "completion-test.ps1"

@@ -18,6 +18,7 @@ from .process_options import captured_process_options, detached_process_options
 
 WINDOWS = sys.platform.startswith("win")
 GRACE_SECONDS = 5.0
+PROGRESS_SECONDS = 5.0
 
 
 class SubprocessRunner:
@@ -40,7 +41,7 @@ class SubprocessRunner:
             "stdout": subprocess.PIPE,
             "stderr": subprocess.STDOUT,
         }
-        # Keep captured output in the existing PTK/VS Code terminal. A process
+        # Keep captured output in the existing PTk/VS Code terminal. A process
         # group alone does not suppress a Windows console when the parent is
         # console-free (for example VS Code discovery or a background helper).
         if command.detached:
@@ -73,7 +74,7 @@ class SubprocessRunner:
             return ProcessOutcome(126, error=f"cannot start: {exc}")
 
         if command.detached:
-            # Reap while PTK is alive, without keeping PTK alive or registering
+            # Reap while PTk is alive, without keeping PTk alive or registering
             # the GUI for timeout/cancellation cleanup. No terminal pipe survives.
             threading.Thread(target=proc.wait, daemon=True).start()
             return ProcessOutcome(0, launched_pid=proc.pid)
@@ -107,12 +108,38 @@ def _path_of(env: dict[str, str]) -> str | None:
     return None
 
 
-def _pump(proc: subprocess.Popen, on_output: Callable[[str], None]) -> None:
-    if proc.stdout is None:
+def _pump(
+    proc: subprocess.Popen,
+    on_output: Callable[[str], None],
+    *,
+    clock: Callable[[], float] = time.monotonic,
+) -> None:
+    """Forward lines; a ``\\r`` progress line (Sphinx, curl) is cut every few seconds."""
+    stream = proc.stdout
+    if stream is None:
         raise RuntimeError("process output pipe is missing")
-    for raw in iter(proc.stdout.readline, b""):
-        on_output(raw.decode("utf-8", errors="replace").rstrip("\r\n"))
-    proc.stdout.close()
+    read = getattr(stream, "read1", None) or stream.read
+
+    def emit(data: bytes) -> None:
+        on_output(data.decode("utf-8", errors="replace").rstrip("\r\n"))
+
+    buffer = b""
+    flushed = clock()
+    while chunk := read(65536):
+        *lines, buffer = (buffer + chunk).split(b"\n")
+        for line in lines:
+            emit(line)
+        now = clock()
+        if lines:
+            flushed = now
+        cut = buffer.rfind(b"\r")
+        # Not at the end: that \r may start a CRLF line end.
+        if 0 < cut < len(buffer) - 1 and now - flushed >= PROGRESS_SECONDS:
+            emit(buffer[:cut])
+            buffer, flushed = buffer[cut:], now
+    if buffer:
+        emit(buffer)
+    stream.close()
 
 
 def _kill_tree(proc: subprocess.Popen) -> None:

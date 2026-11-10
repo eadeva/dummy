@@ -1,4 +1,4 @@
-"""Console-free launches for PTK's captured/background subprocesses."""
+"""Console-free launches for PTk's captured/background subprocesses."""
 
 import subprocess
 import sys

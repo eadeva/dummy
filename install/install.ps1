@@ -8,7 +8,7 @@
 #
 # Environment:
 #   PTK_SOURCE   what 'uv tool install' installs (default: this checkout, otherwise xcce_ptk from your index)
-#   PTK_EXTRAS   optional extras (default "keyring": Windows Credential Manager; set "" for none)
+#   PTK_EXTRAS   optional extras (default: none)
 #   UV_INDEX_URL / UV_EXTRA_INDEX_URL   your package index (standard uv variables)
 param([switch]$NoCompletion, [switch]$NoExtension, [switch]$ForceExtension)
 
@@ -41,7 +41,7 @@ if (-not $source) {
         }
     }
 }
-$extras = if ($null -eq $env:PTK_EXTRAS) { "keyring" } else { $env:PTK_EXTRAS }
+$extras = $env:PTK_EXTRAS
 if ($extras) {
     if ($source -match "://|@") { Say "PTK_EXTRAS is ignored for URL sources" }
     else { $source = "$source[$extras]" }
@@ -56,7 +56,7 @@ if ($LASTEXITCODE -ne 0) { Write-Warning "uv could not update the shell PATH; co
 
 if (-not $NoCompletion -or -not $NoExtension) {
     $toolBin = (uv tool dir --bin | Out-String).Trim()
-    if ($LASTEXITCODE -ne 0 -or -not $toolBin) { throw "PTK installed, but cannot locate uv's tool directory" }
+    if ($LASTEXITCODE -ne 0 -or -not $toolBin) { throw "PTk installed, but cannot locate uv's tool directory" }
     $ptkExecutable = Join-Path $toolBin "ptk.exe"
     if (-not (Test-Path -LiteralPath $ptkExecutable -PathType Leaf)) { throw "ptk.exe not found in $toolBin" }
     $env:PATH = $toolBin + [IO.Path]::PathSeparator + $env:PATH
@@ -67,7 +67,7 @@ if (-not $NoExtension) {
     $extensionOptions = @("self-service", "extension", "--if-available")
     if ($ForceExtension -or $fromCheckout) { $extensionOptions += "--force" }
     & $ptkExecutable @extensionOptions
-    if ($LASTEXITCODE -ne 0) { throw "PTK installed, but extension setup failed; retry: ptk self-service extension" }
+    if ($LASTEXITCODE -ne 0) { throw "PTk installed, but extension setup failed; retry: ptk self-service extension" }
 }
 
 if (-not $NoCompletion) {
@@ -81,7 +81,7 @@ if (-not $NoCompletion) {
         Say "Tab completion enabled now and in future PowerShell and Bash/Git Bash terminals"
         Say "double-Tab listing applies to all commands; profile: $($PROFILE.CurrentUserAllHosts)"
     } catch {
-        Write-Warning "PTK is installed, but completion setup failed: $_"
+        Write-Warning "PTk is installed, but completion setup failed: $_"
         Say 'retry: ptk self-service completion install'
     }
 }

@@ -2,7 +2,7 @@ Runtime view
 ============
 
 .. figure:: ../_static/diagrams/job-lifecycle.svg
-   :alt: A caller selects a job, variants and parameters. PTK loads and prepares the selection. Invalid requests return an error, and dry runs return a preview. Execution acquires a per-job and variant lock, delegates steps, retains evidence, imports and exports reports, then returns execution status.
+   :alt: A caller selects a job, variants and parameters. PTk loads and prepares the selection. Invalid requests return an error, and dry runs return a preview. Execution acquires a per-job and variant lock, delegates steps, retains evidence, imports and exports reports, then returns execution status.
    :figclass: ptk-diagram
    :target: ../_static/diagrams/job-lifecycle.svg
 

@@ -28,9 +28,6 @@ dependencies = [
   "cryptography==50.0.2",   # built-in credential vault (AES-GCM)
 ]
 
-[project.optional-dependencies]
-keyring = ["keyring==25.7.0"]   # OS keyring provider (Windows Credential Manager, macOS, Secret Service)
-
 [project.scripts]
 ptk = "ptk.drivers.cli.main:main"
 
@@ -98,7 +95,7 @@ extend-exclude = ["reference"]
 [tool.ruff.lint]
 # ruff defaults (E4, E7, E9, F; line length 88) plus stricter and security rule sets
 extend-select = ["I", "B", "UP", "SIM", "S", "PERF"]
-# Running configured commands is PTK's purpose; argv lists never use a shell.
+# Running configured commands is PTk's purpose; argv lists never use a shell.
 # PERF401 rewrites readable report builders into long extend() expressions.
 ignore = ["S603", "S607", "PERF401"]
 

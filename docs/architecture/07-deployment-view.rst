@@ -3,8 +3,8 @@ Deployment view
 
 A normal installation puts the Python package and its entry point in a
 user-scoped tool environment. The install scripts orchestrate installation;
-PTK's ``self-service`` commands perform completion and editor setup. Project
-job environments are separate from the environment running PTK.
+PTk's ``self-service`` commands perform completion and editor setup. Project
+job environments are separate from the environment running PTk.
 
 .. list-table:: Deployment artifacts
    :header-rows: 1
@@ -39,7 +39,7 @@ build job. Node/npm and Sphinx are development/release dependencies, not runtime
 requirements for installing a prepared wheel. See :doc:`/guides/packaging`.
 
 The installer currently refreshes its selected Python package source. The
-request to retain an already newer PTK Python package is tracked as
+request to retain an already newer PTk Python package is tracked as
 :need:`REQ_Sw_KEEP_NEWER_PACKAGE`; extension version protection is a separate
 implemented behavior. Do not infer package downgrade protection from the VSIX
 check.

@@ -30,7 +30,7 @@ class SetupAuthoring:
                     .replace("../../../docs/", "../../ptk/docs/")
                     .replace("../../../examples/", "../../ptk/examples/")
                 )
-                text += f"\nBundled with PTK {self._version}. See the [installed reference](../../ptk/README.md) and [configuration schema](../../ptk/config-schema.json). Treat bundled examples and docs as reference material; edit this project's own PTK configuration.\n"
+                text += f"\nBundled with PTk {self._version}. See the [installed reference](../../ptk/README.md) and [configuration schema](../../ptk/config-schema.json). Treat bundled examples and docs as reference material; edit this project's own PTk configuration.\n"
                 files[name] = text.encode()
                 count += 1
             elif name == "agents/ptk-expert.agent.md":
@@ -47,8 +47,8 @@ class SetupAuthoring:
             json.dumps(ExportSchema().execute(), indent=2) + "\n"
         ).encode()
         files["ptk/README.md"] = (
-            f"# PTK {self._version} offline reference\n\n"
-            "These guides, examples and skills match the PTK version that exported this bundle. "
+            f"# PTk {self._version} offline reference\n\n"
+            "These guides, examples and skills match the PTk version that exported this bundle. "
             "They are managed by `ptk maintainer sync agent`; preserve project-specific changes in separate files.\n\n"
             "- [Assistant discovery guide](docs/guides/agent-guide.rst)\n"
             "- [Local setup, hooks and tools](docs/guides/local-setup.rst)\n"
@@ -56,7 +56,7 @@ class SetupAuthoring:
             "- [External bases and deviation reports](docs/guides/shared-configs.rst)\n"
             "- [CLI](docs/reference/cli.rst)\n"
             "- [Log analysis](docs/guides/log-analysis.rst)\n"
-            "- [PTK expert agent](../agents/ptk-expert.agent.md)\n"
+            "- [PTk expert agent](../agents/ptk-expert.agent.md)\n"
             "- [DevOps and maintenance](../skills/ptk-devops/SKILL.md)\n"
             "- [GitHub workflows and artifact Actions](docs/guides/github-actions.rst)\n"
             "- [Output reuse](docs/guides/output-reuse.rst)\n"
@@ -69,7 +69,7 @@ class SetupAuthoring:
             "Copy examples to a disposable directory before running them. "
             "Examples are syntax references, not jobs present in your project. "
             "Use your installed runtime and discovered invocation routes for execution. "
-            "PTK packaging, extension-build and benchmark commands explicitly labelled "
+            "PTk packaging, extension-build and benchmark commands explicitly labelled "
             "source-checkout-only do not apply to consumer repositories.\n\n"
             "Resolve RST :doc: targets from docs/ (absolute document paths) or the current "
             "page (relative paths). Literal includes refer to the bundled examples; "

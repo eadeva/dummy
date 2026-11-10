@@ -4,12 +4,12 @@ Preparing package artifacts
 Package a consuming project
 ---------------------------
 
-PTK orchestrates the project's chosen packaging commands. It does not add a
+PTk orchestrates the project's chosen packaging commands. It does not add a
 ``package`` job, Python build backend or dependency groups to an existing project.
 Discover the actual job with ``ptk --help`` or ``ptk describe --json`` and inspect
 its source before execution. Preserve that project's version source, backend,
 artifact naming and release policy; non-Python projects need no Python packaging
-configuration merely because they use PTK.
+configuration merely because they use PTk.
 
 Declare outputs on the producing steps or job, inspect the completed output
 summary and ``upload.json``, and verify artifacts using the project's own tools.
@@ -17,15 +17,15 @@ See :doc:`artifacts`, :doc:`python-tools` and :doc:`github-actions` when relevan
 Preparation does not imply publication. Keep credentials out of manifests and
 confirm that an apparent build/packaging command does not also publish.
 
-Install a distributed PTK release
+Install a distributed PTk release
 ---------------------------------
 
 Use the team's approved package source and installer. After installation verify
 ``ptk --version``. Use ``ptk self-service extension`` for VS Code and, as a project
 maintainer, ``ptk maintainer sync agent`` for portable offline agent resources.
-A consumer does not build PTK's VSIX or run PTK's packaging job.
+A consumer does not build PTk's VSIX or run PTk's packaging job.
 
-Prepare PTK itself (source checkout only)
+Prepare PTk itself (source checkout only)
 -----------------------------------------
 
 Run ``uv run ptk package`` (or ``ptk package`` from this checkout). The job
@@ -48,7 +48,7 @@ Node.js, npm, Git checkout or extension download. Editable builds (``uv sync``)
 skip the VSIX build so Python development stays fast.
 
 Publish the Python distributions to your Artifactory PyPI repository. The
-installer installs PTK, then calls ``ptk self-service extension --if-available`` using
+installer installs PTk, then calls ``ptk self-service extension --if-available`` using
 the installed tool's executable. The extension needs no separate publication
 or release manifest. ``ptk self-service extension --output project-toolkit.vsix``
 exports it for manual installation. Plain ``uv tool install`` only installs the
@@ -57,7 +57,7 @@ No editor installation runs during wheel building, import or normal CLI startup.
 The installers remain small separate bootstrap scripts.
 
 Nothing is uploaded, tagged or version-bumped. No Artifactory endpoint or
-credentials are needed. The version comes from PTK's project versioning
+credentials are needed. The version comes from PTk's project versioning
 configuration in ``config/ptk/versioning.ptk.yml``. It is Git-managed:
 reachable ``v*`` tags are selected and the ``v`` prefix removed. Exact clean
 ``v1.2.3`` becomes ``1.2.3``; commits after it add ``+N.gHASH`` and tracked dirty
@@ -68,12 +68,12 @@ release preparation. Untagged/shallow checkouts use the explicitly configured
 The job consumes ``PTK_VERSION_PTK`` from its immutable run snapshot. Python
 metadata normalizes that value to PEP 440 and rejects incompatible versions.
 ``pyproject.toml`` declares a dynamic version, so ordinary wheel/editable builds
-also use PTK's configuration reader and version discovery. Metadata generation
+also use PTk's configuration reader and version discovery. Metadata generation
 reads only ``.main.ptk.yml``, ``versioning.ptk.yml`` and the optional
 ``project.variants.ptk.yml`` in ``repository.config_path``. The default variant
 selects any project version override. These inputs are validated, but unrelated
 project files are not loaded: an unfinished job or an unexpected configuration
-filename must not prevent installing PTK to diagnose and repair the project.
+filename must not prevent installing PTk to diagnose and repair the project.
 Normal commands still validate the complete project with the fixed layout.
 Runtime ``ptk.__version__`` reads installed
 distribution metadata. Source distributions freeze the resolved version in

@@ -58,7 +58,7 @@ test("list edits stay in the entity document", () => {
   const edits = plan(config, docs, [{ op: "set", path: ["jobs", "build", "steps", "compile", "run"], value: "make all" }]);
   assert.equal(YAML.parse(edits.get("/repo/config/jobs/build.ptk.yml")).steps.compile.run, "make all");
 });
-test("component features use the exact file provided by PTK", () => {
+test("component features use the exact file provided by PTk", () => {
   const config = { version: 5, value: { variants: { components: { networking: {} } } }, bindings: [{ file: "/repo/src/net/component.variants.ptk.yml", path: ["variants", "components", "networking"], document_path: [] }] };
   const edits = plan(config, new Map(), [{ op: "add", path: ["variants", "components", "networking", "features"], value: { TLS: { type: "bool" } } }]);
   assert.deepEqual(YAML.parse(edits.get("/repo/src/net/component.variants.ptk.yml")), { features: { TLS: { type: "bool" } } });
@@ -80,7 +80,7 @@ test("unowned fields cannot be silently discarded when editing a parent", () => 
 
 test("graph connections update only the owning job document and survive invalid unrelated fields", () => {
   const { config, docs } = fixture();
-  config.value.jobs.build.help = 123; // PTK reports this error; graph repair remains possible.
+  config.value.jobs.build.help = 123; // PTk reports this error; graph repair remains possible.
   config.value.jobs.build.steps.test = { run: "test", needs: [] };
   docs.set("/repo/config/jobs/build.ptk.yml", "# preserve\nhelp: 123\nsteps:\n  compile: {run: make}\n  test: {run: test, needs: []}\n");
   const edits = plan(config, docs, [{ op: "dependency", path: ["jobs", "build", "steps", "test"], prerequisite: "compile", remove: false }]);

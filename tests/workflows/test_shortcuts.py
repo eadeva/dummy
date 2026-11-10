@@ -1,6 +1,5 @@
 """Workflow commands and deterministic collision handling for local/CX callers."""
 
-import json
 import sys
 from types import SimpleNamespace
 
@@ -72,24 +71,6 @@ def test_collision_is_noninteractive_in_help_cx_and_explicit_commands(tmp_path):
     assert invoke(root, "run", "verify").exit_code == 0
     assert invoke(root, "workflow", "run", "verify").exit_code == 0
     assert (root / "workflow-ran").is_file()
-
-
-def test_generated_editor_tasks_resolve_collisions_without_prompting(tmp_path):
-    from tests.conftest import grant_maintainer
-
-    root = setup_project(tmp_path, collide=True)
-    grant_maintainer(root)
-    result = invoke(root, "maintainer", "sync", "tasks", env={"PTK_ROLE": ""})
-    assert result.exit_code == 0, result.output
-    tasks = json.loads((root / ".vscode/tasks.json").read_text())["tasks"]
-    for label, marker in (
-        ("ptk: verify", "job-ran"),
-        ("ptk: workflow verify", "workflow-ran"),
-    ):
-        task = next(task for task in tasks if task["label"] == label)
-        run = invoke(root, *task["args"])
-        assert run.exit_code == 0, run.output
-        assert (root / marker).is_file()
 
 
 def test_vmr_workspace_and_member_shortcuts(tmp_path, monkeypatch):

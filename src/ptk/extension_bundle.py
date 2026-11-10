@@ -33,7 +33,7 @@ def build_vsix(root: Path, output: Path) -> None:
     npm = shutil.which("npm")
     if npm is None:
         raise ValueError(
-            "Building PTK from a checkout requires Node.js 22+ and npm for the "
+            "Building PTk from a checkout requires Node.js 22+ and npm for the "
             "bundled extension. Install a released wheel/sdist, or use 'uv sync' "
             "for editable Python development."
         )

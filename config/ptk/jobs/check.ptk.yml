@@ -1,8 +1,8 @@
-# PTK configuration: this file owns its section or named entity.
-help: Check PTK's lint rules and formatting
+# PTk configuration: this file owns its section or named entity.
+help: Check PTk's lint rules and formatting
 env:
   UV_PROJECT_ENVIRONMENT: ${project.root}/.ptk/venvs/check
-# Explicit report artifact; PTK completes its contents before the upload Action runs.
+# Explicit report artifact; PTk completes its contents before the upload Action runs.
 outputs:
 - path: ${run.reports_dir}
   artifact_type: check-reports

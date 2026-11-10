@@ -1,4 +1,4 @@
-# PTK configuration: this file owns its section or named entity.
+# PTk configuration: this file owns its section or named entity.
 help: Prepare Python distributions with the VS Code extension and offline documentation
 requires_tools:
 - node
@@ -7,7 +7,7 @@ environment:
   inherit_path: true
 env:
   UV_PROJECT_ENVIRONMENT: ${project.root}/.ptk/venvs/package
-# Explicit report artifact; PTK completes its contents before the upload Action runs.
+# Explicit report artifact; PTk completes its contents before the upload Action runs.
 outputs:
 - path: ${run.reports_dir}
   artifact_type: package-reports

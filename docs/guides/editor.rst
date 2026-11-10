@@ -7,39 +7,39 @@ Project Toolkit extension
 The ``project-toolkit`` extension in ``extensions/project-toolkit`` provides a
 sidebar for jobs, workflows, built-in commands, variants and configuration files.
 Run ``ptk self-service extension`` to install the VSIX bundled with the Python package,
-then open a trusted PTK
-repository or VMR. PTK must be installed on the workspace host and support
+then open a trusted PTk
+repository or VMR. PTk must be installed on the workspace host and support
 ``ptk describe --json --configuration``. The extension requires VS Code 1.96 or newer.
 
 Both installers run extension setup automatically when ``code`` is available.
 Use ``install.ps1 -NoExtension`` or ``install.sh --no-extension`` to skip it.
 The setup command works outside projects and with broken configuration, and is
 available to every user. It is separate from maintainer-only ``maintainer sync``,
-which writes shared project tasks and skills.
+which writes shared configuration files and agent resources.
 
 Use ``--code code-insiders`` (or an absolute launcher path) for another VS Code
 installation and ``--profile NAME`` to choose a VS Code profile. The command
 keeps an equal/newer installed extension; ``--force`` explicitly reinstalls or
-downgrades it. A retained newer extension still checks PTK's JSON interface when
+downgrades it. A retained newer extension still checks PTk's JSON interface when
 it loads. ``--output PATH`` exports the VSIX without starting VS Code and refuses
 to overwrite existing files. VSIX installations do not automatically follow
 Python upgrades: rerun the installer or ``ptk self-service extension`` after upgrading
-PTK. In remote workspaces run setup on the workspace host.
+PTk. In remote workspaces run setup on the workspace host.
 
 Hover over a job to see Run, Dry Run, **Run Job or Workflow with Options** (gear) and
 **Show Help** (question mark), each with a tooltip. The gear opens the run-options form for jobs and workflows. Jobs offer multiple
 variant checkboxes, ``--only-step``/``--to`` step dropdowns in authored order, and
 parameter overrides with help, defaults and declared choices. Step titles label
 the dropdown choices. **More run options** exposes feature overrides, per-step
-arguments and flags, with suggestions where PTK supplies them. ``--env`` requires
+arguments and flags, with suggestions where PTk supplies them. ``--env`` requires
 **Dry run**. Repository workflows offer multiple owner variants and their help text;
-PTK resolves the mapped jobs' variants. Workspace workflows have no owner-variant
+PTk resolves the mapped jobs' variants. Workspace workflows have no owner-variant
 selector. Required non-secret job parameters open the form automatically. Help shows
 the job's ``--help`` without running it or asking for parameters.
 Dry Run calls ``ptk JOB --dry-run`` or ``ptk workflow run --dry-run NAME`` and shows the
 planned steps without executing them.
 Provide secrets through their configured environment variables. Tasks execute
-PTK as a process and show output in the task terminal. Saved tasks preserve
+PTk as a process and show output in the task terminal. Saved tasks preserve
 dry-run mode, parameters, variants, run options and help requests. The extension
 rechecks current choices before launching; removed steps or variants require a new selection.
 
@@ -48,9 +48,9 @@ other permitted commands. Duplicate ``run`` and ``report`` branches,
 including workflow equivalents, are omitted in favour of job/workflow actions.
 The remaining tree commands have Run, Options and Help icons. Required
 arguments are prompted automatically; the gear lets you supply optional values.
-Credential values and vault passwords stay in PTK's hidden terminal prompts.
-**CLI help** displays ``ptk --help``; **help** opens PTK's HTML help.
-The command tree requires a supported PTK inventory; incompatible inventories
+Credential values and vault passwords stay in PTk's hidden terminal prompts.
+**CLI help** displays ``ptk --help``; **help** opens PTk's HTML help.
+The command tree requires a supported PTk inventory; incompatible inventories
 show an update error. See :ref:`extension-compatibility`.
 
 Expand a job to check one or more variants. Run, Dry Run, Clean and Re-run launch
@@ -65,20 +65,20 @@ The choice is stored independently per job/workflow in VS Code's workspace state
 **All variants** selects every concrete variant. Unchecking the last selected
 variant checks the actual configured default variant automatically; there is no
 separate default checkbox. Abstract variants are excluded. This updates only the
-affected tree branch, without running PTK or rewriting configuration.
+affected tree branch, without running PTk or rewriting configuration.
 Workflows use the selected owner variant and its repository variant mappings. Use **Display Variant**
 for resolved features and the report icon on a job or workflow to open its report.
 A job with ``variant_independent: true`` has no variant branch and no variant
-choices in its form; the extension runs it without ``--variant``, so PTK uses the
+choices in its form; the extension runs it without ``--variant``, so PTk uses the
 project default variant for its paths.
 
 The configuration form uses compact rows for labels, values and actions, with a
 vertical layout in narrow editor columns. Hover a field label or its **?** button
 for help, or activate **?** to expand the explanation, default and constraints.
-Help is supplied by the installed PTK's schema, generated from Pydantic field
+Help is supplied by the installed PTk's schema, generated from Pydantic field
 descriptions. The optional-field selector shows the same help before insertion.
 Open help survives save replies, and typing retains the existing deferred-save
-behavior. Compatible additions to PTK's field descriptions appear after refresh.
+behavior. Compatible additions to PTk's field descriptions appear after refresh.
 
 Guided creation
 ~~~~~~~~~~~~~~~
@@ -103,7 +103,7 @@ Draft values remain in the live editor only and are not saved as workspace
 state; closing or reloading the webview discards them. Existing pending field
 edits are saved before opening setup. Creation uses the current document revision
 and checks for duplicate names or changed parent fields; rejected writes retain
-the draft for repair. Required/type/range checks assist entry, while PTK remains
+the draft for repair. Required/type/range checks assist entry, while PTk remains
 responsible for complete project validation, which the extension repeats on
 every reload and save (errors appear in the tree and Problems panel).
 File-based forms may leave the document unsaved until **Save**. Placeholder commands
@@ -117,11 +117,11 @@ configurations, not a new saved ``mode`` field. Python configuration fields also
 offer environment choices. See :doc:`python-tools` and
 :ref:`command-line-forms` for execution semantics.
 
-Mode templates and explanations come from the installed PTK schema. If that
-metadata is unavailable, update PTK and refresh; the extension does not invent
+Mode templates and explanations come from the installed PTk schema. If that
+metadata is unavailable, update PTk and refresh; the extension does not invent
 templates or substitute its bundled schema. Raw YAML remains available outside
 setup. The addition is compatible with inventory/configuration interface 5;
-the wizard requires extension 0.22.0 and a PTK schema exporting creation modes.
+the wizard requires extension 0.22.0 and a PTk schema exporting creation modes.
 See :need:`DD_GUIDED_CREATION` and :need:`REQ_Sw_CREATION_METADATA`.
 
 Configuration trees and graphs
@@ -130,10 +130,10 @@ Configuration trees and graphs
 Tree and form place scalar fields before objects and lists. At the root, scalar
 metadata is followed by repository/project identity, variants and components,
 jobs and workflows, execution settings, tools and credentials, artifacts and
-versioning, then output settings. PTK exports explicit field-order metadata;
+versioning, then output settings. PTk exports explicit field-order metadata;
 JSON key sorting cannot change the display order. Optional-field choices follow
 the same rules. Lists keep their authored order. Jobs and workflows show dependency
-trees supplied by PTK in execution direction: prerequisites first, with dependents
+trees supplied by PTk in execution direction: prerequisites first, with dependents
 nested underneath. Steps with no prerequisites are roots. Shared nodes expand
 once; later occurrences
 are leaf references marked **shared — shown above**. Activating either occurrence
@@ -191,7 +191,7 @@ editor overview, not a tool/file-level build graph or a free-position drawing.
 
 Connection edits preserve other prerequisites, YAML order and unrelated fields.
 They pass through the existing version/fingerprint checks and write the owning
-document. Logical project forms save and reload through PTK; individual file
+document. Logical project forms save and reload through PTk; individual file
 forms use VS Code's document save and undo behavior. Dragging creates scheduling
 dependencies; it does not reorder definitions, run commands or establish artifact
 contracts. Positions are automatic and are not stored in YAML.
@@ -210,34 +210,34 @@ An invalid graph displays its diagnostic while fields and Raw YAML remain
 available. Existing missing or cyclic references can be removed one at a time;
 new connections are checked in both the webview and the host before writing.
 Cycles are detected while configuring, including after editing needs fields;
-PTK also rejects cycles and repeated job targets during configuration validation.
+PTk also rejects cycles and repeated job targets during configuration validation.
 Malformed dependency fields can be repaired through their normal field controls
-or Raw YAML. Other project validation errors do not prevent graph repairs. PTK
+or Raw YAML. Other project validation errors do not prevent graph repairs. PTk
 remains responsible for full configuration validation and execution permissions.
 Graph field metadata is supplied by the installed schema; there is no embedded
 schema fallback or legacy configuration conversion.
 
 Multiple folders, VMR members and workspace workflows are supported. Discovery
-uses PTK's role-filtered inventory; commands still enforce permissions in the CLI.
+uses PTk's role-filtered inventory; commands still enforce permissions in the CLI.
 Configuration changes trigger a refresh. Errors appear on project nodes and in
 the Project Toolkit output channel. Tasks can execute project commands, so the
 extension requires workspace trust.
 
 Set ``projectToolkit.executable`` to a program or absolute path and
 ``projectToolkit.arguments`` to separate prefix arguments. For uv, use executable
-``uv`` and arguments ``["run", "--no-sync", "ptk"]``. Use an installed PTK executable at VMR
-roots without a uv project. SSH/WSL/container sessions run PTK on their workspace
+``uv`` and arguments ``["run", "--no-sync", "ptk"]``. Use an installed PTk executable at VMR
+roots without a uv project. SSH/WSL/container sessions run PTk on their workspace
 host. Increase ``projectToolkit.discoveryTimeout`` for slow discovery.
 
 For a uv-managed project, prepare or update its environment with an explicit
 ``uv sync``. The extension inserts ``--no-sync`` into existing ``uv run`` settings
-for discovery and all tasks, so launching a command does not reinstall PTK or
+for discovery and all tasks, so launching a command does not reinstall PTk or
 its dependencies. Child job runtimes can still synchronize their own environments.
 Installed configuration copies in virtual environments and generated output do
-not trigger discovery. Refresh requests are serialized, and PTK task completion
-refreshes the tree. Click **PTK unavailable** to see the exact discovery error.
+not trigger discovery. Refresh requests are serialized, and PTk task completion
+refreshes the tree. Click **PTk unavailable** to see the exact discovery error.
 
-Only in PTK's source checkout, build from its root with ``ptk extension`` or
+Only in PTk's source checkout, build from its root with ``ptk extension`` or
 ``uv run ptk extension``. Consumer projects use ``ptk self-service extension``.
 The job checks Node.js 22+ and npm, installs the build dependencies, runs the
 checks and writes a stable ``project-toolkit.vsix`` under the package step
@@ -250,12 +250,12 @@ settings and manual smoke-test instructions.
 
 .. _extension-compatibility:
 
-PTK and extension compatibility
+PTk and extension compatibility
 -------------------------------
 
-PTK defines the capabilities; the extension presents them. The extension depends
-on PTK's versioned JSON interface and CLI behavior, not only on its configuration
-schema. It starts the configured PTK executable on the workspace host; it does
+PTk defines the capabilities; the extension presents them. The extension depends
+on PTk's versioned JSON interface and CLI behavior, not only on its configuration
+schema. It starts the configured PTk executable on the workspace host; it does
 not import Python modules or require an exact Python-package release version.
 Discovery calls::
 
@@ -265,7 +265,7 @@ Discovery calls::
    :header-rows: 1
    :widths: 45 55
 
-   * - PTK supplies or performs
+   * - PTk supplies or performs
      - The extension uses it for
    * - Loaded values, document ownership, source locations and fingerprints
      - The logical configuration tree and edits to the correct YAML files
@@ -274,7 +274,7 @@ Discovery calls::
    * - Jobs, workflows, variants, parameters and permitted built-in commands
      - Available actions, variant selection and parameter forms
    * - Invocation directory, repository prefix and command paths
-     - Launching PTK through VS Code tasks without a config-file override
+     - Launching PTk through VS Code tasks without a config-file override
    * - Run and built-in argument/option metadata, choices and descriptions
      - Step dropdowns, parameter help and value suggestions
    * - Validated graph nodes, prerequisites and ordered tree projection
@@ -282,10 +282,10 @@ Discovery calls::
    * - Validation diagnostics and template-variable metadata
      - Errors, variable suggestions and field-specific insertion rules
 
-PTK owns discovery, configuration assembly, full validation, permissions and job
-or workflow execution. The extension writes YAML using PTK's ownership mappings,
-then reloads through PTK. Its form checks assist editing; they do not replace
-PTK's full validation. The bundled schema is not a runtime fallback.
+PTk owns discovery, configuration assembly, full validation, permissions and job
+or workflow execution. The extension writes YAML using PTk's ownership mappings,
+then reloads through PTk. Its form checks assist editing; they do not replace
+PTk's full validation. The bundled schema is not a runtime fallback.
 
 Compatible additions
 ~~~~~~~~~~~~~~~~~~~~~
@@ -298,7 +298,7 @@ For example, an optional integer ``timeout`` field with a default and descriptio
 can be offered by the form as a numeric input with help. Adding fields does not
 migrate existing YAML; new required values can still require user edits.
 
-PTK's internal loading implementation can also change independently, provided
+PTk's internal loading implementation can also change independently, provided
 the exported values, schemas, ownership mappings and command behavior preserve
 the contract. New Python code alone does not require a new extension release.
 
@@ -308,29 +308,29 @@ Compatibility limits and versioning
 The extension supports a defined set of schema constructs and parameter types,
 not every possible JSON Schema feature. A new widget, unsupported schema
 construct, parameter type or specialized action can require extension changes.
-Although PTK supplies execution paths, dedicated actions still use known CLI
+Although PTk supplies execution paths, dedicated actions still use known CLI
 operations and flags, including validation, reports, initialization,
 ``--variant``, ``--dry-run``, ``--param``, ``--clean`` and ``--re-run``.
 Changing those semantics can break compatibility even if the schema is unchanged.
 
 The extension requires inventory ``schema_version: 6`` and per-project
 ``configuration.version: 5``. These are interface versions, separate from the
-PTK package version, extension version and project marker's ``schema_version``.
+PTk package version, extension version and project marker's ``schema_version``.
 Unsupported interface versions or malformed inventories are rejected with an
 error; there is no legacy parser or schema fallback.
 
-When evolving PTK, keep compatible additions within the supported contract.
+When evolving PTk, keep compatible additions within the supported contract.
 Treat removal or reinterpretation of required metadata, command semantics or
 editing mappings as a breaking change: update the affected interface version,
 extension and integration tests together. An unchanged version number alone
 does not guarantee compatibility. The recent CLI reorganization required an
 inventory-version and extension update because command routing changed.
 
-Bundling the VSIX in PTK distributes a tested pair; it does not require both
+Bundling the VSIX in PTk distributes a tested pair; it does not require both
 projects to have matching release numbers. Use the installers or
 ``ptk self-service extension`` to apply the bundled extension when needed.
 
-Developing PTK locally
+Developing PTk locally
 ----------------------
 
 The existing checkout installation still works::
@@ -341,7 +341,7 @@ The existing checkout installation still works::
    # Bash
    sh install/install.sh
 
-It rebuilds the wheel and bundled VSIX from this checkout, reinstalls PTK and
+It rebuilds the wheel and bundled VSIX from this checkout, reinstalls PTk and
 refreshes even a same-version extension. Node.js 22+ and npm are needed for this
 source build. Reload the VS Code window after installation. ``-ForceExtension``
 or ``--force-extension`` requests the same behaviour for explicit ``PTK_SOURCE``
@@ -383,31 +383,29 @@ Template-capable configuration text inputs offer **Insert variable…** and
 autocomplete when typing ``${``. Search by name, group or description; use
 arrow keys and Enter to select, or Escape to close. Insertion preserves the
 surrounding text, cursor and unsaved draft and does not reload configuration.
-The installed PTK supplies the catalogue, field capabilities and current job's
+The installed PTk supplies the catalogue, field capabilities and current job's
 parameter names. Runtime availability is described rather than evaluated in
 the editor. Environment and credential values are never previewed.
 The catalogue follows the compatibility contract in :ref:`extension-compatibility`.
 
-Generated tasks and offline resources
------------------------------------------
+Offline resources
+-----------------
 
-Run ``ptk maintainer sync tasks`` to generate VS Code tasks. Run
-``ptk maintainer sync agent`` for
-the PTK expert agent, its skills and their reference files. ``ptk maintainer sync agent --check`` checks drift
+Run ``ptk maintainer sync agent`` for
+the PTk expert agent, its skills and their reference files. ``ptk maintainer sync agent --check`` checks drift
 without writing (exit code 1 when an update is needed).
 
-Editor setup and all its subcommands are maintainer-only, including ``--check``.
-They are hidden from normal users and refuse direct invocation. Maintainers are
+The command is maintainer-only, including ``--check``.
+It is hidden from normal users and refuses direct invocation. Maintainers are
 listed by login ID in the configuration folder's ``maintainers.ptk.yml``; see
-:doc:`/guides/configuration`. Generate shared tasks with ``--users-only`` so they exclude
-maintainer jobs and workflows. Running existing tasks remains available to users.
+:doc:`/guides/configuration`.
 
 Fifteen project skills are installed under ``.github/skills/ptk-*/SKILL.md``.
 Version-matched documentation, examples and the generated configuration schema
 live under ``.github/ptk``. Skill links are relative to their own SKILL.md files;
-the consuming repository needs neither PTK's source tree nor network access.
-The PTK-development and PTK-documentation-maintenance skills stay in the PTK
-source repository, because they operate on PTK itself.
+the consuming repository needs neither PTk's source tree nor network access.
+The PTk-development and PTk-documentation-maintenance skills stay in the PTk
+source repository, because they operate on PTk itself.
 
 The wheel contains lightweight readable documentation sources; Sphinx is not a
 runtime dependency. ``.github/ptk/config-schema.json`` provides the exact field
@@ -415,7 +413,7 @@ reference. Full rendered HTML is a separate release artifact. Docs and examples
 are reference material: edit the consuming repository's own configuration and
 copy examples to a temporary directory before running them.
 
-Setup records hashes and the PTK version in ``.github/ptk/manifest.json``. It
+Setup records hashes and the PTk version in ``.github/ptk/manifest.json``. It
 updates unchanged managed files and removes obsolete unchanged managed files.
 Custom skills and other GitHub files are preserved. Locally modified or conflicting
 files cause an error before writing; reconcile them explicitly and rerun setup.
@@ -425,25 +423,19 @@ reference files and manifest together if the team should share them.
 Local workflows
 -------------------
 
-Workflow tasks call ``ptk workflow run NAME`` on the local machine; they do not
-invoke GitHub Actions. Repository task files include jobs and local workflows.
-Generated tasks use explicit ``ptk run JOB`` and ``ptk workflow run WORKFLOW``
-commands, prefixed with ``maintainer`` for restricted targets, so a shared name never triggers an interactive choice in an editor task.
-At a VMR root, ``ptk maintainer sync tasks`` includes workspace-owned workflows and
-qualified member workflows and each member's tasks. Use
-``ptk maintainer sync agent`` separately for member authoring resources.
-VMR tasks run from the workspace root. See :doc:`/guides/workflows` for
+Workflow actions call ``ptk workflow run NAME`` on the local machine; they do not
+invoke GitHub Actions. See :doc:`/guides/workflows` for
 parallelism, repository selection and CX restrictions.
 
-Workspace editor commands require membership in the VMR root's own
+Workspace ``maintainer sync`` commands require membership in the VMR root's own
 ``maintainers.ptk.yml``. Commands updating member repositories also require
 membership in each target's list; synchronization checks every member before any
-write. Use ``ptk ALIAS maintainer sync tasks`` or ``ptk ALIAS maintainer sync agent`` to update only a repository you maintain.
+write. Use ``ptk ALIAS maintainer sync agent`` to update only a repository you maintain.
 
 Report files
 ------------
 
-Jobs and workflows print the report file path. PTK does not start a local HTTP
+Jobs and workflows print the report file path. PTk does not start a local HTTP
 server or print browser URLs. Click **Open Latest Job or Workflow Report** on the
 job/workflow row. Job reports follow the selected variant; workflows open the
 latest saved aggregate report. Missing reports produce an informational message
@@ -454,25 +446,25 @@ The CLI operations are
 ``ptk report open --if-exists JOB`` and ``ptk report open --workflow NAME --if-exists``.
 Omitting ``--if-exists`` retains an error for missing reports. Configured
 ``open_report`` policies continue to open reports after local runs. Remote
-sessions open files on the machine running PTK.
+sessions open files on the machine running PTk.
 
 Cleanup actions
 ---------------
 
 Jobs and workflows expose **Clean Job or Workflow Outputs** (trash icon) and
 **Clean Outputs and Re-run Job or Workflow** (restart icon). They use the selected
-repository variant; workflow mappings are resolved by PTK. Clean does not prompt
+repository variant; workflow mappings are resolved by PTk. Clean does not prompt
 for job parameters. Saved tasks support mutually exclusive ``clean`` and ``reRun``
 booleans and can combine either with ``preview: true`` to inspect deletion paths.
 The built-in command tree exposes ``clean-all`` for repositories and
-``vmr-clean-all`` at the VMR root. Their confirmation occurs in the focused PTK
+``vmr-clean-all`` at the VMR root. Their confirmation occurs in the focused PTk
 terminal; the Options action also exposes ``--dry-run`` and ``--yes``.
 
 Configuration and parameter forms
 ---------------------------------
 
 Configuration is a logical schema tree. Components appear with their features,
-dependencies and source directory. The installed PTK supplies schemas, file ownership,
+dependencies and source directory. The installed PTk supplies schemas, file ownership,
 source locations and errors. New entities create their conventional file; component
 features go beside their code. Raw-file forms use the appropriate document schema.
 
@@ -480,7 +472,7 @@ Text and numbers remain local while typing. Leaving a field, saving or navigatin
 commits the edit; save replies preserve focus, cursor and unfinished input.
 Add actions are queued in order and acknowledge the newest completed refresh,
 so file-watcher activity cannot hide a successfully added item. New items include
-required descendants and minimum collection entries from PTK's schema. Workflow
+required descendants and minimum collection entries from PTk's schema. Workflow
 steps select an existing job; create a job first if none exists.
 Empty text fields have red borders and a fill-in message that clears while typing.
 Zero and false remain filled values. Starter URLs use ``example.invalid`` and
@@ -501,7 +493,7 @@ exact shades, while labels and shapes preserve meaning without color.
 A job with ``gui: true`` appears in the **GUIs** branch beside **Jobs** and
 **Workflows**, with no duplicate entry under Jobs. Its row offers only Run and
 Help; variant checkboxes, parameter forms and task restoration still apply.
-PTK runs preparation normally, detaches the single final command and exits.
+PTk runs preparation normally, detaches the single final command and exits.
 The application stays open after the task ends; later application output,
 health and exit status are not monitored. Terminate the application through
 its own UI. In a remote workspace it starts on the extension host, which must
@@ -512,12 +504,12 @@ Fingerprints reject stale edits, and dirty YAML must be saved first.
 Loading errors appear in the tree and Problems panel; the extension validates the
 configuration whenever it loads it. Broader checks (``--variants``, ``--versions``,
 ``--generated``) run from the built-in ``validate`` command with options. Without a
-project, **Initialize PTK Project** runs ``ptk init``. Use Raw YAML
+project, **Initialize PTk Project** runs ``ptk init``. Use Raw YAML
 for aliases or values that the form cannot safely represent.
 
 The job parameter gear opens a single window with help, default values, text
-fields, checkboxes and choices. Only enabled overrides are passed to PTK;
-environment values and template defaults are resolved by PTK at execution time.
+fields, checkboxes and choices. Only enabled overrides are passed to PTk;
+environment values and template defaults are resolved by PTk at execution time.
 Required non-secret parameters open this form automatically. Use Run job or Dry
 run to submit it, or Cancel to leave without executing. Secret parameters are
 not exposed in this window.
@@ -526,11 +518,11 @@ Output and cache configuration
 ------------------------------
 
 Job and step forms explain that outputs primarily describe workflow upload and
-download artifacts. They show PTK cache as an optional aid, with output
+download artifacts. They show PTk cache as an optional aid, with output
 completeness and cache correctness owned by the project. ``cache`` defaults to
 false and requires explicit ``outputs`` when enabled. Field help explains path
 resolution and roots that always run. Job/workflow parameter forms and saved
-tasks expose ``--no-cache-ptk`` to bypass PTK reuse throughout the invocation.
+tasks expose ``--no-cache-ptk`` to bypass PTk reuse throughout the invocation.
 See :doc:`output-reuse` for complete behavior.
 
 Workflow targets and explicit Boolean fields
@@ -559,7 +551,7 @@ text developers will see, enter choices one per line, choose whether a value is
 required, and optionally name an environment variable. The form explains the
 priority: explicit argument, then environment, then default.
 
-Enable **Use a default value** to enter a typed literal or a PTK variable/template.
+Enable **Use a default value** to enter a typed literal or a PTk variable/template.
 Boolean defaults use a checkbox, choice defaults use a dropdown, and list defaults
 use one item per line. Templates retain variable insertion and are resolved and
 type-checked at execution. Required and secret parameters cannot have defaults.

@@ -15,6 +15,17 @@ from tests.cli_runner import CliRunner
 from tests.conftest import grant_maintainer
 
 
+@pytest.mark.parametrize("tag", ["v2.4", "v2.4.0", "v26.45.00.01", "1.2.3-rc.1"])
+def test_release_tags_are_accepted(tag):
+    assert sc.valid_revision(tag) == tag
+
+
+@pytest.mark.parametrize("ref", ["main", "develop", "v1", "v1.2.3.4.5"])
+def test_moving_or_unknown_refs_are_rejected(ref):
+    with pytest.raises(ValueError, match="moving branches"):
+        sc.valid_revision(ref)
+
+
 def test_deep_merge_and_delete():
     base = {"A": 1, "B": {"x": 1, "y": 2}, "L": [1, 2]}
     assert sc.deep_merge(base, {"B": {"y": 3, "x": None}, "L": [9], "C": True}) == {
@@ -186,6 +197,47 @@ def test_check_never_fetches_or_creates_cache(external, monkeypatch):
     )
     assert any(item.status != "up to date" for item in service.check(project()))
     assert not (root / ".ptk").exists()
+
+
+def test_folder_mapping_copies_recursively_and_checks_offline(external):
+    import json
+
+    from ptk.application.use_cases.configs import LOCK
+    from ptk.domain.config.model import ConfigFileMapping
+    from ptk.domain.errors import PtkError
+    from tests.project_files import write_project
+    from tests.test_git_metadata import git
+
+    root, upstream, config, service, adapter, project = external
+    (upstream / "qac/config/rcf").mkdir(parents=True)
+    (upstream / "qac/config/a.acf").write_text("acf")
+    (upstream / "qac/config/rcf/b.rcf").write_text("rcf")
+    git(upstream, "add", ".")
+    git(upstream, "commit", "-m", "folder")
+    git(upstream, "tag", "v1.1.0")
+    config["configs"]["source"]["revision"] = "v1.1.0"
+    config["configs"]["helix"] = {
+        "files": [{"source": "qac/config/", "destination": "tools/helix/config/"}]
+    }
+    write_project(root / ".main.ptk.yml", config)
+    assert any(item.status != "up to date" for item in service.check(project()))
+    service.sync(project())
+    assert (root / "tools/helix/config/a.acf").read_text() == "acf"
+    assert (root / "tools/helix/config/rcf/b.rcf").read_text() == "rcf"
+    lock = json.loads((root / "config" / LOCK).read_text())
+    record = lock["files"]["tools/helix/config/rcf/b.rcf"]
+    assert record["source"] == "qac/config/rcf/b.rcf"
+    assert record["mapping"] == "qac/config/"
+    snapshot = adapter.snapshot
+    adapter.snapshot = lambda *a: pytest.fail("read-only check fetched")
+    assert all(item.status == "up to date" for item in service.check(project()))
+    (root / "tools/helix/config/rcf/b.rcf").write_text("edited")
+    assert any(item.status != "up to date" for item in service.check(project()))
+    adapter.snapshot = snapshot
+    with pytest.raises(PtkError, match="locally modified"):
+        service.sync(project())
+    with pytest.raises(ValueError, match="trailing '/'"):
+        ConfigFileMapping(source="qac/config/", destination="tools/helix")
 
 
 def test_overlay_changes_only_generated_output(external):

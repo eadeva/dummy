@@ -158,19 +158,6 @@ class SecretResolver(Protocol):
         """``credential.field`` -> secret value."""
 
 
-class TasksFile(Protocol):
-    """``.vscode/tasks.json`` (JSON with comments)."""
-
-    path: Path
-    had_comments: bool
-
-    def read(self) -> dict | None: ...
-
-    def render(self, data: dict) -> str: ...
-
-    def write(self, data: dict) -> None: ...
-
-
 class AuthoringResources(Protocol):
     def bundle(self) -> dict[str, bytes]: ...
 
@@ -189,7 +176,7 @@ class AuthoringResources(Protocol):
 
 
 class SecretProvider(Protocol):
-    """One link of the credential chain (env, keyring, gopass, vault, prompt)."""
+    """One link of the credential chain (env, vault, prompt)."""
 
     name: str
     can_store: bool

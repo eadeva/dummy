@@ -258,6 +258,17 @@ class LoadProject:
                     else t.Node({}, Location(str(file), 1))
                 )
             )
+            if file.parent.name == "guis" and file not in by_file:
+                plain = t.to_plain(fragment)
+                if not isinstance(plain, dict) or plain.get("gui") is not True:
+                    raise ConfigError(
+                        [
+                            Problem(
+                                "jobs in guis/ must set 'gui: true'; move other jobs to jobs/",
+                                location=Location(str(file)),
+                            )
+                        ]
+                    )
             # Normalize the documented tool-list shorthand after mounting a job.
             assembled = (
                 normalize_requirements(doc.assemble(fragment))
@@ -479,7 +490,7 @@ class ExportSchema:
         from ...domain.config.step_modes import creation_modes
 
         schema = PtkConfig.model_json_schema(by_alias=True)
-        # Form creation hints belong to the installed PTK schema. They describe
+        # Form creation hints belong to the installed PTk schema. They describe
         # a valid starting shape without changing runtime configuration defaults.
         definitions = schema.get("$defs", {})
         initial = {
@@ -534,7 +545,7 @@ class ExportSchema:
         definitions["JobSpec"]["properties"]["params"]["propertyNames"] = {
             "pattern": PARAM_RE.pattern,
             "not": {"enum": sorted(RESERVED_PARAMS)},
-            "description": "Start with a lowercase letter; use lowercase letters, digits or underscores. PTK run-option names are reserved.",
+            "description": "Start with a lowercase letter; use lowercase letters, digits or underscores. PTk run-option names are reserved.",
         }
         definitions["JobSpec"]["properties"]["steps"]["propertyNames"][
             "description"

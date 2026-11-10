@@ -88,7 +88,7 @@ def section(reports):
             )
         content += "</div></details>"
     return (
-        '<section id="cmake"><h2>CMake</h2><p class="meta">Warnings and errors use PTK diagnostic dispositions. Unsupported feature probes and missing optional packages are information, not failed tests. Diagnostics are listed once in the shared Diagnostics section.</p>'
+        '<section id="cmake"><h2>CMake</h2><p class="meta">Warnings and errors use PTk diagnostic dispositions. Unsupported feature probes and missing optional packages are information, not failed tests. Diagnostics are listed once in the shared Diagnostics section.</p>'
         + content
         + "</section>"
     )

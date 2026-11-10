@@ -1,1 +1,1 @@
-"""Secret providers: env, keyring, gopass, vault, prompt."""
+"""Secret providers: env, vault, prompt."""

@@ -1,6 +1,6 @@
 ---
 name: ptk-variant-model
-description: "Create or diagnose a PTK project\u2019s component features, inherited variants, aliases, constraints and step eligibility. Use for variant resolution, qualified feature references and step-local generators without assuming debug/release variants exist."
+description: "Create or diagnose a PTk project\u2019s component features, inherited variants, aliases, constraints and step eligibility. Use for variant resolution, qualified feature references and step-local generators without assuming debug/release variants exist."
 ---
 
 # ptk-variant-model
@@ -11,7 +11,7 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 2. Register component directories in `project.ptk.yml`. Put features, dependencies and local constraints in `component.variants.ptk.yml` beside the component code. Put the project default and global constraints in `project.variants.ptk.yml`, and each variant body in `variants/<name>.ptk.yml`.
 
-3. Keep local feature names UPPER_SNAKE_CASE and component IDs lower_snake_case. Use `component.FEATURE` in product selections, expressions and CLI overrides, and `${vh.features.component.FEATURE}` in substitutions. Local feature names may repeat across components; exported `VARIANT_<COMPONENT>_<FEATURE>` names must not collide.
+3. Keep local feature names UPPER_SNAKE_CASE and component IDs lower_snake_case. Use `component.FEATURE` in product selections, expressions and job CLI overrides (`--feature component.FEATURE=VALUE`), and `${vh.features.component.FEATURE}` in substitutions. Local feature names may repeat across components; exported `VARIANT_<COMPONENT>_<FEATURE>` names must not collide.
 
 4. Use enum features for finite choices. Declare min/max for bounded integer features.
 
@@ -31,7 +31,7 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 Temporary feature overrides on jobs do not change files. A local workflow selects one owner variant with global `-V`; its `repo_variants`
 mapping selects variants in other repositories. Steps only filter eligibility,
-not variant selection. A generated build graph describes build targets; it is separate from PTK’s step dependency graph and does not create missing `needs` edges. GitHub setup can expand multiple concrete owner variants;
+not variant selection. A generated build graph describes build targets; it is separate from PTk’s step dependency graph and does not create missing `needs` edges. GitHub setup can expand multiple concrete owner variants;
 see [GitHub workflows](../ptk-github-workflows/SKILL.md). Maintainers alone
 can force `--cx`/`--no-cx`; all users retain automatic CX detection. See
 [configuration](../../../docs/guides/configuration.rst).

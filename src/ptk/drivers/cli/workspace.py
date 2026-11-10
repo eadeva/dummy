@@ -48,7 +48,7 @@ class WorkspaceGroup(ProjectGroup):
         ):
             ctx.meta["vmr_repositories"] = None
             ctx.meta["host_setup"] = True
-        # Init resolves its scope itself, including members without PTK config.
+        # Init resolves its scope itself, including members without PTk config.
         if args[:1] == ["init"]:
             ctx.meta["vmr_repositories"] = None
         if args[:1] == ["describe"]:
@@ -58,7 +58,42 @@ class WorkspaceGroup(ProjectGroup):
                 # The editor must be able to report malformed marker metadata.
                 # Let its normal project loader return structured diagnostics.
                 ctx.meta["vmr_repositories"] = None
+        alias = self._current_member(ctx, args)
+        if alias is not None:
+            args = [alias, *args]
         return super().resolve_command(ctx, args)
+
+    def _current_member(self, ctx, args):
+        """Inside a member repository, its commands are callable without the alias."""
+        if (
+            not args
+            or args[0].startswith("-")
+            or "/" in args[0]
+            or args[0] in {"init", "describe", "self-service"}
+            or ctx.resilient_parsing
+            or "vmr_repositories" in ctx.meta
+        ):
+            return None
+        # Look up without caching: the routing must not switch this group to VMR mode.
+        try:
+            discovery = state_of(ctx).app.workspace
+            cwd = Path.cwd().resolve()
+            root = discovery.root(cwd)
+            repos = discovery.repositories(root) if root else None
+        except (PtkError, OSError):
+            return None
+        if not repos or args[0] in repos:
+            return None
+        root = Path(root).resolve()
+        if (root / "workflows" / f"{args[0]}.ptk.yml").is_file():
+            return None  # a workspace workflow keeps its workspace scope
+        members = [
+            (len(entry.parent.resolve().parts), alias)
+            for alias, entry in repos.items()
+            if cwd.is_relative_to(entry.parent.resolve())
+            and entry.parent.resolve() != root
+        ]
+        return max(members)[1] if members else None
 
     def _repositories(self, ctx):
         if "vmr_repositories" not in ctx.meta:

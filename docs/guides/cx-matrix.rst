@@ -3,7 +3,7 @@ CX setup matrix
 
 Use ``ptk maintainer matrix`` in the first GitHub workflow job to export the
 selected project's execution and upload metadata. The helper is optional,
-built into PTK, hidden from help/completion/editor command lists, and available
+built into PTk, hidden from help/completion/editor command lists, and available
 to local maintainers or automatically detected CX. CX access grants no other
 maintenance rights and does not expose restricted jobs to ordinary users.
 
@@ -43,7 +43,7 @@ The document contains ``schema_version: 1``, ``matrix: {include: [...]}`` and
    * - ``variant``, ``aliases``
      - Canonical variant and its aliases; null and an empty list without variants.
    * - ``job``, ``command``
-     - PTK job name and argv, such as ``["ptk", "-V", "debug", "run", "build"]``.
+     - PTk job name and argv, such as ``["ptk", "-V", "debug", "run", "build"]``.
    * - ``version``
      - Discovered project version for this variant/job; null when versioning is unconfigured.
    * - ``commit``
@@ -69,8 +69,8 @@ Inputs come from GitHub needs
 ------------------------------
 
 ``needs: [build]`` identifies ``build`` as the producer whose artifacts the
-consumer needs to download. **There is no separate PTK inputs declaration.**
-Keep GitHub producer job IDs aligned with PTK job names, or translate them in
+consumer needs to download. **There is no separate PTk inputs declaration.**
+Keep GitHub producer job IDs aligned with PTk job names, or translate them in
 the project's transfer script when using different IDs. The setup job is a
 metadata dependency, not an artifact producer.
 
@@ -91,7 +91,7 @@ base, using its GitHub ``needs`` to supply the producer job name:
    * - ``variant_alias``
      - The upload manifest supplies the canonical variant and all configured aliases, or default without variants. Select the desired producer alias when downloading.
    * - ``job``
-     - Producing PTK job, selected by the consumer's GitHub ``needs``.
+     - Producing PTk job, selected by the consumer's GitHub ``needs``.
    * - ``step``
      - Step inside the producing job that created the artifact.
    * - ``artifact_type``

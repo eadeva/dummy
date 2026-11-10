@@ -1,4 +1,4 @@
 interface:
-  display_name: "PTK Workflow Authoring"
+  display_name: "PTk Workflow Authoring"
   short_description: "Compose local workflows from project jobs and variants"
-  default_prompt: "Use $ptk-workflow-authoring to compose a local PTK workflow from this project's existing jobs, needs and variant mappings."
+  default_prompt: "Use $ptk-workflow-authoring to compose a local PTk workflow from this project's existing jobs, needs and variant mappings."

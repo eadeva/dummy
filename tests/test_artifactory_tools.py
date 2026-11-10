@@ -124,9 +124,14 @@ def test_failure_does_not_install(tmp_path):
 
 
 def test_missing_token_and_checksum(tmp_path):
-    runner = CurlRunner()
+    rows = [{"repo": "tools", "path": ".", "name": "tool.zip", "sha256": "c" * 64}]
+    runner = CurlRunner(rows=rows)
+    assert CurlArtifactory(runner, {}, source()).resolve().sha256 == "c" * 64
+    assert '"name": {"$match": "tool.zip"}' in runner.queries[0]
+    runner = CurlRunner(rows=[{**rows[0], "sha256": None}])
     with pytest.raises(PtkError, match="sha256"):
         CurlArtifactory(runner, {}, source()).resolve()
+    runner = CurlRunner()
     client = CurlArtifactory(runner, {}, source(token_env="TOKEN", sha256="a" * 64))
     with pytest.raises(PtkError, match="Missing Artifactory token"):
         client.fetch(client.resolve().url, tmp_path / "out")
@@ -196,6 +201,12 @@ def test_split_volumes_are_verified_joined_and_extracted(tmp_path):
     assert downloaded == ["helix.001", "helix.002", "helix.003"]
     assert all("Authorization: Bearer tok" in config for config in runner.configs)
     assert not any("warning" in line for line in lines)
+    assert [line for line in lines if "volume " in line] == [
+        "downloading volume 1/3: helix.001",
+        "downloading volume 2/3: helix.002",
+        "downloading volume 3/3: helix.003",
+    ]
+    assert "extracting helix" in lines
     [binary] = installer.bin_dirs({"helix": spec})
     assert (Path(binary) / "qagui").read_text() == "gui"
 

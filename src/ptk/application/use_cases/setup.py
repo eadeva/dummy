@@ -168,7 +168,7 @@ class Doctor:
                         hooks.detail,
                         ""
                         if hooks.installed
-                        else "run a local PTK job to install the configured hooks",
+                        else "run a local PTk job to install the configured hooks",
                     )
                 )
         except PtkError as exc:

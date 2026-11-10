@@ -1,4 +1,4 @@
-"""Project-aware suggestions use PTK's commands and never resolve run-time values."""
+"""Project-aware suggestions use PTk's commands and never resolve run-time values."""
 
 import json
 from pathlib import Path

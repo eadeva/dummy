@@ -20,7 +20,7 @@ function createEditors(vscode, context, { changed = () => {}, project: reloadPro
   const selections = new Map();
   const media = vscode.Uri.joinPath(context.extensionUri, "media");
   function trusted() {
-    if (!vscode.workspace.isTrusted) throw new Error("Trust this workspace before editing or running PTK.");
+    if (!vscode.workspace.isTrusted) throw new Error("Trust this workspace before editing or running PTk.");
   }
   function html(webview) {
     const nonce = crypto.randomBytes(18).toString("base64");
@@ -63,12 +63,12 @@ function createEditors(vscode, context, { changed = () => {}, project: reloadPro
               const selection = selections.get(key) || [];
               selections.delete(key);
               const installed = await configuration(document.uri);
-              if (!installed?.schema || installed.version !== 5) return state({ error: "No compatible PTK project schema is available. Open the project and refresh PTK, or use Raw YAML.", schema: {}, selection });
+              if (!installed?.schema || installed.version !== 5) return state({ error: "No compatible PTk project schema is available. Open the project and refresh PTk, or use Raw YAML.", schema: {}, selection });
               const schema = projectEdits.schemaForFile(installed, document.uri.fsPath);
               configurationValue = installed.value;
               variables = installed.variables;
               pathBindings = projectEdits.bindingsForFile(installed, document.uri.fsPath);
-              return state({ schema: schema || {}, ...(schema ? {} : { error: "This file is not part of PTK’s configuration layout. Use Raw YAML." }), selection });
+              return state({ schema: schema || {}, ...(schema ? {} : { error: "This file is not part of PTk’s configuration layout. Use Raw YAML." }), selection });
             }
             if (message.type === "edit") {
               if (message.version !== document.version) throw new Error("The YAML changed outside this form. Your edit was not applied; review the refreshed fields and try again.");
@@ -129,7 +129,7 @@ function createEditors(vscode, context, { changed = () => {}, project: reloadPro
       return panels.get(key).webview.postMessage({ type: "navigate", selection });
     }
     let config = owner.project.configuration;
-    if (!config || config.version !== 5) throw new Error("The installed PTK does not support this configuration editor. Update PTK and the extension together.");
+    if (!config || config.version !== 5) throw new Error("The installed PTk does not support this configuration editor. Update PTk and the extension together.");
     const panel = vscode.window.createWebviewPanel(viewType, `${owner.project.alias}: Configuration`, vscode.ViewColumn.Active, { retainContextWhenHidden: true });
     panels.set(key, panel);
     let version = 1, chain = Promise.resolve(), disposed = false;
@@ -177,7 +177,7 @@ function createEditors(vscode, context, { changed = () => {}, project: reloadPro
             for (let current = file; path.relative(root, current); current = path.dirname(current)) {
               const stat = await fs.lstat(current).catch(error => { if (error.code !== "ENOENT") throw error; return undefined; });
               if (stat?.isSymbolicLink()) throw new Error("Configuration paths cannot contain symbolic links.");
-              if (current === file && stat && !documents.has(file)) throw new Error("The destination file already exists. Refresh PTK before editing it.");
+              if (current === file && stat && !documents.has(file)) throw new Error("The destination file already exists. Refresh PTk before editing it.");
             }
             if (after !== null && !documents.has(file)) await vscode.workspace.fs.createDirectory(vscode.Uri.file(path.dirname(file)));
           }

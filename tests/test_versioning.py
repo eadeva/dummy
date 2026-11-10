@@ -153,7 +153,7 @@ def test_git_variant_lines_and_dirty_policy(write, load):
         return subprocess.check_output(["git", *args], cwd=root, text=True).strip()
 
     git("init", "-q")
-    git("config", "user.name", "PTK Test")
+    git("config", "user.name", "PTk Test")
     git("config", "user.email", "test@example.invalid")
     git("add", ".")
     git("commit", "-qm", "initial")

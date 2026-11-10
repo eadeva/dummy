@@ -1,4 +1,4 @@
-"""Resolve PTK's own distribution version using its existing configuration engine."""
+"""Resolve PTk's own distribution version using its existing configuration engine."""
 
 from email.parser import Parser
 from pathlib import Path
@@ -11,7 +11,7 @@ from ptk import DISTRIBUTION
 
 def configured_version(root: Path) -> str:
     # Installation must work even when jobs or other project files need repair.
-    # Read only version inputs, using PTK's normal reader, schemas and discovery.
+    # Read only version inputs, using PTk's normal reader, schemas and discovery.
     # Keep imports lazy: rebuilding an sdist only needs its frozen metadata.
     from ptk.adapters.config.discovery import checked_path
     from ptk.adapters.config.source import FileConfigSource
@@ -42,7 +42,7 @@ def configured_version(root: Path) -> str:
         raise ConfigError(
             [
                 Problem(
-                    "PTK package requires a repository marker",
+                    "PTk package requires a repository marker",
                     location=Location(str(main)),
                 )
             ]
@@ -54,7 +54,7 @@ def configured_version(root: Path) -> str:
         raise ConfigError(
             [
                 Problem(
-                    "PTK package requires versioning.project configuration",
+                    "PTk package requires versioning.project configuration",
                     location=Location(str(version_file)),
                 )
             ]
@@ -77,7 +77,7 @@ def package_version(root: Path, *, resolved_version: str | None = None) -> str:
             canonicalize_name(metadata["Name"] or "") != canonicalize_name(DISTRIBUTION)
             or not metadata["Version"]
         ):
-            raise ValueError("invalid PTK source distribution metadata")
+            raise ValueError("invalid PTk source distribution metadata")
         value = metadata["Version"]
     elif resolved_version is not None:
         value = resolved_version
@@ -87,5 +87,5 @@ def package_version(root: Path, *, resolved_version: str | None = None) -> str:
         return str(Version(value))
     except InvalidVersion:
         raise ValueError(
-            f"PTK project version {value!r} is not a valid Python package version"
+            f"PTk project version {value!r} is not a valid Python package version"
         ) from None

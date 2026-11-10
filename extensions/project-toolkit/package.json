@@ -1,7 +1,7 @@
 {
   "name": "project-toolkit",
   "displayName": "Project Toolkit",
-  "description": "Run PTK jobs, workflows and built-in commands, browse help, select variants and open reports.",
+  "description": "Run PTk jobs, workflows and built-in commands, browse help, select variants and open reports.",
   "version": "0.0.0",
   "publisher": "bosch-xc-ce",
   "author": "Adeva Sanz Enrique (XC-CE/EFE21)",
@@ -29,11 +29,11 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": false,
-      "description": "PTK tasks execute project commands and Python tools."
+      "description": "PTk tasks execute project commands and Python tools."
     },
     "virtualWorkspaces": {
       "supported": false,
-      "description": "PTK requires a filesystem and a local process on the extension host."
+      "description": "PTk requires a filesystem and a local process on the extension host."
     }
   },
   "contributes": {
@@ -57,7 +57,7 @@
     "viewsWelcome": [
       {
         "view": "project-toolkit.projects",
-        "contents": "Open a PTK repository or VMR folder, then [refresh](command:project-toolkit.refresh).\nPTK must be installed on the machine running this workspace."
+        "contents": "Open a PTk repository or VMR folder, then [refresh](command:project-toolkit.refresh).\nPTK must be installed on the machine running this workspace."
       }
     ],
     "commands": [
@@ -141,13 +141,13 @@
       },
       {
         "command": "project-toolkit.openConfigForm",
-        "title": "Open PTK Form",
+        "title": "Open PTk Form",
         "category": "Project Toolkit",
         "icon": "$(settings-gear)"
       },
       {
         "command": "project-toolkit.init",
-        "title": "Initialize PTK Project",
+        "title": "Initialize PTk Project",
         "category": "Project Toolkit"
       }
     ],
@@ -226,7 +226,7 @@
           "type": "string",
           "default": "ptk",
           "scope": "resource",
-          "description": "PTK executable or absolute path. For a prepared uv environment, set this to uv and arguments to [\"run\", \"--no-sync\", \"ptk\"]. The extension enforces --no-sync for uv run so launching PTK does not reinstall packages."
+          "description": "PTk executable or absolute path. For a prepared uv environment, set this to uv and arguments to [\"run\", \"--no-sync\", \"ptk\"]. The extension enforces --no-sync for uv run so launching PTk does not reinstall packages."
         },
         "projectToolkit.arguments": {
           "type": "array",
@@ -235,7 +235,7 @@
           },
           "default": [],
           "scope": "resource",
-          "description": "Arguments before PTK options, for example [\"run\", \"ptk\"] when the executable is uv."
+          "description": "Arguments before PTk options, for example [\"run\", \"ptk\"] when the executable is uv."
         },
         "projectToolkit.discoveryTimeout": {
           "type": "number",
@@ -272,7 +272,7 @@
           },
           "variant": {
             "type": "string",
-            "description": "Job variant or workflow owner variant (repository mappings are resolved by PTK)."
+            "description": "Job variant or workflow owner variant (repository mappings are resolved by PTk)."
           },
           "preview": {
             "type": "boolean",
@@ -324,7 +324,7 @@
                 "type": "string"
               }
             },
-            "description": "PTK run option values, keyed by inventory parameter name. For example end: [\"build\"] includes prerequisites, while only_step: [\"build\"] runs just that step."
+            "description": "PTk run option values, keyed by inventory parameter name. For example end: [\"build\"] includes prerequisites, while only_step: [\"build\"] runs just that step."
           }
         },
         "when": "processExecutionSupported && isWorkspaceTrusted"
@@ -333,7 +333,7 @@
     "customEditors": [
       {
         "viewType": "project-toolkit.configuration",
-        "displayName": "PTK Configuration",
+        "displayName": "PTk Configuration",
         "selector": [
           {
             "filenamePattern": "*.ptk.yml"

@@ -1,4 +1,4 @@
-PTK — project tool kit
+PTk — project tool kit
 ======================
 
 .. toctree::
@@ -22,7 +22,7 @@ PTK — project tool kit
       A familiar command-line interface across projects, with shared conventions
       and the freedom to choose how each project works.
 
-   PTK is a toolkit for standardizing how teams work with their projects:
+   PTk is a toolkit for standardizing how teams work with their projects:
    command discovery, variant handling, environment setup, credentials, logging
    and reporting. Projects define their own jobs in configuration and provide
    the actual functionality through tools, scripts and Python packages.
@@ -51,7 +51,7 @@ The idea
 
 A developer moving between projects should recognize how to discover commands,
 select a variant, prepare tools, supply credentials and inspect a failed run.
-PTK provides those shared conventions through a configuration-driven CLI.
+PTk provides those shared conventions through a configuration-driven CLI.
 Job names and options remain project-defined, with consistent help and completion.
 
 The project owns what a command actually does. A build job can call CMake today
@@ -59,7 +59,7 @@ and a different tool tomorrow; a test job can delegate to a script or an install
 Python package. Those implementations can evolve while the team retains a familiar way
 to invoke them and inspect their results.
 
-PTK centralizes the repeated operational work and keeps project-specific
+PTk centralizes the repeated operational work and keeps project-specific
 complexity with the project. That separation gives teams flexibility in their
 tools, simpler daily usage and less duplicated setup, credential and reporting
 logic. Start with one useful job around an existing command and add conventions
@@ -94,11 +94,11 @@ job invocations; ``needs`` connects their dependencies and determines which can
 run concurrently. Each job's ``steps`` list defines its executable work through
 commands or built-in operations. The same job can be reused by different workflows.
 
-PTK workflows currently orchestrate work locally. CX pipelines use their own
-orchestration and invoke PTK jobs. See :doc:`guides/workflows` for the structure
+PTk workflows currently orchestrate work locally. CX pipelines use their own
+orchestration and invoke PTk jobs. See :doc:`guides/workflows` for the structure
 in configuration and :doc:`architecture/06-runtime-view` for execution behavior.
 
-Why PTK?
+Why PTk?
 -----------------
 
 .. grid:: 1 1 3 3
@@ -202,7 +202,7 @@ What you can do
 
       Publish ordinary Python tools, pin their versions and run them through uv.
       Keep project-specific functionality independently reusable and preserve
-      PTK’s built-in orchestration, logging and reporting.
+      PTk’s built-in orchestration, logging and reporting.
 
       +++
       :doc:`Reusable Python tools </guides/python-tools>` ·
@@ -212,14 +212,14 @@ What you can do
       :class-card: ptk-card ptk-blue
 
       Use the optional VS Code integration to browse configuration and run
-      jobs. Synchronize the PTK expert agent and task-specific skills, with
+      jobs. Synchronize the PTk expert agent and task-specific skills, with
       offline references matching the installed CLI.
 
       +++
       :doc:`Editor and authoring tools </guides/editor>` ·
       :need:`Related requirement <REQ_Sw_AGENT_SYNC>`
 
-Who is PTK for?
+Who is PTk for?
 ---------------
 
 .. grid:: 1 1 2 2
@@ -268,14 +268,14 @@ Who is PTK for?
 Try a complete first run
 ------------------------
 
-With PTK installed, create a small project that needs no compiler, credentials
+With PTk installed, create a small project that needs no compiler, credentials
 or Git tags::
 
    ptk init my-project --name "My project" --config-dir config/ptk --yes
    cd my-project
    ptk --help
    ptk validate
-   ptk hello --message "Hello from PTK"
+   ptk hello --message "Hello from PTk"
 
 The starter also includes debug/release variants and a build job. Continue with
 :doc:`guides/getting-started` to preview a variant, run it and open its report.

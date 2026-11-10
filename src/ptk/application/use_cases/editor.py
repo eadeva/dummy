@@ -19,7 +19,7 @@ from .variants import VariantService
 def describe_configuration(
     tree, root, files, error=None, fingerprints=None, environment_names=()
 ):
-    """Authored model and schema from the installed PTK, never an editor loader."""
+    """Authored model and schema from the installed PTk, never an editor loader."""
     sources = []
     locked = []
 

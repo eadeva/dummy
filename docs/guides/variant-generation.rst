@@ -1,8 +1,8 @@
 Reusable components and variant generation
 ==========================================
 
-PTK owns the configuration contract: components declare their choices in YAML,
-product variants select values, and PTK validates and resolves one snapshot before
+PTk owns the configuration contract: components declare their choices in YAML,
+product variants select values, and PTk validates and resolves one snapshot before
 execution. Projects own the implementation: build files decide which sources,
 targets, compiler definitions and dependencies those values control. This division
 is intentional so projects can use their own build conventions and scripts.
@@ -12,7 +12,7 @@ The accepted design records are :need:`DD_COMPONENT_VARIANTS`,
 :need:`REQ_Sw_COMPONENT_SELECTIONS`, :need:`REQ_Sw_STEP_GENERATORS` and
 :need:`REQ_Sw_GENERATORS`. The other team's proposal under
 ``reference/pmt_reuse_concept_variant_handling`` remains reference material;
-PTK does not execute its CMake declaration/selection helper.
+PTk does not execute its CMake declaration/selection helper.
 
 Declare choices; select a product
 ---------------------------------
@@ -80,7 +80,7 @@ Expressions use qualified names, including inside component-local constraints::
 
 Component constraints apply only when their component is selected. Feature
 ``depends_on``, ``requires`` and ``conflicts`` and project-wide constraints retain
-their existing semantics. Required components must be selected explicitly; PTK
+their existing semantics. Required components must be selected explicitly; PTk
 does not silently enable them. Invalid types, ranges, choices, dependencies and
 inheritance cycles fail validation. An inactive boolean resolves to false;
 an inactive non-boolean resolves to null. Explicit incompatible selections are
@@ -94,7 +94,7 @@ reported rather than quietly accepted.
      - Example
    * - Product YAML, expressions, CLI override
      - ``motor.DEBUG_LEVEL``
-   * - PTK substitution
+   * - PTk substitution
      - ``${vh.features.motor.DEBUG_LEVEL}``
    * - Environment and generated build variable
      - ``VARIANT_MOTOR_DEBUG_LEVEL``
@@ -109,7 +109,7 @@ Environment values are strings: booleans become 0/1 and null becomes empty.
 ``VARIANT_COMPONENTS`` is an environment-only space-separated list. Exports carry
 component flags, feature values and the product name. Arbitrary variant ``data``
 is available to substitutions and external commands, but is not copied into the
-built-in formats. Enumeration values remain strings; PTK does not assign ordinal
+built-in formats. Enumeration values remain strings; PTk does not assign ordinal
 C preprocessor numbers based on the order of an enum's choices.
 
 Generate for a step
@@ -157,7 +157,7 @@ cancellation scope. Command retries regenerate files. A generator exception fail
 the step before its command/script/built-in operation runs and is not itself retried. Normal
 ``continue_on_error`` and dependency handling still apply. Cancellation is checked
 between generator calls and file writes; synchronous built-in generators must
-return before PTK can observe cancellation or a timeout.
+return before PTk can observe cancellation or a timeout.
 
 Dry runs and graph previews list generators without invoking them. Skipped,
 blocked and unselected steps do not generate. Configuration validation rejects unknown generator names, even on skipped steps.
@@ -173,7 +173,7 @@ orders execution; it neither transfers nor validates the files.
 
 Files are UTF-8 with LF endings. Returned paths must stay inside the step folder;
 absolute paths, traversal, symlinks, case-insensitive filename collisions and
-file/directory conflicts fail before writing. PTK replaces each file atomically,
+file/directory conflicts fail before writing. PTk replaces each file atomically,
 but does not provide a multi-file transaction or remove stale files from an older
 generator selection. Projects own build cleanup. Generated files must not be
 edited manually.
@@ -233,10 +233,10 @@ The project consumes the generated file directly::
 The component can use ``VARIANT_MOTOR_CONTROL_MODE`` in an ``if(... STREQUAL ...)``
 and configure its own targets. If a source library needs numerical enum macros,
 the project maps names to explicit stable numeric values or supplies its own
-header generator. PTK does not turn enum positions into an ABI.
+header generator. PTk does not turn enum positions into an ABI.
 
 The proposed CMake helper is not needed to declare features, apply defaults or
-choose the product: PTK already does those operations. A project may keep a small
+choose the product: PTk already does those operations. A project may keep a small
 adapter that includes the generated file and maps values onto target properties.
 It must not introduce another variant-selection authority or global cache writes
 shared by concurrent configurations. CMake's ordinary variable scope still applies;
@@ -266,7 +266,7 @@ GN (Generate Ninja)
 ~~~~~~~~~~~~~~~~~~~
 
 GN reads a ``.gni`` file during ``gn gen``; GN then creates Ninja build files.
-There is no PTK plain-Ninja generator. For a step folder under the GN source root,
+There is no PTk plain-Ninja generator. For a step folder under the GN source root,
 pass a source-absolute GN path as a declared build argument::
 
    generators: [gn]
@@ -277,7 +277,7 @@ pass a source-absolute GN path as a declared build argument::
    - '--args=ptk_variant_file="//_builds/${vh.variant}/build/configure/variant.gni"'
 
 The literal relative portion in that example assumes the default layout, job
-``build`` and step ``configure``. Adapt it if the GN source root or PTK layout
+``build`` and step ``configure``. Adapt it if the GN source root or PTk layout
 changes; GN ``//`` means the GN source root, not the filesystem root. A project
 wrapper can compute this path from ``${run.build_dir}``.
 
@@ -286,7 +286,7 @@ In the project's common GN configuration::
    declare_args() {
      ptk_variant_file = ""
    }
-   assert(ptk_variant_file != "", "Select the generated PTK configuration")
+   assert(ptk_variant_file != "", "Select the generated PTk configuration")
    import(ptk_variant_file)
    # Use VARIANT_MOTOR_CONTROL_MODE and VARIANT_COMPONENT_MOTOR in targets.
 
@@ -297,7 +297,7 @@ Bazel
 ~~~~~
 
 Bazel cannot load an arbitrary absolute ``.bzl`` file from a step folder as if it
-were a workspace label. The PTK generator therefore emits data, and the project
+were a workspace label. The PTk generator therefore emits data, and the project
 adapts it through a local external repository. The JSON contract is
 ``{"schema_version": 1, "values": {"VARIANT_NAME": "road", ...}}`` with boolean,
 integer, string or null values. Enum choices are strings.
@@ -305,7 +305,7 @@ integer, string or null values. Enum choices are strings.
 Download :download:`ptk_variants.bzl <../resources/bazel/ptk_variants.bzl>` and copy
 it into the **consuming project**, for example ``build_support/ptk_variants.bzl``.
 Add ``build_support/BUILD.bazel`` so the file has a package label. This helper is
-a documentation resource, not a PTK runtime module or installed built-in.
+a documentation resource, not a PTk runtime module or installed built-in.
 The project owns and can adapt the copy.
 
 With Bzlmod, in ``MODULE.bazel``::
@@ -313,7 +313,7 @@ With Bzlmod, in ``MODULE.bazel``::
    ptk_variants = use_repo_rule("//build_support:ptk_variants.bzl", "ptk_variants")
    ptk_variants(name = "ptk_variant")
 
-The PTK step can then run::
+The PTk step can then run::
 
    generators: [bazel]
    run:
@@ -346,15 +346,15 @@ It also creates public typed build settings for ``config_setting``/``select()``:
    # deps = select({":closed_loop": [":closed_loop_impl"],
    #                "//conditions:default": [":open_loop_impl"]})
 
-Settings are not command-line flags: PTK remains the selection authority. Null
+Settings are not command-line flags: PTk remains the selection authority. Null
 inactive non-boolean features remain ``None`` in the dictionary and have no typed
 setting. Gate those targets on component selection rather than referring to an
 absent setting. The helper tracks the JSON file and repository environment, so
 changing content at the same path or selecting a new path causes reevaluation.
 Schema versions and unsupported value types are checked explicitly.
 
-One external repository represents one resolved PTK configuration per Bazel
-invocation. Building several PTK products means separate Bazel invocations and
+One external repository represents one resolved PTk configuration per Bazel
+invocation. Building several PTk products means separate Bazel invocations and
 output bases; this is not a Bazel transition framework. Remote action execution
 can consume Bazel's resulting configuration, but the helper still needs the local
 snapshot at repository evaluation time. The helper targets Bzlmod; it does not
@@ -376,8 +376,8 @@ output bases for concurrent configurations. Bazel caches, module lockfiles,
 convenience symlinks, downloads and any other shared mutable state must follow
 the project's concurrency policy. A dependency edge does not lock external state.
 
-PTK does not monitor what project scripts read or write and does not sandbox
-steps. The generated configuration is an input contract; PTK cannot prove the
+PTk does not monitor what project scripts read or write and does not sandbox
+steps. The generated configuration is an input contract; PTk cannot prove the
 build consumed it correctly or that outputs are valid. Projects own artifact
 validation, input/output declarations, compiler mapping, reproducibility,
 retry-safe side effects, cancellation cleanup and any necessary rollback.
@@ -389,13 +389,13 @@ Compatibility and verification
 
 This replaces unqualified product feature keys, ``${vh.features.FEATURE}``,
 custom export prefixes, ``VH_*``/``BO_*`` exports and ``uses: variant.generate``.
-Update configurations explicitly; PTK does not silently translate old forms.
+Update configurations explicitly; PTk does not silently translate old forms.
 Third-party generator registration is removed under :need:`DD_NO_PLUGIN_API`.
 Built-in generation and the project-owned Bazel helper remain supported.
 External generation tools use explicit input/output paths; see
 :doc:`python-tools`.
 
-The extension consumes PTK's canonical schema and keeps invalid documents editable;
+The extension consumes PTk's canonical schema and keeps invalid documents editable;
 validation errors must not prevent opening the editor or correcting YAML.
 
 ``tests/test_step_generators.py`` covers execution ordering, prepared snapshots,

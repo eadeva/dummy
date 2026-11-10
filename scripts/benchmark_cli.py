@@ -1,6 +1,6 @@
 """Repeatable CLI startup benchmarks; each sample starts a fresh Python process.
 
-Run with the Python environment containing PTK. Fixtures are temporary and only
+Run with the Python environment containing PTk. Fixtures are temporary and only
 help/version commands are executed. No job, tool installation or network access.
 """
 

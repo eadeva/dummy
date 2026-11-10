@@ -1,4 +1,4 @@
-"""Credential chain: env, keyring, gopass, vault, prompt; ptk self-service creds commands."""
+"""Credential chain: env, vault, prompt; ptk self-service creds commands."""
 
 from __future__ import annotations
 
@@ -6,21 +6,18 @@ import json
 import os
 import stat
 import sys
-import types
 from pathlib import Path
 
 import pytest
 
 from ptk.adapters.credentials.env import EnvProvider
-from ptk.adapters.credentials.gopass import GopassProvider
-from ptk.adapters.credentials.keyring_provider import KeyringProvider
 from ptk.adapters.credentials.prompt import PromptProvider
+from ptk.adapters.credentials.session import VaultSession
 from ptk.adapters.credentials.vault import Vault, VaultProvider
 from ptk.application.use_cases.credentials import CredentialService
 from ptk.application.use_cases.run import RunRequest
 from ptk.bootstrap import create_app
 from ptk.domain.config.model import CredentialSpec
-from ptk.domain.credentials import key_for
 from ptk.domain.errors import PtkError
 from ptk.drivers.cli.main import cli
 from tests.cli_runner import CliRunner
@@ -101,6 +98,75 @@ def test_vault_password_rules(tmp_path):
         Vault(tmp_path / "v.json", lambda confirm: "short").create()
 
 
+class Clock:
+    def __init__(self):
+        self.now = 1000.0
+
+    def __call__(self):
+        return self.now
+
+
+def session(tmp_path, clock, hours="8"):
+    environ = {
+        "LOCALAPPDATA": str(tmp_path / "local"),
+        "XDG_RUNTIME_DIR": str(tmp_path / "run"),
+        "PTK_VAULT_UNLOCK_HOURS": hours,
+    }
+    return VaultSession(tmp_path / "vault.json", environ, now=clock)
+
+
+def asking(tmp_path, clock, asked, password="correct horse"):
+    def ask(confirm):
+        asked.append(confirm)
+        return password
+
+    return Vault(tmp_path / "vault.json", ask, session(tmp_path, clock))
+
+
+def test_session_keeps_the_vault_unlocked_until_it_expires(tmp_path):
+    clock, asked = Clock(), []
+    asking(tmp_path, clock, asked).set("art.token", "value-1")
+    assert asked == [True]
+    stored = session(tmp_path, clock).file.read_bytes()
+    assert b"correct horse" not in stored and b"value-1" not in stored
+    assert asking(tmp_path, clock, asked).entries() == {"art.token": "value-1"}
+    assert asked == [True]  # next run: no password
+    clock.now += 8 * 3600
+    assert asking(tmp_path, clock, asked).entries() == {"art.token": "value-1"}
+    assert asked == [True, False]
+
+
+def test_lock_and_disabled_sessions(tmp_path):
+    clock, asked = Clock(), []
+    first = asking(tmp_path, clock, asked)
+    first.set("a.b", "value-1")
+    assert first.lock() is True and first.lock() is False
+    asking(tmp_path, clock, asked).entries()
+    assert asked == [True, False]
+    assert not session(tmp_path, clock, hours="0").enabled
+    with pytest.raises(PtkError, match="PTK_VAULT_UNLOCK_HOURS"):
+        session(tmp_path, clock, hours="soon")
+
+
+def test_session_of_a_replaced_vault_is_ignored(tmp_path):
+    clock, asked = Clock(), []
+    asking(tmp_path, clock, asked).set("a.b", "old")
+    (tmp_path / "vault.json").unlink()
+    Vault(tmp_path / "vault.json", lambda c: "other password").set("a.b", "new")
+    assert asking(tmp_path, clock, asked, "other password").entries() == {"a.b": "new"}
+    assert asked == [True, False]
+
+
+def test_reset_deletes_vault_and_session(tmp_path):
+    clock, asked = Clock(), []
+    v = asking(tmp_path, clock, asked)
+    v.set("a.b", "value-1")
+    assert v.delete() is True
+    assert not (tmp_path / "vault.json").exists()
+    assert not session(tmp_path, clock).file.exists()
+    assert v.delete() is False
+
+
 # --------------------------------------------------------------------------- chain
 
 
@@ -167,54 +233,22 @@ def test_unknown_credential_and_field(tmp_path):
         svc.resolve("art.tokn")
 
 
-class WindowsHost(Host):
-    def os_name(self):
-        return "windows"
-
-
-class FakeKeyring:
-    name = "keyring"
-    can_store = True
-
-    def __init__(self, values=None):
-        self.values = dict(values or {})
-
-    def available(self):
-        return True, ""
-
-    def get(self, key):
-        return self.values.get(key.ref)
-
-    def store(self, key, value):
-        self.values[key.ref] = value
-
-    def remove(self, key):
-        return self.values.pop(key.ref, None) is not None
-
-
-def test_windows_prefers_the_vault_and_remembers_prompts_there(tmp_path):
-    keyring = FakeKeyring({"art.token": "from-keyring"})
+def test_only_env_vault_and_prompt_are_providers(tmp_path):
     providers = {
         "env": EnvProvider({}),
-        "keyring": keyring,
         "vault": VaultProvider(vault(tmp_path)),
         "prompt": PromptProvider(FakePrompter(["typed-user"])),
     }
-    svc = CredentialService({"art": SPEC}, providers, WindowsHost())
-    assert svc.providers("art") == ["env", "vault", "keyring", "gopass", "prompt"]
-    assert svc.stores("art") == ["vault", "keyring"]
-    assert svc.resolve("art.token") == "from-keyring"  # existing entries still work
+    svc = CredentialService({"art": SPEC}, providers, Host())
+    assert svc.providers("art") == ["env", "vault", "prompt"]
+    assert svc.stores("art") == ["vault"]
     assert svc.resolve("art.user") == "typed-user"
     assert vault(tmp_path).entries() == {"art.user": "typed-user"}
-    assert keyring.values == {"art.token": "from-keyring"}
-    vault(tmp_path).set("art.token", "from-vault")
-    providers["vault"] = VaultProvider(vault(tmp_path))
-    fresh = CredentialService({"art": SPEC}, providers, WindowsHost())
-    assert fresh.resolve("art.token") == "from-vault"
-    explicit = CredentialSpec(providers=["env", "keyring"])
-    assert CredentialService({"art": explicit}, providers, WindowsHost()).providers(
-        "art"
-    ) == ["env", "keyring"]
+    for removed in ("keyring", "gopass"):
+        with pytest.raises(ValueError, match="providers"):
+            CredentialSpec(providers=["env", removed])
+    with pytest.raises(ValueError, match="gopass"):
+        CredentialSpec(gopass={"path": "team/x"})
 
 
 class UserHost(Host):
@@ -315,119 +349,6 @@ def test_cx_rejects_several_users_for_one_credential():
         convention_service(env, cx=True).resolve("artifactory_rb.token")
 
 
-# --------------------------------------------------------------------------- keyring
-
-
-@pytest.fixture
-def fake_keyring(monkeypatch):
-    store: dict[tuple[str, str], str] = {}
-    module = types.ModuleType("keyring")
-    errors = types.ModuleType("keyring.errors")
-    errors.KeyringError = Exception
-
-    class PasswordDeleteError(Exception):
-        pass
-
-    errors.PasswordDeleteError = PasswordDeleteError
-
-    class Backend:
-        priority = 5
-
-    module.get_keyring = lambda: Backend()
-    module.get_password = lambda service, user: store.get((service, user))
-    module.set_password = lambda service, user, value: store.__setitem__(
-        (service, user), value
-    )
-
-    def delete(service, user):
-        if (service, user) not in store:
-            raise PasswordDeleteError(user)
-        del store[(service, user)]
-
-    module.delete_password = delete
-    module.errors = errors
-    monkeypatch.setitem(sys.modules, "keyring", module)
-    monkeypatch.setitem(sys.modules, "keyring.errors", errors)
-    return store
-
-
-def test_keyring_provider(tmp_path, fake_keyring):
-    provider = KeyringProvider()
-    assert provider.available() == (True, "")
-    svc = service(
-        tmp_path,
-        extra={"keyring": provider},
-        spec=CredentialSpec(fields=["token"], providers=["env", "keyring", "vault"]),
-    )
-    assert svc.stores("art")[0] == "keyring"
-    svc.store("art", None, "kr-secret", None)
-    assert fake_keyring == {("ptk", "art.token"): "kr-secret"}
-    assert (
-        service(
-            tmp_path,
-            extra={"keyring": KeyringProvider()},
-            spec=CredentialSpec(providers=["keyring"]),
-        ).resolve("art.token")
-        == "kr-secret"
-    )
-
-
-def test_keyring_remove_reports_backend_failures(fake_keyring, monkeypatch):
-    from ptk.domain.credentials import SecretKey
-
-    provider = KeyringProvider()
-    key = SecretKey("art", "token", "ART_TOKEN", "ptk/art/token")
-    provider.store(key, "kr-secret")
-    assert provider.remove(key) is True
-    assert provider.remove(key) is False
-
-    def locked(service, user):
-        raise RuntimeError("keyring is locked")
-
-    monkeypatch.setattr(sys.modules["keyring"], "delete_password", locked)
-    with pytest.raises(PtkError, match="keyring is locked"):
-        provider.remove(key)
-
-
-def test_keyring_missing_is_skipped(monkeypatch):
-    monkeypatch.setitem(sys.modules, "keyring", None)  # import fails
-    ok, reason = KeyringProvider().available()
-    assert not ok and "xcce_ptk[keyring]" in reason
-
-
-# --------------------------------------------------------------------------- gopass
-
-FAKE_GOPASS = """#!/bin/sh
-# stand-in for gopass: entries are files below $GOPASS_DIR
-cmd=$1; shift
-case "$cmd" in
-  show) [ "$1" = "--password" ] && shift; f="$GOPASS_DIR/$1"
-        [ -f "$f" ] || { echo "entry not found" >&2; exit 11; }; head -n1 "$f" ;;
-  insert) [ "$1" = "--force" ] && shift; mkdir -p "$(dirname "$GOPASS_DIR/$1")"
-          cat > "$GOPASS_DIR/$1" ;;
-  rm) [ "$1" = "--force" ] && shift; rm "$GOPASS_DIR/$1" ;;
-esac
-"""
-
-
-@pytest.mark.skipif(not POSIX, reason="shell stand-in")
-def test_gopass_provider_uses_stdin_and_paths(tmp_path, monkeypatch):
-    exe = tmp_path / "gopass"
-    exe.write_text(FAKE_GOPASS)
-    exe.chmod(0o755)
-    monkeypatch.setenv("GOPASS_DIR", str(tmp_path / "store"))
-    provider = GopassProvider(str(exe))
-    spec = CredentialSpec(fields=["token"], gopass={"path": "team/artifactory"})
-    key = key_for("art", "token", spec)
-    assert key.gopass_path == "team/artifactory/token"
-    assert provider.get(key) is None
-    provider.store(key, "gp-secret")
-    assert (tmp_path / "store/team/artifactory/token").read_text() == "gp-secret\n"
-    assert provider.get(key) == "gp-secret"
-    assert provider.remove(key) and provider.get(key) is None
-    assert GopassProvider(executable=None).available()[0] in (True, False)
-
-
 # --------------------------------------------------------------------------- CLI + run
 
 PROJECT = """\
@@ -494,11 +415,26 @@ def test_creds_cli_end_to_end(cli_env):
 
 
 def test_creds_setup_creates_vault(cli_env):
-    result = cli_env("self-service", "creds", "setup", "--vault")
+    result = cli_env("self-service", "creds", "setup")
     assert result.exit_code == 0 and "vault created" in result.output
     assert Path(cli_env.env["PTK_VAULT_FILE"]).is_file()
-    again = cli_env("self-service", "creds", "setup", "--vault")
-    assert again.exit_code == 2 and "already exists" in again.output
+    again = cli_env("self-service", "creds", "setup")
+    assert again.exit_code == 0 and "vault created" not in again.output
+    assert "ready" in again.output
+
+
+def test_creds_reset_and_lock(cli_env):
+    cli_env("self-service", "creds", "setup")
+    vault_file = Path(cli_env.env["PTK_VAULT_FILE"])
+    refused = cli_env("self-service", "creds", "reset")
+    assert refused.exit_code != 0 and "--yes" in refused.output
+    assert vault_file.is_file()
+    reset = cli_env("self-service", "creds", "reset", "--yes")
+    assert reset.exit_code == 0 and "vault deleted" in reset.output
+    assert not vault_file.exists()
+    assert "no vault" in cli_env("self-service", "creds", "reset", "--yes").output
+    locked = cli_env("self-service", "creds", "lock")
+    assert locked.exit_code == 0 and "not unlocked" in locked.output
 
 
 def test_locked_vault_without_terminal(cli_env, tmp_path):

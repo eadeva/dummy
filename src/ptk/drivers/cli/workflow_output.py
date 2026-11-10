@@ -32,7 +32,7 @@ class WorkflowOutput:
             rows.append(f"Workspace: {root}")
         rows.extend(
             [
-                f"PTK: {__version__} | Run: {run_id}",
+                f"PTk: {__version__} | Run: {run_id}",
                 f"Jobs: {len(plan.jobs)} | Max concurrent: {plan.spec.max_workers}",
             ]
         )

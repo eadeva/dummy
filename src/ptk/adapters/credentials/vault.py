@@ -4,7 +4,8 @@
   (default ``~/.config/ptk``); ``PTK_VAULT_FILE`` overrides
 * key: scrypt(master password, random salt); content: AES-256-GCM, so names and
   values are both encrypted and any tampering is detected
-* master password: ``PTK_VAULT_PASSWORD`` (automation) or asked once per ptk run
+* master password: ``PTK_VAULT_PASSWORD`` (automation) or asked once per ptk run;
+  a ``VaultSession`` then keeps the vault unlocked for following runs
 * written atomically, readable by the owner only (POSIX)
 """
 
@@ -25,6 +26,7 @@ from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from ...domain.credentials import SecretKey
 from ...domain.errors import PtkError
 from ..locking import file_lock
+from .session import VaultSession
 
 AAD = b"ptk-vault-v1"
 SCRYPT = {"n": 2**15, "r": 8, "p": 1}
@@ -44,6 +46,13 @@ def _b64(data: bytes) -> str:
     return base64.b64encode(data).decode("ascii")
 
 
+def _decrypt(key: bytes, nonce: bytes, data: bytes) -> bytes | None:
+    try:
+        return AESGCM(key).decrypt(nonce, data, AAD)
+    except (InvalidTag, ValueError):
+        return None
+
+
 def _derive(password: str, salt: bytes, params: Mapping[str, int]) -> bytes:
     return hashlib.scrypt(
         password.encode("utf-8"),
@@ -59,9 +68,15 @@ def _derive(password: str, salt: bytes, params: Mapping[str, int]) -> bytes:
 class Vault:
     """The encrypted file. ``password`` is asked lazily, at most once."""
 
-    def __init__(self, path: Path, password: Callable[[bool], str]):
+    def __init__(
+        self,
+        path: Path,
+        password: Callable[[bool], str],
+        session: VaultSession | None = None,
+    ):
         self.path = path
         self._password = password  # password(confirm) -> str
+        self.session = session
         self._key: bytes | None = None
         self._salt: bytes | None = None
         self._entries: dict[str, str] | None = None
@@ -69,6 +84,19 @@ class Vault:
     @property
     def exists(self) -> bool:
         return self.path.is_file()
+
+    def lock(self) -> bool:
+        """Forget the unlocked session; the next run asks for the master password."""
+        self._key = self._salt = self._entries = None
+        return self.session.clear() if self.session else False
+
+    def delete(self) -> bool:
+        """Remove the vault and every secret in it (a forgotten password cannot be recovered)."""
+        with file_lock(self.path.with_suffix(".lock")):
+            self.lock()
+            existed = self.exists
+            self.path.unlink(missing_ok=True)
+            return existed
 
     def create(self) -> None:
         with file_lock(self.path.with_suffix(".lock")):
@@ -84,6 +112,8 @@ class Vault:
         self._key = _derive(password, self._salt, SCRYPT)
         self._entries = {}
         self._save()
+        if self.session:
+            self.session.save(self._salt, self._key)
 
     def entries(self) -> dict[str, str]:
         if self._entries is None:
@@ -128,14 +158,21 @@ class Vault:
         except (ValueError, KeyError) as exc:
             raise PtkError(f"{self.path} is not a ptk vault ({exc})") from None
         key = self._key if self._salt == salt else None
+        cached = self.session.load() if key is None and self.session else None
+        if cached and cached[0] == salt:
+            plain = _decrypt(cached[1], nonce, data)
+            if plain is not None:
+                key = cached[1]
+            elif self.session:
+                self.session.clear()  # vault replaced or re-keyed
+        fresh = key is None
         key = key or _derive(self._password(False), salt, kdf)
-        try:
-            plain = AESGCM(key).decrypt(nonce, data, AAD)
-        except InvalidTag:
-            raise PtkError(
-                "wrong vault password (or the vault file was modified)"
-            ) from None
+        plain = _decrypt(key, nonce, data)
+        if plain is None:
+            raise PtkError("wrong vault password (or the vault file was modified)")
         self._key, self._salt = key, salt
+        if fresh and self.session:
+            self.session.save(salt, key)
         self._entries = json.loads(plain.decode("utf-8"))["entries"]
 
     def _save(self) -> None:

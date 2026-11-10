@@ -10,7 +10,7 @@ def cache_option():
     return click.Option(
         ["--no-cache-ptk"],
         is_flag=True,
-        help="Disable PTK's optional built-in output cache for all jobs and steps in this execution. Tool-native caches are unchanged.",
+        help="Disable PTk's optional built-in output cache for all jobs and steps in this execution. Tool-native caches are unchanged.",
     )
 
 

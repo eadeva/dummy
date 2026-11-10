@@ -1,18 +1,18 @@
 Run your first project
 ======================
 
-Install the team-provided PTK package with its installer; see
+Install the team-provided PTk package with its installer; see
 :doc:`/guides/packaging` for package sources and local development. Then check
 ``ptk --version`` in a new shell. The examples below use the installed CLI.
 
-When working on PTK itself, run ``uv sync`` from its source checkout to install
+When working on PTk itself, run ``uv sync`` from its source checkout to install
 the development dependencies. This is separate from initializing a consuming
 project.
 
 Join an existing project
 ------------------------
 
-Use the team-provided PTK launcher and check ``ptk --version``, ``ptk --help``
+Use the team-provided PTk launcher and check ``ptk --version``, ``ptk --help``
 and ``ptk validate`` from the checkout. Read :doc:`local-setup` for tools, local
 hooks and troubleshooting. Do not run ``ptk init`` over an existing project.
 A project can have entirely different jobs, variants and configuration paths
@@ -55,7 +55,7 @@ Both platform installers are included under ``.github/ptk/install/`` and updated
 by ``ptk maintainer sync agent`` with the same local-edit protection as the
 assistant bundle. Init copies these scripts; it does not execute them. Developers
 run the appropriate script from the repository root. Maintainers bootstrapping
-without PTK obtain the script from ``install/`` in the PTK source repository at
+without PTk obtain the script from ``install/`` in the PTk source repository at
 their approved release. Configure ``PTK_SOURCE`` and package-index access for
 the project; copied installers otherwise install ``ptk`` from the configured index.
 
@@ -77,7 +77,7 @@ keep project-specific guidance separately. Existing assistant-file collisions al
 stop init before writes. The bundle includes provenance for subsequent
 ``ptk maintainer sync agent`` updates, which protect locally edited files.
 In a VMR, each newly initialized repository receives its own bundle.
-Existing ``.gitignore`` content is kept and missing PTK ignore
+Existing ``.gitignore`` content is kept and missing PTk ignore
 rules are appended. The project name defaults to the destination directory name.
 
 The command works without an existing project, including inside a directory
@@ -96,7 +96,7 @@ compiler, credentials, or network connection once ptk is installed. Commands
 below work on Linux and Windows. Copy ``examples/quickstart`` outside this Git
 checkout, then open a terminal in the copy. When using installed authoring
 resources, the same example is under ``.github/ptk/examples/quickstart``; copy it
-out of the managed reference directory first. PTK discovers its root marker::
+out of the managed reference directory first. PTk discovers its root marker::
 
    ptk validate
    ptk -V debug build --dry-run
@@ -131,7 +131,7 @@ Read the configuration and workload
 .. literalinclude:: ../../examples/quickstart/demo.py
    :language: python
 
-In PTK's source checkout only, the larger ``examples/demo`` directory illustrates a firmware configuration.
+In PTk's source checkout only, the larger ``examples/demo`` directory illustrates a firmware configuration.
 Its CMake presets, toolchains and upload scripts are project-specific placeholders;
 it is suitable for configuration validation and dry runs, not an unattended build.
 

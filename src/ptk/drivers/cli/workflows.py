@@ -308,9 +308,9 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False, no_cache_ptk=Fals
             return
     if dry_run:
         click.echo(
-            "PTK cache: disabled for this invocation"
+            "PTk cache: disabled for this invocation"
             if no_cache_ptk or parent.no_cache_ptk or parent.re_run
-            else "PTK cache: opt-in; reuse is checked after prerequisites run"
+            else "PTk cache: opt-in; reuse is checked after prerequisites run"
         )
         click.echo("workflow dry-run; no jobs executed")
         return
@@ -570,14 +570,12 @@ def workspace_shortcuts(ctx):
     return ctx.meta["workflow_shortcuts"]
 
 
-def workspace_sync(
-    ctx, entries, *, target, names, check, diff, command, users_only, output
-):
-    """Preflight every member before writing shared repository integrations."""
+def workspace_sync(ctx, entries, *, target, names, check, diff):
+    """Preflight every member before running the sync in each repository."""
     from .workspace_commands import visit
 
     root_ctx = ctx.find_root()
-    parent, _, owners, available = catalog(ctx)
+    _, _, owners, _ = catalog(ctx)
     for alias in sorted(entries):
         owner = owners[alias]
         if not command_allowed(
@@ -589,35 +587,4 @@ def workspace_sync(
         args.append("--check")
     if diff:
         args.append("--diff")
-    if target != "tasks":
-        return visit(root_ctx, [(alias, args) for alias in sorted(entries)])
-    if output is None:
-        # Member tasks are generated in each repository; the workspace file holds workflow tasks.
-        task_args = [
-            *args,
-            "--command",
-            command,
-            *(["--users-only"] if users_only else []),
-        ]
-        visit(root_ctx, [(alias, task_args) for alias in sorted(entries)])
-    workflows = []
-    for name, (owner, spec, _) in sorted(available.items()):
-        if not can_view(parent, owners, owner, spec):
-            continue
-        restricted = spec.audience == "maintainer" or bool(
-            owner
-            and owners[owner].project().config.command_audience.get("workflow")
-            == "maintainer"
-        )
-        if users_only and restricted:
-            continue
-        workflows.append((name, spec.help, restricted))
-    root = parent.app.workspace.root(Path.cwd())
-    result = parent.app.vscode_tasks.workflows(
-        workflows, root=root, command=command, path=output, check=check
-    )
-    click.echo(
-        f"{result.path}: {'up to date' if result.up_to_date else 'out of date' if check else 'updated'}"
-    )
-    if check and not result.up_to_date:
-        raise click.exceptions.Exit(1)
+    return visit(root_ctx, [(alias, args) for alias in sorted(entries)])

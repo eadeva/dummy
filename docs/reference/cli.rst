@@ -1,10 +1,10 @@
 CLI command groups
 ==================
 
-PTK separates everyday work, local self-service and project maintenance.
-PTK uses CX for automated test and development execution: ``--cx`` /
+PTk separates everyday work, local self-service and project maintenance.
+PTk uses CX for automated test and development execution: ``--cx`` /
 ``--no-cx``, environment override ``PTK_CX``, and condition symbol ``cx``.
-These replace the former CI-named PTK interfaces; legacy aliases are not accepted.
+These replace the former CI-named PTk interfaces; legacy aliases are not accepted.
 Update existing scripts and conditions when upgrading. Standard provider variables
 such as ``CI``, ``GITHUB_ACTIONS`` and ``GITLAB_CI`` still automatically detect
 hosted execution; ``PTK_CX`` overrides that detection.
@@ -35,7 +35,7 @@ completion follow the same permissions and ordering.
    * - ``ptk variant list|show|explain``
      - Inspect the product line and explain resolved feature values
    * - ``ptk validate [--variants] [--versions] [--generated]``
-     - Validate PTK configuration; optionally check concrete variants, version sources or generated shared configuration
+     - Validate PTk configuration; optionally check concrete variants, version sources or generated shared configuration
    * - ``ptk report open JOB`` / ``ptk report open --workflow NAME``
      - Open the latest saved job or workflow report
    * - ``ptk report export JOB``
@@ -46,8 +46,8 @@ completion follow the same permissions and ordering.
      - Remove project outputs, with confirmation
    * - ``ptk self-service tools``
      - Install missing or outdated tools; optionally select ``--job JOB`` or preview with ``--dry-run``
-   * - ``ptk self-service creds setup|set|list|test|remove``
-     - Manage personal credential providers and stored values
+   * - ``ptk self-service creds setup|set|list|test|remove|lock|reset``
+     - Manage the credential vault and stored values (``lock`` ends the unlocked session, ``reset`` deletes the vault)
    * - ``ptk self-service completion install|powershell|bash|zsh|fish``
      - Persist or generate shell completion, even outside a project
    * - ``ptk self-service extension``
@@ -58,7 +58,7 @@ completion follow the same permissions and ordering.
      - Manage this repository's local Git hooks
    * - ``ptk maintainer config show|schema``
      - Inspect effective configuration and sources, or export its JSON schema
-   * - ``ptk maintainer sync configs|tasks|agent [--check]``
+   * - ``ptk maintainer sync configs|agent [--check]``
      - Regenerate one explicitly selected integration, or check it without writing
    * - ``ptk maintainer configs-report [--output PATH]``
      - Write offline JSON deviations and modified external-base filenames; does not synchronize files
@@ -74,12 +74,11 @@ completion follow the same permissions and ordering.
 ``self-service`` and ``maintainer`` without a subcommand show help without
 changing files. ``maintainer sync`` requires a target; it never generates
 unrequested integrations. Config names may follow ``sync configs``;
-``--diff`` previews shared configuration changes. Tasks accept ``--command``,
-``--users-only`` and ``--output``. Agent resources and tasks both support ``--check``.
-``sync agent`` installs the PTK expert agent, its skills and offline reference docs.
+``--diff`` previews shared configuration changes. Both targets support ``--check``.
+``sync agent`` installs the PTk expert agent, its skills and offline reference docs.
 
 ``validate`` is always available. With no project it reports
-"No PTK project found" and suggests ``ptk init``. Ordinary validation only
+"No PTk project found" and suggests ``ptk init``. Ordinary validation only
 loads local configuration. ``--variants --strict`` treats variant warnings as
 errors; ``--versions`` opts into version discovery and accepts ``--job`` for
 explicit version dependencies. ``--generated`` checks shared configuration
@@ -102,13 +101,13 @@ been removed. Previews use ``--dry-run``; the flag also works with generic
 ``describe --json --configuration`` provides the versioned extension interface.
 Both are hidden from normal help and completion. The inventory supplies the
 exact job/workflow command paths, including the maintainer namespace, so the
-extension does not infer command routing. Update PTK and its bundled extension
+extension does not infer command routing. Update PTk and its bundled extension
 together when upgrading this command interface.
 
 Terminal Tab completion
 -----------------------
 
-PTK is installed once per user and works without activating a project virtual
+PTk is installed once per user and works without activating a project virtual
 environment. Completion is a shell feature: both installers persist it for
 Bash/Git Bash and every detected PowerShell edition. For an existing installation,
 install or repair all registrations with::
@@ -116,11 +115,11 @@ install or repair all registrations with::
    ptk self-service completion install
 
 This locates the shared launcher using ``uv tool dir --bin`` rather than an
-activated venv's PTK. ``--executable PATH`` explicitly selects another shared
+activated venv's PTk. ``--executable PATH`` explicitly selects another shared
 launcher. Each shell profile adds that tool directory to PATH if needed,
 including new VS Code terminals that inherit an older environment. An explicitly
 activated development environment keeps precedence. No Python process starts
-when a shell opens; PTK runs only when completion is requested.
+when a shell opens; PTk runs only when completion is requested.
 
 On Windows, setup queries Windows PowerShell and PowerShell 7 separately for
 their ``$PROFILE.CurrentUserAllHosts`` paths, including redirected Documents
@@ -145,13 +144,13 @@ does not list option names: option completion starts with ``-``. After a choice
 option, Tab completes its allowed values, for example ``ptk JOB --build-type D``.
 Use ``ptk JOB --help`` for all options and descriptions. If even ``--`` produces
 no suggestions, install/load completion for the active shell and open a new
-terminal; check that its PATH selects the intended PTK installation.
+terminal; check that its PATH selects the intended PTk installation.
 
 To target just one PowerShell profile instead of all shells::
 
    ptk self-service completion powershell --double-tab --install $PROFILE.CurrentUserAllHosts
 
-This updates one marked PTK block, preserves the rest of the profile and its
+This updates one marked PTk block, preserves the rest of the profile and its
 encoding, and keeps a ``.ptk.bak`` backup of an existing profile before the first
 change. Repeating the command updates the block without adding duplicates.
 PowerShell supplies the path, including redirected Documents locations;
@@ -167,12 +166,12 @@ Open a new terminal, or activate completion immediately in the current shell::
 prefix; another Tab lists the remaining matches. This changes Tab for **all
 commands** in that shell. Omit the flag to keep your current key bindings
 (Windows PowerShell normally cycles matches with Tab). PSReadLine must be
-available for the double-Tab binding; the PTK completer itself does not require it.
-PTK normalizes an unfinished bare ``--`` in PowerShell completion independently
+available for the double-Tab binding; the PTk completer itself does not require it.
+PTk normalizes an unfinished bare ``--`` in PowerShell completion independently
 of the command AST's element count. A trailing space still commits ``--`` as the
 end-of-options marker; the registration script preserves that boundary even
 though PowerShell removes trailing whitespace from its command AST. After updating
-PTK, regenerate the persistent registration and reload it in any already-open
+PTk, regenerate the persistent registration and reload it in any already-open
 terminal. Native ``TabExpansion2`` tests cover both forms, option prefixes and
 choice values. Windows PowerShell 5.1 never calls native completers for a bare
 ``--``; type the first letter of the option (``--b``) or use PowerShell 7.
@@ -186,12 +185,12 @@ To check candidate generation independently of the Tab key binding, replace
 If this lists options but Tab does not, check the PSReadLine binding. If it
 returns nothing, check ``Get-Command ptk -All`` and ``ptk --version``, then reload
 the completion registration from that executable. Updating a checkout alone
-does not update a separately installed PTK package or a saved profile script.
+does not update a separately installed PTk package or a saved profile script.
 Generating a script without ``--install`` does not modify the profile.
-Profile loading must be allowed by your PowerShell execution policy; PTK does
+Profile loading must be allowed by your PowerShell execution policy; PTk does
 not change that policy. Terminals started with ``-NoProfile`` do not load it.
 
-To remove permanent completion, remove only the managed PTK block with::
+To remove permanent completion, remove only the managed PTk block with::
 
    ptk self-service completion powershell --uninstall $PROFILE.CurrentUserAllHosts
 
@@ -215,10 +214,10 @@ You can save a generated script with ``--output PATH`` and source that file from
 your shell profile instead. Its directory must already exist. Zsh and Fish use
 their configured completion key bindings and display styles.
 
-Zsh and Fish registration remains explicit. Traditional ``cmd.exe`` can run PTK
+Zsh and Fish registration remains explicit. Traditional ``cmd.exe`` can run PTk
 but does not use these completion scripts. Shells started with profile loading
 disabled also need explicit registration. WSL/SSH/container environments need
-their own PTK installation and shell setup on the workspace host.
+their own PTk installation and shell setup on the workspace host.
 
 Examples (``<Tab>`` means press the key)::
 
@@ -248,7 +247,7 @@ Tab completion offers the complete set. These hints use the same project metadat
 as the extension's run-options form. ``--only-step``/``--to`` apply to jobs; workflows
 select one owner variant and use their configured job mappings.
 
-Each completion request starts a short-lived PTK process and reads the required
+Each completion request starts a short-lived PTk process and reads the required
 configuration. It does not execute jobs, load Python tools, resolve Git/version
 variables, read credential values or install tools. Configuration is read again
 on the next request, so edits appear without a separate refresh. With missing or
@@ -289,7 +288,7 @@ Pre-commit commands
 -------------------
 
 The built-in ``pre-commit`` group uses the current repository's configured
-pre-commit file and PTK's managed runtime. No separate pre-commit executable on
+pre-commit file and PTk's managed runtime. No separate pre-commit executable on
 PATH is required. In a VMR, select a member: ``ptk ALIAS pre-commit ...``.
 There is no implicit operation across all repositories.
 
@@ -340,10 +339,10 @@ If ``configs.pre-commit.enabled`` is true, the next local job installs hooks aga
 
 These commands do not regenerate configuration or change hook revisions.
 Maintainers change the owning project configuration file and run
-``ptk maintainer sync configs pre-commit``; PTK upgrades supply newer base revisions.
+``ptk maintainer sync configs pre-commit``; PTk upgrades supply newer base revisions.
 ``ptk maintainer sync configs --check pre-commit`` checks whether the generated file is current.
 Use ``command_audience: {pre-commit: maintainer}`` to restrict the whole group.
-The VS Code extension discovers these built-ins automatically after updating PTK
+The VS Code extension discovers these built-ins automatically after updating PTk
 and refreshing projects.
 
 Variant matrices
@@ -373,7 +372,7 @@ stops at the nearest repository boundary; an ancestor or parent containing
 
 Git-repo members come from ``.repo/project.list``. A missing index is an error
 with ``repo sync`` guidance. There is no recursive filesystem scan or manifest
-parsing fallback, and a git-repo workspace does not need a root PTK file.
+parsing fallback, and a git-repo workspace does not need a root PTk file.
 
 For a manual VMR, place a ``.main.ptk.yml`` containing only
 ``virtual_monorepo: true`` at the **workspace root**. The containing directory
@@ -416,8 +415,8 @@ isolated configuration, tools, permissions and output directories.
 repositories. There is no implicit run across all repositories. Global options
 precede the alias. Project selection uses the working directory and the repository
 alias; there is no global ``--config``/``-C`` option. To opt a repository out of
-VMR membership, set ``virtual_monorepo: false`` in its root marker. Generated
-VS Code tasks and extension launches use the discovered workspace directory
+VMR membership, set ``virtual_monorepo: false`` in its root marker. Extension
+launches use the discovered workspace directory
 and repository alias.
 
 Shared VMR commands
@@ -441,10 +440,10 @@ identity unless ``credentials.NAME.namespace`` explicitly sets a stable scope.
 Git-pointer membership preserves this scope when invoked from a member directory.
 Manual VMR members receive workspace scope when routed from the marked workspace;
 direct standalone invocation does not infer a parent workspace. Identical definitions
-share a scope; conflicting definitions cannot overwrite each other in the vault
-or keyring. Moving a workspace or changing a definition changes its automatic
-scope: provision again or configure a stable namespace. Explicit env and gopass
-mappings are honored and may intentionally share external storage. Default env
+share a scope; conflicting definitions cannot overwrite each other in the vault.
+Moving a workspace or changing a definition changes its automatic
+scope: provision again or configure a stable namespace. Explicit env
+mappings are honored and may intentionally share variables. Default env
 variable names are shown by ``self-service creds list``.
 
 Listing only reads environment values and provider availability. Other stores
@@ -481,7 +480,7 @@ the README. A changed config path relocates an unmodified managed README and
 rebuilds its relative links; modified old files must be reconciled first.
 
 In VMR mode, omit DIRECTORY to initialize **all checked-out members without a
-root .main.ptk.yml**. This works before any member has PTK configuration and from
+root .main.ptk.yml**. This works before any member has PTk configuration and from
 a git-repo member's subdirectory. Existing entry files are skipped, even when
 their configuration is invalid, and the workspace root is not scaffolded.
 Running the command again skips the newly configured repositories::
@@ -551,7 +550,7 @@ Both all-clean commands list the directories and ask for confirmation; ``--yes``
 (or ``-y``) skips the prompt. ``vmr-clean-all`` includes all configured member
 repositories and the VMR root's default output folders (including workspace
 workflow reports). Job/workflow clean and re-run do not prompt. Dry-run modes
-never delete folders. PTK preflights all paths before deletion and refuses
+never delete folders. PTk preflights all paths before deletion and refuses
 repository roots, paths outside repositories, symlink paths, configuration/Git
 metadata, tracked source files and active job locks. Filesystem errors can still
 interrupt deletion; cleanup is not a transactional filesystem operation.
@@ -561,12 +560,12 @@ Binary output paths now include the job: ``_bin/<variant>/<job>``. Jobs using
 ``${run.bin_dir}`` receive the new path automatically; update hard-coded paths.
 Old files directly under ``_bin/<variant>`` remain until ``clean-all``.
 
-PTK cleanup versus native build-tool cleanup
+PTk cleanup versus native build-tool cleanup
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-PTK deletes output directories. It does not invoke Bazel or CMake's clean targets.
+PTk deletes output directories. It does not invoke Bazel or CMake's clean targets.
 Arguments after ``--`` are forwarded to job steps marked ``passthrough: true``;
-``--args-for STEP="ARGS"`` targets a particular eligible step. PTK options must
+``--args-for STEP="ARGS"`` targets a particular eligible step. PTk options must
 appear before the job; forwarded arguments appear after it.
 
 For a CMake build job with a passthrough step running ``cmake --build build``, use::
@@ -588,4 +587,4 @@ Then ``ptk bazel-clean`` invokes native ``bazel clean`` and
 ``ptk bazel-clean -- --expunge`` invokes ``bazel clean --expunge``. Appending
 ``clean`` to a job running ``bazel build`` does not switch its subcommand.
 Native cleanup scope is controlled by the build tool and its working directory;
-it is independent of PTK's selected-job folder cleanup.
+it is independent of PTk's selected-job folder cleanup.

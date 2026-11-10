@@ -1,8 +1,8 @@
-# PTK configuration: this file owns its section or named entity.
-help: Build PTK's Sphinx documentation with warnings treated as errors
+# PTk configuration: this file owns its section or named entity.
+help: Build PTk's Sphinx documentation with warnings treated as errors
 env:
   UV_PROJECT_ENVIRONMENT: ${project.root}/.ptk/venvs/docs
-# Explicit report artifact; PTK completes its contents before the upload Action runs.
+# Explicit report artifact; PTk completes its contents before the upload Action runs.
 outputs:
 - path: ${run.reports_dir}
   artifact_type: docs-reports

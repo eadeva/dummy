@@ -68,12 +68,12 @@
             }
           ],
           "default": null,
-          "description": "Credential reference credential.field for the bearer token, resolved through PTK's credential providers when installing. Alternative to token_env.",
+          "description": "Credential reference credential.field for the bearer token, resolved through PTk's credential providers when installing. Alternative to token_env.",
           "title": "Token"
         },
         "split": {
           "default": false,
-          "description": "The archive is stored as numbered volumes name.001, name.002, ... (byte-split). PTK downloads all volumes in order, verifies each against Artifactory's sha256 and joins them before extraction. name is the base name without the volume suffix.",
+          "description": "The archive is stored as numbered volumes name.001, name.002, ... (byte-split). PTk downloads all volumes in order, verifies each against Artifactory's sha256 and joins them before extraction. name is the base name without the volume suffix.",
           "title": "Split",
           "type": "boolean"
         },
@@ -320,12 +320,12 @@
           "title": "Overlay"
         },
         "source": {
-          "description": "Literal file path in the source repository, relative to its root.",
+          "description": "Literal path in the source repository, relative to its root. A trailing '/' copies that folder recursively (all regular files).",
           "title": "Source",
           "type": "string"
         },
         "destination": {
-          "description": "Literal destination relative to this repository. Unchanged byte-for-byte copy of the external base; never edit it. An overlay produces a separate output.",
+          "description": "Literal destination relative to this repository; a folder (trailing '/') for a folder source. Unchanged byte-for-byte copy of the external base; never edit it. An overlay produces a separate output.",
           "title": "Destination",
           "type": "string"
         }
@@ -427,12 +427,10 @@
           "type": "array"
         },
         "providers": {
-          "description": "Credential providers to try, in order. Default: env, keyring, gopass, vault, prompt; on Windows env, vault, keyring, gopass, prompt.",
+          "description": "Credential providers to try, in order: env (<PROJECT>_<USER>_<CREDENTIAL>_<FIELD>), the built-in encrypted vault, then a terminal prompt.",
           "items": {
             "enum": [
               "env",
-              "keyring",
-              "gopass",
               "vault",
               "prompt"
             ],
@@ -449,18 +447,6 @@
           "title": "Env",
           "type": "object"
         },
-        "gopass": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/GopassSpec"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Location of this credential in the gopass store."
-        },
         "user_field": {
           "anyOf": [
             {
@@ -471,12 +457,12 @@
             }
           ],
           "default": null,
-          "description": "Field holding the account name. Outside CX it is the user running PTK (lowercase); in CX it comes from the env provider.",
+          "description": "Field holding the account name. Outside CX it is the user running PTk (lowercase); in CX it comes from the env provider.",
           "title": "User Field"
         },
         "remember": {
           "default": true,
-          "description": "Store values entered at the prompt in the first writable provider (by default the encrypted vault on Windows, gopass or keyring on Linux). Set false to ask every run.",
+          "description": "Store values entered at the prompt in the encrypted vault. Set false to ask every run.",
           "title": "Remember",
           "type": "boolean"
         },
@@ -502,7 +488,6 @@
         "fields",
         "providers",
         "env",
-        "gopass",
         "user_field",
         "remember",
         "test"
@@ -828,24 +813,6 @@
       "title": "FeatureType",
       "type": "string"
     },
-    "GopassSpec": {
-      "additionalProperties": false,
-      "properties": {
-        "path": {
-          "description": "Entry path in the gopass password store.",
-          "title": "Path",
-          "type": "string"
-        }
-      },
-      "required": [
-        "path"
-      ],
-      "title": "GopassSpec",
-      "type": "object",
-      "x-ptk-field-order": [
-        "path"
-      ]
-    },
     "JobDestination": {
       "additionalProperties": false,
       "properties": {
@@ -866,7 +833,7 @@
       "additionalProperties": false,
       "properties": {
         "outputs": {
-          "description": "Explicit job output files or folders, as strings or {path, artifact_type} objects, relative to the repository root or absolute. Supports PTK variables including steps.<id>.build_dir. Used by workflow dependents; no outputs are inferred from steps or build directories. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. Every declared output is required after successful full execution. Missing outputs fail the producer before consumers can run. The project owns content validity.",
+          "description": "Explicit job output files or folders, as strings or {path, artifact_type} objects, relative to the repository root or absolute. Supports PTk variables including steps.<id>.build_dir. Used by workflow dependents; no outputs are inferred from steps or build directories. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. Every declared output is required after successful full execution. Missing outputs fail the producer before consumers can run. The project owns content validity.",
           "items": {
             "anyOf": [
               {
@@ -883,13 +850,13 @@
         },
         "cache": {
           "default": false,
-          "description": "PTK cache is an optional aid; cache correctness is the project\u2019s responsibility. Allow whole-job output reuse in workflows after unchanged successful needs. Requires explicit outputs. Standalone jobs and workflow roots always run; --no-cache-ptk disables this and all step caches. Existing outputs are reused in place.",
+          "description": "PTk cache is an optional aid; cache correctness is the project\u2019s responsibility. Allow whole-job output reuse in workflows after unchanged successful needs. Requires explicit outputs. Standalone jobs and workflow roots always run; --no-cache-ptk disables this and all step caches. Existing outputs are reused in place.",
           "title": "Cache",
           "type": "boolean"
         },
         "gui": {
           "default": false,
-          "description": "Show this job under GUIs. Run prerequisites normally, then launch the single final command in a detached process and let PTK exit. Success means the process started, not that the application finished. The final step cannot use timeout or retries.",
+          "description": "Show this job under GUIs. Run prerequisites normally, then launch the single final command in a detached process and let PTk exit. Success means the process started, not that the application finished. The final step cannot use timeout or retries.",
           "title": "Gui",
           "type": "boolean"
         },
@@ -995,7 +962,7 @@
                 "variant"
               ]
             },
-            "description": "Start with a lowercase letter; use lowercase letters, digits or underscores. PTK run-option names are reserved."
+            "description": "Start with a lowercase letter; use lowercase letters, digits or underscores. PTk run-option names are reserved."
           }
         },
         "requires_tools": {
@@ -1069,7 +1036,7 @@
           "label": "Executable + arguments",
           "description": "Run a program directly. Each list item is one argument, including paths with spaces.",
           "requirements": "The executable must be on the step's PATH or specified by a full path.",
-          "constraints": "No shell expansion, pipes or redirection. Leading script paths select PTK's script handling. Replace tool and its arguments before running.",
+          "constraints": "No shell expansion, pipes or redirection. Leading script paths select PTk's script handling. Replace tool and its arguments before running.",
           "initial": {
             "steps": {
               "step": {
@@ -1086,7 +1053,7 @@
           "group": "Command line",
           "label": "Platform-shell command",
           "description": "Run a command string through /bin/sh on POSIX or cmd.exe on Windows. Supports that shell's pipes, redirection and expansion.",
-          "requirements": "Use syntax for the machine executing PTK; this is not automatically Bash or PowerShell.",
+          "requirements": "Use syntax for the machine executing PTk; this is not automatically Bash or PowerShell.",
           "constraints": "Quoting and commands differ between platforms. A string starting with a recognized script and without shell operators uses script handling instead.",
           "initial": {
             "steps": {
@@ -1102,7 +1069,7 @@
           "label": "Bash script (.sh)",
           "description": "Run a shell script with Bash; subsequent list items are script arguments.",
           "requirements": "Bash must be available on PATH, including on Windows. Replace the example script path.",
-          "constraints": "PTK invokes bash explicitly. For another shell, name that interpreter as the executable.",
+          "constraints": "PTk invokes bash explicitly. For another shell, name that interpreter as the executable.",
           "initial": {
             "steps": {
               "step": {
@@ -1118,7 +1085,7 @@
           "group": "Command line",
           "label": "PowerShell script (.ps1)",
           "description": "Run a PowerShell file with -NoProfile -ExecutionPolicy Bypass -File.",
-          "requirements": "PTK selects available pwsh, otherwise powershell. Replace the example script path.",
+          "requirements": "PTk selects available pwsh, otherwise powershell. Replace the example script path.",
           "constraints": "PowerShell must be installed; scripts must suit its version and the host OS. A successful launch does not establish script portability.",
           "initial": {
             "steps": {
@@ -1151,7 +1118,7 @@
           "id": "bash-command",
           "group": "Command line",
           "label": "Explicit Bash command",
-          "description": "Run Bash syntax explicitly with bash -c, independently of PTK's default platform shell.",
+          "description": "Run Bash syntax explicitly with bash -c, independently of PTk's default platform shell.",
           "requirements": "Bash must be on the step's PATH.",
           "constraints": "Keep the complete shell expression in one argument after -c. Bash quoting and expansion apply.",
           "initial": {
@@ -1248,7 +1215,7 @@
           "label": "Local Python package (editable / dev mode)",
           "description": "Use python.project for a local package. uv normally installs it editable, so subsequent execution sees Python source edits.",
           "requirements": "uv, a local packaged project with an editable-capable build system, and its declared command entry point. Replace both example names.",
-          "constraints": "Compiled code may need rebuilding. Source edits do not automatically invalidate PTK's output cache; use --no-cache-ptk during development or declare source dependencies.",
+          "constraints": "Compiled code may need rebuilding. Source edits do not automatically invalidate PTk's output cache; use --no-cache-ptk during development or declare source dependencies.",
           "initial": {
             "steps": {
               "step": {
@@ -1268,7 +1235,7 @@
           "label": "Python environment (requirements / packages)",
           "description": "Create and reuse a repository-local environment with uv. Add requirements files, packages and optionally a Python version under python.venv.",
           "requirements": "uv; dependency installation uses the launcher's index/authentication environment. Requirement file paths are repository-relative.",
-          "constraints": "The environment key hashes declared requirement file contents and package/version requests, not transitive files or local package sources. It is separate from PTK's output cache.",
+          "constraints": "The environment key hashes declared requirement file contents and package/version requests, not transitive files or local package sources. It is separate from PTk's output cache.",
           "initial": {
             "steps": {
               "step": {
@@ -1308,9 +1275,9 @@
         {
           "id": "python-cli",
           "group": "Python",
-          "label": "Python using PTK's interpreter",
-          "description": "Run a .py file with the exact Python interpreter running PTK.",
-          "requirements": "The script's dependencies must already be installed in PTK's environment.",
+          "label": "Python using PTk's interpreter",
+          "description": "Run a .py file with the exact Python interpreter running PTk.",
+          "requirements": "The script's dependencies must already be installed in PTk's environment.",
           "constraints": "No script dependencies are installed. Use a project or requirements environment to keep separate dependencies.",
           "initial": {
             "steps": {
@@ -1331,7 +1298,7 @@
           "label": "Python with an explicit interpreter",
           "description": "Run python as an ordinary executable. Replace it with a full interpreter path when selecting a specific installation.",
           "requirements": "The chosen interpreter and dependencies must already exist on the host.",
-          "constraints": "Without a python setting, PTK adds no uv command or dependency setup. PATH and absolute executable paths are host-specific.",
+          "constraints": "Without a python setting, PTk adds no uv command or dependency setup. PATH and absolute executable paths are host-specific.",
           "initial": {
             "steps": {
               "step": {
@@ -1370,7 +1337,7 @@
           "group": "Python",
           "label": "Inline Python (-c)",
           "description": "Run a short Python expression supplied as one argument to python -c.",
-          "requirements": "This starter uses PTK's interpreter environment and its existing packages.",
+          "requirements": "This starter uses PTk's interpreter environment and its existing packages.",
           "constraints": "Keep longer code in a script. No dependency installation or PEP 723 processing is performed.",
           "initial": {
             "steps": {
@@ -1389,11 +1356,11 @@
         },
         {
           "id": "builtin",
-          "group": "PTK operations",
+          "group": "PTk operations",
           "label": "Built-in operation",
-          "description": "Use a shipped PTK operation instead of a command. Choose uses and supply operation-specific fields in with.",
+          "description": "Use a shipped PTk operation instead of a command. Choose uses and supply operation-specific fields in with.",
           "requirements": "The selected operation's inputs; the starter prints a message with echo.",
-          "constraints": "run and python are not used for built-in operations. Available operations come from PTK's schema.",
+          "constraints": "run and python are not used for built-in operations. Available operations come from PTk's schema.",
           "initial": {
             "steps": {
               "step": {
@@ -1407,7 +1374,7 @@
         },
         {
           "id": "generators",
-          "group": "PTK operations",
+          "group": "PTk operations",
           "label": "Generate variant files only",
           "description": "Generate variant configuration files without a following command. Choose formats in generators.",
           "requirements": "A selected project variant and supported generator formats; the starter selects cmake.",
@@ -1603,7 +1570,7 @@
       "additionalProperties": false,
       "properties": {
         "path": {
-          "description": "Literal output file or folder path. Supports the same PTK variables as a string output.",
+          "description": "Literal output file or folder path. Supports the same PTk variables as a string output.",
           "title": "Path",
           "type": "string"
         },
@@ -1655,7 +1622,7 @@
         },
         "default": {
           "default": null,
-          "description": "Value used when no explicit argument or environment value is supplied. Supports PTK variables resolved when the job runs. Required and secret parameters cannot have defaults.",
+          "description": "Value used when no explicit argument or environment value is supplied. Supports PTk variables resolved when the job runs. Required and secret parameters cannot have defaults.",
           "title": "Default",
           "x-ptk-template-context": "default"
         },
@@ -1716,7 +1683,7 @@
       "additionalProperties": false,
       "properties": {
         "path": {
-          "description": "Relative destination path for this route. Supports PTK variables.",
+          "description": "Relative destination path for this route. Supports PTk variables.",
           "title": "Path",
           "type": "string"
         },
@@ -1818,7 +1785,7 @@
             }
           ],
           "default": null,
-          "description": "Job used when PTK is invoked without a command. Choose a job defined in this repository.",
+          "description": "Job used when PTk is invoked without a command. Choose a job defined in this repository.",
           "title": "Default Job",
           "x-ptk-reference": {
             "path": [
@@ -1916,7 +1883,7 @@
             }
           ],
           "default": null,
-          "description": "Use cli to run with PTK\u2019s own Python environment. Choose exactly one Python execution mode.",
+          "description": "Use cli to run with PTk\u2019s own Python environment. Choose exactly one Python execution mode.",
           "title": "Interpreter"
         }
       },
@@ -1943,7 +1910,7 @@
           "label": "Local Python package (editable / dev mode)",
           "description": "Use python.project for a local package. uv normally installs it editable, so subsequent execution sees Python source edits.",
           "requirements": "uv, a local packaged project with an editable-capable build system, and its declared command entry point. Replace both example names.",
-          "constraints": "Compiled code may need rebuilding. Source edits do not automatically invalidate PTK's output cache; use --no-cache-ptk during development or declare source dependencies.",
+          "constraints": "Compiled code may need rebuilding. Source edits do not automatically invalidate PTk's output cache; use --no-cache-ptk during development or declare source dependencies.",
           "initial": {
             "project": "tools/my-tool"
           }
@@ -1954,7 +1921,7 @@
           "label": "Python environment (requirements / packages)",
           "description": "Create and reuse a repository-local environment with uv. Add requirements files, packages and optionally a Python version under python.venv.",
           "requirements": "uv; dependency installation uses the launcher's index/authentication environment. Requirement file paths are repository-relative.",
-          "constraints": "The environment key hashes declared requirement file contents and package/version requests, not transitive files or local package sources. It is separate from PTK's output cache.",
+          "constraints": "The environment key hashes declared requirement file contents and package/version requests, not transitive files or local package sources. It is separate from PTk's output cache.",
           "initial": {
             "venv": {
               "requirements": [],
@@ -1976,9 +1943,9 @@
         {
           "id": "python-cli",
           "group": "Python",
-          "label": "Python using PTK's interpreter",
-          "description": "Run a .py file with the exact Python interpreter running PTK.",
-          "requirements": "The script's dependencies must already be installed in PTK's environment.",
+          "label": "Python using PTk's interpreter",
+          "description": "Run a .py file with the exact Python interpreter running PTk.",
+          "requirements": "The script's dependencies must already be installed in PTk's environment.",
           "constraints": "No script dependencies are installed. Use a project or requirements environment to keep separate dependencies.",
           "initial": {
             "interpreter": "cli"
@@ -2004,7 +1971,7 @@
           "type": "string"
         },
         "config_path": {
-          "description": "Configuration directory relative to .main.ptk.yml. PTK loads the conventional configuration files from this directory.",
+          "description": "Configuration directory relative to .main.ptk.yml. PTk loads the conventional configuration files from this directory.",
           "minLength": 1,
           "title": "Config Path",
           "type": "string"
@@ -2088,7 +2055,7 @@
       "additionalProperties": false,
       "properties": {
         "outputs": {
-          "description": "Explicit output files or folders, as strings or {path, artifact_type} objects, relative to this step's cwd or absolute. Supports PTK variables; no globs or implicit build directory. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. Every declared path is required after successful execution; missing or nonregular outputs fail before dependents run. The project owns semantic validity. Outputs can provide dependency fingerprints without enabling this step's cache.",
+          "description": "Explicit output files or folders, as strings or {path, artifact_type} objects, relative to this step's cwd or absolute. Supports PTk variables; no globs or implicit build directory. Outputs primarily describe artifacts for workflow uploads and downloads; declaring paths does not transfer files. Every declared path is required after successful execution; missing or nonregular outputs fail before dependents run. The project owns semantic validity. Outputs can provide dependency fingerprints without enabling this step's cache.",
           "items": {
             "anyOf": [
               {
@@ -2105,7 +2072,7 @@
         },
         "cache": {
           "default": false,
-          "description": "PTK cache is an optional aid; cache correctness is the project\u2019s responsibility. Reuse existing outputs after unchanged successful dependencies. Requires explicit outputs. Steps without needs always execute; --no-cache-ptk disables reuse throughout the execution. No files are copied or restored.",
+          "description": "PTk cache is an optional aid; cache correctness is the project\u2019s responsibility. Reuse existing outputs after unchanged successful dependencies. Requires explicit outputs. Steps without needs always execute; --no-cache-ptk disables reuse throughout the execution. No files are copied or restored.",
           "title": "Cache",
           "type": "boolean"
         },
@@ -2216,7 +2183,7 @@
             }
           ],
           "default": null,
-          "description": "Condition evaluated during planning against PTK execution symbols, before steps run. Use cx for CX-only steps. Cannot inspect prior step results or call functions. The step is skipped when the expression is false.",
+          "description": "Condition evaluated during planning against PTk execution symbols, before steps run. Use cx for CX-only steps. Cannot inspect prior step results or call functions. The step is skipped when the expression is false.",
           "title": "When"
         },
         "continue_on_error": {
@@ -2256,7 +2223,7 @@
             }
           ],
           "default": null,
-          "description": "Working directory for this step; defaults to the repository root. Supports PTK variable expressions.",
+          "description": "Working directory for this step; defaults to the repository root. Supports PTk variable expressions.",
           "title": "Cwd",
           "x-ptk-template-context": "step"
         },
@@ -2264,7 +2231,7 @@
           "additionalProperties": {
             "type": "string"
           },
-          "description": "Environment variables added or overridden for this step. Values support PTK variables.",
+          "description": "Environment variables added or overridden for this step. Values support PTk variables.",
           "title": "Env",
           "type": "object",
           "x-ptk-template-context": "secret"
@@ -2300,6 +2267,19 @@
           "description": "Include this step in the job report.",
           "title": "Report",
           "type": "boolean"
+        },
+        "cmake_build_dir": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "CMake build directory configured by a script or wrapper in this run step, relative to the repository root or absolute. PTk requests CMake File API replies there before the step and imports the changed cache, File API replies and console diagnostics afterwards. Direct cmake configure commands need no setting. Supports PTk variables.",
+          "title": "Cmake Build Dir"
         }
       },
       "title": "StepSpec",
@@ -2314,7 +2294,7 @@
           "label": "Executable + arguments",
           "description": "Run a program directly. Each list item is one argument, including paths with spaces.",
           "requirements": "The executable must be on the step's PATH or specified by a full path.",
-          "constraints": "No shell expansion, pipes or redirection. Leading script paths select PTK's script handling. Replace tool and its arguments before running.",
+          "constraints": "No shell expansion, pipes or redirection. Leading script paths select PTk's script handling. Replace tool and its arguments before running.",
           "initial": {
             "run": [
               "tool",
@@ -2327,7 +2307,7 @@
           "group": "Command line",
           "label": "Platform-shell command",
           "description": "Run a command string through /bin/sh on POSIX or cmd.exe on Windows. Supports that shell's pipes, redirection and expansion.",
-          "requirements": "Use syntax for the machine executing PTK; this is not automatically Bash or PowerShell.",
+          "requirements": "Use syntax for the machine executing PTk; this is not automatically Bash or PowerShell.",
           "constraints": "Quoting and commands differ between platforms. A string starting with a recognized script and without shell operators uses script handling instead.",
           "initial": {
             "run": "echo Hello"
@@ -2339,7 +2319,7 @@
           "label": "Bash script (.sh)",
           "description": "Run a shell script with Bash; subsequent list items are script arguments.",
           "requirements": "Bash must be available on PATH, including on Windows. Replace the example script path.",
-          "constraints": "PTK invokes bash explicitly. For another shell, name that interpreter as the executable.",
+          "constraints": "PTk invokes bash explicitly. For another shell, name that interpreter as the executable.",
           "initial": {
             "run": [
               "tools/script.sh"
@@ -2351,7 +2331,7 @@
           "group": "Command line",
           "label": "PowerShell script (.ps1)",
           "description": "Run a PowerShell file with -NoProfile -ExecutionPolicy Bypass -File.",
-          "requirements": "PTK selects available pwsh, otherwise powershell. Replace the example script path.",
+          "requirements": "PTk selects available pwsh, otherwise powershell. Replace the example script path.",
           "constraints": "PowerShell must be installed; scripts must suit its version and the host OS. A successful launch does not establish script portability.",
           "initial": {
             "run": [
@@ -2376,7 +2356,7 @@
           "id": "bash-command",
           "group": "Command line",
           "label": "Explicit Bash command",
-          "description": "Run Bash syntax explicitly with bash -c, independently of PTK's default platform shell.",
+          "description": "Run Bash syntax explicitly with bash -c, independently of PTk's default platform shell.",
           "requirements": "Bash must be on the step's PATH.",
           "constraints": "Keep the complete shell expression in one argument after -c. Bash quoting and expansion apply.",
           "initial": {
@@ -2453,7 +2433,7 @@
           "label": "Local Python package (editable / dev mode)",
           "description": "Use python.project for a local package. uv normally installs it editable, so subsequent execution sees Python source edits.",
           "requirements": "uv, a local packaged project with an editable-capable build system, and its declared command entry point. Replace both example names.",
-          "constraints": "Compiled code may need rebuilding. Source edits do not automatically invalidate PTK's output cache; use --no-cache-ptk during development or declare source dependencies.",
+          "constraints": "Compiled code may need rebuilding. Source edits do not automatically invalidate PTk's output cache; use --no-cache-ptk during development or declare source dependencies.",
           "initial": {
             "python": {
               "project": "tools/my-tool"
@@ -2469,7 +2449,7 @@
           "label": "Python environment (requirements / packages)",
           "description": "Create and reuse a repository-local environment with uv. Add requirements files, packages and optionally a Python version under python.venv.",
           "requirements": "uv; dependency installation uses the launcher's index/authentication environment. Requirement file paths are repository-relative.",
-          "constraints": "The environment key hashes declared requirement file contents and package/version requests, not transitive files or local package sources. It is separate from PTK's output cache.",
+          "constraints": "The environment key hashes declared requirement file contents and package/version requests, not transitive files or local package sources. It is separate from PTk's output cache.",
           "initial": {
             "python": {
               "venv": {
@@ -2501,9 +2481,9 @@
         {
           "id": "python-cli",
           "group": "Python",
-          "label": "Python using PTK's interpreter",
-          "description": "Run a .py file with the exact Python interpreter running PTK.",
-          "requirements": "The script's dependencies must already be installed in PTK's environment.",
+          "label": "Python using PTk's interpreter",
+          "description": "Run a .py file with the exact Python interpreter running PTk.",
+          "requirements": "The script's dependencies must already be installed in PTk's environment.",
           "constraints": "No script dependencies are installed. Use a project or requirements environment to keep separate dependencies.",
           "initial": {
             "python": {
@@ -2520,7 +2500,7 @@
           "label": "Python with an explicit interpreter",
           "description": "Run python as an ordinary executable. Replace it with a full interpreter path when selecting a specific installation.",
           "requirements": "The chosen interpreter and dependencies must already exist on the host.",
-          "constraints": "Without a python setting, PTK adds no uv command or dependency setup. PATH and absolute executable paths are host-specific.",
+          "constraints": "Without a python setting, PTk adds no uv command or dependency setup. PATH and absolute executable paths are host-specific.",
           "initial": {
             "run": [
               "python",
@@ -2551,7 +2531,7 @@
           "group": "Python",
           "label": "Inline Python (-c)",
           "description": "Run a short Python expression supplied as one argument to python -c.",
-          "requirements": "This starter uses PTK's interpreter environment and its existing packages.",
+          "requirements": "This starter uses PTk's interpreter environment and its existing packages.",
           "constraints": "Keep longer code in a script. No dependency installation or PEP 723 processing is performed.",
           "initial": {
             "python": {
@@ -2566,11 +2546,11 @@
         },
         {
           "id": "builtin",
-          "group": "PTK operations",
+          "group": "PTk operations",
           "label": "Built-in operation",
-          "description": "Use a shipped PTK operation instead of a command. Choose uses and supply operation-specific fields in with.",
+          "description": "Use a shipped PTk operation instead of a command. Choose uses and supply operation-specific fields in with.",
           "requirements": "The selected operation's inputs; the starter prints a message with echo.",
-          "constraints": "run and python are not used for built-in operations. Available operations come from PTK's schema.",
+          "constraints": "run and python are not used for built-in operations. Available operations come from PTk's schema.",
           "initial": {
             "uses": "echo",
             "with": {
@@ -2580,7 +2560,7 @@
         },
         {
           "id": "generators",
-          "group": "PTK operations",
+          "group": "PTk operations",
           "label": "Generate variant files only",
           "description": "Generate variant configuration files without a following command. Choose formats in generators.",
           "requirements": "A selected project variant and supported generator formats; the starter selects cmake.",
@@ -2610,7 +2590,8 @@
         "secrets",
         "python",
         "passthrough",
-        "report"
+        "report",
+        "cmake_build_dir"
       ]
     },
     "ToolSpec": {
@@ -3430,7 +3411,7 @@
     "schema_version": {
       "const": 1,
       "default": 1,
-      "description": "PTK configuration schema version.",
+      "description": "PTk configuration schema version.",
       "title": "Schema Version",
       "type": "integer"
     },
@@ -3444,7 +3425,7 @@
         }
       ],
       "default": null,
-      "description": "Required PTK package version range, for example >=0.7,<1.",
+      "description": "Required PTk package version range, for example >=0.7,<1.",
       "title": "Ptk Version"
     },
     "project": {

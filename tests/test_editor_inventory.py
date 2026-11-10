@@ -1,4 +1,4 @@
-"""The editor consumes PTK's permissions/discovery, never a second YAML parser."""
+"""The editor consumes PTk's permissions/discovery, never a second YAML parser."""
 
 import json
 from pathlib import Path
@@ -62,7 +62,7 @@ def test_inventory_is_read_only_filters_roles_and_omits_secret_values(tmp_path):
                 for p in commands["maintainer sync"]["params"]
                 if p["name"] == "target"
             )
-            assert target["choices"] == ["configs", "tasks", "agent"]
+            assert target["choices"] == ["configs", "agent"]
         assert "creds" not in commands  # Obsolete alias is not registered.
         assert "go" not in commands  # Jobs have their own section.
         assert [j["name"] for j in project["jobs"]] == expected

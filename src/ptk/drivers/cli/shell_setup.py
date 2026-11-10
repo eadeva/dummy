@@ -43,7 +43,7 @@ def tool_executable(explicit=None):
         uv = shutil.which("uv")
         if uv is None:
             raise ValueError(
-                "Cannot locate uv. Use --executable PATH to select the installed PTK launcher."
+                "Cannot locate uv. Use --executable PATH to select the installed PTk launcher."
             )
         directory = _capture([uv, "tool", "dir", "--bin"])
         if not directory:
@@ -51,7 +51,7 @@ def tool_executable(explicit=None):
         path = Path(directory) / ("ptk.exe" if WINDOWS else "ptk")
     if not path.is_absolute() or not path.is_file():
         raise ValueError(
-            f"Shared PTK executable not found: {path}. Install PTK with the installer first."
+            f"Shared PTk executable not found: {path}. Install PTk with the installer first."
         )
     return path
 

@@ -17,7 +17,7 @@ inputs:
     description: Artifactory destination URL from the setup matrix.
     required: true
   uploads-json:
-    description: Path to the PTK upload.json manifest; filename may be arbitrary.
+    description: Path to the PTk upload.json manifest; filename may be arbitrary.
     required: true
   producer:
     description: Optional setup row JSON to validate identity; otherwise use the manifest producer.

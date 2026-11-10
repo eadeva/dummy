@@ -1,4 +1,4 @@
-"""Click's runner with an explicit working directory, as used by real PTK calls."""
+"""Click's runner with an explicit working directory, as used by real PTk calls."""
 
 from contextlib import chdir, nullcontext
 

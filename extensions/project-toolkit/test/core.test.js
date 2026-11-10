@@ -19,7 +19,7 @@ test("GUI metadata is mandatory in the current inventory and old inventories are
     doc.projects[0].jobs[0].gui = value;
     assert.throws(() => core.parseInventory(JSON.stringify(doc)), /Incomplete/);
   }
-  assert.throws(() => core.parseInventory(JSON.stringify({...inventory(), schema_version: 4})), /Update PTK/);
+  assert.throws(() => core.parseInventory(JSON.stringify({...inventory(), schema_version: 4})), /Update PTk/);
 });
 
 test("inventory accepts the versioned CLI contract and isolated broken members", () => {
@@ -35,7 +35,7 @@ test("malformed inventories produce actionable errors", () => {
   const bad = inventory();
   bad.projects[0].jobs[0].params[0].type = "secret";
   assert.throws(() => core.parseInventory(JSON.stringify(bad)), /Incomplete/);
-  assert.throws(() => core.parseInventory("old PTK output"), /Update PTK/);
+  assert.throws(() => core.parseInventory("old PTk output"), /Update PTk/);
 });
 
 test("all public parameter types, including lists, are accepted", () => {
@@ -75,7 +75,7 @@ test("workflows select their owner variants and resolve shared names explicitly"
   assert.deepEqual(core.argsFor({ kind: "workflow", name: "all", spec: { run_options: [], command: ["workflow", "run", "all"] } }, { preview: true }), ["workflow", "run", "all", "--dry-run"]);
   assert.deepEqual(core.argsFor(target("report"), { variant: "large" }), ["--variant", "large", "report", "open", "build"]);
   assert.deepEqual(core.argsFor(target("variant")), ["variant", "show", "build"]);
-  assert.throws(() => core.argsFor(target("validate")), /Unsupported PTK operation/);
+  assert.throws(() => core.argsFor(target("validate")), /Unsupported PTk operation/);
 });
 
 test("target discovery preserves healthy VMR members and workspace workflows", () => {
@@ -177,7 +177,7 @@ test("uv launch arguments prevent implicit syncing on POSIX and Windows without 
   assert.deepEqual(core.launchArgs({ executable: "uv", arguments: ["tool", "run", "ptk"] }, ["--help"]), ["tool", "run", "ptk", "--help"]);
 });
 
-test("watch filtering ignores installed resources but respects PTK-reported source files", () => {
+test("watch filtering ignores installed resources but respects PTk-reported source files", () => {
   for (const [paths, root] of [[path, path.resolve("project")], [path.win32, "C:\\git\\project"]]) {
     const generated = paths.join(root, "config", ".gen.version.ptk.yml");
     assert.equal(core.ignoreConfigEvent(generated, [root], [generated]), true);
@@ -231,7 +231,7 @@ test("graph projections require current metadata and reject dangling or malforme
   assert.throws(() => core.parseInventory(JSON.stringify(doc)), /configuration interface/);
 });
 
-test("maintainer command paths come from PTK for run, preview, help and cleanup", () => {
+test("maintainer command paths come from PTk for run, preview, help and cleanup", () => {
   const job = target();
   job.spec.command = ["maintainer", "run", "build"];
   job.spec.help_command = ["maintainer", "build"];
@@ -247,10 +247,10 @@ test("maintainer command paths come from PTK for run, preview, help and cleanup"
     doc.projects[0].jobs[0].command = invalid;
     assert.throws(() => core.parseInventory(JSON.stringify(doc)), /Incomplete/);
   }
-  assert.throws(() => core.parseInventory(JSON.stringify({ ...inventory(), schema_version: 1 })), /Update PTK/);
+  assert.throws(() => core.parseInventory(JSON.stringify({ ...inventory(), schema_version: 1 })), /Update PTk/);
 });
 
-test("PTK supplies cwd and alias routing without a config override", () => {
+test("PTk supplies cwd and alias routing without a config override", () => {
   const t = target();
   t.project.invocation = { cwd: path.resolve("workspace"), prefix: ["demo"] };
   assert.equal(core.cwdFor(t), path.resolve("workspace"));
@@ -261,7 +261,7 @@ test("PTK supplies cwd and alias routing without a config override", () => {
     const doc = inventory(); doc.projects[0].invocation = route;
     assert.throws(() => core.parseInventory(JSON.stringify(doc)), /repository paths/);
   }
-  assert.throws(() => core.parseInventory(JSON.stringify({ ...inventory(), schema_version: 3 })), /Update PTK/);
+  assert.throws(() => core.parseInventory(JSON.stringify({ ...inventory(), schema_version: 3 })), /Update PTk/);
 });
 
 test("run options retain literal repeated values and reject removed step choices", () => {

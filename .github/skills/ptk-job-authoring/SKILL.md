@@ -1,6 +1,6 @@
 ---
 name: ptk-job-authoring
-description: Add, change or explain PTK jobs, typed parameters, step dependency graphs, GUI launchers, declared outputs, optional caching, conditions and maintainer visibility in an existing or new project.
+description: Add, change or explain PTk jobs, typed parameters, step dependency graphs, GUI launchers, declared outputs, optional caching, conditions and maintainer visibility in an existing or new project.
 ---
 
 # ptk-job-authoring
@@ -25,13 +25,13 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 9. Validate the edit and preview the affected path. Run a focused check only within the authorized scope, using disposable inputs where possible; inspect its actual output paths and exit status.
 
-10. If the requested change affects maintained VS Code tasks, update them with `ptk maintainer sync tasks`, preserving the project's user/maintainer task policy; use `--users-only` when explicitly wanted.
+10. To run or inspect jobs from VS Code, use the Project Toolkit extension; it reads jobs from PTk's inventory and saves its own re-run tasks. PTk does not generate `.vscode/tasks.json`.
 
-11. Inspect with `--graph`; dry-runs include graphs automatically. Keep repository-root default cwd. Step folders are conventions, not enforced sandboxes: declare dependencies for shared writes and use `${steps.ID.build_dir}` for known paths. `--only-step` requires existing prerequisite artifacts; never assume stored runtime outputs. Retries affect one step; built-in handlers observe cancellation, and external processes follow the documented timeout behavior. Use `files.clean` only within generated workspace folders.
+11. Inspect with `--graph`; dry-runs include graphs automatically. Keep repository-root default cwd. Step folders are conventions, not enforced sandboxes: declare dependencies for shared writes and use `${steps.ID.build_dir}` for known paths. Use `${tools.NAME.bin}` for a configured tool's binary folder; the tool must be listed in the job's `requires_tools`. For scripts or wrappers that configure CMake outside `${run.build_dir}`, set the step's `cmake_build_dir` so CMake evidence reaches the report. `--only-step` requires existing prerequisite artifacts; never assume stored runtime outputs. Retries affect one step; built-in handlers observe cancellation, and external processes follow the documented timeout behavior. Use `files.clean` only within generated workspace folders.
 
 Declare `outputs` explicitly as paths or `{path, artifact_type}` objects on the producing step/job. Their principal purpose is workflow artifact transfer; output validity is project responsibility. Opt into reuse only with declared outputs and `cache: true`; content hashes, not timestamps, decide reuse. Root steps/calls still execute, and `--no-cache-ptk` disables reuse throughout execution. Read [output reuse](../../../docs/guides/output-reuse.rst) and [artifact manifests](../../../docs/guides/artifacts.rst).
 
-For GUI launchers, inspect the installed job `gui` field and its constraints in [execution](../../../docs/reference/execution.rst). The launched process outlives PTK; successful launch is not proof the application completed. Do not treat detached GUI jobs as completed artifact producers. Use the editor's creation wizard and runtime mode descriptions for Python, direct-command and shell choices; do not embed shell syntax in argv lists.
+For GUI launchers, put the job in `guis/NAME.ptk.yml` under the configuration folder and set `gui: true` (required there); inspect the installed job `gui` field and its constraints in [execution](../../../docs/reference/execution.rst). The launched process outlives PTk; successful launch is not proof the application completed. Do not treat detached GUI jobs as completed artifact producers. Use the editor's creation wizard and runtime mode descriptions for Python, direct-command and shell choices; do not embed shell syntax in argv lists.
 
 Before real execution, account for required-tool/credential checks and enabled local hook installation. Python environments are prepared when their steps start. Configuration freshness is a separate explicit check, not an automatic job prerequisite. Read [local setup](../../../docs/guides/local-setup.rst) when startup fails.
 
@@ -39,8 +39,7 @@ Read [versioning](../ptk-versioning/SKILL.md) only for version sources or genera
 
 Use `audience: maintainer` for configuration-writing or release jobs. Maintainer
 IDs are plain login strings in `maintainers.ptk.yml`, never Git-email records.
-Editor task generation now requires a maintainer; use `--users-only` for shared
-tasks and verify user visibility with `PTK_ROLE=user`. Role elevation via the
+Verify user visibility with `PTK_ROLE=user`. Role elevation via the
 environment is not supported.
 
 Use `when` for job and step eligibility; never author `only_cx`, `only_variants`

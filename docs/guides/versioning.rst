@@ -1,7 +1,7 @@
 Version discovery and generated build files
 ===========================================
 
-PTK discovers versions; it never bumps versions, commits changes or creates tags.
+PTk discovers versions; it never bumps versions, commits changes or creates tags.
 Put maintained rules in ``versioning.ptk.yml`` in ``repository.config_path``.
 The file contains the versioning body without a ``versioning`` wrapper and owns all version rules.
 A project without versioning configuration runs as before.
@@ -53,7 +53,7 @@ Supported sources:
   ``json``, ``toml`` or ``yaml``. Structured formats require a dotted ``key``
   whose value is a string. Text can use ``regex`` (named ``version`` group,
   otherwise the first capture, otherwise the entire match).
-* ``env``: required ``variable`` read from PTK's caller environment.
+* ``env``: required ``variable`` read from PTk's caller environment.
 * ``command``: an argv list in ``command``, run in the repository root with
   caller environment and ``timeout`` seconds (default 30). No implicit shell.
 * ``inherit``: component default, using the resolved project version.

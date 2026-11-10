@@ -404,3 +404,38 @@ def test_job_versions_coexist_and_path_contains_only_selected_tools(
         "tool requirements are not satisfied in the command environment"
         in result.output
     )
+
+
+def test_tool_bin_folder_is_available_to_steps(write):
+    python = Path(sys.executable)
+    root = write(
+        project_files(f"""
+        project: {{name: t}}
+        tools:
+          py: {{check: '"{python.as_posix()}" --version'}}
+        jobs:
+          show:
+            requires_tools: [py]
+            environment: {{inherit_path: true}}
+            steps:
+              print:
+                run: ['{python.as_posix()}', -c, 'import sys; print("BIN=" + sys.argv[1])', '${{tools.py.bin}}']
+        """)
+    )
+    result = CliRunner().invoke(cli, ["show"], cwd=root, catch_exceptions=False)
+    assert result.exit_code == 0, result.output
+    assert f"BIN={python.resolve().parent}" in result.output
+    wrong = write(
+        project_files("""
+        project: {name: t}
+        tools:
+          py: {check: python --version}
+        jobs:
+          wrong:
+            steps:
+              print:
+                run: [echo, '${tools.py.bin}']
+        """)
+    )
+    invalid = CliRunner().invoke(cli, ["validate"], cwd=wrong, catch_exceptions=False)
+    assert "needs 'py' in the job's requires_tools" in invalid.output

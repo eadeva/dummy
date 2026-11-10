@@ -63,7 +63,7 @@ def section(reports, root=None):
                 "Executable": bazel.executable,
                 "Workspace": bazel.workspace,
                 "Evidence": bazel.source,
-                "PTK command result": bazel.status,
+                "PTk command result": bazel.status,
                 "Captured command duration": f"{bazel.duration:.2f}s"
                 if bazel.duration
                 else "Not recorded",

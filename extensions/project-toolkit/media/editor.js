@@ -199,7 +199,7 @@
       status();
       if (state.error && !creation) {
         const main = el("main"); notice(main);
-        main.append(el("h2", "This YAML needs attention"), el("p", state.error, { className: "notice error" }), el("p", "Open Raw YAML to fix syntax errors, then switch back using Open PTK Form in the editor title bar."));
+        main.append(el("h2", "This YAML needs attention"), el("p", state.error, { className: "notice error" }), el("p", "Open Raw YAML to fix syntax errors, then switch back using Open PTk Form in the editor title bar."));
         app.append(main); return;
       }
       if (creation) {
@@ -269,12 +269,12 @@
       if (resolved.description) main.append(el("p", resolved.description, { className: "help" }));
       if (resolved.title === "ParamSpec") main.append(button("Edit parameter…", () => startCreation(selected.slice(0, -1), {}, selected.at(-1)), ""));
       if (resolved.properties?.outputs && resolved.properties?.cache) {
-        main.append(el("p", "Outputs primarily describe artifacts for uploads and downloads in workflows. Declaring outputs does not transfer files. PTK’s built-in cache is an optional aid: the project owns the output declarations and cache correctness. Reuse requires cache: true and explicit outputs; --no-cache-ptk disables it for the whole invocation.", { className: "help", "data-output-guidance": "true" }));
+        main.append(el("p", "Outputs primarily describe artifacts for uploads and downloads in workflows. Declaring outputs does not transfer files. PTk’s built-in cache is an optional aid: the project owns the output declarations and cache correctness. Reuse requires cache: true and explicit outputs; --no-cache-ptk disables it for the whole invocation.", { className: "help", "data-output-guidance": "true" }));
       }
       if (state.locked.some(prefix => prefix.length <= selected.length && prefix.every((key, i) => key === selected[i]))) {
         main.append(el("p", "This value uses an alias, unsupported tag or complex mapping. Use Raw YAML to edit it.", { className: "notice" }));
       } else if (value === null || typeof value !== "object") {
-        main.append(el("p", "PTK configuration files must contain a mapping. Use Raw YAML to correct this document.", { className: "notice" }));
+        main.append(el("p", "PTk configuration files must contain a mapping. Use Raw YAML to correct this document.", { className: "notice" }));
       } else if (resolved.title === "ParamSpec") {
         main.append(el("p", `${value.type || "str"} · ${value.required ? "Required" : "Optional"}${value.env ? ` · Environment: ${value.env}` : ""}`, { className: "help" }));
         if (value.help) main.append(el("p", value.help));
@@ -429,7 +429,7 @@
     function insert(entry) {
       const text = "${" + entry.reference + "}";
       input.setRangeText(text, range.start, range.end, "end");
-      // Queue locally, exactly like typing. Insertion never reloads PTK.
+      // Queue locally, exactly like typing. Insertion never reloads PTk.
       inserting = true; input.dispatchEvent(new Event("input", { bubbles: true })); inserting = false;
       if (entry.placeholder) {
         const start = range.start + 2 + entry.reference.indexOf(entry.placeholder);
@@ -569,7 +569,7 @@
     if (!choices.length) return () => [];
     const section = el("section", undefined, { className: "run-variants" });
     section.append(el("h2", state.kind === "workflow" ? "Owner variants" : "Variants"));
-    section.append(el("p", "Select one or more variants to run in parallel. An empty selection automatically selects the project default." + (state.kind === "workflow" ? " PTK applies repository mappings separately to each owner variant." : ""), { className: "help" }));
+    section.append(el("p", "Select one or more variants to run in parallel. An empty selection automatically selects the project default." + (state.kind === "workflow" ? " PTk applies repository mappings separately to each owner variant." : ""), { className: "help" }));
     if (state.variantHelp) {
       const details = el("details"); details.append(el("summary", "Variant help"), el("p", state.variantHelp, { className: "help" })); section.append(details);
     }
@@ -617,7 +617,7 @@
       const id = `run-option-${spec.name}`;
       const field = el("div", undefined, { className: "run-option" });
       const label = el("label", spec.option, { for: id });
-      const description = el("p", spec.help || "Optional; omit to use PTK's default.", { className: "help", id: `${id}-help` });
+      const description = el("p", spec.help || "Optional; omit to use PTk's default.", { className: "help", id: `${id}-help` });
       let input;
       if (spec.choices.length) {
         input = el("select", undefined, { id });
@@ -670,7 +670,7 @@
       header.querySelector("p").textContent = [state.project, selected.length && `${selected.length > 1 ? "Variants (parallel)" : "Variant"}: ${selected.join(", ")}`].filter(Boolean).join(" · ");
     });
     const runOptions = executionControls(main);
-    if (state.params.length) main.append(el("p", "Enable an override to supply a value. Otherwise PTK uses the configured environment or default when the job runs.", { className: "muted" }));
+    if (state.params.length) main.append(el("p", "Enable an override to supply a value. Otherwise PTk uses the configured environment or default when the job runs.", { className: "muted" }));
     if (variants.length > 1 || state.kind === "job" && state.variantChoices?.length > 1) main.append(el("p", "Overrides apply to every selected variant. Omitted values and template defaults are resolved separately for each run.", { className: "help" }));
     const controls = [];
     for (const spec of state.params) {

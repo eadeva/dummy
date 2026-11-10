@@ -1,7 +1,7 @@
 CLI startup performance
 =======================
 
-Help must reflect current jobs, workflows and maintainer permissions. PTK loads
+Help must reflect current jobs, workflows and maintainer permissions. PTk loads
 and validates configuration for that invocation; no persistent help cache can
 hide a recent edit or keep an obsolete permission.
 
@@ -87,12 +87,12 @@ What changed
   Cache expected failures too, so broken or absent configuration is not repeatedly
   searched and parsed while rendering help. A new invocation rereads everything.
 * Defer execution, installer, Python runtime, vault and reporting services and
-  their imports until used. Ordinary help avoids those modules. Installed packages are not scanned for PTK entry points.
+  their imports until used. Ordinary help avoids those modules. Installed packages are not scanned for PTk entry points.
 
 Run the benchmark
 -----------------
 
-In a PTK source checkout with its Python environment installed::
+In a PTk source checkout with its Python environment installed::
 
    uv run python scripts/benchmark_cli.py --output .ptk/benchmark-cli.json
 
@@ -113,7 +113,7 @@ there are no wall-time assertions on shared runners.
 Profile an installed environment
 --------------------------------
 
-Use the Python environment containing PTK and the repository where help is slow::
+Use the Python environment containing PTk and the repository where help is slow::
 
    python -m cProfile -o ptk-help.prof -m ptk --help
    python -c "import pstats; pstats.Stats('ptk-help.prof').strip_dirs().sort_stats('cumulative').print_stats(30)"
@@ -122,5 +122,5 @@ Use the Python environment containing PTK and the repository where help is slow:
 Profiling adds overhead: use it to identify expensive work, not to claim wall-time
 speedups. Compare workspace-root help with ``ptk ALIAS --help`` and ``ptk --help``
 from a directory outside any project to separate workspace configuration cost
-from base startup. Record PTK/Python versions, OS, repository count, config size
+from base startup. Record PTk/Python versions, OS, repository count, config size
 and selected Python tools. Keep profiles local; they contain source and project paths.

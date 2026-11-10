@@ -198,7 +198,7 @@ def test_headers_use_prepared_metadata_and_only_verbose_shows_features(verbose):
     text = stream.getvalue()
     assert "JOB [debug][docs] | START" in text
     assert "Project: Firmware | Project version: 2.4.1" in text
-    assert "Repository: fw | PTK: 9.0.0" in text
+    assert "Repository: fw | PTk: 9.0.0" in text
     assert "Variant: debug — Development" in text
     assert "Components: 1 | Resolved features: 1" in text
     assert ("core.MODE" in text) is verbose

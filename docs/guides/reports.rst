@@ -13,7 +13,7 @@ Overview and ownership
 Headers identify the owner, variant, recorded run and elapsed duration. Job
 reports also show the project and recorded version. Workflow execution entries
 identify the invocation, repository, job and actual variant; their configuration
-section contains each child's recorded project/PTK version, variant features,
+section contains each child's recorded project/PTk version, variant features,
 tool dependencies and parameters. A workspace workflow has workspace scope,
 not an invented common product variant.
 
@@ -26,7 +26,7 @@ the same content.
 Overview counts link to execution, tests and diagnostics. These are distinct
 measurements: a failed process, a failed test and a matching log message can be
 three records of related evidence. They are not three failed tests. A successful
-process can still have imported test failures or active error diagnostics. PTK
+process can still have imported test failures or active error diagnostics. PTk
 does not rewrite execution outcomes based on report filters or findings.
 
 Execution, graphs and timelines
@@ -106,7 +106,7 @@ compact CX summary. Workflow reports currently export HTML/JSON; job reports
 support the complete format set.
 
 Project implementations own artifact correctness, output validation, side
-effects, retry safety and isolation. PTK deliberately leaves projects free to
+effects, retry safety and isolation. PTk deliberately leaves projects free to
 choose their tools and checks; a green execution badge records execution success,
 not independent verification of produced artifacts. Historical comparisons,
 trends and flaky-test analysis are outside this report redesign.
@@ -117,9 +117,9 @@ See :need:`DD_REPORT_EXPLORATION`, :need:`REQ_Sw_REPORT_EXPLORATION` and
 Sphinx documentation and needs
 ------------------------------
 
-PTK imports documentation evidence produced by **Sphinx 9.1.0** and
-**Sphinx-Needs 8.5.0**. No Sphinx package is required in PTK's own environment:
-the project runs its chosen documentation tools, and PTK reads their JSON output.
+PTk imports documentation evidence produced by **Sphinx 9.1.0** and
+**Sphinx-Needs 8.5.0**. No Sphinx package is required in PTk's own environment:
+the project runs its chosen documentation tools, and PTk reads their JSON output.
 Enable the needs export in the project's ``conf.py``::
 
    needs_build_json = True
@@ -141,7 +141,7 @@ For example, a documentation step can write HTML into its build directory:
        - docs
        - ${run.build_dir}/html
 
-After execution, PTK discovers ``needs.json`` and ``schema_violations.json``
+After execution, PTk discovers ``needs.json`` and ``schema_violations.json``
 recursively inside each executed, report-visible step's **build directory**.
 It does not look for these exports in ``run.log_dir``. Configured layout roots
 are respected. Symbolic-link directories are not traversed and artifacts must
@@ -177,18 +177,18 @@ The **Sphinx documentation** section contains:
   when reported by Sphinx-Needs. An absent violations file means **validation not
   reported**, rather than zero violations.
 
-Schema severity ``violation`` maps to a PTK error, ``warning`` to a warning and
+Schema severity ``violation`` maps to a PTk error, ``warning`` to a warning and
 ``info`` to a note. The schema severity takes precedence over the console logging
 level. These findings use the **Sphinx-Needs** source in the shared Diagnostics
 view; errors also appear in **What failed**. Nested validation reasons belong to
 their parent finding and are not counted again. Suppressed console messages can
 still be present in the JSON export. Related log findings retain their separate
-source; PTK does not infer that matching-looking records have the same cause.
+source; PTk does not infer that matching-looking records have the same cause.
 Neither needs nor violations are additional tests, and importing them does not
 change the process exit result. Active errors automatically open the dedicated diagnostics report locally.
 
 When the producing step **passed** and an HTML ``index.html`` exists, the report
-offers **Open docs**. PTK checks the export directory, its ``html`` subdirectory,
+offers **Open docs**. PTk checks the export directory, its ``html`` subdirectory,
 and a sibling ``html`` directory for a separate ``needs`` builder output. Need
 IDs link to their local HTML document/anchor when that document exists. Failed
 or cancelled builds can still contribute diagnostic evidence but do not advertise
@@ -205,7 +205,7 @@ existing exporters, not a new Sphinx builder or plugin interface.
 
 The built HTML documentation site is **linked, not copied**. Its files must
 remain available, and a later build can replace what that link opens. Projects
-own output freshness and cleanup: PTK captures the files left by an executed
+own output freshness and cleanup: PTk captures the files left by an executed
 step, without proving that every artifact was regenerated or validating the
 project's requirements itself. A successful build is not proof of requirement
 completeness, traceability or implementation correctness.
@@ -215,7 +215,7 @@ See :need:`DD_SPHINX_EVIDENCE` and :need:`REQ_Sw_SPHINX_REPORTS`.
 CMake configuration evidence
 ----------------------------
 
-PTK selects one of two shipped importers automatically, using the CMake
+PTk selects one of two shipped importers automatically, using the CMake
 executable in the actual command environment, including its step-specific PATH.
 It runs that executable's ``--version`` before a direct configure command and
 records the version and executable with the evidence. Exporting historical
@@ -249,10 +249,10 @@ directory is recommended::
    configure:
      run: [cmake, -S, ., -B, "${run.build_dir}"]
 
-The actual ``-B`` directory is used; PTK does not change cwd or overwrite the
+The actual ``-B`` directory is used; PTk does not change cwd or overwrite the
 project's build directory selection. Older positional source/existing-build
 invocations are supported. A configure preset needs an explicit ``-B`` for
-automatic instrumentation. PTK creates its own File API client queries, preserving
+automatic instrumentation. PTk creates its own File API client queries, preserving
 other clients, and captures SARIF where supported. It respects an explicit
 ``--sarif-output`` path. It does not enable suppressed CMake warnings or change
 warning-as-error settings. Only diagnostics actually emitted by CMake are imported.
@@ -261,9 +261,18 @@ Scripts, wrappers, compound shell commands and presets without ``-B`` are not
 rewritten. Their changed caches beneath ``run.build_dir`` can identify the CMake
 version that wrote them, and already-produced evidence can be imported. They
 must prepare structured outputs themselves for complete reporting. Unchanged
-caches are not assigned to unrelated commands. CMake build/install/script/tool
+caches are not assigned to unrelated commands. A wrapper configuring outside
+``run.build_dir`` can declare its build directory on the step::
+
+   build:
+     run: [tools/build.py, --variant, "${vh.variant}"]
+     cmake_build_dir: _builds/${vh.variant}/build
+
+PTk then creates its File API queries there before the step and imports the
+changed cache, the replies and console diagnostics afterwards. SARIF cannot be
+requested from a wrapper. CMake build/install/script/tool
 modes are not instrumented as configure commands. Compiler/linker diagnostics
-remain the responsibility of their own report formats and PTK log analysis.
+remain the responsibility of their own report formats and PTk log analysis.
 
 The HTML CMake section shows configuration metadata, toolchains, searchable
 checks/packages/targets and collapsed target dependency graphs. Targets are
@@ -282,7 +291,7 @@ Missing evidence is labelled unavailable rather than successful. Imported text
 is masked before persistence, and HTML escapes project-supplied content.
 
 Matching CMake findings from SARIF and console output are merged, then matched
-against PTK log analysis using owner/step, severity, source location and normalized
+against PTk log analysis using owner/step, severity, source location and normalized
 message. Their details list contributing sources. Ambiguous matches remain
 separate with explicit source labels. The existing ordered ``log_analysis.rules``
 apply to these findings; ignored/justified warnings and errors remain available
@@ -293,11 +302,11 @@ run, not from current configuration. See :need:`DD_CMAKE_REPORTS` and
 Bazel build and test evidence
 -----------------------------
 
-PTK imports Bazel's newline-delimited JSON Build Event Protocol (BEP) with one
+PTk imports Bazel's newline-delimited JSON Build Event Protocol (BEP) with one
 shipped ``bazel-bep-json`` importer. The producing stream records the actual
 ``buildToolVersion`` and invocation UUID, including the version selected by
 Bazelisk. Report regeneration never probes the current PATH. BEP uses optional
-fields across Bazel releases; PTK consumes the documented event contract,
+fields across Bazel releases; PTk consumes the documented event contract,
 ignores unknown event kinds and displays missing evidence as unavailable. It
 does not invent major-version parser boundaries or fall back to an older report.
 
@@ -306,9 +315,9 @@ and ``run`` automatically receive a temporary ``--build_event_json_file`` path.
 Startup options, working directory, environment, target arguments and the
 arguments after ``bazel run ... --`` retain their meaning. An explicit JSON
 output path on the command line is reused; an explicitly empty path disables
-structured capture. When PTK supplies the path it takes precedence over a JSON
+structured capture. When PTk supplies the path it takes precedence over a JSON
 output destination from ``.bazelrc``; pass that destination explicitly to retain
-it. PTK does not edit ``.bazelrc`` or alter output bases, caches, execution
+it. PTk does not edit ``.bazelrc`` or alter output bases, caches, execution
 strategies, warning settings or test retries. Other Bazel commands are not
 instrumented. A separate version probe is unnecessary and does not start another
 server or trigger another Bazelisk download.
@@ -329,14 +338,14 @@ use ``report.import`` to copy a BEP file with either suffix directly into the
 step's reports folder. Each file must contain one invocation, one JSON event per
 line; binary/text-protobuf BEP files and JSON arrays are not accepted. Console
 output from a wrapper is not assigned to an arbitrary stream; BEP progress
-events carry that invocation's output, and ordinary PTK log analysis remains
+events carry that invocation's output, and ordinary PTk log analysis remains
 available.
 
 The full HTML report adds a Bazel section containing:
 
 * Producing version, invocation UUID, workspace, command result, Bazel's build
   exit result and stream completeness. For ``bazel run``, a successful build
-  does not imply the launched program succeeded; PTK preserves the process result.
+  does not imply the launched program succeeded; PTk preserves the process result.
 * Searchable target/configuration/aspect results, reported actions, test-target
   summaries, attempts, shards, runs and local/remote test-cache indicators.
 * Build metrics with exact recorded counters. ``actionsExecuted`` includes remote
@@ -363,7 +372,7 @@ expanding their internals. Select a node for its dependencies, configuration and
 recorded status; zoom, pan and fit work offline. Only target results actually
 recorded by BEP get passed/failed states. Other targets remain ``configured``.
 
-After a supported direct invocation, PTK runs a bounded ``cquery`` using the same
+After a supported direct invocation, PTk runs a bounded ``cquery`` using the same
 launcher, environment, working directory and startup arguments. It replays the
 canonical expanded build options, including ``.bazelrc``/``--config`` settings,
 without rereading rc files or forwarding program arguments. Reporting destinations
@@ -390,11 +399,11 @@ directory. Produce the latter with the same build options and top-level targets:
      --proto:output_rule_attrs= > name.cquery.json
 
 Use the same source revision as the BEP build; matching configurations cannot
-detect intervening source edits. PTK validates target/configuration identity and
+detect intervening source edits. PTk validates target/configuration identity and
 does not infer graph edges from BEP event links or unresolved ``select()`` inputs.
 
 Bazel warnings, errors and test warnings share the existing Diagnostics section
-and ``diagnostics.html``. Matching structured, BEP-progress, console and PTK-log
+and ``diagnostics.html``. Matching structured, BEP-progress, console and PTk-log
 findings are merged conservatively by step, severity, source location and message,
 with contributing sources and occurrence counts retained. Ambiguous matches keep
 separate source labels. Saved first-match ignore/justify rules and reasons apply
@@ -402,7 +411,7 @@ even when console log analysis is disabled. Dispositions do not change actual
 process or test-target outcomes. Local active errors open diagnostics; CX never
 opens a browser.
 
-PTK retains masked normalized evidence per execution attempt. Later builds and
+PTk retains masked normalized evidence per execution attempt. Later builds and
 workflow snapshots cannot rewrite earlier evidence; temporary raw BEP files are
 removed after capture. Explicit project-owned files are left intact. Inputs and
 each normalized snapshot are bounded to 100 MiB (104,857,600 bytes); exactly the
@@ -423,12 +432,12 @@ saved evidence. Target graph capture uses the project's existing Bazel; see
 GN generation reports
 ---------------------
 
-GN generates Ninja build files; it does not compile the targets. PTK uses GN's
+GN generates Ninja build files; it does not compile the targets. PTk uses GN's
 built-in JSON project export for target information and dependencies. It does not
 parse BUILD.gn files, reconstruct Ninja graphs, run Ninja, or launch a second
 generation to collect reporting data.
 
-For a direct ``gn gen`` list command or simple shell command, PTK resolves the
+For a direct ``gn gen`` list command or simple shell command, PTk resolves the
 executable using the step's PATH and records its ``--version`` output. GN uses
 revision identifiers, so JSON support is checked with ``gn help gen`` rather
 than a semantic-version boundary. These probes have separate 10-second timeouts
@@ -439,17 +448,17 @@ and explicit missing-graph information. For example::
      generate:
        run: [gn, gen, "${run.build_dir}"]
 
-When no IDE or JSON-script/output options are already configured, PTK adds
+When no IDE or JSON-script/output options are already configured, PTk adds
 ``--ide=json --json-file-name=.ptk.gn-project.json``. This stable build-directory
 file is intentional: GN saves those options in Ninja's regeneration rule. Later
 regeneration can refresh it without referencing an old report directory or a
-deleted temporary file. It remains native, unmasked build output; PTK retains a
+deleted temporary file. It remains native, unmasked build output; PTk retains a
 separate masked snapshot in the report directory.
 
 Existing IDE choices, JSON destinations, scripts, filters and other arguments
 are preserved. A different IDE or dormant JSON script/output option prevents
 automatic instrumentation; select ``--ide=json`` explicitly to supply target
-evidence. PTK never enables a dormant JSON post-processing script. Successful
+evidence. PTk never enables a dormant JSON post-processing script. Successful
 direct JSON generations may retain identical bytes because GN only rewrites
 changed exports. Failed/cancelled generations never reuse the old target model.
 Reporting parse failures preserve the actual process outcome.
@@ -466,7 +475,7 @@ available and the report explains why it omitted the interactive graph.
 
 Errors and warnings include source locations, bounded multiline explanations and
 context. Saved first-match ignore/justify rules apply even when generic log
-analysis is disabled. Matching GN and PTK-log findings merge with source labels;
+analysis is disabled. Matching GN and PTk-log findings merge with source labels;
 ambiguous matches remain separate. Full and dedicated diagnostics share local
 active-error opening and CX browser exclusion. GN does not inflate JUnit totals.
 
@@ -517,7 +526,7 @@ through imported-diagnostic rules. See :need:`DD_DEDICATED_DIAGNOSTICS` and
 Reused outputs
 --------------
 
-Optional PTK caching labels reused steps and workflow jobs **Reused**, records
+Optional PTk caching labels reused steps and workflow jobs **Reused**, records
 the original run ID and distinguishes them from newly executed work. Reused
 steps have zero attempts, no new exit code or command log, and no execution
 duration. JSON retains successful dependency status with ``reused_from``;

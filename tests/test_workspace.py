@@ -112,6 +112,21 @@ def test_vmr_cli_isolates_repositories_and_preserves_commands(tmp_path, monkeypa
     assert member.exit_code == 0, member.output
 
 
+def test_commands_inside_a_member_need_no_alias(tmp_path, monkeypatch):
+    a, _b = workspace(tmp_path)
+    grant_maintainer(a.parent)
+    runner = CliRunner(env={"PTK_ROLE": "", "PTK_CX": "0"})
+    monkeypatch.chdir(tmp_path)
+    denied = runner.invoke(cli, ["maintainer", "--help"])
+    assert denied.exit_code != 0 and "maintainer-only" in denied.output
+    for cwd in (a.parent, a.parent / "config"):
+        monkeypatch.chdir(cwd)
+        for args in (["maintainer", "--help"], ["build"], ["bootloader", "build"]):
+            result = runner.invoke(cli, args)
+            assert result.exit_code == 0, (cwd, args, result.output)
+    assert "firmware" in runner.invoke(cli, ["build"]).output
+
+
 def test_vmr_permissions_are_per_repository(tmp_path, monkeypatch):
     a, _b = workspace(tmp_path)
     grant_maintainer(a.parent)
@@ -215,9 +230,7 @@ def test_nested_files_are_not_loaded_and_sources_use_owned_documents(tmp_path):
         )
 
 
-def test_vmr_help_tasks_and_read_only_variants(tmp_path, monkeypatch):
-    import json
-
+def test_vmr_help_and_read_only_variants(tmp_path, monkeypatch):
     a, _b = workspace(tmp_path)
     grant_maintainer(a.parent)
     data = read_project(a)
@@ -228,14 +241,7 @@ def test_vmr_help_tasks_and_read_only_variants(tmp_path, monkeypatch):
     result = runner.invoke(cli, ["firmware", "help", "--no-open"])
     assert result.exit_code == 0, (result.output, result.exception)
     assert "ptk firmware build" in (a.parent / ".ptk/help.html").read_text()
-    result = runner.invoke(cli, ["firmware", "maintainer", "sync", "tasks"])
-    assert result.exit_code == 0, result.output
-    tasks = json.loads((a.parent / ".vscode/tasks.json").read_text())
-    task = tasks["tasks"][0]
-    assert task["command"] == "ptk"
-    assert task["args"] == ["-V", "${input:ptkVariant}", "firmware", "run", "build"]
-    args = ["debug" if arg == "${input:ptkVariant}" else arg for arg in task["args"]]
-    result = runner.invoke(cli, args)
+    result = runner.invoke(cli, ["-V", "debug", "firmware", "run", "build"])
     assert result.exit_code == 0, result.output
     result = runner.invoke(cli, ["-V", "debug", "firmware", "variant", "show"])
     assert result.exit_code == 0, result.output
@@ -333,3 +339,22 @@ def test_shared_credentials_merge_conflicts_and_namespace(tmp_path, monkeypatch)
     result = runner.invoke(cli, ["self-service", "creds", "list"])
     assert result.exit_code == 0 and "not read or verified" in result.output
     assert "shared-synthetic" not in result.output
+
+
+def test_gui_jobs_live_in_their_own_folder(tmp_path):
+    from ptk.domain.errors import ConfigError
+
+    main = repository(tmp_path, "firmware", config_path="tooling/ptk")
+    guis = main.parent / "tooling/ptk/guis"
+    guis.mkdir()
+    (guis / "viewer.ptk.yml").write_text(
+        yaml.safe_dump({"gui": True, "steps": {"open": {"run": ["viewer"]}}})
+    )
+    project = create_app(environ={}).load_project.execute(main.parent)
+    assert project.config.jobs["viewer"].gui is True
+    assert "build" in project.config.jobs
+    (guis / "plain.ptk.yml").write_text(
+        yaml.safe_dump({"steps": {"run": {"run": ["echo"]}}})
+    )
+    with pytest.raises(ConfigError, match="must set 'gui: true'"):
+        create_app(environ={}).load_project.execute(main.parent)

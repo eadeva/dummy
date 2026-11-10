@@ -1,7 +1,7 @@
 """Credential chain (use case ``CredentialService``).
 
 For each credential the configured providers are tried in order
-(default ``env -> keyring -> gopass -> vault -> prompt``); the first value
+(default ``env -> vault -> prompt``); the first value
 wins and is cached for the rest of the ptk run. Values are never printed,
 logged or passed as command arguments.
 """
@@ -13,12 +13,7 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from ...domain.config.model import CredentialSpec
-from ...domain.credentials import (
-    SecretKey,
-    default_variable,
-    parse_ref,
-    provider_chain,
-)
+from ...domain.credentials import SecretKey, default_variable, parse_ref
 from ...domain.errors import PtkError
 from ...domain.execution.model import CommandSpec
 from ...domain.suggest import did_you_mean
@@ -66,7 +61,7 @@ class CredentialService:
         return self._credentials[name]
 
     def providers(self, name: str) -> list[str]:
-        return provider_chain(self.spec(name), self._host.os_name())
+        return list(self.spec(name).providers)
 
     def keys(self, name: str, field_name: str | None = None) -> list[SecretKey]:
         spec = self.spec(name)
@@ -118,7 +113,7 @@ class CredentialService:
 
     def _account(self, key: SecretKey, notes: list[str]) -> str | None:
         """The account of ``user_field``: in CX from env (or the user ID in the
-        convention variable of another field), else the user running PTK."""
+        convention variable of another field), else the user running PTk."""
         if self._host.is_cx():
             value = self._try("env", key, notes)
             env = self._providers.get("env")
@@ -130,7 +125,7 @@ class CredentialService:
             return value
         user = (self._host.user_id() or "").lower()
         if not user:
-            notes.append("user: the user running PTK is unknown")
+            notes.append("user: the user running PTk is unknown")
         return user or None
 
     def _remember(self, key: SecretKey, value: str, notes: list[str]) -> None:
@@ -159,9 +154,7 @@ class CredentialService:
         if not value:
             where = {
                 "env": f"{key.env_var} is not set",
-                "gopass": f"no entry {key.gopass_path}",
                 "vault": f"no entry {key.ref}",
-                "keyring": f"no entry ptk/{key.ref}",
             }.get(name, "no value")
             notes.append(f"{name}: {where}")
         return value
@@ -176,7 +169,7 @@ class CredentialService:
                 notes: list[str] = []
                 supplier = None
                 if key.field == spec.user_field and not self._host.is_cx():
-                    result.append(SecretStatus(key, "user", ["the user running PTK"]))
+                    result.append(SecretStatus(key, "user", ["the user running PTk"]))
                     continue
                 for provider in self.providers(cred):
                     usable = self._providers.get(provider)

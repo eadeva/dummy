@@ -62,14 +62,14 @@ def test_installed_ptk_entry_points_are_never_discovered(tmp_path, monkeypatch):
         "\n".join(f"[ptk.{g}]\ncustom = retired_extension:run\n" for g in groups)
     )
     (tmp_path / "retired_extension.py").write_text(
-        "raise AssertionError('PTK imported a removed extension')"
+        "raise AssertionError('PTk imported a removed extension')"
     )
     monkeypatch.syspath_prepend(str(tmp_path))
     original = importlib.metadata.entry_points
 
     def entries(**kwargs):
         assert not kwargs.get("group", "").startswith("ptk."), (
-            "PTK scanned removed plugin entry points"
+            "PTk scanned removed plugin entry points"
         )
         return original(**kwargs)
 

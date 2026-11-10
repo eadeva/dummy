@@ -1,4 +1,4 @@
-"""Runtime for the shipped composite Actions (PTK/Python and curl preinstalled)."""
+"""Runtime for the shipped composite Actions (PTk/Python and curl preinstalled)."""
 
 from __future__ import annotations
 
@@ -338,7 +338,7 @@ def output(name, value):
 
 def run_job(root, job, variant, params, no_cache=False, maintainer=False):
     if not re.fullmatch(r"[a-z][a-z0-9_-]*", job):
-        raise ValueError("job must be one PTK job name")
+        raise ValueError("job must be one PTk job name")
     if variant and ("," in variant or variant.startswith("-")):
         raise ValueError("select exactly one variant")
     if not isinstance(params, dict):
@@ -385,7 +385,7 @@ def run_job(root, job, variant, params, no_cache=False, maintainer=False):
                 )
         elif result.returncode == 0:
             raise ValueError(
-                "PTK did not return a job result; update PTK in the runner image"
+                "PTk did not return a job result; update PTk in the runner image"
             )
         return result.returncode
 
@@ -451,5 +451,5 @@ if __name__ == "__main__":
         RuntimeError,
         zipfile.BadZipFile,
     ) as exc:
-        print(f"PTK action failed: {exc}", file=sys.stderr)
+        print(f"PTk action failed: {exc}", file=sys.stderr)
         sys.exit(1)

@@ -15,7 +15,7 @@ Discovery, file ownership, schema authority and workspace routing.
    :req_satisfies: REQ_Sys_CONFIG
    :tags: implemented
 
-   PTK shall search upward for .main.ptk.yml without crossing a Git repository boundary and distinguish a missing marker from a malformed marker.
+   PTk shall search upward for .main.ptk.yml without crossing a Git repository boundary and distinguish a missing marker from a malformed marker.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -35,7 +35,7 @@ Discovery, file ownership, schema authority and workspace routing.
    :req_satisfies: REQ_Sys_CONFIG
    :tags: implemented
 
-   PTK shall load the documented section files and direct named files in variants, jobs and workflows under repository.config_path, rejecting unsupported PTK filenames in those owned locations.
+   PTk shall load the documented section files and direct named files in variants, jobs and workflows under repository.config_path, rejecting unsupported PTk filenames in those owned locations.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -55,7 +55,7 @@ Discovery, file ownership, schema authority and workspace routing.
    :req_satisfies: REQ_Sys_CONFIG
    :tags: implemented
 
-   PTK shall reject include chains, obsolete schema fields and legacy loading forms instead of migrating or applying a fallback loader.
+   PTk shall reject include chains, obsolete schema fields and legacy loading forms instead of migrating or applying a fallback loader.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -75,7 +75,7 @@ Discovery, file ownership, schema authority and workspace routing.
    :req_satisfies: REQ_Sys_CONFIG
    :tags: implemented
 
-   PTK shall derive a named entity from its conventional filename and accept only the corresponding section body, with the root marker restricted to repository metadata.
+   PTk shall derive a named entity from its conventional filename and accept only the corresponding section body, with the root marker restricted to repository metadata.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -95,7 +95,7 @@ Discovery, file ownership, schema authority and workspace routing.
    :req_satisfies: REQ_Sys_CONFIG
    :tags: implemented
 
-   PTK shall read component.variants.ptk.yml only from registered component directories inside the repository and reject duplicate registrations and symlink/escaping paths.
+   PTk shall read component.variants.ptk.yml only from registered component directories inside the repository and reject duplicate registrations and symlink/escaping paths.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -115,7 +115,7 @@ Discovery, file ownership, schema authority and workspace routing.
    :req_satisfies: REQ_Sys_CONFIG
    :tags: implemented
 
-   PTK shall retain source locations during composition and report invalid values and cross-document references with actionable diagnostics.
+   PTk shall retain source locations during composition and report invalid values and cross-document references with actionable diagnostics.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -135,7 +135,7 @@ Discovery, file ownership, schema authority and workspace routing.
    :req_satisfies: REQ_Sys_CONFIG
    :tags: implemented
 
-   PTK shall retain explicit --set overrides, shared job defaults and declared variant inheritance while keeping file precedence absent.
+   PTk shall retain explicit --set overrides, shared job defaults and declared variant inheritance while keeping file precedence absent.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -155,7 +155,7 @@ Discovery, file ownership, schema authority and workspace routing.
    :req_satisfies: REQ_Sys_CONFIG
    :tags: implemented
 
-   PTK shall export configuration schemas, ownership, provenance, validation errors and parameter metadata from its own loading and model mechanisms for external consumers.
+   PTk shall export configuration schemas, ownership, provenance, validation errors and parameter metadata from its own loading and model mechanisms for external consumers.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -175,7 +175,7 @@ Discovery, file ownership, schema authority and workspace routing.
    :req_satisfies: REQ_Sys_CONFIG
    :tags: implemented
 
-   PTK shall export creation templates and contextual explanations for supported
+   PTk shall export creation templates and contextual explanations for supported
    command-line and Python execution choices, including editable packages,
    built-in operations and generation-only steps. Templates shall use existing
    configuration fields. The schema shall retain descriptions, required values,
@@ -193,7 +193,7 @@ Discovery, file ownership, schema authority and workspace routing.
 
    **Implementation:** Implemented. The extension's Choose/Configure/Review flow
    holds drafts in memory and writes only after Create. Client checks assist
-   entry; complete project validation remains PTK's responsibility. Setup does
+   entry; complete project validation remains PTk's responsibility. Setup does
    not execute commands, install dependencies or verify tool availability.
 
    **Evidence:** ``src/ptk/domain/config/step_modes.py``; ``tests/test_creation_modes.py``; ``extensions/project-toolkit/test/creation.test.js``; ``extensions/project-toolkit/test/webview.test.js``; ``extensions/project-toolkit/test/integration.test.js``.
@@ -210,7 +210,7 @@ Discovery, file ownership, schema authority and workspace routing.
    :req_satisfies: REQ_Sys_CONFIG
    :tags: implemented
 
-   PTK shall require an explicit or interactively supplied configuration directory for init and scaffold conventional files without overwriting existing configuration.
+   PTk shall require an explicit or interactively supplied configuration directory for init and scaffold conventional files without overwriting existing configuration.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -230,7 +230,7 @@ Discovery, file ownership, schema authority and workspace routing.
    :req_satisfies: REQ_Sys_VMR
    :tags: implemented
 
-   PTK shall use the git-repo member index or a manual workspace marker with explicit members/direct children and shall not recursively discover arbitrary repositories.
+   PTk shall use the git-repo member index or a manual workspace marker with explicit members/direct children and shall not recursively discover arbitrary repositories.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -250,7 +250,7 @@ Discovery, file ownership, schema authority and workspace routing.
    :req_satisfies: REQ_Sys_VMR
    :tags: implemented
 
-   PTK shall execute a workspace repository alias with that member's own project, tools, permissions, credentials and output context.
+   PTk shall execute a workspace repository alias with that member's own project, tools, permissions, credentials and output context.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -270,7 +270,7 @@ Discovery, file ownership, schema authority and workspace routing.
    :req_satisfies: REQ_Sys_VMR
    :tags: implemented
 
-   PTK shall initialize checked-out members lacking a marker, preflight all new scaffolds, and skip existing markers and missing checkouts with a summary.
+   PTk shall initialize checked-out members lacking a marker, preflight all new scaffolds, and skip existing markers and missing checkouts with a summary.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -290,7 +290,7 @@ Discovery, file ownership, schema authority and workspace routing.
    :req_satisfies: REQ_Sys_CONFIG
    :tags: implemented
 
-   PTK shall load reusable component feature declarations from PTK YAML and use
+   PTk shall load reusable component feature declarations from PTk YAML and use
    component.FEATURE as their identity in product variant selections, conditions
    and overrides. It shall validate and resolve defaults, types, ranges, enum
    choices, dependencies and constraints before executing a generator. It shall
@@ -318,7 +318,7 @@ Discovery, file ownership, schema authority and workspace routing.
    :req_satisfies: REQ_Sys_CONFIG
    :tags: implemented
 
-   PTK shall synchronize explicit per-group mappings from one pinned external
+   PTk shall synchronize explicit per-group mappings from one pinned external
    repository only through maintainer commands. It shall ship no base files,
    preserve external copies unchanged, record provenance and content hashes,
    protect local modifications, and keep project overlays and Ruff configuration
@@ -346,7 +346,7 @@ Discovery, file ownership, schema authority and workspace routing.
    :req_satisfies: REQ_Sys_CONFIG
    :tags: implemented
 
-   PTK shall leave synchronized files writable and offer a maintainer command
+   PTk shall leave synchronized files writable and offer a maintainer command
    that exports JSON deviations from verified bases with a separate list of
    modified base filenames. It shall not fetch, repair files or compare against
    a modified base while reporting.

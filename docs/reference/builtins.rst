@@ -1,7 +1,7 @@
 Built-in operations and generators
 ==================================
 
-PTK ships a fixed set of operations selected through ``uses``. Use ``run`` with
+PTk ships a fixed set of operations selected through ``uses``. Use ``run`` with
 an external command or Python package for project-specific behavior; see
 :doc:`/guides/python-tools`. The schema lists the supported operation and generator
 names. Unknown names are configuration errors, including in skipped steps.
@@ -35,7 +35,7 @@ are ``header``, ``cmake``, ``bazel``, ``gn``, ``make``, ``yocto``, ``robot`` and
 
 See :doc:`/guides/variant-generation` for the data contract, escaping restrictions,
 project responsibilities, native build integration and downloadable Bazel helper.
-PTK validates generated paths/content before writing, rejects colliding names
+PTk validates generated paths/content before writing, rejects colliding names
 and directory/file conflicts, and replaces each file atomically. There is no
 transaction across multiple files. Additional generation logic belongs in an
 ordinary command with explicit inputs and outputs.

@@ -1,7 +1,7 @@
 Artifactory destinations
 ========================
 
-PTK resolves **where** artifacts belong. GitHub workflows choose files, supply
+PTk resolves **where** artifacts belong. GitHub workflows choose files, supply
 credentials and perform uploads. Resolution does not run the producing job,
 install tools, request credentials, create version files or contact Artifactory.
 Configured version sources are discovered normally, including command sources.
@@ -22,7 +22,7 @@ An event can override the repository. The ``push`` event accepts either a common
 route can also override the repository. Other events use a single path.
 An omitted job entry adds no suffix. Unknown events, missing push routes, unknown
 jobs and unresolved values are errors. Job visibility and ``command_audience.artifacts``
-apply to the command. Job suffix names refer to PTK jobs, not GitHub job IDs.
+apply to the command. Job suffix names refer to PTk jobs, not GitHub job IDs.
 
 Branch slashes are retained. Paths are relative, with no ``.``/``..``, empty
 interior segments, backslashes or control characters. The returned ``path`` is
@@ -58,7 +58,7 @@ GitHub expressions. Available fields are ``event_name``, ``ref_type``, ``ref_nam
 ``sha``, ``run_id``, ``run_attempt`` and ``repository``; the event file supplies
 ``event.pull_request.number``, ``event.release.tag_name`` and
 ``event.release.prerelease``. Missing fields fail only when the selected template
-uses them. PTK does not evaluate ``${{ ... }}`` GitHub expressions in this file.
+uses them. PTk does not evaluate ``${{ ... }}`` GitHub expressions in this file.
 
 CLI and workflow outputs
 ------------------------
@@ -108,7 +108,7 @@ Jobs and steps can declare ``outputs`` as a list of files or folders. These
 project-owned declarations primarily describe artifacts for workflow uploads and
 downloads; the workflow's transfer commands remain responsible for moving them.
 They do not replace the destination rules above or automatically transfer files.
-PTK's optional built-in cache can also use explicit outputs when ``cache: true``.
+PTk's optional built-in cache can also use explicit outputs when ``cache: true``.
 Cache configuration and correctness remain the project's responsibility. See
 :doc:`output-reuse` for paths, ownership, workflow reuse and ``--no-cache-ptk``.
 
@@ -119,7 +119,7 @@ in one invocation. It is available in CX without human maintainer identity.
 Completed-job upload configuration
 ----------------------------------
 
-After each actual job execution PTK writes ``upload.json`` alongside ``run.json``
+After each actual job execution PTk writes ``upload.json`` alongside ``run.json``
 in that job's log directory, normally ``_logs/VARIANT/JOB/upload.json``. Custom
 layouts apply. The execution summary prints declared output paths, their producer
 and availability, and the configuration file location. JSON, HTML and Markdown
@@ -127,9 +127,9 @@ reports retain this information; workflow reports retain each child's manifest.
 Dry runs do not generate this file. A job with no available outputs gets an
 empty ``files`` list, so an uploader can skip it.
 
-This is a **PTK upload manifest**, not a JFrog CLI File Spec. A workflow uploader
+This is a **PTk upload manifest**, not a JFrog CLI File Spec. A workflow uploader
 reads it and supplies the destination exported by the setup matrix. Keeping the
-destination separate preserves the first job's timestamped upload base. PTK does
+destination separate preserves the first job's timestamped upload base. PTk does
 not perform a transfer or write credentials into the manifest.
 
 String outputs remain valid. To distinguish artifacts from one step, add an
@@ -149,7 +149,7 @@ optional literal ``artifact_type`` to that output's declaration:
 
 ``path`` has the same substitutions and relative-path rules as a string output.
 ``artifact_type`` is optional metadata, not inferred from the filename. The
-same form works on job outputs and with the optional PTK cache. Path ownership
+same form works on job outputs and with the optional PTk cache. Path ownership
 and cache correctness remain the project's responsibility.
 
 For example, the completed run can produce:
@@ -216,7 +216,7 @@ A project uploader can read the configuration directly:
 
 Use GitHub ``needs`` to choose producer job names when downloading. Combine that
 name with version/commit/variant and, when needed, producer step and
-``artifact_type``. There is no separate PTK input configuration.
+``artifact_type``. There is no separate PTk input configuration.
 
 Portable GitHub transfers
 -------------------------

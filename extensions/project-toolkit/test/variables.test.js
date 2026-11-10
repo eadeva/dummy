@@ -24,7 +24,7 @@ test("installed field capabilities filter literal fields, defaults, jobs, named 
   assert.ok(!names(["artifactory", "events", "push", "path"]).includes("run.bin_dir"));
 });
 
-test("raw file parameter filtering follows PTK's logical bindings", () => {
+test("raw file parameter filtering follows PTk's logical bindings", () => {
   const file = "/project/config/jobs/build.ptk.yml";
   const snapshot = { schema, bindings: [{ file: "/project/config/jobs/{name}.ptk.yml", path: ["jobs", "*"], document_path: [] }],
     documents: [{ file: "/project/config/jobs/{name}.ptk.yml", schema: { $ref: "#/$defs/JobSpec" } }] };

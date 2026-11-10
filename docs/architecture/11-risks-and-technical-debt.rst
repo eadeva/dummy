@@ -20,13 +20,13 @@ Operational limits
 * Job commands and Python tools are trusted code; environment filtering is
   not a filesystem, network or device sandbox.
 * Shallow Git history and missing local PR head objects limit tag/version
-  discovery. PTK does not fetch metadata to conceal this condition.
+  discovery. PTk does not fetch metadata to conceal this condition.
 * In-process built-in operations cooperate with cancellation. External tools
   run as child processes with the platform’s termination capabilities.
 * Cleanup is preflighted but not transactional. A later filesystem error can
   leave some output folders removed and others present.
 * Per-user completion depends on profile loading and PATH. A shell selecting an
-  older PTK can expose older completion data.
+  older PTk can expose older completion data.
 * Log recognition is deterministic and format-specific. Unknown diagnostics,
   multiline tool conventions and excluded/oversized files can limit findings.
   Original logs and report problems remain necessary evidence.

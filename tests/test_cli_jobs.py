@@ -1,16 +1,13 @@
-"""Generated job commands, maintainer visibility, VS Code tasks."""
+"""Generated job commands and maintainer visibility."""
 
 from __future__ import annotations
 
-import json
 import os
 import sys
 
 import pytest
 from rich.text import Text
 
-from ptk.adapters.vscode_file import strip_jsonc
-from ptk.domain import vscode
 from ptk.drivers.cli.main import cli
 from tests.cli_runner import CliRunner
 from tests.conftest import grant_maintainer
@@ -153,82 +150,6 @@ def test_broken_config_still_shows_help(write):
         cli, [*base, "build"], catch_exceptions=False, cwd=root
     )
     assert run.exit_code == 2 and "stepz" in run.output
-
-
-# --------------------------------------------------------------------------- vscode
-
-
-def test_jsonc():
-    text, comments = strip_jsonc('{"a": "x // y", /* c */ "b": [1, 2,], // end\n}')
-    assert json.loads(text) == {"a": "x // y", "b": [1, 2]} and comments
-
-
-def test_merge_keeps_user_tasks_and_inputs():
-    tasks, inputs = vscode.build_tasks(
-        [vscode.TaskJob("build", "Build", True, False)],
-        command="ptk",
-        variants=["a", "b"],
-        default_variant="a",
-    )
-    existing = {
-        "version": "2.0.0",
-        "tasks": [{"label": "mine"}, {"label": "ptk: old"}],
-        "inputs": [{"id": "other"}, {"id": "ptkVariant", "options": ["z"]}],
-    }
-    merged = vscode.merge(existing, tasks, inputs)
-    assert [t["label"] for t in merged["tasks"]] == ["mine", "ptk: build"]
-    assert [i["id"] for i in merged["inputs"]] == ["other", "ptkVariant"]
-    assert merged["tasks"][1]["args"] == ["-V", "${input:ptkVariant}", "run", "build"]
-    assert merged["tasks"][1]["group"] == {"kind": "build", "isDefault": True}
-    assert vscode.merge(merged, tasks, inputs) == merged  # idempotent
-
-
-def test_vscode_tasks_command(invoke):
-    tasks_file = invoke.root / ".vscode" / "tasks.json"
-    tasks_file.parent.mkdir()
-    tasks_file.write_text(
-        '{\n  // mine\n  "version": "2.0.0",\n  "tasks": [{"label": "lint"},],\n}\n'
-    )
-    assert (
-        invoke("maintainer", "sync", "tasks", "--check", role="maintainer").exit_code
-        == 1
-    )
-    result = invoke(
-        "maintainer",
-        "sync",
-        "tasks",
-        "--command",
-        "uv run ptk",
-        "--users-only",
-        role="maintainer",
-    )
-    assert (
-        result.exit_code == 0
-        and "comments in the file could not be kept" in result.output
-    )
-    data = json.loads(tasks_file.read_text())
-    assert [t["label"] for t in data["tasks"]] == ["lint", "ptk: build"]
-    assert data["tasks"][1]["command"] == "uv run ptk"
-    assert (
-        invoke(
-            "maintainer",
-            "sync",
-            "tasks",
-            "--check",
-            "--command",
-            "uv run ptk",
-            "--users-only",
-            role="maintainer",
-        ).exit_code
-        == 0
-    )
-    # maintainers get their jobs too, unless --users-only
-    invoke("maintainer", "sync", "tasks", role="maintainer")
-    labels = [t["label"] for t in json.loads(tasks_file.read_text())["tasks"]]
-    assert "ptk: publish" in labels
-    invoke("maintainer", "sync", "tasks", "--users-only", role="maintainer")
-    labels = [t["label"] for t in json.loads(tasks_file.read_text())["tasks"]]
-    assert "ptk: publish" not in labels
 
 
 def test_help_page_lists_jobs_once(invoke, tmp_path):

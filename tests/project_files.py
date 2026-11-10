@@ -86,7 +86,7 @@ def write_project(entry, model, *, encoding="utf-8"):
 
 
 def read_project(entry):
-    """Read the authored logical model through the actual PTK loader."""
+    """Read the authored logical model through the actual PTk loader."""
     from ptk.bootstrap import create_app
     from ptk.domain.config.tree import to_plain
 

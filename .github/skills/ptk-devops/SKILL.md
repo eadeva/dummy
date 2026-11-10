@@ -1,11 +1,11 @@
 ---
 name: ptk-devops
-description: Maintain or review local onboarding, tools and Docker images, external configuration policy, artifact delivery and CX automation in any project using PTK. Use for cross-cutting DevOps or maintainer tasks spanning several PTK features; route detailed implementation to the relevant skill without assuming the consumer is PTK's source repository.
+description: Maintain or review local onboarding, tools and Docker images, external configuration policy, artifact delivery and CX automation in any project using PTk. Use for cross-cutting DevOps or maintainer tasks spanning several PTk features; route detailed implementation to the relevant skill without assuming the consumer is PTk's source repository.
 ---
 
-# PTK DevOps and project maintenance
+# PTk DevOps and project maintenance
 
-First follow the [project discovery and execution guide](../../../docs/guides/agent-guide.rst). Work from the consumer's installed CLI, root marker, actual configuration directory and permitted invocation routes. Do not require PTK source, a Python package, a particular build system, or jobs named build, verify or package.
+First follow the [project discovery and execution guide](../../../docs/guides/agent-guide.rst). Work from the consumer's installed CLI, root marker, actual configuration directory and permitted invocation routes. Do not require PTk source, a Python package, a particular build system, or jobs named build, verify or package.
 
 ## Establish scope and ownership
 
@@ -18,7 +18,7 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 | Task | Procedure and detailed skill |
 |---|---|
 | Fresh checkout, local hooks or missing tool | Read [local setup](../../../docs/guides/local-setup.rst), then [tools setup](../ptk-tools-setup/SKILL.md) or [shared configs](../ptk-shared-configs/SKILL.md). Inspect tool requirements and hook status before requesting installation. |
-| Container readiness | Use [tools setup](../ptk-tools-setup/SKILL.md). Verify required versions in the actual container environment. `docker: false` disables installation only; report every unavailable/incompatible tool and correct the image/PATH. PTK does not build or launch a container merely because this field exists. |
+| Container readiness | Use [tools setup](../ptk-tools-setup/SKILL.md). Verify required versions in the actual container environment. `docker: false` disables installation only; report every unavailable/incompatible tool and correct the image/PATH. PTk does not build or launch a container merely because this field exists. |
 | Shared policy update | Use [shared configs](../ptk-shared-configs/SKILL.md). Pin the approved source/revision, preview and synchronize explicit mappings, validate offline, then inspect deviation JSON. Preserve bases and project overlays separately; never edit hashes to hide changes. |
 | Jobs and local orchestration | Use [job authoring](../ptk-job-authoring/SKILL.md) and [workflow authoring](../ptk-workflow-authoring/SKILL.md). Declare explicit dependencies, outputs and resource ordering; do not infer artifacts or opt into cache automatically. |
 | Callable GitHub CX workflow | Use [GitHub workflows](../ptk-github-workflows/SKILL.md). Generate or review the setup matrix, producer needs, individual job execution and upload/download wiring. Preserve project runner, Docker, event, secret-name and VMR-checkout TODOs until actual choices are supplied. |
@@ -28,10 +28,10 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 ## Review integration boundaries
 
 4. For local setup, enabled hooks are checked before real jobs, not automatically on clone or extension activation. Required tools are checked; `--setup` or an ordered `tools.ensure` step requests installation. External configuration freshness is explicit (`ptk validate --generated`), not an automatic job prerequisite. Keep uv.lock beside its owning pyproject.toml.
-5. For CX, select approved Action/PTK versions and real project-owned images, runners and checkout rules. Generated workflows call the variant-matrix command first; each execution job depends on setup and its producers. Do not run local PTK workflows remotely or use last-finishing matrix outputs as producer identity. Generation does not execute or dispatch a workflow.
+5. For CX, select approved Action/PTk versions and real project-owned images, runners and checkout rules. Generated workflows call the variant-matrix command first; each execution job depends on setup and its producers. Do not run local PTk workflows remotely or use last-finishing matrix outputs as producer identity. Generation does not execute or dispatch a workflow.
 6. Keep artifact destination identity from setup, actual output paths from completed producers, and downloads relative to the producing repository. Direct files and ZIP folders use the shipped Action contract. `artifact_type` is metadata, not a built-in selective-download filter. Never place credentials in URLs, command arguments, manifests or additional properties.
-7. Treat cache as an optional project responsibility: explicit outputs plus `cache: true`, content-based matching, root steps/jobs always run, and `--no-cache-ptk` bypasses PTK reuse. Do not use successful reuse as proof that a remote artifact/service is still available.
-8. Use CX in explanations and documentation. Use `PTK_CX`, `--cx`, `--no-cx` and expression `cx` for PTK interfaces. Preserve external provider variables such as `CI` and third-party action names. Mise is not currently a built-in PTK installer; do not invent configuration fields or silently change tool managers.
+7. Treat cache as an optional project responsibility: explicit outputs plus `cache: true`, content-based matching, root steps/jobs always run, and `--no-cache-ptk` bypasses PTk reuse. Do not use successful reuse as proof that a remote artifact/service is still available.
+8. Use CX in explanations and documentation. Use `PTK_CX`, `--cx`, `--no-cx` and expression `cx` for PTk interfaces. Preserve external provider variables such as `CI` and third-party action names. Mise is not currently a built-in PTk installer; do not invent configuration fields or silently change tool managers.
 
 ## Verify and hand off
 

@@ -355,6 +355,43 @@ def test_unchanged_cache_not_assigned_to_unrelated_command(tmp_path):
     assert not cmake.read(tmp_path / "reports", "other").cmake
 
 
+def test_wrapper_build_dir_outside_step_build_dir_is_prepared_and_imported(tmp_path):
+    import sys
+
+    wrapper_build = tmp_path / "wrapper"
+    step_build = wrapper_build / "step"
+    step_build.mkdir(parents=True)
+    script = (
+        "import pathlib,sys;b=pathlib.Path(sys.argv[1]);"
+        "(b/'CMakeCache.txt').write_text('CMAKE_CACHE_MAJOR_VERSION:INTERNAL=4\\n"
+        "CMAKE_CACHE_MINOR_VERSION:INTERNAL=1\\nCMAKE_CACHE_PATCH_VERSION:INTERNAL=3\\n"
+        "CMAKE_COMMAND:INTERNAL=/opt/cmake\\n');print('CMake Warning: from wrapper')"
+    )
+    command = CommandSpec(
+        argv=[sys.executable, "-c", script, str(wrapper_build)],
+        cwd=str(tmp_path),
+        env={
+            **os.environ,
+            "PTK_BUILD_DIR": str(step_build),
+            "PTK_CMAKE_BUILD_DIR": str(wrapper_build),
+            "PTK_STEP_REPORTS_DIR": str(tmp_path / "reports"),
+            "PTK_STEP": "build",
+        },
+    )
+    cmake.CMakeReportingRunner(SubprocessRunner(), "linux").run(
+        command, lambda _: None, mask=lambda text: text, on_problem=pytest.fail
+    )
+    query = wrapper_build / ".cmake/api/v1/query/client-ptk"
+    assert sorted(p.name for p in query.iterdir()) == [
+        "codemodel-v2",
+        "configureLog-v1",
+        "toolchains-v1",
+    ]
+    [report] = cmake.read(tmp_path / "reports", "build").cmake
+    assert report.version == "4.1.3" and report.source == str(wrapper_build.resolve())
+    assert report.diagnostics[0].level == "warning"
+
+
 def test_masking_occurs_before_json_encoding_and_duplicate_occurrences():
     secret = 'secret"with\\escapes'
     masked = cmake.mask_data(

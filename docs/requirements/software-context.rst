@@ -1,7 +1,7 @@
 Runtime context and versioning
 ==============================
 
-Template values and version identity are resolved by PTK at the appropriate
+Template values and version identity are resolved by PTk at the appropriate
 runtime/build boundary, rather than by the editor.
 
 .. req-sw:: Publish and resolve documented variable namespaces
@@ -16,7 +16,7 @@ runtime/build boundary, rather than by the editor.
    :req_satisfies: REQ_Sys_CONTEXT
    :tags: implemented
 
-   PTK shall publish template-variable metadata without resolving secrets and resolve supported runtime namespaces where templating is permitted.
+   PTk shall publish template-variable metadata without resolving secrets and resolve supported runtime namespaces where templating is permitted.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -36,7 +36,7 @@ runtime/build boundary, rather than by the editor.
    :req_satisfies: REQ_Sys_CONTEXT
    :tags: implemented
 
-   PTK shall resolve GitHub PR source commit/branch from valid local head-event metadata and expose the actual checkout commit separately, never substituting a merge/base SHA for missing head identity.
+   PTk shall resolve GitHub PR source commit/branch from valid local head-event metadata and expose the actual checkout commit separately, never substituting a merge/base SHA for missing head identity.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -56,7 +56,7 @@ runtime/build boundary, rather than by the editor.
    :req_satisfies: REQ_Sys_CONTEXT
    :tags: implemented
 
-   PTK shall expose short_commit and short_checkout_commit as the first 12 hexadecimal characters of their corresponding full hashes.
+   PTk shall expose short_commit and short_checkout_commit as the first 12 hexadecimal characters of their corresponding full hashes.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -76,7 +76,7 @@ runtime/build boundary, rather than by the editor.
    :req_satisfies: REQ_Sys_CONTEXT
    :tags: implemented
 
-   PTK shall expose sorted exact source tags and select the matching triggering tag or first sorted tag, returning an empty list/string when no exact tag is available.
+   PTk shall expose sorted exact source tags and select the matching triggering tag or first sorted tag, returning an empty list/string when no exact tag is available.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -96,7 +96,7 @@ runtime/build boundary, rather than by the editor.
    :req_satisfies: REQ_Sys_CONTEXT
    :tags: implemented
 
-   PTK shall query Git only when requested, cache results within the operation, and avoid tag/status queries for commit-only templates without fetching or mutating the repository.
+   PTk shall query Git only when requested, cache results within the operation, and avoid tag/status queries for commit-only templates without fetching or mutating the repository.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -116,7 +116,7 @@ runtime/build boundary, rather than by the editor.
    :req_satisfies: REQ_Sys_CONTEXT
    :tags: implemented
 
-   PTK shall capture one instant per CLI invocation and expose local and UTC date fields consistently across job variants and workflow calls.
+   PTk shall capture one instant per CLI invocation and expose local and UTC date fields consistently across job variants and workflow calls.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -136,7 +136,7 @@ runtime/build boundary, rather than by the editor.
    :req_satisfies: REQ_Sys_CONTEXT
    :tags: implemented
 
-   PTK shall resolve configured version sources and dependencies and expose version context and generated outputs without implicit bump/set/tag operations.
+   PTk shall resolve configured version sources and dependencies and expose version context and generated outputs without implicit bump/set/tag operations.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -156,7 +156,7 @@ runtime/build boundary, rather than by the editor.
    :req_satisfies: REQ_Sys_DISTRIBUTION
    :tags: implemented
 
-   PTK package builds shall resolve metadata independently of full job configuration and preserve the resolved version when rebuilding a source distribution without Git.
+   PTk package builds shall resolve metadata independently of full job configuration and preserve the resolved version when rebuilding a source distribution without Git.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 

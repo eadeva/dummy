@@ -125,7 +125,7 @@ printf '%s\\n' "${COMPREPLY[@]}"
         command = """$ptkToolDirectory = 'keep my setting'
 . $env:TEST_PROFILE
 if ($ptkToolDirectory -ne 'keep my setting') { throw 'profile changed my variable' }
-if (Test-Path -LiteralPath $env:TEST_CALL_LOG) { throw 'PTK ran during profile loading' }
+if (Test-Path -LiteralPath $env:TEST_CALL_LOG) { throw 'PTk ran during profile loading' }
 $found = (Get-Command ptk).Source
 $matches = @((TabExpansion2 'ptk self-service ' 17).CompletionMatches.CompletionText)
 @{ executable = $found; matches = $matches } | ConvertTo-Json -Compress

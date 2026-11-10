@@ -175,7 +175,7 @@ def configuration(report):
         "Project": report.project,
         "Repository alias": context.get("repository_alias", report.project),
         "Project version": version(report),
-        "PTK version": report.ptk_version or "Not recorded",
+        "PTk version": report.ptk_version or "Not recorded",
         "Variant": report.variant or "default",
     }
     content = (
@@ -291,7 +291,7 @@ def render(report, *, link_root=None):
             + e(selection["only_step"])
             + ". Prerequisites not run: "
             + e(", ".join(selection["omitted_dependencies"]) or "none")
-            + ". Required outputs must already exist; PTK does not restore outputs from previous runs.</p>"
+            + ". Required outputs must already exist; PTk does not restore outputs from previous runs.</p>"
         )
     workflow = report.context.get("workflow", {})
     evidence_html = evidence(report, link_root)
@@ -316,7 +316,7 @@ def render(report, *, link_root=None):
             "Owner": owner(report),
             "Project": report.project,
             "Project version": version(report),
-            "PTK": report.ptk_version or "Not recorded",
+            "PTk": report.ptk_version or "Not recorded",
             "Started": report.started_at or "Not recorded",
             "Duration": f"{report.duration:.2f}s",
             "Run": report.run_id,

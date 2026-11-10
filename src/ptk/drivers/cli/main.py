@@ -118,7 +118,7 @@ click.rich_click.SHOW_ARGUMENTS = True
 @click.option(
     "--no-cache-ptk",
     is_flag=True,
-    help="Disable PTK's built-in output cache for all executed jobs and steps. Tool-native caches are unchanged.",
+    help="Disable PTk's built-in output cache for all executed jobs and steps. Tool-native caches are unchanged.",
 )
 @click.pass_context
 @guarded
@@ -222,7 +222,7 @@ def config_group() -> None:
 @click.pass_context
 @guarded
 def config_validate(ctx, variants, versions, generated, strict, job):
-    """Validate PTK configuration; broader checks are explicitly opt-in."""
+    """Validate PTk configuration; broader checks are explicitly opt-in."""
     if strict and not variants:
         raise click.UsageError("--strict requires --variants")
     if job and not versions:
@@ -232,7 +232,7 @@ def config_validate(ctx, variants, versions, generated, strict, job):
         project = state.project()
     except ProjectNotFoundError:
         raise PtkError(
-            "No PTK project found (.main.ptk.yml). Run 'ptk init' to create one."
+            "No PTk project found (.main.ptk.yml). Run 'ptk init' to create one."
         ) from None
     console.print(
         f"[green]configuration is valid[/] ({len(project.files)} file(s), "
@@ -483,7 +483,7 @@ run_command.params.extend(common_options())
 
 @click.group("creds", cls=AccessGroup)
 def creds_group() -> None:
-    """Credentials: env -> keyring -> gopass -> vault -> prompt (Windows: vault first). Values are never shown."""
+    """Credentials: env -> vault -> prompt. Values are never shown."""
 
 
 def _read_secret(ctx: click.Context, question: str) -> str:
@@ -493,7 +493,7 @@ def _read_secret(ctx: click.Context, question: str) -> str:
     if not sys.stdin.isatty():
         return sys.stdin.read().rstrip("\r\n")  # e.g. piped from a secret manager
     raise PtkError(
-        "no terminal: pipe the value in, e.g. 'gopass show -o x | ptk self-service creds set NAME'"
+        "no terminal: pipe the value in, e.g. 'printenv TOKEN | ptk self-service creds set NAME'"
     )
 
 
@@ -580,35 +580,64 @@ def creds_test(ctx: click.Context, name: str) -> None:
 
 
 @creds_group.command("setup")
-@click.option(
-    "--vault",
-    "create_vault",
-    is_flag=True,
-    help="Create the built-in encrypted vault (asks for a master password).",
-)
 @click.pass_context
 @guarded
-def creds_setup(ctx: click.Context, create_vault: bool) -> None:
-    """Check the credential providers on this machine and how to set them up."""
+def creds_setup(ctx: click.Context) -> None:
+    """Create the encrypted vault if missing and show the credential providers."""
     app = _state(ctx).app
     providers = app.secret_providers
-    if create_vault:
-        vault = providers["vault"].vault  # type: ignore[attr-defined]
+    vault = providers["vault"].vault  # type: ignore[attr-defined]
+    if not vault.exists and not app.host.is_cx():
         vault.create()
         console.print(f"[green]vault created[/] at {escape(str(vault.path))}")
     table = Table("provider", "status", "notes", box=None, pad_edge=False)
     hints = {
         "env": "CX: set the variables shown by 'ptk self-service creds list'",
-        "keyring": "OS keyring: Windows Credential Manager, macOS Keychain, Linux desktop",
-        "gopass": "recommended for teams: gopass setup --crypto age (no gpg needed)",
-        "vault": "built-in encrypted file: ptk self-service creds setup --vault",
-        "prompt": "asks in the terminal; stored in the first writable provider unless remember: false",
+        "vault": f"encrypted file {vault.path}",
+        "prompt": "asks in the terminal; stored in the vault unless remember: false",
     }
     for name, provider in providers.items():
         ok, reason = provider.available()
         status = "[green]ready[/]" if ok else "[yellow]not available[/]"
         table.add_row(name, status, escape(reason or hints.get(name, "")))
     console.print(table)
+
+
+@creds_group.command("lock")
+@click.pass_context
+@guarded
+def creds_lock(ctx: click.Context) -> None:
+    """Lock the vault now; the next run asks for the master password again."""
+    vault = _state(ctx).app.secret_providers["vault"].vault  # type: ignore[attr-defined]
+    console.print("vault locked" if vault.lock() else "vault was not unlocked")
+
+
+@creds_group.command("reset")
+@click.option("--yes", is_flag=True, help="Do not ask for confirmation.")
+@click.pass_context
+@guarded
+def creds_reset(ctx: click.Context, yes: bool) -> None:
+    """Delete the vault and all secrets in it, e.g. after a forgotten master password."""
+    app = _state(ctx).app
+    vault = app.secret_providers["vault"].vault  # type: ignore[attr-defined]
+    if not vault.exists:
+        vault.lock()
+        console.print(f"no vault at {escape(str(vault.path))}")
+        return
+    if not yes:
+        if not app.prompter.interactive():
+            raise PtkError("confirm with --yes to delete the vault without a terminal")
+        click.confirm(
+            f"Delete {vault.path} and every secret stored in it?",
+            default=False,
+            abort=True,
+            err=True,
+        )
+    vault.delete()
+    console.print(
+        f"[green]vault deleted[/] ({escape(str(vault.path))}); "
+        "'ptk self-service creds setup' creates a new one"
+    )
 
 
 # --------------------------------------------------------------------------- setup
@@ -898,7 +927,7 @@ def report_open(
 @click.pass_context
 @guarded
 def agent_command(ctx: click.Context, check: bool) -> None:
-    """Sync the config README and PTK agent, skills and offline docs."""
+    """Sync the config README and PTk agent, skills and offline docs."""
     state = _state(ctx)
     project = state.project()
     result = state.app.setup_authoring.execute(
@@ -906,94 +935,14 @@ def agent_command(ctx: click.Context, check: bool) -> None:
     )
     if check:
         console.print(
-            "PTK README, agent, skills and docs are "
+            "PTk README, agent, skills and docs are "
             + ("out of date" if result.paths else "up to date")
         )
         if result.paths:
             ctx.exit(1)
     else:
         console.print(
-            f"PTK README, agent, skills and docs: {result.skill_count} skills, {len(result.paths)} files updated."
-        )
-
-
-@click.command("tasks")
-@click.option(
-    "--check",
-    is_flag=True,
-    help="Only check that tasks.json is up to date (exit code 1 if not) - for CX.",
-)
-@click.option(
-    "--command",
-    "command",
-    default="ptk",
-    show_default=True,
-    help='How VS Code starts ptk, e.g. "uv run ptk".',
-)
-@click.option(
-    "--users-only",
-    is_flag=True,
-    help="Leave out maintainer-only jobs (for a tasks.json that is committed).",
-)
-@click.option(
-    "-o",
-    "--output",
-    type=click.Path(path_type=Path, dir_okay=False),
-    help="Target file (default: .vscode/tasks.json in the project).",
-)
-@click.pass_context
-@guarded
-def vscode_tasks(
-    ctx: click.Context, check: bool, command: str, users_only: bool, output: Path | None
-) -> None:
-    """Add a task for every job to .vscode/tasks.json.
-
-    Tasks labelled [bold]ptk: ...[/] and the variant picker input are managed by ptk;
-    all other tasks and inputs in the file are kept. The default job becomes the
-    default build task (Ctrl+Shift+B).
-    """
-    state = _state(ctx)
-    task_cwd = None
-    repository_alias = None
-    parent = ctx
-    while parent is not None:
-        if getattr(parent.command, "repository_boundary", False):
-            repository_alias = parent.info_name
-            task_cwd = state.app.workspace.root(state.project().root)
-            break
-        parent = parent.parent
-    result = state.app.vscode_tasks.execute(
-        state.project(),
-        state.role(),
-        command=command,
-        users_only=users_only,
-        check=check,
-        path=output,
-        cwd=task_cwd,
-        repository_alias=repository_alias,
-    )
-    if check:
-        if result.up_to_date:
-            console.print(
-                f"[green]{escape(str(result.path))} is up to date[/]", highlight=False
-            )
-            return
-        console.print(
-            f"[red]{escape(str(result.path))} is out of date[/] - run 'ptk maintainer sync tasks'",
-            highlight=False,
-        )
-        sys.exit(1)
-    if result.written:
-        console.print(
-            f"updated [bold]{escape(str(result.path))}[/]: "
-            f"{', '.join(result.labels) or 'no jobs'}",
-            highlight=False,
-        )
-        if result.lost_comments:
-            console.print("[yellow]note: comments in the file could not be kept[/]")
-    else:
-        console.print(
-            f"{escape(str(result.path))} is already up to date", highlight=False
+            f"PTk README, agent, skills and docs: {result.skill_count} skills, {len(result.paths)} files updated."
         )
 
 
@@ -1171,7 +1120,7 @@ def init_command(
                 "and is relative to each repository root."
             )
         config_dir = click.prompt(
-            "PTK configuration directory (relative to each repository root)"
+            "PTk configuration directory (relative to each repository root)"
         )
     if workspace is not None:
         results = (
@@ -1221,14 +1170,14 @@ def _show_init_result(target: Path, result: InitResult) -> None:
             console.print(content, markup=False, highlight=False)
     if result.kept_gitignore:
         console.print(
-            "Would keep existing .gitignore content and append missing PTK ignore rules."
+            "Would keep existing .gitignore content and append missing PTk ignore rules."
             if result.dry_run
-            else "Kept existing .gitignore content and appended missing PTK ignore rules."
+            else "Kept existing .gitignore content and appended missing PTk ignore rules."
         )
 
 
 @click.command("sync")
-@click.argument("target", type=click.Choice(["configs", "tasks", "agent"]))
+@click.argument("target", type=click.Choice(["configs", "agent"]))
 @click.argument("names", nargs=-1)
 @click.option(
     "--check",
@@ -1238,37 +1187,15 @@ def _show_init_result(target: Path, result: InitResult) -> None:
 @click.option(
     "--diff", is_flag=True, help="Preview shared configuration changes (configs only)."
 )
-@click.option(
-    "--command", default="ptk", help="PTK launcher for generated tasks (tasks only)."
-)
-@click.option(
-    "--users-only",
-    is_flag=True,
-    help="Exclude maintainer jobs and workflows from tasks.",
-)
-@click.option(
-    "-o",
-    "--output",
-    type=click.Path(path_type=Path, dir_okay=False),
-    help="Tasks destination (tasks only).",
-)
 @click.pass_context
 @guarded
-def sync_command(ctx, target, names, check, diff, command, users_only, output):
+def sync_command(ctx, target, names, check, diff):
     """Regenerate one explicitly selected kind of project integration."""
     if names and target != "configs":
         raise click.UsageError("NAMES apply only to configs")
     if diff and (target != "configs" or check):
         raise click.UsageError(
             "--diff requires configs and cannot be combined with --check"
-        )
-    if target != "tasks" and (
-        users_only
-        or output
-        or ctx.get_parameter_source("command") == click.core.ParameterSource.COMMANDLINE
-    ):
-        raise click.UsageError(
-            "--command, --users-only and --output apply only to tasks"
         )
     root = ctx.find_root()
     current = ctx
@@ -1287,9 +1214,6 @@ def sync_command(ctx, target, names, check, diff, command, users_only, output):
             names=names,
             check=check,
             diff=diff,
-            command=command,
-            users_only=users_only,
-            output=output,
         )
     if target == "configs":
         return (
@@ -1297,11 +1221,7 @@ def sync_command(ctx, target, names, check, diff, command, users_only, output):
             if check
             else ctx.invoke(configs_sync, names=names, diff=diff)
         )
-    if target == "agent":
-        return ctx.invoke(agent_command, check=check)
-    return ctx.invoke(
-        vscode_tasks, check=check, command=command, users_only=users_only, output=output
-    )
+    return ctx.invoke(agent_command, check=check)
 
 
 @click.group("self-service", cls=AccessGroup, invoke_without_command=True)

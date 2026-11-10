@@ -198,9 +198,7 @@ def test_reject_parallel_output_and_uv_environment_collisions(tmp_path):
     assert result.exit_code != 0 and "uv project environment" in result.output
 
 
-def test_vmr_targets_keep_environment_and_reports_and_have_editor_tasks(
-    tmp_path, monkeypatch
-):
+def test_vmr_targets_keep_environment_and_reports(tmp_path, monkeypatch):
     root = tmp_path
     (root / ".main.ptk.yml").write_text("virtual_monorepo: true\nmembers: [a, b]\n")
     for alias in ("a", "b"):
@@ -231,25 +229,11 @@ def test_vmr_targets_keep_environment_and_reports_and_have_editor_tasks(
         ["workflow", "run", "all"],
         ["workflow", "run", "a/local"],
         ["a", "workflow", "run", "local", "--dry-run"],
-        ["maintainer", "sync", "tasks"],
-        ["a", "maintainer", "sync", "tasks"],
     ):
         result = runner.invoke(cli, args, catch_exceptions=False)
         assert result.exit_code == 0, result.output
     for alias in ("a", "b"):
         assert (root / alias / "selected").read_text() == alias
-    workspace_tasks = json.loads((root / ".vscode/tasks.json").read_text())["tasks"]
-    assert {t["label"] for t in workspace_tasks} == {
-        "ptk: workflow all",
-        "ptk: workflow a/local",
-        "ptk: workflow b/local",
-    }
-    member_tasks = json.loads((root / "a/.vscode/tasks.json").read_text())["tasks"]
-    workflow = next(t for t in member_tasks if t["label"] == "ptk: workflow local")
-    assert workflow["command"] == "ptk"
-    assert workflow["args"] == ["a", "workflow", "run", "local"]
-    # Windows can canonicalize ancestor capitalization (for example pytest-of-USER).
-    assert Path(workflow["options"]["cwd"]).samefile(root)
     assert (
         len(list((root / "_reports/workflows/all").glob("*/jobs/*/report.html"))) == 2
     )
@@ -329,9 +313,7 @@ def test_secret_parameters_cannot_be_embedded_in_workflow_yaml(tmp_path):
 
 
 @pytest.mark.parametrize("command_policy", [False, True])
-def test_maintainer_workflows_are_protected_and_hidden_from_user_tasks(
-    tmp_path, command_policy
-):
+def test_maintainer_workflows_are_protected(tmp_path, command_policy):
     root = repository(
         tmp_path,
         workflows={
@@ -351,41 +333,6 @@ def test_maintainer_workflows_are_protected_and_hidden_from_user_tasks(
         root, "maintainer", "workflow", "run", "verify", env={"PTK_ROLE": ""}
     )
     assert allowed.exit_code == 0, allowed.output
-    for options, visible in (
-        ([], True),
-        (["--users-only"], False),
-    ):
-        result = invoke(
-            root, "maintainer", "sync", "tasks", *options, env={"PTK_ROLE": ""}
-        )
-        assert result.exit_code == 0, result.output
-        tasks = json.loads((root / ".vscode/tasks.json").read_text())["tasks"]
-        assert any(t["label"] == "ptk: workflow verify" for t in tasks) is visible
-
-
-def test_workflow_tasks_are_idempotent_and_preserve_user_tasks(tmp_path):
-    root = repository(tmp_path, workflows={"verify": {"jobs": {"build": {}}}})
-    folder = root / ".vscode"
-    folder.mkdir()
-    (folder / "tasks.json").write_text(
-        json.dumps(
-            {"version": "2.0.0", "tasks": [{"label": "mine", "command": "hello"}]}
-        )
-    )
-    grant_maintainer(root)
-    assert (
-        invoke(root, "maintainer", "sync", "tasks", env={"PTK_ROLE": ""}).exit_code == 0
-    )
-    assert (
-        invoke(
-            root, "maintainer", "sync", "tasks", "--check", env={"PTK_ROLE": ""}
-        ).exit_code
-        == 0
-    )
-    tasks = json.loads((folder / "tasks.json").read_text())["tasks"]
-    assert tasks[0]["label"] == "mine"
-    task = next(t for t in tasks if t["label"] == "ptk: workflow verify")
-    assert task["args"] == ["workflow", "run", "verify"]
 
 
 def test_published_example_runs_locally_without_github(tmp_path, monkeypatch):

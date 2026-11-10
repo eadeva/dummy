@@ -166,7 +166,7 @@ details[open] > summary { border-color: var(--vscode-focusBorder); }
 }
 @media (forced-colors: active) { .configuration .field { border-bottom: 1px solid CanvasText; } }
 
-/* Runtime choices share PTK metadata with shell help and completion. */
+/* Runtime choices share PTk metadata with shell help and completion. */
 .parameter-editor header { padding: 12px 20px; }
 .parameter-editor h1 { font-size: 20px; margin: 4px 0; }
 .parameters { padding: 12px 20px 84px; }

@@ -1,9 +1,9 @@
 Local job workflows
 ======================
 
-Workflows orchestrate existing PTK jobs **on the developer's machine**. They
-require neither GitHub nor a CX runner. Run one from the terminal or a generated
-VS Code task. Each job keeps its repository, variant, tool requirements,
+Workflows orchestrate existing PTk jobs **on the developer's machine**. They
+require neither GitHub nor a CX runner. Run one from the terminal or the Project
+Toolkit extension. Each job keeps its repository, variant, tool requirements,
 credentials, environment, maintainers and ordinary logs/reports.
 
 For native GitHub workflows, :doc:`cx-matrix` exports execution and artifact
@@ -12,7 +12,7 @@ metadata for the setup job. GitHub owns CX orchestration.
 Workflow, job and step
 ----------------------
 
-The names deliberately follow GitHub Actions terminology. PTK uses three
+The names deliberately follow GitHub Actions terminology. PTk uses three
 levels: a **workflow** coordinates reusable jobs; a **job** defines a runnable
 task; a **step** invokes a command, script or built-in operation inside
 that job. A job can run directly, without belonging to a workflow.
@@ -33,7 +33,7 @@ Local orchestration and CX pipelines
 ``ptk workflow run`` refuses CX mode, whether detected or forced with ``--cx``.
 ``list``, ``show`` and ``dry-run`` are inspection operations and remain available.
 Use ``ptk maintainer gen-workflows`` for callable GitHub templates with setup
-matrices and separate download/run/upload Actions. PTK YAML is not interchangeable
+matrices and separate download/run/upload Actions. PTk YAML is not interchangeable
 with GitHub YAML. See :doc:`github-actions` for the implemented contracts.
 
 Files and commands
@@ -104,7 +104,7 @@ jobs with the same name. Use ``{}`` for a job without invocation options.
 Existing workflows must move each former ``job`` value into its mapping key,
 remove that field, and replace old invocation aliases in every ``needs`` entry.
 The previous shape is rejected; there is no compatibility conversion. Update
-PTK and the extension together. Regenerate or manually update GitHub templates
+PTk and the extension together. Regenerate or manually update GitHub templates
 for the new encoded matrix/output IDs; generation still does not overwrite
 existing files.
 
@@ -142,7 +142,7 @@ form identify the same job. The same job name in another repository is distinct;
 the same job may still participate in different workflows.
 
 Loading rejects duplicate job targets, unknown dependencies, repeated dependencies, self-dependencies and
-cycles; cycle errors show the dependency path. PTK prepares every job before
+cycles; cycle errors show the dependency path. PTk prepares every job before
 starting the first. Unknown repositories/jobs,
 invalid parameters/variants, unsatisfied declared tool/credential requirements
 and maintainer restrictions fail the preflight. Credentials are resolved serially before parallel execution,
@@ -170,22 +170,22 @@ They also may not share a ``python.project`` environment, since uv can synchroni
 that project's shared virtual environment while another job is using it.
 For parallel jobs in one project, set a distinct absolute
 ``env.UV_PROJECT_ENVIRONMENT`` on each job, for example
-``${project.root}/.ptk/venvs/package``. PTK checks the resolved environment paths,
+``${project.root}/.ptk/venvs/package``. PTk checks the resolved environment paths,
 including step-level overrides. This check applies even with ``max_workers: 1``;
 express resource ordering with ``needs`` rather than relying on worker limits.
 Use absolute paths for uv workspace members so
 the environment location does not depend on uv's workspace-root discovery.
-PTK's own ``verify`` workflow runs ``check``, ``test`` and ``package`` sequentially,
+PTk's own ``verify`` workflow runs ``check``, ``test`` and ``package`` sequentially,
 alongside ``docs``; these jobs have separate environments. Existing job locks
-also protect against a separate PTK invocation using the same output folders.
-PTK cannot infer arbitrary paths or external resources used by scripts: authors
+also protect against a separate PTk invocation using the same output folders.
+PTk cannot infer arbitrary paths or external resources used by scripts: authors
 must add dependencies between jobs that write the same files, hardware device or service.
 
 This division of responsibility deliberately preserves project flexibility:
 projects choose their scripts, build tools, artifact contracts and execution
 policies. **The project implementation is responsible** for its input/output
 checks, shared-resource coordination, safe retries and recovery, and any required
-isolation. PTK orchestrates the declared calls and uses the outcomes they report.
+isolation. PTk orchestrates the declared calls and uses the outcomes they report.
 It does not inspect or control arbitrary internal operations of project scripts.
 
 The orchestration checks do not sandbox jobs or establish a general input/output contract.
@@ -221,7 +221,7 @@ repositories never merge. Under ``ptk frontend workflow``, use the local name
 ``verify``. Manual VMR members should be invoked from the workspace root to retain
 membership context. Use ``ptk frontend verify`` from that root to select the
 member's command surface. Git-pointer membership is detected automatically
-when invoking PTK inside a member directory.
+when invoking PTk inside a member directory.
 
 An owner workflow's ``audience`` and ``command_audience.workflow`` policy are
 checked along with the target job's actual repository role. A public workflow
@@ -231,8 +231,8 @@ member job roles still use their own repository settings. Neither scope grants
 rights in the other. ``PTK_ROLE=maintainer`` does not elevate a user. These role policies
 remain a developer convenience, not an operating-system security boundary.
 
-Reports and editor tasks
-------------------------
+Reports
+-------
 
 Each job writes its normal reports and applies its ``open_report`` policy.
 The workflow also writes an immutable summary and child HTML/JSON reports under::
@@ -310,18 +310,12 @@ trigger a cascade of child tabs. The summary table links only child HTML reports
 JSON files remain available for automation. Workflow ``on-errors`` uses a hyphen; job ``on_errors``
 retains its existing spelling.
 
-``ptk maintainer sync tasks`` adds ``ptk: workflow NAME`` tasks alongside job tasks.
-Generated workflow tasks use the owner repository's default variant and its
-repository mappings. The Project Toolkit extension also offers an owner variant
-selector. Regeneration preserves user tasks and is checked with ``--check``.
-
-At VMR level, ``ptk maintainer sync tasks`` generates workspace tasks for workspace
-and repository-qualified workflows. ``ptk ALIAS maintainer sync tasks`` generates
-that member's job and workflow tasks. Workspace task synchronization updates
-member tasks too; synchronize authoring resources separately with
-``ptk maintainer sync agent``. The generated VMR tasks set their
-working directory to the workspace root. Offline skills and examples are installed
-with the normal authoring bundle; see :doc:`/guides/editor`.
+Inside a VMR member repository the alias is
+implied: ``ptk maintainer sync configs`` or ``ptk build`` act on that member and use
+its maintainer list. Workspace workflows (``workflows/NAME.ptk.yml`` at the VMR
+root), ``ALIAS/...`` references, other aliases, ``init``, ``describe`` and
+``self-service`` keep their workspace meaning there. Offline skills and examples
+are installed with ``ptk maintainer sync agent``; see :doc:`/guides/editor`.
 
 GitHub template generation
 ---------------------------
@@ -374,7 +368,7 @@ own existing outputs; job outputs are not inferred from step outputs. A missed
 job-level check still permits eligible step-level reuse.
 
 ``ptk workflow run NAME --no-cache-ptk`` (or ``ptk NAME --no-cache-ptk``) disables
-PTK reuse for every child job and step, including calls into other repositories.
+PTk reuse for every child job and step, including calls into other repositories.
 Outputs primarily describe artifacts for workflow uploads and downloads; the
 project owns their validity, cache policy and transfer operations. See
 :doc:`output-reuse` for examples and the full contract.
@@ -382,7 +376,7 @@ project owns their validity, cache policy and transfer operations. See
 Portable job identifiers
 ------------------------
 
-PTK keeps ``JOB`` and ``REPO:JOB`` as authored workflow keys. For report folders
+PTk keeps ``JOB`` and ``REPO:JOB`` as authored workflow keys. For report folders
 and generated GitHub job/output identifiers it uses ``job_<jobname>`` and
 ``repo_<reponame>_job_<jobname>`` respectively, retaining existing underscores.
 Validation rejects two keys that yield the same identifier and names both targets.

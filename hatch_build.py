@@ -1,4 +1,4 @@
-"""Bundle the compiled extension and authoring assets in PTK distributions."""
+"""Bundle the compiled extension and authoring assets in PTk distributions."""
 
 import importlib.util
 import tempfile
@@ -23,7 +23,7 @@ class AuthoringBuildHook(BuildHookInterface):
                 bundle.build_vsix(root, vsix)
             if not vsix.is_file():
                 raise ValueError(
-                    "PTK release is missing its bundled Project Toolkit VSIX"
+                    "PTk release is missing its bundled Project Toolkit VSIX"
                 )
             bundle.inspect_vsix(vsix)
             prefix = "src/ptk/" if self.target_name == "sdist" else "ptk/"

@@ -27,7 +27,7 @@ profile changes. Per-user completion is the accepted scope.
    :clustered_by: FEAT_CONFIG
    :tags: superseded
 
-   PTK would discover all repository ``*.ptk.yml`` fragments and combine them without include directives.
+   PTk would discover all repository ``*.ptk.yml`` fragments and combine them without include directives.
 
    **Origin:** Earlier accepted idea explicitly replaced by the fixed conventional layout and component-local definitions; superseded by REQ_Stkh_CONFIG.
 
@@ -45,7 +45,7 @@ profile changes. Per-user completion is the accepted scope.
    :req_satisfies: REQ_Stkh_VMR
    :tags: superseded
 
-   PTK would expose or hide a global --config option to select the project configuration file.
+   PTk would expose or hide a global --config option to select the project configuration file.
 
    **Origin:** Earlier command-option discussion was superseded by project discovery and alias routing; see REQ_Sw_NO_CONFIG_OPTION.
 
@@ -60,15 +60,15 @@ profile changes. Per-user completion is the accepted scope.
    :security: false
    :legal: false
    :status: obsolete
-   :verification_criteria: Historical only; current tests verify retired settings are rejected and installed PTK entry points are inert.
+   :verification_criteria: Historical only; current tests verify retired settings are rejected and installed PTk entry points are inert.
    :verification_level: sw-integration-test
    :req_satisfies: REQ_Sys_TOOLS
    :tags: superseded
 
-   PTK would discover installed distributions named in project configuration and reject missing, duplicate, reserved or non-callable registrations without implicitly installing plugins.
+   PTk would discover installed distributions named in project configuration and reject missing, duplicate, reserved or non-callable registrations without implicitly installing plugins.
 
    **Origin:** Earlier plugin implementation superseded by the accepted removal
    decision :need:`DD_NO_PLUGIN_API` and :need:`REQ_Sw_EXTERNAL_TOOLS`.
 
-   **Implementation:** Removed. PTK rejects the old plugins field and does not
-   discover any third-party PTK entry points. Historical source/tests were deleted.
+   **Implementation:** Removed. PTk rejects the old plugins field and does not
+   discover any third-party PTk entry points. Historical source/tests were deleted.

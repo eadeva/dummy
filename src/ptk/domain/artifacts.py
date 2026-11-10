@@ -12,7 +12,7 @@ from .config.template_variables import GIT_FIELDS, GITHUB_FIELDS
 class PathRoute(BaseModel):
     model_config = ConfigDict(extra="forbid")
     path: str = Field(
-        description="Relative destination path for this route. Supports PTK variables."
+        description="Relative destination path for this route. Supports PTk variables."
     )
     repository: str | None = Field(
         default=None, description="Override the Artifactory repository for this route."

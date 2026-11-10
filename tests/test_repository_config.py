@@ -1,4 +1,4 @@
-"""The repository's own PTK configuration must stay usable without release tags."""
+"""The repository's own PTk configuration must stay usable without release tags."""
 
 from pathlib import Path
 

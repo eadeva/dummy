@@ -1,4 +1,4 @@
-"""The CLI and editor consume one conventional file layout owned by PTK."""
+"""The CLI and editor consume one conventional file layout owned by PTk."""
 
 import json
 from pathlib import Path

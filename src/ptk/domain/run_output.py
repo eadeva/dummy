@@ -79,7 +79,7 @@ def job_rows(plan, *, verbose=False):
     variant = context.get("variant", {})
     rows = [
         f"Project: {one_line(plan.project)} | Project version: {one_line(project_version(plan))}",
-        f"Repository: {one_line(context.get('repository_alias', plan.project))} | PTK: {one_line(context.get('ptk_version') or 'not recorded')}",
+        f"Repository: {one_line(context.get('repository_alias', plan.project))} | PTk: {one_line(context.get('ptk_version') or 'not recorded')}",
         f"Variant: {one_line(variant_label(plan))}",
         f"Components: {len(variant.get('components', []))} | Resolved features: {len(variant.get('features', {}))}",
         f"Run: {plan.run_id} | Steps: {len(plan.steps)} | Max concurrent: {plan.max_workers}",

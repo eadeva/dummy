@@ -36,7 +36,6 @@ credentials:
   remote:
     providers:
     - env
-    - keyring
     - vault
 """,
         encoding="utf-8",

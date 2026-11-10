@@ -1,4 +1,4 @@
-"""Build, validate and stage PTK release artifacts locally. No upload operation."""
+"""Build, validate and stage PTk release artifacts locally. No upload operation."""
 
 from __future__ import annotations
 
@@ -151,7 +151,6 @@ def smoke(wheel: Path, temporary: Path) -> None:
     for args in (
         ["init", "--config-dir", "config/ptk", "--yes"],
         ["validate"],
-        ["maintainer", "sync", "tasks"],
         ["maintainer", "sync", "agent"],
         ["maintainer", "sync", "agent", "--check"],
     ):
@@ -207,7 +206,7 @@ def prepare(output: Path) -> Path:
             )
             if metadata["Name"] != project["name"] or metadata["Version"] != version:
                 raise ValueError(
-                    "distribution metadata differs from the PTK project/version"
+                    "distribution metadata differs from the PTk project/version"
                 )
             for name in (
                 "skills/ptk-config-authoring/SKILL.md",

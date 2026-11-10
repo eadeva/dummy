@@ -1,4 +1,4 @@
-"""PTK-owned template catalogue and field capabilities, without runtime values."""
+"""PTk-owned template catalogue and field capabilities, without runtime values."""
 
 from .dates import DATE_FIELDS
 
@@ -198,6 +198,17 @@ def catalogue(value, environment_names=()):
                     f"Current-run {field.replace('_', ' ')} for step {step_name}. Declare needs when consuming its files.",
                     ["job", "step", "secret"],
                     job=job_name,
+                )
+        tools = mapping(job).get("requires_tools")
+        for tool in tools if isinstance(tools, list) else mapping(tools):
+            if isinstance(tool, str):
+                add(
+                    f"tools.{tool}.bin",
+                    "Tools",
+                    f"Folder of the {tool} executable on the job PATH (absolute); steps only.",
+                    ["step"],
+                    job=job_name,
+                    availability="Resolved when the job starts.",
                 )
 
         for name, spec in mapping(mapping(job).get("params")).items():

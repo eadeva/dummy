@@ -1,7 +1,7 @@
 Configuration reference
 =======================
 
-These tables describe YAML fields using the schema that PTK uses to validate
+These tables describe YAML fields using the schema that PTk uses to validate
 configuration. Section names are configuration paths: ``<name>`` means a key
 you choose, and ``[]`` means a list item. Linked types lead to the corresponding
 field table. Shared structures are documented once at their first path; the same

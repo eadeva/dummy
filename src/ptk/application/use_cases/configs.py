@@ -142,6 +142,30 @@ class SharedConfigs:
                 if item.output:
                     yield name, item, item.output, item.overlay
 
+    def _files_of(self, groups, sources):
+        """(group, item, destination, overlay, source file); folders expand to their files."""
+        for name, item, destination, overlay_path in self._entries(groups):
+            if not item.source.endswith("/"):
+                yield name, item, destination, overlay_path, item.source
+                continue
+            found = sorted(p for p in sources if p.startswith(item.source))
+            for path in found:
+                yield (
+                    name,
+                    item,
+                    item.destination + path[len(item.source) :],
+                    None,
+                    path,
+                )
+
+    @staticmethod
+    def _recorded_sources(previous, groups):
+        return {
+            record.get("source")
+            for record in previous.get("files", {}).values()
+            if record.get("group") in groups and record.get("mapping")
+        }
+
     def check(self, project, names=None):
         """Read-only offline validation; no cache creation, fetch or tag lookup."""
         groups = self._selection(project, names)
@@ -151,7 +175,18 @@ class SharedConfigs:
         same_source = previous.get("source") == identity
         result = []
         desired = set()
-        for name, item, destination, overlay_path in self._entries(groups):
+        empty_folder = any(
+            item.source.endswith("/")
+            and not any(
+                r.get("mapping") == item.source and r.get("group") == name
+                for r in previous.get("files", {}).values()
+            )
+            for name, spec in groups.items()
+            for item in spec.files
+        )
+        for name, item, destination, overlay_path, source_path in self._files_of(
+            groups, self._recorded_sources(previous, groups)
+        ):
             desired.add(destination)
             old, old_mode = self._files.read(project.root, destination)
             record = previous.get("files", {}).get(destination, {})
@@ -166,7 +201,7 @@ class SharedConfigs:
                     old_mode=old_mode & 0o111 if old_mode is not None else None,
                     expected=record.get("sha256"),
                     stale=not same_source
-                    or record.get("source") != item.source
+                    or record.get("source") != source_path
                     or record.get("group") != name
                     or record.get("overlay") != overlay_path
                     or record.get("overlay_sha256") != digest(overlay),
@@ -177,7 +212,7 @@ class SharedConfigs:
             for path, record in previous.get("files", {}).items()
             if not names or record.get("group") in names
         }
-        if desired != recorded or result and not same_source:
+        if desired != recorded or empty_folder or result and not same_source:
             result.append(
                 ConfigFile(
                     "lock",
@@ -215,8 +250,10 @@ class SharedConfigs:
             if names and record.get("group") not in names
         }
         changes = []
-        for name, item, destination, overlay_path in self._entries(groups):
-            content, mode = blobs[item.source]
+        for name, item, destination, overlay_path, source_path in self._files_of(
+            groups, blobs
+        ):
+            content, mode = blobs[source_path]
             overlay = self._overlay(project, item) if overlay_path else None
             content = self._merge(name, content, overlay)
             if overlay is not None:
@@ -249,13 +286,15 @@ class SharedConfigs:
                 )
             records[destination] = {
                 "group": name,
-                "source": item.source,
+                "source": source_path,
                 "sha256": wanted[0],
                 "mode": mode,
                 "overlay": overlay_path,
                 "overlay_sha256": digest(overlay),
                 "kind": "generated" if overlay_path else "external-base",
             }
+            if source_path != item.source:
+                records[destination]["mapping"] = item.source
             changes.append(
                 ConfigFile(
                     name,
@@ -265,7 +304,7 @@ class SharedConfigs:
                     mode=mode,
                     old_mode=current_mode,
                     notes=[
-                        f"{records[destination]['kind']}: {source.repository}@{commit}:{item.source}"
+                        f"{records[destination]['kind']}: {source.repository}@{commit}:{source_path}"
                         + (
                             f" + overlay {overlay_path}"
                             if overlay_path
@@ -332,6 +371,18 @@ class SharedConfigs:
         records = previous.get("files", {})
         for name, spec in groups.items():
             for item in spec.files:
+                if item.source.endswith("/"):
+                    for path, record in records.items():
+                        if record.get("mapping") != item.source:
+                            continue
+                        base, _ = self._files.read(project.root, path)
+                        if base is None:
+                            report["unavailable"].append(
+                                {"path": path, "reason": "base missing"}
+                            )
+                        elif digest(base) != record.get("sha256"):
+                            report["modified_base_files"].append(path)
+                    continue
                 base, _ = self._files.read(project.root, item.destination)
                 record = records.get(item.destination, {})
                 reason = None
@@ -419,7 +470,7 @@ class SharedConfigs:
                     owned = False
                 if not owned:
                     raise PtkError(
-                        "report output exists and is not a PTK configuration deviations report"
+                        "report output exists and is not a PTk configuration deviations report"
                     )
             report = self.deviations(project)
             self._files.write(

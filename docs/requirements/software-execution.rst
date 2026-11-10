@@ -15,7 +15,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall accept project-owned file/folder outputs on jobs and steps,
+   PTk shall accept project-owned file/folder outputs on jobs and steps,
    principally as artifact declarations for workflow uploads and downloads.
    Declarations shall not imply file transfer. Built-in caching shall be an
    optional aid requiring explicit outputs and cache: true, with correctness
@@ -43,7 +43,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    ``extensions/project-toolkit/test/schema.test.js``;
    ``extensions/project-toolkit/test/integration.test.js``.
 
-.. req-sw:: Launch GUI jobs independently of PTK
+.. req-sw:: Launch GUI jobs independently of PTk
    :id: REQ_Sw_GUI_JOBS
    :req_type: functional
    :safety: QM
@@ -55,7 +55,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall accept a boolean job-level ``gui`` setting, execute prerequisite
+   PTk shall accept a boolean job-level ``gui`` setting, execute prerequisite
    steps normally and detach the unique final command. The extension shall
    expose these jobs under GUIs with a distinct icon and color, preserving
    normal job permissions, variants, parameters and actions. It shall give
@@ -83,7 +83,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: partial
 
-   PTK shall accept multiple eligible job variants, prepare each variant separately and execute selected variants concurrently with distinct outputs.
+   PTk shall accept multiple eligible job variants, prepare each variant separately and execute selected variants concurrently with distinct outputs.
 
    **Origin:** User decision in the configuration/CLI discussion; this requirement records the agreed behavior.
 
@@ -103,7 +103,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall resolve variant inheritance, typed features, selected components and constraints, applying component-local constraints only when that component is selected.
+   PTk shall resolve variant inheritance, typed features, selected components and constraints, applying component-local constraints only when that component is selected.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -123,7 +123,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall resolve and validate required parameter values for each selected concrete variant before starting its job steps.
+   PTk shall resolve and validate required parameter values for each selected concrete variant before starting its job steps.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -143,7 +143,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall compose command environments from a filtered base plus declared variables, permitted caller values, selected tools and runtime paths.
+   PTk shall compose command environments from a filtered base plus declared variables, permitted caller values, selected tools and runtime paths.
 
    **Scope:** Environment composition does not provide filesystem, process,
    network or device sandboxing. Commands and Python tools retain the user's
@@ -171,13 +171,13 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall support standalone Python scripts through uv and explicit selection
+   PTk shall support standalone Python scripts through uv and explicit selection
    of exactly one Python runtime: a uv project with optional dependency groups,
    a requirements/packages environment with an optional Python request, a uvx
-   package with optional extra packages, or PTK's own interpreter. Ordinary
+   package with optional extra packages, or PTk's own interpreter. Ordinary
    interpreter commands shall remain executable without Python-mode configuration.
    The selected runtime shall apply to command steps without activating or
-   replacing PTK's parent process environment.
+   replacing PTk's parent process environment.
 
    The user guide shall describe script, module and inline-code forms, editable
    local project execution, working-directory rules and environment/cache
@@ -188,7 +188,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    **Implementation:** Implemented; the following source and tests are candidate verification evidence, not an acceptance record.
 
    **Constraints:** uv controls project synchronization and editable installation;
-   the project must provide suitable package/build metadata. PTK does not add a
+   the project must provide suitable package/build metadata. PTk does not add a
    frozen-lockfile policy, an editable toggle or implicit source-file invalidation
    for output caching. Requirements-environment reuse is not a transitive lock.
    See :need:`DD_PYTHON_RUNTIME` and :doc:`/guides/python-tools`.
@@ -209,7 +209,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall support job/workflow dry runs that resolve a plan without executing steps, installing tools or writing run reports.
+   PTk shall support job/workflow dry runs that resolve a plan without executing steps, installing tools or writing run reports.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -229,7 +229,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall honor configured conditions, explicit step dependencies, bounded concurrency, retries, timeouts and continue-on-error rules and preserve failure information in results.
+   PTk shall honor configured conditions, explicit step dependencies, bounded concurrency, retries, timeouts and continue-on-error rules and preserve failure information in results.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -249,7 +249,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall propagate cancellation to active process trees and cooperative handlers and prevent queued workflow calls from starting after cancellation.
+   PTk shall propagate cancellation to active process trees and cooperative handlers and prevent queued workflow calls from starting after cancellation.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -269,7 +269,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall wait for all active steps before completing a job, scheduling ready steps by explicit dependencies within the configured worker limit.
+   PTk shall wait for all active steps before completing a job, scheduling ready steps by explicit dependencies within the configured worker limit.
 
    **Origin:** The approved step dependency design supersedes the previous background-mode mechanism while retaining the requirement to join active work.
 
@@ -289,7 +289,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall support selecting a target step with all its transitive prerequisites, or explicitly selecting only that step while listing omitted prerequisites and requiring the user to supply necessary existing outputs.
+   PTk shall support selecting a target step with all its transitive prerequisites, or explicitly selecting only that step while listing omitted prerequisites and requiring the user to supply necessary existing outputs.
 
    **Origin:** User-approved partial execution option 3.
 
@@ -309,14 +309,14 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall expose job and workflow dependency graphs through a graph-only option and include them automatically in dry-run output. Terminal trees shall start with nodes without prerequisites, nest dependents under their prerequisites, retain authored root/sibling order and expand shared nodes once. Joins shall list every prerequisite and remain subject to all declared needs. Offline HTML diagrams shall retain one node per invocation and all dependency edges directed from prerequisites to dependents, with zoom, fit, pan and node details. Selection, variant and known skip information shall remain visible.
+   PTk shall expose job and workflow dependency graphs through a graph-only option and include them automatically in dry-run output. Terminal trees shall start with nodes without prerequisites, nest dependents under their prerequisites, retain authored root/sibling order and expand shared nodes once. Joins shall list every prerequisite and remain subject to all declared needs. Offline HTML diagrams shall retain one node per invocation and all dependency edges directed from prerequisites to dependents, with zoom, fit, pan and node details. Selection, variant and known skip information shall remain visible.
 
    **Scope:** Graphs represent declared scheduling dependencies. They do not
    discover file inputs/outputs or guarantee artifact existence, freshness,
    correctness, sandboxing or freedom from shared-resource races. Project
    implementations own these semantics and report their outcomes. This is an
    intentional boundary that preserves project flexibility, rather than an
-   obligation for PTK to monitor or validate arbitrary script operations. See
+   obligation for PTk to monitor or validate arbitrary script operations. See
    :need:`DD_EXECUTION_BOUNDARIES`.
 
    **Origin:** User request for graph inspection and automatic dry-run graphs.
@@ -337,7 +337,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall define workflows keyed directly by JOB or REPO:JOB, without a separate job field or invocation alias, with explicit needs referencing exact job keys, resolve qualified REPO:JOB targets and owner variant mappings, reject invalid graphs before execution, schedule ready jobs within one concurrency limit, block dependents of failed or skipped prerequisites unless failure is tolerated, and reject local workflow execution in CX mode.
+   PTk shall define workflows keyed directly by JOB or REPO:JOB, without a separate job field or invocation alias, with explicit needs referencing exact job keys, resolve qualified REPO:JOB targets and owner variant mappings, reject invalid graphs before execution, schedule ready jobs within one concurrency limit, block dependents of failed or skipped prerequisites unless failure is tolerated, and reject local workflow execution in CX mode.
 
    Each repository/job pair shall occur at most once per workflow, including
    sequential calls and local/owner-qualified spellings of the same target.
@@ -362,7 +362,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall reject concurrent runs targeting the same job/variant storage while allowing independent jobs or variants to proceed.
+   PTk shall reject concurrent runs targeting the same job/variant storage while allowing independent jobs or variants to proceed.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -382,7 +382,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall preflight requested output cleanup and reject repository roots, escaping/symlink paths, configuration/Git metadata, tracked sources and active run locks.
+   PTk shall preflight requested output cleanup and reject repository roots, escaping/symlink paths, configuration/Git metadata, tracked sources and active run locks.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 
@@ -402,7 +402,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall accept an ordered, unique generators list on any job step and run it
+   PTk shall accept an ordered, unique generators list on any job step and run it
    before each execution attempt from the prepared resolved variant. It shall
    write outputs only inside that step's build directory without changing cwd.
    It shall reject unknown enabled generators and missing variant selections
@@ -432,7 +432,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall provide a hidden built-in maintainer matrix command usable locally
+   PTk shall provide a hidden built-in maintainer matrix command usable locally
    by maintainers and in CX without requiring a human maintainer identity.
    It shall expose only variant/repository/job identifiers, invocation arguments,
    version/source commit and configured upload destinations, including the shared
@@ -465,7 +465,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall show declared output paths and availability in completed job
+   PTk shall show declared output paths and availability in completed job
    summaries and reports and generate a versioned upload configuration containing
    available files/directories and producer properties. It shall accept optional
    artifact_type metadata without inferring output paths or changing cache opt-in.
@@ -495,7 +495,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall ship ptk-upload, ptk-download and ptk-run-job composite Actions.
+   PTk shall ship ptk-upload, ptk-download and ptk-run-job composite Actions.
    Upload shall use curl with technical-user/token credentials, ZIP directories,
    upload files directly and retain declared producer properties plus additional
    properties. Download shall select producers declared in GitHub needs, verify
@@ -510,7 +510,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    live Artifactory and hosted GitHub execution remain unverified.
 
    **Decision:** Setup selectors and a run-scoped remote manifest avoid ambiguous
-   property searches and matrix job output races. PTK is preinstalled in the
+   property searches and matrix job output races. PTk is preinstalled in the
    project's Docker image. See :need:`DD_GITHUB_ACTIONS`.
 
    **Evidence:** ``src/ptk/adapters/github_actions.py``;
@@ -528,7 +528,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall support job and step ``when`` conditions. Job conditions shall use
+   PTk shall support job and step ``when`` conditions. Job conditions shall use
    only portable CX/variant context. Removed filter fields shall be rejected.
    Runtime, discovery, cleanup, local workflow scheduling and matrix export shall
    apply the same eligibility rule. Disabled jobs shall skip and block dependents;
@@ -558,7 +558,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall validate required declared outputs before releasing consumers or
+   PTk shall validate required declared outputs before releasing consumers or
    saving cache receipts. Missing, symlink and nonregular outputs shall fail the
    producer without continue_on_error bypass. Upload shall reject a manifest with
    an invalid output contract. Dry-run and skipped producers shall not check paths;
@@ -589,7 +589,7 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
    :req_satisfies: REQ_Sys_EXECUTION
    :tags: implemented
 
-   PTK shall use job_<jobname> for local targets and
+   PTk shall use job_<jobname> for local targets and
    repo_<reponame>_job_<jobname> for qualified targets in generated GitHub IDs,
    matrix-output names and local workflow report directories. It shall retain
    authored target keys for display and reject colliding generated identifiers
