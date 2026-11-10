@@ -22,8 +22,6 @@ test("custom editor applies minimal document edits and follows undo, save and ra
   assert.equal(p.messages.at(-1).dirty, false);
   await p.receive({ type: "raw" });
   assert.deepEqual(h.executed.at(-1), ["vscode.openWith", h.document.uri, "default"]);
-  await p.receive({ type: "validate" });
-  assert.equal(h.validationCount(), 1);
   p.dispose();
   h.external("jobs: {}\n");
   assert.equal(p.messages.at(-1).value.project.name, "old");
@@ -46,7 +44,7 @@ test("external changes, failed edits and lost trust cannot silently overwrite YA
   assert.ok(h.document.getText().includes("external"));
 });
 
-test("invalid YAML retains Raw YAML access and failed saves do not validate", async () => {
+test("invalid YAML retains Raw YAML access and failed saves report an error", async () => {
   const h = harness("jobs: [\n");
   const p = await h.resolve();
   await p.receive({ type: "ready" });
@@ -54,8 +52,7 @@ test("invalid YAML retains Raw YAML access and failed saves do not validate", as
   await p.receive({ type: "raw" });
   assert.equal(h.executed[0][0], "vscode.openWith");
   h.setSaved(false);
-  await p.receive({ type: "validate" });
-  assert.equal(h.validationCount(), 0);
+  await p.receive({ type: "save" });
   assert.match(p.messages.at(-1).issue, /could not be saved/);
 });
 

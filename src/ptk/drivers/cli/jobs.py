@@ -303,6 +303,10 @@ def execute(
         job = request.job or project.config.project.default_job
         if job:
             install_tools(state, project, [job])
+    elif not state.clean and not request.dry_run and state.app.prompter.interactive():
+        job = request.job or project.config.project.default_job
+        if job in project.config.jobs:
+            offer_missing_tools(state, project, job)
     if state.clean:
         from ...application.use_cases.cleanup import prepare_cleanup
 
@@ -413,6 +417,20 @@ def _execute_one_unlocked(
     return codes.get(result.status, 1)
 
 
+def offer_missing_tools(state: Any, project: Any, job: str) -> None:
+    """Ask in a terminal whether to install the job's missing tools (declining keeps the usual error)."""
+    missing = state.app.tools.problems(project, job)
+    if not missing:
+        return
+    err_console.print(
+        f"[yellow]'{escape(job)}' needs tools that are missing or too old:[/]\n"
+        + "\n".join(f"  - {escape(s.name)}: {escape(s.problem)}" for s in missing),
+        highlight=False,
+    )
+    if click.confirm("Install them now?", default=True, err=True):
+        install_tools(state, project, [job])
+
+
 def install_tools(
     state: Any,
     project: Any,
@@ -483,6 +501,8 @@ def write_reports(
         )
     for problem in report.problems:
         err_console.print(f"[yellow]report: {escape(problem)}[/]")
+    for warning in report.warnings:
+        err_console.print(f"[yellow]report warning: {escape(warning)}[/]")
     if diagnostic is not None and diagnostic != shown:
         print_report(
             diagnostic,

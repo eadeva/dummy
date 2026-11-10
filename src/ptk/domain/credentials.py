@@ -3,7 +3,9 @@
 A secret is addressed as ``credential.field`` (``artifactory.token``); the
 field defaults to the credential's first field. Where each provider looks:
 
-* env:    ``credentials.<name>.env.<field>`` or ``PTK_CRED_<NAME>_<FIELD>``
+* env:    ``credentials.<name>.env.<field>``, else ``<PROJECT>_<USER>_<NAME>_<FIELD>``
+          (``<PROJECT>_<USER>_<FIELD>`` when field and name are equal; in CX any user
+          ID matches), else ``PTK_CRED_<NAME>_<FIELD>``
 * gopass: ``credentials.<name>.gopass.path`` + ``/<field>`` (default ``ptk/<name>/<field>``)
 * vault:  the key ``<name>.<field>`` (one vault per user, shared by all projects)
 """
@@ -22,9 +24,39 @@ def _ident(text: str) -> str:
     return re.sub(r"[^0-9A-Za-z_]", "_", text).upper()
 
 
+WINDOWS_PROVIDERS = ("env", "vault", "keyring", "gopass", "prompt")
+
+
+def provider_chain(spec: CredentialSpec, os_name: str) -> list[str]:
+    """Configured providers; without an explicit list Windows prefers the vault."""
+    if os_name == "windows" and "providers" not in spec.model_fields_set:
+        return list(WINDOWS_PROVIDERS)
+    return list(spec.providers)
+
+
 def default_variable(credential: str, field: str) -> str:
-    """Environment variable read by the env provider when ``env:`` maps nothing."""
+    """Environment variable read by the env provider when nothing else applies."""
     return f"PTK_CRED_{_ident(credential)}_{_ident(field)}"
+
+
+def convention_suffix(credential: str, field: str) -> str:
+    """``ARTIFACTORY_RB_TOKEN`` for ``artifactory_rb.token``, ``PASSWORD`` for ``password.password``."""
+    if credential == field:
+        return _ident(field)
+    return f"{_ident(credential)}_{_ident(field)}"
+
+
+def convention_variable(project: str, user: str, credential: str, field: str) -> str:
+    """``<PROJECT>_<USER>_<CREDENTIAL>_<FIELD>``, e.g. ``TOYOTA_CGW_TET6YH_FOSSID_TOKEN``."""
+    return f"{_ident(project)}_{_ident(user)}_{convention_suffix(credential, field)}"
+
+
+def convention_pattern(project: str, credential: str, field: str) -> str:
+    """Matches the convention variable of any user; group 1 is the user ID."""
+    return (
+        rf"^{re.escape(_ident(project))}_([0-9A-Z]+)_"
+        rf"{re.escape(convention_suffix(credential, field))}$"
+    )
 
 
 @dataclass(frozen=True)
@@ -34,6 +66,8 @@ class SecretKey:
     env_var: str
     gopass_path: str
     namespace: str | None = None
+    env_pattern: str | None = None  # convention variable of any user (CX)
+    env_fallbacks: tuple[str, ...] = ()
 
     @property
     def storage_ref(self) -> str:
@@ -43,20 +77,47 @@ class SecretKey:
     def ref(self) -> str:
         return f"{self.credential}.{self.field}"
 
+    @property
+    def env_vars(self) -> tuple[str, ...]:
+        return (self.env_var, *self.env_fallbacks)
 
-def key_for(name: str, field: str, spec: CredentialSpec) -> SecretKey:
+
+def key_for(
+    name: str,
+    field: str,
+    spec: CredentialSpec,
+    *,
+    project: str | None = None,
+    user: str | None = None,
+) -> SecretKey:
     scoped_name = f"{spec.namespace}/{name}" if spec.namespace else name
     base = spec.gopass.path.rstrip("/") if spec.gopass else f"ptk/{scoped_name}"
+    fallback = default_variable(scoped_name, field)
+    if field in spec.env:
+        env_var, pattern, fallbacks = spec.env[field], None, ()
+    elif project:
+        env_var = convention_variable(project, user or "USER", name, field)
+        pattern, fallbacks = convention_pattern(project, name, field), (fallback,)
+    else:
+        env_var, pattern, fallbacks = fallback, None, ()
     return SecretKey(
         namespace=spec.namespace,
         credential=name,
         field=field,
-        env_var=spec.env.get(field) or default_variable(scoped_name, field),
+        env_var=env_var,
         gopass_path=f"{base}/{field}",
+        env_pattern=pattern,
+        env_fallbacks=fallbacks,
     )
 
 
-def parse_ref(ref: str, credentials: dict[str, CredentialSpec]) -> SecretKey:
+def parse_ref(
+    ref: str,
+    credentials: dict[str, CredentialSpec],
+    *,
+    project: str | None = None,
+    user: str | None = None,
+) -> SecretKey:
     name, _, field = ref.partition(".")
     spec = credentials.get(name)
     if spec is None:
@@ -66,4 +127,4 @@ def parse_ref(ref: str, credentials: dict[str, CredentialSpec]) -> SecretKey:
         raise PtkError(
             f"credential '{name}' has no field '{field}'{did_you_mean(field, spec.fields)}"
         )
-    return key_for(name, field, spec)
+    return key_for(name, field, spec, project=project, user=user)

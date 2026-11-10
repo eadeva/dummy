@@ -14,10 +14,11 @@ import shutil
 from dataclasses import asdict
 from pathlib import Path, PurePosixPath
 
+from ...domain.reporting import limits
 from ...domain.reporting.model import Contribution, Need, NeedsViolation, SphinxReport
 
 SNAPSHOT = ".ptk-sphinx"
-MAX_JSON_BYTES = 100 * 1024 * 1024
+MAX_JSON_BYTES = limits.MAX_BYTES
 ARTIFACTS = {"needs.json", "schema_violations.json"}
 
 
@@ -191,9 +192,10 @@ def capture(build: Path, reports: Path, step: str, status: str):
                         "artifact must be a regular file inside the step build folder"
                     )
                 if source.stat().st_size > MAX_JSON_BYTES:
-                    raise ValueError(
-                        f"JSON artifact exceeds {MAX_JSON_BYTES / (1024 * 1024):g} MiB"
+                    problems.append(
+                        f"{step}: {report.source}/{name}: {limits.exceeded('JSON artifact')}"
                     )
+                    continue
                 destination = target / str(index) / name
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(source, destination)

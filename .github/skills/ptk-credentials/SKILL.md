@@ -9,7 +9,7 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 1. Read [docs/guides/configuration.rst](../../../docs/guides/configuration.rst) and [docs/reference/cli.rst](../../../docs/reference/cli.rst); inspect the credential fields with `ptk describe --json --configuration` (or the bundled schema when runtime inspection is unavailable).
 
-2. Declare fields and an ordered provider chain; default order is env, keyring, gopass, vault, prompt.
+2. Declare fields and an ordered provider chain; default order is env, keyring, gopass, vault, prompt (Windows: env, vault, keyring, gopass, prompt).
 
 3. Start with `ptk self-service creds list NAME` to inspect declared provider availability without unlocking a store. Use `setup` or `set NAME FIELD --store PROVIDER` only for requested provisioning, selecting a configured writable provider; do not assume vault is available.
 

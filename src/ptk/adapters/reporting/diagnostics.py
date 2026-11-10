@@ -228,6 +228,10 @@ def collect(report, owner, root=None, *, scope="", allowed=False):
     result.extend(
         Diagnostic(owner, "", "report", "error", problem) for problem in report.problems
     )
+    result.extend(
+        Diagnostic(owner, "", "report", "warning", warning)
+        for warning in report.warnings
+    )
     for doc in report.sphinx:
         for violation in doc.violations:
             detail = fields(

@@ -11,11 +11,12 @@ import json
 import math
 from pathlib import Path
 
+from ...domain.reporting import limits
 from ...domain.reporting.bazel import identity
 from ...domain.reporting.log_analysis import diagnostic
 from ...domain.reporting.model import BazelReport, LogFinding
 
-MAX_BYTES = 100 * 1024 * 1024
+MAX_BYTES = limits.MAX_BYTES
 READ_ERRORS = (
     OSError,
     ValueError,
@@ -51,11 +52,11 @@ def bounded_text(path, root):
     if path.is_symlink() or not path.resolve().is_relative_to(root):
         raise ValueError("Bazel evidence must stay inside its recorded directory")
     if path.stat().st_size > MAX_BYTES:
-        raise ValueError("Bazel artifact exceeds 100 MiB")
+        raise ValueError(limits.exceeded("Bazel artifact"))
     with path.open("rb") as stream:
         data = stream.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
-        raise ValueError("Bazel artifact exceeds 100 MiB")
+        raise ValueError(limits.exceeded("Bazel artifact"))
     return data.decode("utf-8-sig")
 
 

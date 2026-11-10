@@ -18,6 +18,7 @@ from pathlib import Path
 from ...application.ports import ProcessOutcome
 from ...domain.execution.commands import split_words
 from ...domain.execution.model import CommandSpec
+from ...domain.reporting import limits
 from ...domain.reporting.cmake import normalized_message, same_diagnostic
 from ...domain.reporting.model import CMakeReport, Contribution, LogFinding
 from .cmake_importers import select
@@ -314,7 +315,7 @@ class CMakeReportingRunner:
                     attempt(report, problems, "diagnostics", read_sarif)
                 if captured > MAX_BYTES:
                     problems.append(
-                        f"{step}: CMake console capture exceeds 100 MiB; diagnostics may be incomplete"
+                        f"{step}: {limits.exceeded('CMake console capture', 'diagnostics may be incomplete')}"
                     )
                 records.append(asdict(report))
         except READ_ERRORS as exc:

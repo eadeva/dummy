@@ -1468,7 +1468,7 @@ wheels = [
 
 [[package]]
 name = "xcce-ptk"
-version = "0.0.0+143.g503c9637bea7.dirty"
+version = "0.0.0+144.g6bcc844b1ad2.dirty"
 source = { editable = "." }
 dependencies = [
     { name = "click" },

@@ -21,17 +21,18 @@ import urllib.request
 import zipfile
 from collections.abc import Callable, Mapping
 from dataclasses import replace
+from functools import partial
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
 from ..application.ports import ProcessRunner
-from ..domain.config.model import ArtifactorySource, ToolbaseSource
+from ..domain.config.model import ArtifactorySource, DownloadSource, ToolbaseSource
 from ..domain.errors import PtkError
 from ..domain.execution.model import CommandSpec
 from ..domain.tools import InstallMethod, tool_identity
 from .locking import file_lock
 from .tool_sources import toolbase
-from .tool_sources.artifactory import CurlArtifactory
+from .tool_sources.artifactory import CurlArtifactory, _url
 
 WINDOWS = sys.platform.startswith("win")
 MARKER = ".ptk-tool.json"
@@ -125,14 +126,28 @@ class SystemToolInstaller:
                 )
         return result
 
+    def toolbase_folder(self, source: ToolbaseSource) -> str | None:
+        if not self._windows or not self._environ.get("TB_HOMEDIR"):
+            return None
+        folder = toolbase.root(self._environ) / source.package / source.version
+        if not folder.is_dir():
+            return None
+        if len(toolbase.bin_dirs(source, self._environ)) != len(source.bin):
+            return None
+        return str(folder)
+
     # -- install ------------------------------------------------------------------------
 
     def install(
-        self, name: str, method: InstallMethod, out: Callable[[str], None]
+        self,
+        name: str,
+        method: InstallMethod,
+        out: Callable[[str], None],
+        secrets: Callable[[str], str] | None = None,
     ) -> None:
         handler = {
             "toolbase": self._toolbase,
-            "artifactory": self._artifactory,
+            "artifactory": partial(self._artifactory, secrets=secrets),
             "choco": self._choco,
             "uv_tool": self._uv_tool,
             "download": self._download,
@@ -174,12 +189,32 @@ class SystemToolInstaller:
             self.tools_dir / ".toolbase.lock",
         )
 
-    def _artifactory(self, name, method, out) -> None:
-        client = CurlArtifactory(
-            self._runner,
-            self._environ,
-            ArtifactorySource.model_validate(method.options),
-        )
+    def _artifactory(self, name, method, out, *, secrets=None) -> None:
+        source = ArtifactorySource.model_validate(method.options)
+        token = None
+        if source.token:
+            if secrets is None:
+                raise PtkError(
+                    f"tool '{name}': credential {source.token} cannot be resolved"
+                )
+            token = secrets(source.token)
+        client = CurlArtifactory(self._runner, self._environ, source, token=token)
+        if source.split:
+            volumes = client.volumes()
+            out(f"{name}: {len(volumes)} volume(s) of {source.name}")
+            joined = DownloadSource(
+                url=_url(source.url, source.repository, source.path, source.name),
+                extract=source.extract,
+                bin=source.bin,
+            )
+            self._download(
+                name,
+                replace(method, download=joined),
+                out,
+                fetch=lambda _url, file: client.fetch_volumes(volumes, file),
+                verified=True,
+            )
+            return
         source = client.resolve()
         self._download(name, replace(method, download=source), out, fetch=client.fetch)
 
@@ -271,6 +306,7 @@ class SystemToolInstaller:
         out: Callable[[str], None],
         *,
         fetch=None,
+        verified: bool = False,
     ) -> None:
         source = method.download
         if source is None:
@@ -297,7 +333,7 @@ class SystemToolInstaller:
             if source.sha256:
                 if digest.lower() != source.sha256.lower():
                     raise PtkError(f"sha256 mismatch for {source.url}: got {digest}")
-            else:
+            elif not verified:
                 out(f"warning: no sha256 configured for {name} (got {digest})")
             staging = Path(tmp) / "unpacked"
             staging.mkdir()

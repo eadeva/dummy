@@ -54,8 +54,11 @@ Missing tools
 -------------
 
 Declare tools in the project's ``tools.ptk.yml`` and require them through the job's
-``requires_tools``. Normal execution checks but does not install them. To preview
-or request installation::
+``requires_tools``. Normal execution checks but does not install them without
+asking: in an interactive terminal (not CX), a job with missing or too old tools
+lists them and asks **Install them now?**; answering yes installs them like
+``--setup`` and continues, no keeps the usual error. Without a terminal the job
+fails with that error. To preview or request installation explicitly::
 
    ptk self-service tools --job JOB --dry-run
    ptk self-service tools --job JOB

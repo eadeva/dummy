@@ -126,6 +126,8 @@ command and omit ``python``. Existing Python modes (project, venv, uvx and
 ``interpreter: cli``), tool preparation, substitutions, parameters, working
 directories and credentials still apply. Normal commands such as
 ``ptk run viewer`` launch GUI jobs; the extension lists them under **GUIs**.
+Add ``variant_independent: true`` to any job or GUI that does not depend on the
+selected variant; the extension then offers no variant selection.
 
 An optional preparation graph must lead through explicit ``needs`` to one final
 ``run`` step. All preparation runs normally and can log, fail, time out or retry.
@@ -146,8 +148,9 @@ the application's own logging if needed. Closing PTK's terminal does not close
 the application. Stop it through its own UI. Close it before cleanup or re-run
 if it still uses job output folders; PTK does not manage already launched GUIs.
 
-On POSIX, PTK creates a new process session. On Windows it detaches the console
-and creates a new process group without hiding the GUI window. GUI jobs retain
+On POSIX, PTK creates a new process session. On Windows it starts the command
+with a hidden console in a new process group: console launchers such as a
+venv's ``python.exe`` open no terminal window, and the GUI window stays visible. GUI jobs retain
 ``DISPLAY``, ``WAYLAND_DISPLAY``, ``XAUTHORITY``, ``XDG_RUNTIME_DIR``,
 ``DBUS_SESSION_BUS_ADDRESS`` and ``XDG_SESSION_TYPE`` from the host even with
 environment isolation; explicit ``unset``/``set`` and job/step overrides still
@@ -330,7 +333,11 @@ Credentials
 -----------
 
 Declare credential fields and provider order under ``credentials``. The default
-chain is env, keyring, gopass, vault, prompt. Keyring is optional; prompting is
+chain is env, keyring, gopass, vault, prompt; on Windows it is env, vault,
+keyring, gopass, prompt, so prompted values (including passwords) are stored in
+the encrypted vault, created with a master password on first use. Existing
+keyring entries keep working as a fallback. An explicit ``providers`` list is
+used unchanged. Keyring is optional; prompting is
 unavailable in CX. Supply secrets to individual steps using::
 
    secrets: {TOKEN: service.token}
@@ -701,13 +708,18 @@ Toolbase must already be installed on Windows, with ``TB_HOMEDIR`` set and
 
    # config/ptk/tools.ptk.yml
    ninja:
-     version: ==1.12.1
      toolbase:
        package: ninja
        version: 1.12.1
        environment: ptk
        bin:
        - bin
+
+On Windows, a Toolbase tool counts as installed when
+``TB_HOMEDIR/<package>/<version>`` and all its ``bin`` directories exist. No
+check command runs and ``check``/``version`` are not used; the folder already
+pins the release. On other systems, the tool's remaining sources use the
+normal ``check``/``version`` rules.
 
 PTK enables the exact ``package/version`` and runs ``TBUpdate -e`` only if that
 version's directory is missing. Nonzero exits fail installation. Enable/update
@@ -738,9 +750,12 @@ an optional environment variable. No JFrog CLI or legacy downloader is required:
 
 ``url`` is the Artifactory base URL, not the repository URL. ``path`` defaults
 to ``.`` (repository root). ``artifactory`` may also map ``windows`` and ``linux``
-to separate source definitions. No token values belong in YAML. The token must
-be available in PTK's caller environment when setup runs; setup does not prompt
-for or resolve credential-provider entries. curl receives it through a temporary
+to separate source definitions. No token values belong in YAML. With
+``token_env``, the token must be available in PTK's caller environment when setup
+runs. Alternatively, ``token: credential.field`` names a declared credential;
+setup resolves it through the credential providers (environment, keyring,
+gopass, vault, prompt) only when the tool is actually installed. Use one of the
+two. curl receives the token through a temporary
 configuration file, removed after the request, rather than command arguments.
 TLS certificate verification remains enabled; curl's normal CA/proxy environment
 settings apply. HTTP failures, timeouts and checksum mismatches fail installation.
@@ -762,6 +777,23 @@ Exact URL downloads require an explicit checksum.
 
 ZIP and tar archives use PTK's existing extraction support. Standalone files use
 ``extract: false``. Convert legacy 7z bundles to ZIP/tar before using this source.
+Archives stored as byte-split volumes (``name.001``, ``name.002``, ...) use
+``split: true`` with the literal base name::
+
+   helix_qac:
+     artifactory:
+       windows:
+         url: https://artifacts.example.org/artifactory
+         repository: tools-local
+         path: ZippedTools/helix_qac
+         name: helix_qac_2024.2_WIN64
+         split: true
+         token: artifactory.token
+         bin: common/bin
+
+PTK lists the volumes with AQL, requires them in one folder and numbered
+consecutively from ``.001``, verifies each against Artifactory's SHA-256, joins
+them in order and extracts the result. ``sha256`` is not used with ``split``.
 Downloads are checksum-verified before entering the managed tools directory;
 failed downloads do not create an installation marker. Downloads are cached by
 the effective tool definition, so ``latest`` is resolved only on installation,

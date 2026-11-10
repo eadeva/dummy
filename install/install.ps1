@@ -8,7 +8,7 @@
 #
 # Environment:
 #   PTK_SOURCE   what 'uv tool install' installs (default: this checkout, otherwise xcce_ptk from your index)
-#   PTK_EXTRAS   optional extras, e.g. "keyring" (Windows Credential Manager)
+#   PTK_EXTRAS   optional extras (default "keyring": Windows Credential Manager; set "" for none)
 #   UV_INDEX_URL / UV_EXTRA_INDEX_URL   your package index (standard uv variables)
 param([switch]$NoCompletion, [switch]$NoExtension, [switch]$ForceExtension)
 
@@ -41,9 +41,10 @@ if (-not $source) {
         }
     }
 }
-if ($env:PTK_EXTRAS) {
+$extras = if ($null -eq $env:PTK_EXTRAS) { "keyring" } else { $env:PTK_EXTRAS }
+if ($extras) {
     if ($source -match "://|@") { Say "PTK_EXTRAS is ignored for URL sources" }
-    else { $source = "$source[$($env:PTK_EXTRAS)]" }
+    else { $source = "$source[$extras]" }
 }
 
 Say "installing/updating $source"

@@ -271,9 +271,17 @@ class ToolInstaller(Protocol):
 
     def clean_environment(self, env: dict[str, str]) -> dict[str, str]: ...
 
+    def toolbase_folder(self, source) -> str | None:
+        """Installed Toolbase package/version folder with all ``bin`` dirs, else None."""
+
     def install(
-        self, name: str, method: InstallMethod, out: Callable[[str], None]
-    ) -> None: ...
+        self,
+        name: str,
+        method: InstallMethod,
+        out: Callable[[str], None],
+        secrets: Callable[[str], str] | None = None,
+    ) -> None:
+        """``secrets`` resolves credential references (``credential.field``) of the source."""
 
 
 class ProjectScaffold(Protocol):

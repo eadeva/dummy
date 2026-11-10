@@ -13,7 +13,8 @@ from tests.project_files import read_project, write_project
 from tests.workflows.test_cli import invoke, repository
 
 from ptk.adapters.reporting import diagnostics, exporters, html, importers, sphinx
-from ptk.domain.reporting.model import from_summary
+from ptk.domain.reporting import limits
+from ptk.domain.reporting.model import Contribution, from_summary
 
 
 def needs_data():
@@ -227,7 +228,7 @@ def test_limits_and_unsafe_doc_paths(tmp_path, monkeypatch):
         (100 * 1024 * 1024 + 1, False),
     ],
 )
-def test_100_mib_limit_is_inclusive_and_per_artifact(
+def test_100_mib_limit_is_inclusive_per_artifact_and_only_a_warning(
     tmp_path, monkeypatch, artifact, size, accepted
 ):
     folder = write_exports(tmp_path / "build")
@@ -256,8 +257,27 @@ def test_100_mib_limit_is_inclusive_and_per_artifact(
         assert not result.problems
     else:
         assert len(result.problems) == 1
-        assert f"{artifact}: JSON artifact exceeds 100 MiB" in result.problems[0]
+        assert (
+            f"{artifact}: JSON artifact exceeds the 100 MiB report import limit; section omitted"
+            in result.problems[0]
+        )
+        assert limits.is_limit(result.problems[0])
         assert not (tmp_path / "reports" / sphinx.SNAPSHOT / "0" / artifact).exists()
+
+
+def test_omitted_oversized_evidence_is_a_warning_not_an_error():
+    message = f"docs: html/needs.json: {limits.exceeded('JSON artifact')}"
+    report = from_summary(
+        {"status": "passed"},
+        [Contribution("docs", problems=[message, "docs: cannot import x"])],
+    )
+    assert report.warnings == [message]
+    assert report.problems == ["docs: cannot import x"]
+    report.problems.clear()
+    assert not report.has_errors
+    assert [
+        d.severity for d in diagnostics.collect(report, "job") if d.source == "report"
+    ] == ["warning"]
 
 
 def test_workflow_build_discovery_hidden_steps_and_retained_history(tmp_path):

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import quote, urlsplit
 
@@ -37,11 +39,32 @@ def _url(base: str, *parts: str) -> str:
     return base.rstrip("/") + "/" + "/".join(segments)
 
 
+@dataclass(frozen=True)
+class Volume:
+    url: str
+    sha256: str
+
+
 class CurlArtifactory:
-    def __init__(self, runner, environ, source: ArtifactorySource):
+    def __init__(
+        self, runner, environ, source: ArtifactorySource, token: str | None = None
+    ):
         self.runner = runner
         self.environ = dict(environ)
         self.source = source
+        self.token = token
+
+    def _token(self) -> str | None:
+        if self.token is not None:
+            return self.token
+        if not self.source.token_env:
+            return None
+        token = self.environ.get(self.source.token_env)
+        if not token:
+            raise PtkError(
+                f"Missing Artifactory token environment variable: {self.source.token_env}"
+            )
+        return token
 
     def fetch(self, url: str, destination: Path, *, query: str | None = None) -> None:
         executable = self.runner.which("curl", path=self.environ.get("PATH"))
@@ -51,13 +74,9 @@ class CurlArtifactory:
             config = Path(tmp) / "curl.conf"
             config.touch(mode=0o600)
             options = []
-            if self.source.token_env:
-                token = self.environ.get(self.source.token_env)
-                if not token:
-                    raise PtkError(
-                        f"Missing Artifactory token environment variable: {self.source.token_env}"
-                    )
-                if any(ord(c) < 32 or ord(c) == 127 for c in token):
+            token = self._token()
+            if token is not None:
+                if not token or any(ord(c) < 32 or ord(c) == 127 for c in token):
                     raise PtkError("Invalid Artifactory token")
                 # curl config escaping; token is never part of argv, logs or markers.
                 escaped = token.replace("\\", "\\\\").replace('"', '\\"')
@@ -159,3 +178,73 @@ class CurlArtifactory:
             extract=source.extract,
             bin=source.bin,
         )
+
+    def volumes(self) -> list[Volume]:
+        """The ordered volumes name.001, name.002, ... of a split archive (one folder)."""
+        source = self.source
+        criteria = {
+            "repo": source.repository,
+            "type": "file",
+            "path": {"$match": source.path},
+            "name": {"$match": f"{source.name}.*"},
+        }
+        criteria.update({f"@{k}": {"$eq": v} for k, v in source.properties.items()})
+        query = (
+            "items.find(" + json.dumps(criteria) + ")"
+            '.include("repo","path","name","sha256")'
+        )
+        with tempfile.TemporaryDirectory(prefix="ptk-aql-") as tmp:
+            result = Path(tmp) / "result.json"
+            self.fetch(_url(source.url, "api/search/aql"), result, query=query)
+            try:
+                rows = json.loads(result.read_text(encoding="utf-8"))["results"]
+                if not isinstance(rows, list):
+                    raise TypeError
+            except (ValueError, KeyError, TypeError, OSError) as exc:
+                raise PtkError("Invalid Artifactory AQL response") from exc
+        pattern = re.compile(re.escape(source.name) + r"\.(\d{3,})")
+        numbered = {}
+        for row in rows:
+            match = pattern.fullmatch(str(row.get("name", "")))
+            if match and row.get("repo") == source.repository:
+                numbered[int(match.group(1))] = row
+        if not numbered:
+            raise PtkError("No Artifactory volumes match the configured split archive")
+        if len({row["path"] for row in numbered.values()}) > 1:
+            raise PtkError("Split archive volumes are in several folders; pin the path")
+        if sorted(numbered) != list(range(1, len(numbered) + 1)):
+            raise PtkError(
+                "Split archive volumes are not numbered consecutively from .001"
+            )
+        volumes = []
+        for number in sorted(numbered):
+            row = numbered[number]
+            digest = row.get("sha256")
+            if not isinstance(digest, str) or not re.fullmatch(
+                r"[a-fA-F0-9]{64}", digest
+            ):
+                raise PtkError(f"Artifactory reports no sha256 for {row['name']}")
+            volumes.append(
+                Volume(
+                    _url(source.url, source.repository, row["path"], row["name"]),
+                    digest,
+                )
+            )
+        return volumes
+
+    def fetch_volumes(self, volumes: list[Volume], destination: Path) -> None:
+        """Download and verify each volume, appending it to ``destination``."""
+        with (
+            tempfile.TemporaryDirectory(prefix="ptk-volume-") as tmp,
+            destination.open("wb") as joined,
+        ):
+            part = Path(tmp) / "volume"
+            for volume in volumes:
+                self.fetch(volume.url, part)
+                with part.open("rb") as handle:
+                    digest = hashlib.file_digest(handle, "sha256").hexdigest()
+                if digest.lower() != volume.sha256.lower():
+                    raise PtkError(f"sha256 mismatch for {volume.url}: got {digest}")
+                with part.open("rb") as handle:
+                    while chunk := handle.read(1024 * 1024):
+                        joined.write(chunk)

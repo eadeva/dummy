@@ -148,10 +148,11 @@ are respected. Symbolic-link directories are not traversed and artifacts must
 remain inside the step build directory. Each JSON file has a fixed limit of
 **100 MiB (104,857,600 bytes)**, applied separately to ``needs.json`` and
 ``schema_violations.json``. Files exactly at the limit pass the size check;
-larger files are excluded with a report-collection diagnostic, without changing
-the job's execution result. Unreadable or malformed exports also produce
-report-collection diagnostics. The limit accommodates larger needs catalogs
-while retaining a finite input-size guard. It is not a process-memory budget:
+larger files are skipped without being read: their report section is omitted and
+a report **warning** names the file (not an error, and the job's execution result
+is unchanged). The same applies to oversized CMake, Bazel and GN evidence.
+Unreadable or malformed exports produce report-collection error diagnostics. The
+limit keeps report generation fast for large needs catalogs. It is not a process-memory budget:
 parsed objects, retained data and rendered reports can require more memory.
 Skipped, blocked, never-started and ``report: false`` steps are not imported.
 
@@ -478,7 +479,7 @@ so these remain unknown for offline/wrapper inputs. Regenerating a saved report
 never probes the current PATH or invokes GN.
 
 Inputs, console capture and each normalized snapshot are bounded to 100 MiB
-(104,857,600 bytes), with the boundary accepted. Unknown JSON fields are ignored;
+(1,073,741,824 bytes), with the boundary accepted. Unknown JSON fields are ignored;
 malformed/cyclic evidence and unsafe input paths produce collection diagnostics.
 Snapshots are immutable per attempt and reused by saved workflow reports. See
 :need:`DD_GN_REPORTS`, :need:`REQ_Sw_GN_REPORTS` and the

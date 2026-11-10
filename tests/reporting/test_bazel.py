@@ -358,7 +358,7 @@ def test_size_boundary_unsafe_paths_and_malformed_events(tmp_path, monkeypatch):
     assert bazel_bep.parse(path, tmp_path, "compile", []).complete
     with path.open("a") as handle:
         handle.write(" ")
-    with pytest.raises(ValueError, match="100 MiB"):
+    with pytest.raises(ValueError, match="100 MiB report import limit"):
         bazel_bep.parse(path, tmp_path, "compile", [])
     with pytest.raises(ValueError, match="recorded directory"):
         bazel_bep.parse(path, tmp_path / "elsewhere", "compile", [])

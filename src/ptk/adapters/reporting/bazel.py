@@ -11,6 +11,7 @@ from dataclasses import asdict, replace
 from pathlib import Path
 
 from ...domain.execution.commands import split_words
+from ...domain.reporting import limits
 from ...domain.reporting.model import BazelReport, Contribution, LogFinding
 from .bazel_bep import MAX_BYTES, READ_ERRORS, Findings, bounded_text, parse, stamp
 from .bazel_graph import collect
@@ -267,7 +268,7 @@ class BazelReportingRunner:
                         )
                 if records and captured > MAX_BYTES:
                     problems.append(
-                        f"{step}: Bazel console capture exceeds 100 MiB; diagnostics may be incomplete"
+                        f"{step}: {limits.exceeded('Bazel console capture', 'diagnostics may be incomplete')}"
                     )
             except READ_ERRORS as exc:
                 problems.append(f"{step}: cannot collect Bazel reporting: {exc}")
@@ -291,7 +292,7 @@ class BazelReportingRunner:
                         + "\n"
                     )
                     if len(text.encode("utf-8")) > MAX_BYTES:
-                        raise ValueError("normalized Bazel evidence exceeds 100 MiB")
+                        raise ValueError(limits.exceeded("normalized Bazel evidence"))
                     (target / f"{time.time_ns()}-{uuid.uuid4().hex}.json").write_text(
                         text, encoding="utf-8"
                     )

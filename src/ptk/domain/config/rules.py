@@ -39,6 +39,14 @@ def parse_path(text: str) -> Path:
 
 def validate(config: PtkConfig) -> list[PathProblem]:
     problems: list[PathProblem] = []
+    for tool, spec in config.tools.items():
+        sources = spec.artifactory
+        for key, source in (
+            sources.items() if isinstance(sources, dict) else [(None, sources)]
+        ):
+            if source is not None and source.token:
+                path = ("tools", tool, "artifactory", *([key] if key else []), "token")
+                problems += _check_secret(source.token, path, config)
     if config.artifactory is not None:
         problems += [
             (("artifactory", *path), message)

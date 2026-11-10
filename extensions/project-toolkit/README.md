@@ -192,7 +192,7 @@ session. See the GUI jobs section in `docs/guides/configuration.rst` for setup.
   omitted. Credential values and vault passwords are entered through PTK's hidden
   terminal prompts. Command names and credential names are ordinary arguments;
   never enter secret values into the extension's option prompts.
-- Use **Open Latest Job or Workflow Report**, **Validate Configuration** and **Open
+- Use **Open Latest Job or Workflow Report** and **Open
   Configuration File** from the command palette. Available operations follow
   PTK's maintainer permissions. Report files and explicit opening use the machine
   running PTK; no local browser-link server is started.
@@ -292,10 +292,11 @@ VS Code save/undo behavior and uses PTK's schema for that specific document.
 Simple source edits preserve comments and scalar spelling. Use Raw YAML for
 aliases or complex values that the form cannot safely edit.
 
-Loading errors appear in the tree and Problems panel, with links to their source.
-The **Validate Configuration** toolbar action is always available. A workspace
-without `.main.ptk.yml` displays **No PTK project found** and offers **PTK init**,
-which asks for the configuration directory.
+Loading errors appear in the tree and Problems panel, with links to their source;
+the configuration is validated whenever the extension loads it. Broader checks
+(`--variants`, `--versions`, `--generated`) run from the built-in `validate` command
+with **Run Command with Options**. In a workspace without `.main.ptk.yml`,
+**Initialize PTK Project** asks for the configuration directory and runs `ptk init`.
 
 Expand a job or repository workflow to see variant checkboxes, or use its existing
 variant selector. Jobs accept multiple variants; workflows also accept multiple owner variants.
@@ -375,8 +376,10 @@ fail before execution or cleanup.
 
 The trash and restart icons clean selected job/variant outputs or clean and
 re-run them. Clean requires no job parameters. All four output categories are
-removed; these actions execute immediately. Repository `clean-all` and workspace
-`vmr-clean-all` are in Built-in commands and ask for confirmation in the terminal.
+removed; these actions execute immediately. Repository `clean-all` is in each
+repository's Built-in commands; the VMR folder has no Built-in commands section,
+so workspace `vmr-clean-all` runs from the palette (**Run Command**). Both ask for
+confirmation in the terminal.
 Use their Options action for `--dry-run` or `--yes`. Saved tasks accept `clean`
 or `reRun`, with optional `preview: true` to inspect without deletion.
 

@@ -122,7 +122,9 @@ class App:
     def tools(self) -> ToolService:
         from .application.use_cases.tools import ToolService
 
-        return ToolService(self.host, self.runner, self.installer)
+        return ToolService(
+            self.host, self.runner, self.installer, secrets=self.credentials
+        )
 
     @cached_property
     def shared_configs(self) -> SharedConfigs:
@@ -220,6 +222,7 @@ class App:
                 self.host,
                 self.runner,
                 root=project.root,
+                project=project.config.project.name,
             )
         return self._credentials[key]
 

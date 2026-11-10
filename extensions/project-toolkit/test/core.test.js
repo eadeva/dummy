@@ -75,7 +75,7 @@ test("workflows select their owner variants and resolve shared names explicitly"
   assert.deepEqual(core.argsFor({ kind: "workflow", name: "all", spec: { run_options: [], command: ["workflow", "run", "all"] } }, { preview: true }), ["workflow", "run", "all", "--dry-run"]);
   assert.deepEqual(core.argsFor(target("report"), { variant: "large" }), ["--variant", "large", "report", "open", "build"]);
   assert.deepEqual(core.argsFor(target("variant")), ["variant", "show", "build"]);
-  assert.deepEqual(core.argsFor(target("validate")), ["validate"]);
+  assert.throws(() => core.argsFor(target("validate")), /Unsupported PTK operation/);
 });
 
 test("target discovery preserves healthy VMR members and workspace workflows", () => {
@@ -256,7 +256,7 @@ test("PTK supplies cwd and alias routing without a config override", () => {
   assert.equal(core.cwdFor(t), path.resolve("workspace"));
   assert.deepEqual(core.argsFor(t, { variant: "large", preview: true }), ["--variant", "large", "demo", "run", "build", "--dry-run"]);
   assert.deepEqual(core.argsFor(t, { help: true }), ["demo", "build", "--help"]);
-  assert.deepEqual(core.argsFor({ ...t, kind: "validate" }), ["demo", "validate"]);
+  assert.deepEqual(core.argsFor({ ...t, kind: "variant" }), ["demo", "variant", "show", "build"]);
   for (const route of [undefined, { cwd: "relative", prefix: [] }, { cwd: path.resolve("workspace"), prefix: ["--config"] }]) {
     const doc = inventory(); doc.projects[0].invocation = route;
     assert.throws(() => core.parseInventory(JSON.stringify(doc)), /repository paths/);

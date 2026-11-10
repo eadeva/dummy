@@ -8,10 +8,11 @@ from pathlib import Path
 
 import yaml
 
+from ....domain.reporting import limits
 from ....domain.reporting.log_analysis import ANSI
 from ....domain.reporting.model import LogFinding
 
-MAX_BYTES = 100 * 1024 * 1024
+MAX_BYTES = limits.MAX_BYTES
 READ_ERRORS = (
     OSError,
     ValueError,
@@ -37,12 +38,12 @@ def text_file(path, root, *, offset=0):
     if path.is_symlink() or not path.resolve().is_relative_to(root):
         raise ValueError("CMake evidence must stay inside its build directory")
     if path.stat().st_size - offset > MAX_BYTES:
-        raise ValueError("CMake artifact exceeds 100 MiB")
+        raise ValueError(limits.exceeded("CMake artifact"))
     with path.open("rb") as stream:
         stream.seek(offset)
         data = stream.read(MAX_BYTES + 1)
     if len(data) > MAX_BYTES:
-        raise ValueError("CMake artifact exceeds 100 MiB")
+        raise ValueError(limits.exceeded("CMake artifact"))
     return data.decode("utf-8-sig", errors="replace")
 
 

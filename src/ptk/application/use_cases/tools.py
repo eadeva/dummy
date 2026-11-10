@@ -17,6 +17,7 @@ from ...domain.tools import (
     check_version,
     install_methods,
     tool_applies,
+    toolbase_status,
 )
 from ..ports import HostEnvironment, ProcessRunner, ToolInstaller
 from .project import Project
@@ -90,11 +91,16 @@ def tools_for_jobs(project: Project, jobs: list[str] | None = None) -> Project:
 
 class ToolService:
     def __init__(
-        self, host: HostEnvironment, runner: ProcessRunner, installer: ToolInstaller
+        self,
+        host: HostEnvironment,
+        runner: ProcessRunner,
+        installer: ToolInstaller,
+        secrets: Callable[[Project], Callable[[str], str]] | None = None,
     ):
         self._host = host
         self._runner = runner
         self._installer = installer
+        self._secrets = secrets
 
     def paths(self, project: Project | None = None) -> list[str]:
         if project is None:
@@ -154,6 +160,10 @@ class ToolService:
         for name in names if names is not None else list(tools):
             spec = tools[name]
             if not tool_applies(spec, self._host.os_name()):
+                continue
+            if spec.toolbase is not None and self._host.os_name() == "windows":
+                folder = self._installer.toolbase_folder(spec.toolbase)
+                result.append(toolbase_status(name, spec.toolbase, folder))
                 continue
             argv = split_words(check_command(name, spec), self._host.os_name())
             lines: list[str] = []
@@ -234,7 +244,16 @@ class ToolService:
             for method in methods:
                 out(f"{before.name}: {method.describe()}")
                 try:
-                    self._installer.install(before.name, method, out)
+                    self._installer.install(
+                        before.name,
+                        method,
+                        out,
+                        secrets=(
+                            (lambda ref: self._secrets(project)(ref))
+                            if self._secrets
+                            else None
+                        ),
+                    )
                 except PtkError as exc:
                     errors.append(f"{method.kind}: {exc}")
                     out(f"{before.name}: {method.kind} failed - {exc}")

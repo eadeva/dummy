@@ -483,7 +483,7 @@ run_command.params.extend(common_options())
 
 @click.group("creds", cls=AccessGroup)
 def creds_group() -> None:
-    """Credentials: env -> keyring -> gopass -> vault -> prompt. Values are never shown."""
+    """Credentials: env -> keyring -> gopass -> vault -> prompt (Windows: vault first). Values are never shown."""
 
 
 def _read_secret(ctx: click.Context, question: str) -> str:
@@ -602,7 +602,7 @@ def creds_setup(ctx: click.Context, create_vault: bool) -> None:
         "keyring": "OS keyring: Windows Credential Manager, macOS Keychain, Linux desktop",
         "gopass": "recommended for teams: gopass setup --crypto age (no gpg needed)",
         "vault": "built-in encrypted file: ptk self-service creds setup --vault",
-        "prompt": "asks in the terminal, never stored",
+        "prompt": "asks in the terminal; stored in the first writable provider unless remember: false",
     }
     for name, provider in providers.items():
         ok, reason = provider.available()
@@ -820,6 +820,8 @@ def report_export(
         console.print(f"written {escape(str(file))}", highlight=False, soft_wrap=True)
     for problem in report.problems:
         console.print(f"[yellow]{escape(problem)}[/]")
+    for warning in report.warnings:
+        console.print(f"[yellow]warning: {escape(warning)}[/]")
 
 
 @report_group.command("open")

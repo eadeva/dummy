@@ -192,7 +192,6 @@
       heading.append(el("div", "PTk / Configuration", { className: "brand" }), el("h1", state.filename));
       const actions = el("div", undefined, { className: "actions" });
       if (!creation) actions.append(button("Raw YAML", () => afterEdits(() => vscode.postMessage({ type: "raw" }))),
-        button("Save & validate", () => afterEdits(() => vscode.postMessage({ type: "validate" }))),
         button("Save", () => afterEdits(() => vscode.postMessage({ type: "save" })), ""));
       toolbar.append(heading, actions);
       header.append(toolbar, el("p", "", { className: "status", id: "status", role: "status" }));
@@ -743,7 +742,7 @@
     if (message.mode === "parameters") { state = message; renderParameters(); return; }
     const first = !state;
     if (message.reason && inflight) return;
-    const own = inflight && message.ack === inflight.id || ["saved", "validated"].includes(message.reason);
+    const own = inflight && message.ack === inflight.id || message.reason === "saved";
     const structural = inflight?.structural;
     const submitted = inflight?.operations || [];
     const creationAck = creation?.submitting && message.ack === creation.editId;

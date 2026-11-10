@@ -138,6 +138,7 @@ def describe_project(project, role, *, configuration=False, environment_names=()
                 "name": name,
                 "help": spec.help,
                 "gui": spec.gui,
+                "variant_independent": spec.variant_independent,
                 "command": [
                     *(["maintainer"] if spec.audience == "maintainer" else []),
                     "run",

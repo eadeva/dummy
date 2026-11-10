@@ -47,8 +47,7 @@ def source(**kwargs):
     return ArtifactorySource(
         url="https://example.org/artifactory",
         repository="tools",
-        name="tool.zip",
-        **kwargs,
+        **{"name": "tool.zip", **kwargs},
     )
 
 
@@ -138,6 +137,97 @@ def test_os_source_selection():
     spec = ToolSpec(artifactory={"linux": source(sha256="a" * 64)})
     assert install_methods(spec, "windows", allow_system=False) == []
     assert install_methods(spec, "linux", allow_system=False)[0].kind == "artifactory"
+
+
+class VolumeRunner(CurlRunner):
+    """Serves AQL rows and the bytes of each volume by URL."""
+
+    def __init__(self, volumes, rows):
+        super().__init__(rows=rows)
+        self.volumes = volumes
+
+    def run(self, command, on_output, cancel=None):
+        argv = command.argv
+        if "--data-binary" in argv:
+            return super().run(command, on_output, cancel)
+        self.calls.append(argv)
+        self.configs.append(Path(argv[argv.index("--config") + 1]).read_text())
+        name = argv[argv.index("--url") + 1].rsplit("/", 1)[-1]
+        Path(argv[argv.index("--output") + 1]).write_bytes(self.volumes[name])
+        return ProcessOutcome(0)
+
+
+def split_archive(parts=3):
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("helix/common/bin/qagui", "gui")
+    data = buffer.getvalue()
+    size = -(-len(data) // parts)
+    volumes = {
+        f"helix.{i + 1:03d}": data[i * size : (i + 1) * size] for i in range(parts)
+    }
+    rows = [
+        {"repo": "tools", "path": "Zipped/helix", "name": name,
+         "sha256": hashlib.sha256(chunk).hexdigest()}
+        for name, chunk in reversed(volumes.items())
+    ] + [{"repo": "tools", "path": "Zipped/helix", "name": "helix.manifest", "sha256": "a" * 64}]  # fmt: skip
+    return volumes, rows
+
+
+def test_split_volumes_are_verified_joined_and_extracted(tmp_path):
+    volumes, rows = split_archive()
+    runner = VolumeRunner(volumes, rows)
+    spec = ToolSpec(
+        artifactory=source(
+            name="helix", path="Zipped/helix", split=True, token="artifactory.token",
+            bin="common/bin",
+        )
+    )  # fmt: skip
+    installer = SystemToolInstaller(runner, {}, tools_dir=tmp_path)
+    method = install_methods(spec, "linux", allow_system=False)[0]
+    resolved = []
+    lines = []
+    installer.install(
+        "helix", method, lines.append, secrets=lambda ref: resolved.append(ref) or "tok"
+    )
+    assert resolved == ["artifactory.token"]
+    assert '"name": {"$match": "helix.*"}' in runner.queries[0]
+    downloaded = [c[c.index("--url") + 1].rsplit("/", 1)[-1] for c in runner.calls[1:]]
+    assert downloaded == ["helix.001", "helix.002", "helix.003"]
+    assert all("Authorization: Bearer tok" in config for config in runner.configs)
+    assert not any("warning" in line for line in lines)
+    [binary] = installer.bin_dirs({"helix": spec})
+    assert (Path(binary) / "qagui").read_text() == "gui"
+
+
+def test_split_volume_checks(tmp_path):
+    volumes, rows = split_archive()
+    tampered = [
+        {**row, "sha256": "b" * 64} if row["name"] == "helix.002" else row
+        for row in rows
+    ]
+    spec = source(name="helix", split=True)
+    client = CurlArtifactory(VolumeRunner(volumes, tampered), {}, spec)
+    with pytest.raises(PtkError, match="sha256 mismatch"):
+        client.fetch_volumes(client.volumes(), tmp_path / "joined")
+    gap = [row for row in rows if row["name"] != "helix.002"]
+    with pytest.raises(PtkError, match="consecutively"):
+        CurlArtifactory(VolumeRunner(volumes, gap), {}, spec).volumes()
+    with pytest.raises(PtkError, match="No Artifactory volumes"):
+        CurlArtifactory(VolumeRunner(volumes, []), {}, spec).volumes()
+    with pytest.raises(ValueError, match="literal base name"):
+        source(name="helix*", split=True)
+    with pytest.raises(ValueError, match="either token or token_env"):
+        source(token="a.b", token_env="X")
+
+
+def test_credential_tokens_need_a_resolver(tmp_path):
+    spec = ToolSpec(artifactory=source(sha256="a" * 64, token="artifactory.token"))
+    installer = SystemToolInstaller(CurlRunner(), {}, tools_dir=tmp_path)
+    with pytest.raises(PtkError, match="cannot be resolved"):
+        installer.install(
+            "tool", install_methods(spec, "linux", allow_system=False)[0], print
+        )
 
 
 def test_new_optional_sources_preserve_existing_tool_identity():

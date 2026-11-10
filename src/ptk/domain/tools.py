@@ -24,7 +24,7 @@ from typing import Any
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import InvalidVersion, Version
 
-from .config.model import ChocoSource, DownloadSource, ToolSpec
+from .config.model import ChocoSource, DownloadSource, ToolbaseSource, ToolSpec
 
 
 @dataclass
@@ -83,6 +83,15 @@ def check_version(name: str, spec: ToolSpec, output: str | None) -> ToolStatus:
         elif not satisfies(version, spec.version):
             status.problem = f"version {version} does not match {spec.version}"
     return status
+
+
+def toolbase_status(
+    name: str, source: ToolbaseSource, folder: str | None
+) -> ToolStatus:
+    """``folder``: the installed package/version folder (None: missing)."""
+    if folder is None:
+        return ToolStatus(name, None, found=False, problem="not found")
+    return ToolStatus(name, None, found=True, version=source.version, source=folder)
 
 
 def satisfies(version: str, required: str) -> bool:
@@ -148,4 +157,11 @@ def tool_identity(spec: ToolSpec) -> str:
     for key in ("toolbase", "artifactory"):
         if data.get(key) is None:
             data.pop(key, None)
+    artifactory = data.get("artifactory") or {}
+    for source in artifactory.values() if "url" not in artifactory else [artifactory]:
+        if isinstance(source, dict):
+            if source.get("token") is None:
+                source.pop("token", None)
+            if source.get("split") is False:
+                source.pop("split", None)
     return hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()[:20]

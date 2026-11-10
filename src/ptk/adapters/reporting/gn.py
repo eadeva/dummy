@@ -12,12 +12,13 @@ from graphlib import TopologicalSorter
 from pathlib import Path
 
 from ...domain.execution.commands import split_words
+from ...domain.reporting import limits
 from ...domain.reporting.gn import identity, message
 from ...domain.reporting.log_analysis import ANSI, diagnostic
 from ...domain.reporting.model import Contribution, GNReport, LogFinding
 from .evidence import mask_data
 
-MAX_BYTES = 100 * 1024 * 1024
+MAX_BYTES = limits.MAX_BYTES
 MAX_GRAPH_TARGETS = 2000
 READ_ERRORS = (OSError, ValueError, TypeError, KeyError, AttributeError, RecursionError)
 SNAPSHOT = ".ptk-gn"
@@ -30,7 +31,7 @@ def bounded_text(path, root):
     with path.open("rb") as stream:
         content = stream.read(MAX_BYTES + 1)
     if len(content) > MAX_BYTES:
-        raise ValueError("GN evidence exceeds 100 MiB")
+        raise ValueError(limits.exceeded("GN evidence"))
     return content.decode("utf-8-sig")
 
 
@@ -385,7 +386,7 @@ class GNReportingRunner:
                         )
                 if size > MAX_BYTES:
                     problems.append(
-                        f"{step}: GN console capture exceeds 100 MiB; diagnostics may be incomplete"
+                        f"{step}: {limits.exceeded('GN console capture', 'diagnostics may be incomplete')}"
                     )
             for path, root in candidates.items():
                 item = GNReport(step, str(path))
@@ -414,7 +415,7 @@ class GNReportingRunner:
                     + "\n"
                 )
                 if len(text.encode("utf-8")) > MAX_BYTES:
-                    raise ValueError("normalized GN evidence exceeds 100 MiB")
+                    raise ValueError(limits.exceeded("normalized GN evidence"))
                 (folder / f"{time.time_ns()}-{uuid.uuid4().hex}.json").write_text(
                     text, encoding="utf-8"
                 )

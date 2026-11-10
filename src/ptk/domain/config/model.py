@@ -490,6 +490,10 @@ class JobSpec(_Strict):
         default=False,
         description="Show this job under GUIs. Run prerequisites normally, then launch the single final command in a detached process and let PTK exit. Success means the process started, not that the application finished. The final step cannot use timeout or retries.",
     )
+    variant_independent: StrictBool = Field(
+        default=False,
+        description="The job does not depend on the selected variant. Editors offer no variant selection and run it without --variant, so the project default variant provides its paths.",
+    )
     when: str | None = Field(
         default=None,
         description="Portable job eligibility condition: cx, variant, component/feature symbols and vh variant data. False skips execution and excludes matrix rows. Runner-specific os, env, params and vars are step-only.",
@@ -701,6 +705,15 @@ class ArtifactorySource(_Strict):
         default=None,
         description="Name of the environment variable holding the bearer token. Do not put the token value in configuration.",
     )  # bearer token; never store the value in YAML
+    token: str | None = Field(
+        default=None,
+        description="Credential reference credential.field for the bearer token, resolved through PTK's credential providers when installing. Alternative to token_env.",
+        pattern=r"^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$",
+    )
+    split: bool = Field(
+        default=False,
+        description="The archive is stored as numbered volumes name.001, name.002, ... (byte-split). PTK downloads all volumes in order, verifies each against Artifactory's sha256 and joins them before extraction. name is the base name without the volume suffix.",
+    )
     sha256: str | None = Field(
         description="Expected 64-character SHA-256 digest used to verify the download.",
         default=None,
@@ -712,6 +725,16 @@ class ArtifactorySource(_Strict):
         description="Subdirectory containing executables inside the installed tool.",
     )
 
+    @model_validator(mode="after")
+    def _token_and_volumes(self):
+        if self.token and self.token_env:
+            raise ValueError("use either token or token_env, not both")
+        if self.split and any(c in self.name for c in "*?"):
+            raise ValueError("split needs the literal base name of the volumes")
+        if self.split and self.sha256:
+            raise ValueError("split volumes are verified per volume; omit sha256")
+        return self
+
 
 class ToolSpec(_Strict):
     description: str = Field(
@@ -722,10 +745,12 @@ class ToolSpec(_Strict):
         description="Allow installation inside Docker. When false, installation is skipped in containers but version checks still run.",
     )  # false: disable installation inside Docker, keep checks
     version: str | None = Field(
-        default=None, description="Accepted tool version range, for example >=3.28,<4."
+        default=None,
+        description="Accepted tool version range, for example >=3.28,<4. Not used for Toolbase on Windows.",
     )  # PEP 440 style range: ">=3.28,<4"
     check: str | None = Field(
-        default=None, description="Command that prints the installed tool version."
+        default=None,
+        description="Command that prints the installed tool version. Not used for Toolbase on Windows.",
     )  # command printing the version
     version_regex: str = Field(
         default=r"(\d+\.\d+(?:\.\d+)?)",
@@ -783,7 +808,7 @@ class CredentialSpec(_Strict):
         default_factory=lambda: ["token"],
     )
     providers: list[Literal["env", "keyring", "gopass", "vault", "prompt"]] = Field(
-        description="Credential providers to try, in order: env, keyring, gopass, vault or prompt.",
+        description="Credential providers to try, in order. Default: env, keyring, gopass, vault, prompt; on Windows env, vault, keyring, gopass, prompt.",
         default_factory=lambda: ["env", "keyring", "gopass", "vault", "prompt"],
     )
     env: dict[str, str] = Field(
@@ -792,6 +817,14 @@ class CredentialSpec(_Strict):
     )  # field: ENV_VAR
     gopass: GopassSpec | None = Field(
         default=None, description="Location of this credential in the gopass store."
+    )
+    user_field: str | None = Field(
+        default=None,
+        description="Field holding the account name. Outside CX it is the user running PTK (lowercase); in CX it comes from the env provider.",
+    )
+    remember: bool = Field(
+        default=True,
+        description="Store values entered at the prompt in the first writable provider (by default the encrypted vault on Windows, gopass or keyring on Linux). Set false to ask every run.",
     )
     test: str | None = Field(
         default=None, description="Command used to verify that the credential works."
@@ -803,6 +836,10 @@ class CredentialSpec(_Strict):
         if unknown:
             raise ValueError(
                 f"env maps unknown field(s) {sorted(unknown)}; fields are {self.fields}"
+            )
+        if self.user_field is not None and self.user_field not in self.fields:
+            raise ValueError(
+                f"user_field '{self.user_field}' is not one of the fields {self.fields}"
             )
         return self
 

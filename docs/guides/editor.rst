@@ -43,7 +43,7 @@ PTK as a process and show output in the task terminal. Saved tasks preserve
 dry-run mode, parameters, variants, run options and help requests. The extension
 rechecks current choices before launching; removed steps or variants require a new selection.
 
-Expand **Built-in commands** to browse ``self-service``, ``maintainer``, ``help`` and
+Expand **Built-in commands** (collapsed by default) to browse ``self-service``, ``maintainer``, ``help`` and
 other permitted commands. Duplicate ``run`` and ``report`` branches,
 including workflow equivalents, are omitted in favour of job/workflow actions.
 The remaining tree commands have Run, Options and Help icons. Required
@@ -68,6 +68,9 @@ separate default checkbox. Abstract variants are excluded. This updates only the
 affected tree branch, without running PTK or rewriting configuration.
 Workflows use the selected owner variant and its repository variant mappings. Use **Display Variant**
 for resolved features and the report icon on a job or workflow to open its report.
+A job with ``variant_independent: true`` has no variant branch and no variant
+choices in its form; the extension runs it without ``--variant``, so PTK uses the
+project default variant for its paths.
 
 The configuration form uses compact rows for labels, values and actions, with a
 vertical layout in narrow editor columns. Hover a field label or its **?** button
@@ -101,9 +104,9 @@ state; closing or reloading the webview discards them. Existing pending field
 edits are saved before opening setup. Creation uses the current document revision
 and checks for duplicate names or changed parent fields; rejected writes retain
 the draft for repair. Required/type/range checks assist entry, while PTK remains
-responsible for complete project validation on reload or **Save & validate**.
-File-based forms may leave the document unsaved; **Save & validate** saves it
-and checks the project. Placeholder commands
+responsible for complete project validation, which the extension repeats on
+every reload and save (errors appear in the tree and Problems panel).
+File-based forms may leave the document unsaved until **Save**. Placeholder commands
 and paths must be adapted before execution; setup does not check installed tools.
 
 New jobs also choose their first step's mode. Choices cover direct executable
@@ -496,8 +499,8 @@ selection and result status keep their own semantics. Theme tokens determine
 exact shades, while labels and shapes preserve meaning without color.
 
 A job with ``gui: true`` appears in the **GUIs** branch beside **Jobs** and
-**Workflows**, with no duplicate entry under Jobs. It retains ordinary job
-commands, variant checkboxes, parameter forms, reports and task restoration.
+**Workflows**, with no duplicate entry under Jobs. Its row offers only Run and
+Help; variant checkboxes, parameter forms and task restoration still apply.
 PTK runs preparation normally, detaches the single final command and exits.
 The application stays open after the task ends; later application output,
 health and exit status are not monitored. Terminate the application through
@@ -506,8 +509,10 @@ have an appropriate desktop session. See :ref:`gui-jobs`.
 
 Fingerprints reject stale edits, and dirty YAML must be saved first.
 
-Loading errors appear in the tree and Problems panel. Validate Configuration stays
-available even without a project, when it offers ``ptk init``. Use Raw YAML
+Loading errors appear in the tree and Problems panel; the extension validates the
+configuration whenever it loads it. Broader checks (``--variants``, ``--versions``,
+``--generated``) run from the built-in ``validate`` command with options. Without a
+project, **Initialize PTK Project** runs ``ptk init``. Use Raw YAML
 for aliases or values that the form cannot safely represent.
 
 The job parameter gear opens a single window with help, default values, text

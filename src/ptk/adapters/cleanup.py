@@ -1,6 +1,8 @@
 """Delete validated output directories without following directory symlinks."""
 
+import os
 import shutil
+import stat
 from pathlib import Path
 
 from ..domain.errors import PtkError
@@ -53,9 +55,17 @@ def validate_directory(path: Path, root: Path, protected=()) -> None:
         raise PtkError(f"cleanup expected a directory: {path}")
 
 
+def _clear_readonly(function, target, exc) -> None:
+    # Windows refuses to delete read-only files, e.g. git pack files from FetchContent.
+    if not isinstance(exc, PermissionError) or Path(target).is_symlink():
+        raise exc
+    os.chmod(target, stat.S_IWRITE)
+    function(target)
+
+
 def delete_directory(path: Path) -> None:
     try:
         if path.exists():
-            shutil.rmtree(path)
+            shutil.rmtree(path, onexc=_clear_readonly)
     except OSError as exc:
         raise PtkError(f"cannot clean {path}: {exc}") from exc

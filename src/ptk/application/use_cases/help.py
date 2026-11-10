@@ -13,9 +13,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from ...domain.config.model import ParamSpec, StepSpec
+from ...domain.config.model import CredentialSpec, ParamSpec, StepSpec
 from ...domain.config.substitution import to_text
-from ...domain.credentials import default_variable
+from ...domain.credentials import convention_variable
 from .project import Project
 from .role import Role, visible
 
@@ -191,14 +191,22 @@ class BuildHelp:
                     name,
                     cred.description,
                     list(cred.fields),
-                    _cred_env(name, cred.fields, cred.env),
+                    _cred_env(name, cred, config.project.name),
                     list(cred.providers),
                 )
             )
         for name, tool in config.tools.items():
             sources = [
                 k
-                for k in ("choco", "uv_tool", "download", "apt", "dnf")
+                for k in (
+                    "toolbase",
+                    "artifactory",
+                    "choco",
+                    "uv_tool",
+                    "download",
+                    "apt",
+                    "dnf",
+                )
                 if getattr(tool, k)
             ]
             doc.tools.append(
@@ -287,5 +295,11 @@ def _walk(steps: dict[str, StepSpec]):
         yield (name,), step
 
 
-def _cred_env(name: str, fields: list[str], mapping: dict[str, str]) -> dict[str, str]:
-    return {f: mapping.get(f) or default_variable(name, f) for f in fields}
+def _cred_env(name: str, cred: CredentialSpec, project: str) -> dict[str, str]:
+    return {
+        f: cred.env.get(f)
+        or convention_variable(project, "USERID", name, f).replace(
+            "_USERID_", "_<USER>_", 1
+        )
+        for f in cred.fields
+    }

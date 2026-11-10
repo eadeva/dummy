@@ -160,7 +160,8 @@ artifactory:
     path: team/artifactory
 ```
 
-Looked up in order `env -> keyring -> gopass -> vault -> prompt` (configurable per
+Looked up in order `env -> keyring -> gopass -> vault -> prompt` (on Windows
+`env -> vault -> keyring -> gopass -> prompt`; configurable per
 credential). `ptk self-service creds set artifactory token` stores a value (typed hidden); the
 built-in vault is an AES-GCM file protected by a master password - no external tool
 needed. Steps get secrets only as environment variables (`secrets: {TOKEN: artifactory.token}`),

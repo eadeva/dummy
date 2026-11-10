@@ -222,7 +222,7 @@ def test_windows_gui_launch_detaches_without_hiding_window_or_using_pipes(
     from ptk.adapters import process_options
 
     monkeypatch.setattr(process_options, "WINDOWS", True)
-    monkeypatch.setattr(subprocess, "DETACHED_PROCESS", 8, raising=False)
+    monkeypatch.setattr(subprocess, "CREATE_NO_WINDOW", 0x08000000, raising=False)
     monkeypatch.setattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 512, raising=False)
     launched = []
     monkeypatch.setattr(
@@ -236,7 +236,7 @@ def test_windows_gui_launch_detaches_without_hiding_window_or_using_pipes(
         CommandSpec(argv=["viewer"], cwd=str(tmp_path), detached=True), lambda _: None
     )
     assert outcome.launched_pid == 1234 and outcome.exit_code == 0
-    assert launched[0]["creationflags"] == 520
+    assert launched[0]["creationflags"] == 0x08000000 | 512
     assert "startupinfo" not in launched[0]
     assert launched[0]["close_fds"] is True
     assert all(

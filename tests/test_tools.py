@@ -13,9 +13,15 @@ import pytest
 
 from ptk.adapters.tools import SystemToolInstaller
 from ptk.application.ports import ProcessOutcome
-from ptk.domain.config.model import ToolSpec
+from ptk.domain.config.model import ToolbaseSource, ToolSpec
 from ptk.domain.errors import PtkError
-from ptk.domain.tools import check_version, install_methods, parse_version, satisfies
+from ptk.domain.tools import (
+    check_version,
+    install_methods,
+    parse_version,
+    satisfies,
+    toolbase_status,
+)
 from ptk.drivers.cli.main import cli
 from tests.cli_runner import CliRunner
 from tests.conftest import grant_maintainer
@@ -36,6 +42,22 @@ def test_versions():
     assert "does not match" in check_version("x", spec, "x 1.5").problem
     assert "cannot read" in check_version("x", spec, "no digits").problem
     assert check_version("x", spec, "x 2.1.0").ok
+
+
+def test_toolbase_tool_is_present_when_its_folder_exists(tmp_path):
+    source = ToolbaseSource(package="hexmodx", version="15.3.0", bin=["bin"])
+    installer = SystemToolInstaller(
+        None, {"TB_HOMEDIR": str(tmp_path)}, windows=True, tools_dir=tmp_path / "t"
+    )
+    folder = tmp_path / "hexmodx" / "15.3.0"
+    assert installer.toolbase_folder(source) is None
+    folder.mkdir(parents=True)
+    assert installer.toolbase_folder(source) is None  # bin dir missing
+    (folder / "bin").mkdir()
+    assert installer.toolbase_folder(source) == str(folder.resolve())
+    status = toolbase_status("hexmodx", source, str(folder))
+    assert status.ok and status.version == "15.3.0"
+    assert toolbase_status("hexmodx", source, None).problem == "not found"
 
 
 @pytest.mark.parametrize(
@@ -224,6 +246,32 @@ def test_run_with_setup_flag(project):
     result = project("build", "--setup")
     assert result.exit_code == 0, result.output
     assert "installed via download" in result.output
+
+
+@posix_only
+@pytest.mark.parametrize(("answer", "installed"), [("y\n", True), ("n\n", False)])
+def test_interactive_run_offers_to_install_missing_tools(
+    project, monkeypatch, answer, installed
+):
+    monkeypatch.setattr(
+        "ptk.adapters.credentials.prompt.ConsolePrompter.interactive", lambda self: True
+    )
+    root = project.root
+    result = CliRunner(
+        env={
+            "PTK_DOCKER": "0",
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+            "PTK_TOOLS_DIR": str(project.tools),
+            "PTK_ROLE": "user",
+        }
+    ).invoke(cli, ["build"], input=answer, catch_exceptions=False, cwd=root)
+    assert "mytool: not found" in result.output and "Install them now?" in result.output
+    if installed:
+        assert result.exit_code == 0, result.output
+        assert "installed via download" in result.output
+    else:
+        assert result.exit_code == 2
+        assert "ptk self-service tools --job build" in result.output
 
 
 @posix_only

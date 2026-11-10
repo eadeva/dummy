@@ -3,6 +3,7 @@ from tests.project_files import read_project, write_project
 """Destructive operations are scoped and preflighted before any deletion."""
 
 import json
+import stat
 
 import pytest
 import yaml
@@ -29,6 +30,17 @@ def variant_config(**extra):
         "variants": {"default": "debug", "variants": {"debug": {}, "release": {}}},
         **extra,
     }
+
+
+def test_delete_directory_removes_read_only_files(tmp_path):
+    from ptk.adapters.cleanup import delete_directory
+
+    pack = tmp_path / "out" / "_deps" / ".git" / "objects" / "pack.idx"
+    pack.parent.mkdir(parents=True)
+    pack.write_text("x")
+    pack.chmod(stat.S_IREAD)
+    delete_directory(tmp_path / "out")
+    assert not (tmp_path / "out").exists()
 
 
 def test_clean_scope_no_execution_or_required_parameters(tmp_path):

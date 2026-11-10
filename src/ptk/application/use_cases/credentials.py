@@ -9,11 +9,16 @@ logged or passed as command arguments.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from ...domain.config.model import CredentialSpec
-from ...domain.credentials import SecretKey, parse_ref
+from ...domain.credentials import (
+    SecretKey,
+    default_variable,
+    parse_ref,
+    provider_chain,
+)
 from ...domain.errors import PtkError
 from ...domain.execution.model import CommandSpec
 from ...domain.suggest import did_you_mean
@@ -37,12 +42,14 @@ class CredentialService:
         host: HostEnvironment,
         runner: ProcessRunner | None = None,
         root: Path | None = None,
+        project: str | None = None,
     ):
         self._credentials = dict(credentials)
         self._providers = dict(providers)
         self._host = host
         self._runner = runner
         self._root = root
+        self._project = project
         self._cache: dict[str, str] = {}
 
     # -- lookups -----------------------------------------------------------------------
@@ -58,31 +65,82 @@ class CredentialService:
             raise PtkError(f"unknown credential '{name}'{hint}")
         return self._credentials[name]
 
+    def providers(self, name: str) -> list[str]:
+        return provider_chain(self.spec(name), self._host.os_name())
+
     def keys(self, name: str, field_name: str | None = None) -> list[SecretKey]:
         spec = self.spec(name)
         fields = [field_name] if field_name else spec.fields
-        return [parse_ref(f"{name}.{f}", self._credentials) for f in fields]
+        return [self._key(f"{name}.{f}") for f in fields]
+
+    def _key(self, ref: str) -> SecretKey:
+        cx = self._host.is_cx()
+        key = parse_ref(
+            ref,
+            self._credentials,
+            project=self._project,
+            user=None if cx else self._host.user_id(),
+        )
+        # Locally only the running user's variable counts; in CX the technical user is any ID.
+        return key if cx else replace(key, env_pattern=None)
 
     def __call__(self, ref: str) -> str:
         """SecretResolver port: ``credential.field`` -> value."""
         return self.resolve(ref)
 
     def resolve(self, ref: str) -> str:
-        key = parse_ref(ref, self._credentials)
+        key = self._key(ref)
         if key.ref in self._cache:
             return self._cache[key.ref]
+        spec = self.spec(key.credential)
         notes: list[str] = []
-        for name in self.spec(key.credential).providers:
+        if key.field == spec.user_field:
+            value = self._account(key, notes)
+            if value:
+                self._cache[key.ref] = value
+                return value
+            raise PtkError(
+                f"credential '{key.ref}' is not available:\n  - " + "\n  - ".join(notes)
+            )
+        for name in self.providers(key.credential):
             value = self._try(name, key, notes)
             if value:
+                if name == "prompt" and spec.remember:
+                    self._remember(key, value, notes)
                 self._cache[key.ref] = value
                 return value
         raise PtkError(
             f"credential '{key.ref}' is not available:\n  - "
             + "\n  - ".join(notes)
             + f"\n  store it with: ptk self-service creds set {key.credential}"
-            + (f" {key.field}" if len(self.spec(key.credential).fields) > 1 else "")
+            + (f" {key.field}" if len(spec.fields) > 1 else "")
         )
+
+    def _account(self, key: SecretKey, notes: list[str]) -> str | None:
+        """The account of ``user_field``: in CX from env (or the user ID in the
+        convention variable of another field), else the user running PTK."""
+        if self._host.is_cx():
+            value = self._try("env", key, notes)
+            env = self._providers.get("env")
+            for other in self.keys(key.credential):
+                if value or other.field == key.field or not hasattr(env, "match"):
+                    continue
+                found = env.match(other)
+                value = found[1] if found else None
+            return value
+        user = (self._host.user_id() or "").lower()
+        if not user:
+            notes.append("user: the user running PTK is unknown")
+        return user or None
+
+    def _remember(self, key: SecretKey, value: str, notes: list[str]) -> None:
+        stores = self.stores(key.credential)
+        if not stores:
+            return
+        try:
+            self._providers[stores[0]].store(key, value)
+        except PtkError as exc:
+            notes.append(f"{stores[0]}: not stored ({exc})")
 
     def _try(self, name: str, key: SecretKey, notes: list[str]) -> str | None:
         provider = self._providers.get(name)
@@ -113,10 +171,14 @@ class CredentialService:
         names = [name] if name else list(self._credentials)
         result = []
         for cred in names:
+            spec = self.spec(cred)
             for key in self.keys(cred):
                 notes: list[str] = []
                 supplier = None
-                for provider in self.spec(cred).providers:
+                if key.field == spec.user_field and not self._host.is_cx():
+                    result.append(SecretStatus(key, "user", ["the user running PTK"]))
+                    continue
+                for provider in self.providers(cred):
                     usable = self._providers.get(provider)
                     if (
                         provider == "prompt"
@@ -143,7 +205,7 @@ class CredentialService:
     def stores(self, name: str) -> list[str]:
         """Providers that can store this credential here, in chain order."""
         result = []
-        for provider_name in self.spec(name).providers:
+        for provider_name in self.providers(name):
             provider = self._providers.get(provider_name)
             if provider is None or not provider.can_store:
                 continue
@@ -173,7 +235,7 @@ class CredentialService:
     def remove(self, name: str, field_name: str | None, store: str | None) -> list[str]:
         removed = []
         for key in self.keys(name, field_name):
-            for provider_name in [store] if store else self.spec(name).providers:
+            for provider_name in [store] if store else self.providers(name):
                 provider = self._providers.get(provider_name or "")
                 if provider is not None and provider.can_store and provider.remove(key):
                     removed.append(f"{key.ref} from {provider_name}")
@@ -191,7 +253,11 @@ class CredentialService:
         secrets = []
         for key in self.keys(name):
             value = self.resolve(key.ref)
-            env[key.env_var] = value
+            for variable in {
+                *key.env_vars,
+                default_variable(key.credential, key.field),
+            }:
+                env[variable] = value
             secrets.append(value)
         lines: list[str] = []
 

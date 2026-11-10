@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from ..graphs import describe_graph
+from . import limits
 
 PASSED, FAILED, ERROR, SKIPPED = "passed", "failed", "error", "skipped"
 
@@ -232,6 +233,8 @@ class Report:
     coverage: list[Coverage] = field(default_factory=list)
     log_findings: list[LogFinding] = field(default_factory=list)
     problems: list[str] = field(default_factory=list)
+    # Omitted oversized evidence; never counted as errors.
+    warnings: list[str] = field(default_factory=list)
     log_analysis_enabled: bool = False
     ptk_version: str = ""
     context: dict[str, Any] = field(default_factory=dict)
@@ -386,7 +389,8 @@ def from_summary(
         report.findings += contribution.findings
         report.log_findings += contribution.log_findings
         report.coverage += contribution.coverage
-        report.problems += contribution.problems
+        report.problems += [p for p in contribution.problems if not limits.is_limit(p)]
+        report.warnings += [p for p in contribution.problems if limits.is_limit(p)]
         report.sphinx += contribution.sphinx
         report.cmake += contribution.cmake
         report.bazel += contribution.bazel

@@ -13,9 +13,9 @@ const viewType = "project-toolkit.configuration";
 /**
  * @param {any} vscode
  * @param {any} context
- * @param {{changed?: () => void, validate?: (uri: any) => Promise<void>, project?: (uri: any, options?: object) => any, configuration?: (uri: any) => any}} [options]
+ * @param {{changed?: () => void, project?: (uri: any, options?: object) => any, configuration?: (uri: any) => any}} [options]
  */
-function createEditors(vscode, context, { changed = () => {}, validate = async () => {}, project: reloadProject, configuration = () => undefined } = {}) {
+function createEditors(vscode, context, { changed = () => {}, project: reloadProject, configuration = () => undefined } = {}) {
   const panels = new Map();
   const selections = new Map();
   const media = vscode.Uri.joinPath(context.extensionUri, "media");
@@ -86,10 +86,9 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
               }
               return state({ ack: message.id });
             }
-            if (message.type === "save" || message.type === "validate") {
+            if (message.type === "save") {
               if (!await document.save()) throw new Error("The configuration could not be saved.");
-              if (message.type === "validate") await validate(document.uri);
-              return state({ reason: message.type === "save" ? "saved" : "validated" });
+              return state({ reason: "saved" });
             }
             if (message.type === "raw") return vscode.commands.executeCommand("vscode.openWith", document.uri, "default");
           } catch (error) { await state({ ack: message.id, issue: error.message }); }
@@ -152,7 +151,6 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
           trusted();
           if (message.type === "ready") return state({ selection });
           if (message.type === "save") return state({ reason: "saved" });
-          if (message.type === "validate") { await validate(vscode.Uri.file(owner.project.entry_file)); return state({ reason: "validated" }); }
           if (message.type === "raw") {
             const selected = await vscode.window.showQuickPick(config.files.map(file => ({ label: path.relative(owner.root, file), file })), { placeHolder: "Open configuration source" });
             if (selected) return vscode.commands.executeCommand("vscode.openWith", vscode.Uri.file(selected.file), "default");
@@ -224,7 +222,7 @@ function createEditors(vscode, context, { changed = () => {}, validate = async (
           trusted();
           if (message.type === "ready") return panel.webview.postMessage({ type: "state", mode: "parameters", name: target.name,
             kind: target.kind, project: target.project?.alias, help: target.spec.help,
-            variantChoices: (target.project?.variants || []).filter(item => !item.abstract),
+            variantChoices: target.spec.variant_independent ? [] : (target.project?.variants || []).filter(item => !item.abstract),
             defaultVariant: target.project?.default_variant, variantHelp: target.project?.variant_help,
             runOptions: target.spec.run_options || [], params: (target.spec.params || []).filter(spec => spec.type !== "secret"),
             preview: options.preview, variant: options.variant, variants: options.variants, reRun: !!options.reRun });

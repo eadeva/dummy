@@ -37,7 +37,7 @@ class Installer:
     def clean_environment(self, env):
         return dict(env)
 
-    def install(self, name, method, out):
+    def install(self, name, method, out, secrets=None):
         self.installed.append(name)
 
 

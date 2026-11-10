@@ -27,7 +27,7 @@ class ConsolePrompter:
 
 
 class PromptProvider:
-    """Asks once per ptk run; the answer is not stored (use 'ptk self-service creds set')."""
+    """Asks once per ptk run; the service stores the answer when the credential has ``remember``."""
 
     name = "prompt"
     can_store = False
@@ -43,7 +43,7 @@ class PromptProvider:
     def get(self, key: SecretKey) -> str | None:
         if not self._prompter.interactive():
             return None
-        return self._prompter.secret(f"{key.ref} (not stored)") or None
+        return self._prompter.secret(key.ref) or None
 
     def store(self, key: SecretKey, value: str) -> None:
         raise PtkError("the prompt cannot store secrets")

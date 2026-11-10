@@ -167,6 +167,154 @@ def test_unknown_credential_and_field(tmp_path):
         svc.resolve("art.tokn")
 
 
+class WindowsHost(Host):
+    def os_name(self):
+        return "windows"
+
+
+class FakeKeyring:
+    name = "keyring"
+    can_store = True
+
+    def __init__(self, values=None):
+        self.values = dict(values or {})
+
+    def available(self):
+        return True, ""
+
+    def get(self, key):
+        return self.values.get(key.ref)
+
+    def store(self, key, value):
+        self.values[key.ref] = value
+
+    def remove(self, key):
+        return self.values.pop(key.ref, None) is not None
+
+
+def test_windows_prefers_the_vault_and_remembers_prompts_there(tmp_path):
+    keyring = FakeKeyring({"art.token": "from-keyring"})
+    providers = {
+        "env": EnvProvider({}),
+        "keyring": keyring,
+        "vault": VaultProvider(vault(tmp_path)),
+        "prompt": PromptProvider(FakePrompter(["typed-user"])),
+    }
+    svc = CredentialService({"art": SPEC}, providers, WindowsHost())
+    assert svc.providers("art") == ["env", "vault", "keyring", "gopass", "prompt"]
+    assert svc.stores("art") == ["vault", "keyring"]
+    assert svc.resolve("art.token") == "from-keyring"  # existing entries still work
+    assert svc.resolve("art.user") == "typed-user"
+    assert vault(tmp_path).entries() == {"art.user": "typed-user"}
+    assert keyring.values == {"art.token": "from-keyring"}
+    vault(tmp_path).set("art.token", "from-vault")
+    providers["vault"] = VaultProvider(vault(tmp_path))
+    fresh = CredentialService({"art": SPEC}, providers, WindowsHost())
+    assert fresh.resolve("art.token") == "from-vault"
+    explicit = CredentialSpec(providers=["env", "keyring"])
+    assert CredentialService({"art": explicit}, providers, WindowsHost()).providers(
+        "art"
+    ) == ["env", "keyring"]
+
+
+class UserHost(Host):
+    def __init__(self, cx=False):
+        super().__init__()
+        self._cx = cx
+
+    def is_cx(self):
+        return self._cx
+
+    def user_id(self):
+        return "ABC1XY"
+
+
+USER_SPEC = CredentialSpec(
+    fields=["user", "token"],
+    user_field="user",
+    env={"user": "TECH_USER", "token": "ART_TOKEN"},
+)
+
+
+def test_user_field_is_the_running_user_outside_cx(tmp_path):
+    providers = {"env": EnvProvider({"TECH_USER": "techuser"})}
+    svc = CredentialService({"art": USER_SPEC}, providers, UserHost())
+    assert svc.resolve("art.user") == "abc1xy"
+    assert {r.key.ref: r.provider for r in svc.status()}["art.user"] == "user"
+    cx = CredentialService({"art": USER_SPEC}, providers, UserHost(cx=True))
+    assert cx.resolve("art.user") == "techuser"
+
+
+def test_prompted_value_is_remembered_unless_disabled(tmp_path):
+    vault(tmp_path).create()
+    svc = service(tmp_path, prompter=FakePrompter(["typed-token"]))
+    assert svc.resolve("art.token") == "typed-token"
+    assert vault(tmp_path).entries() == {"art.token": "typed-token"}
+
+    other = tmp_path / "other"
+    other.mkdir()
+    vault(other).create()
+    spec = CredentialSpec(fields=["password"], remember=False)
+    providers = {
+        "vault": VaultProvider(vault(other)),
+        "prompt": PromptProvider(FakePrompter(["pw-123456"])),
+    }
+    svc = CredentialService({"art": spec}, providers, Host())
+    assert svc.resolve("art.password") == "pw-123456"
+    assert vault(other).entries() == {}
+
+
+def test_user_field_must_be_a_field():
+    with pytest.raises(ValueError, match="user_field"):
+        CredentialSpec(fields=["token"], user_field="user")
+
+
+CONVENTION = {
+    "artifactory_rb": CredentialSpec(fields=["user", "token"], user_field="user"),
+    "password": CredentialSpec(fields=["password", "user"], user_field="user"),
+}
+
+
+def convention_service(env, *, cx):
+    providers = {"env": EnvProvider(env)}
+    return CredentialService(
+        CONVENTION, providers, UserHost(cx=cx), project="toyota_cgw"
+    )
+
+
+def test_cx_reads_project_user_credential_variables():
+    env = {
+        "TOYOTA_CGW_TET6YH_ARTIFACTORY_RB_TOKEN": "rb-token",
+        "TOYOTA_CGW_TET6YH_PASSWORD": "pw-value",
+    }
+    svc = convention_service(env, cx=True)
+    assert svc.resolve("artifactory_rb.token") == "rb-token"
+    assert svc.resolve("artifactory_rb.user") == "tet6yh"
+    assert svc.resolve("password.password") == "pw-value"
+    assert svc.resolve("password.user") == "tet6yh"
+
+
+def test_local_runs_only_read_the_running_users_variables():
+    env = {
+        "TOYOTA_CGW_TET6YH_ARTIFACTORY_RB_TOKEN": "techuser-token",
+        "TOYOTA_CGW_ABC1XY_ARTIFACTORY_RB_TOKEN": "own-token",
+    }
+    svc = convention_service(env, cx=False)
+    assert svc.resolve("artifactory_rb.token") == "own-token"
+    assert svc.resolve("artifactory_rb.user") == "abc1xy"
+    with pytest.raises(PtkError, match="TOYOTA_CGW_ABC1XY_PASSWORD is not set"):
+        svc.resolve("password.password")
+
+
+def test_cx_rejects_several_users_for_one_credential():
+    env = {
+        "TOYOTA_CGW_TET6YH_ARTIFACTORY_RB_TOKEN": "a",
+        "TOYOTA_CGW_OTHER1_ARTIFACTORY_RB_TOKEN": "b",
+    }
+    with pytest.raises(PtkError, match="several users"):
+        convention_service(env, cx=True).resolve("artifactory_rb.token")
+
+
 # --------------------------------------------------------------------------- keyring
 
 

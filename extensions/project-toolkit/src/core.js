@@ -75,7 +75,7 @@ function parseInventory(text) {
         !object(project.capabilities) || !["validate", "variants", "reports"].every(key => typeof project.capabilities[key] === "boolean") ||
         !Array.isArray(project.config_files) || !project.config_files.every(absolute) ||
         !project.workflows.every(item => commandPath(item.command) && runOptions(item.run_options)) ||
-        !project.jobs.every(job => typeof job.gui === "boolean" && runOptions(job.run_options) && commandPath(job.command) && commandPath(job.help_command) && Array.isArray(job.params) && job.params.every(param => named(param) &&
+        !project.jobs.every(job => typeof job.gui === "boolean" && typeof job.variant_independent === "boolean" && runOptions(job.run_options) && commandPath(job.command) && commandPath(job.help_command) && Array.isArray(job.params) && job.params.every(param => named(param) &&
           ["str", "int", "float", "bool", "path", "choice", "list"].includes(param.type) &&
           typeof param.required === "boolean" && Array.isArray(param.choices) && param.choices.every(c => typeof c === "string")))) {
       throw new Error("Incomplete PTK project inventory.");
@@ -228,7 +228,6 @@ function argsFor(target, { variant, preview = false, params = {}, help = false, 
       break;
     case "variant": args.push("variant", "show", target.name); break;
     case "report": args.push("report", "open", target.name); break;
-    case "validate": args.push("validate"); break;
     default: throw new Error(`Unsupported PTK operation: ${target.kind}`);
   }
   return args;

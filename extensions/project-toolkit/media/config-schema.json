@@ -57,6 +57,26 @@
           "description": "Name of the environment variable holding the bearer token. Do not put the token value in configuration.",
           "title": "Token Env"
         },
+        "token": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Credential reference credential.field for the bearer token, resolved through PTK's credential providers when installing. Alternative to token_env.",
+          "title": "Token"
+        },
+        "split": {
+          "default": false,
+          "description": "The archive is stored as numbered volumes name.001, name.002, ... (byte-split). PTK downloads all volumes in order, verifies each against Artifactory's sha256 and joins them before extraction. name is the base name without the volume suffix.",
+          "title": "Split",
+          "type": "boolean"
+        },
         "sha256": {
           "anyOf": [
             {
@@ -111,6 +131,8 @@
         "properties",
         "select",
         "token_env",
+        "token",
+        "split",
         "sha256",
         "extract",
         "bin"
@@ -405,7 +427,7 @@
           "type": "array"
         },
         "providers": {
-          "description": "Credential providers to try, in order: env, keyring, gopass, vault or prompt.",
+          "description": "Credential providers to try, in order. Default: env, keyring, gopass, vault, prompt; on Windows env, vault, keyring, gopass, prompt.",
           "items": {
             "enum": [
               "env",
@@ -439,6 +461,25 @@
           "default": null,
           "description": "Location of this credential in the gopass store."
         },
+        "user_field": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Field holding the account name. Outside CX it is the user running PTK (lowercase); in CX it comes from the env provider.",
+          "title": "User Field"
+        },
+        "remember": {
+          "default": true,
+          "description": "Store values entered at the prompt in the first writable provider (by default the encrypted vault on Windows, gopass or keyring on Linux). Set false to ask every run.",
+          "title": "Remember",
+          "type": "boolean"
+        },
         "test": {
           "anyOf": [
             {
@@ -462,6 +503,8 @@
         "providers",
         "env",
         "gopass",
+        "user_field",
+        "remember",
         "test"
       ]
     },
@@ -848,6 +891,12 @@
           "default": false,
           "description": "Show this job under GUIs. Run prerequisites normally, then launch the single final command in a detached process and let PTK exit. Success means the process started, not that the application finished. The final step cannot use timeout or retries.",
           "title": "Gui",
+          "type": "boolean"
+        },
+        "variant_independent": {
+          "default": false,
+          "description": "The job does not depend on the selected variant. Editors offer no variant selection and run it without --variant, so the project default variant provides its paths.",
+          "title": "Variant Independent",
           "type": "boolean"
         },
         "when": {
@@ -1378,6 +1427,7 @@
         "outputs",
         "cache",
         "gui",
+        "variant_independent",
         "when",
         "open_report",
         "version_dependencies",
@@ -2588,7 +2638,7 @@
             }
           ],
           "default": null,
-          "description": "Accepted tool version range, for example >=3.28,<4.",
+          "description": "Accepted tool version range, for example >=3.28,<4. Not used for Toolbase on Windows.",
           "title": "Version"
         },
         "check": {
@@ -2601,7 +2651,7 @@
             }
           ],
           "default": null,
-          "description": "Command that prints the installed tool version.",
+          "description": "Command that prints the installed tool version. Not used for Toolbase on Windows.",
           "title": "Check"
         },
         "version_regex": {

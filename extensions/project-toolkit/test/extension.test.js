@@ -116,7 +116,7 @@ test("GUI jobs have their own branch and keep job variants, parameters and saved
     assert.equal(item.iconPath.id, "window");
     assert.equal(item.iconPath.color.id, "terminal.ansiCyan");
   }
-  assert.equal(node.contextValue, "job-report");
+  assert.equal(node.contextValue, "gui");
   await h.command("run", node);
   assert.deepEqual(h.tasks[0].execution.args, ["--variant", "small", "run", "viewer"]);
   assert.equal(h.tasks[0].definition.kind, "job");
@@ -408,9 +408,7 @@ test("report permissions and capability checks apply to palette commands", async
   const h = harness(t, [doc]);
   await h.controller.ready();
   await h.command("openReport", h.target());
-  await h.command("validate", h.target());
-  assert.equal(h.tasks.length, 1);
-  assert.equal(h.tasks[0].definition.kind, "validate");
+  assert.equal(h.tasks.length, 0);
   assert.equal(h.errors.length, 1);
 });
 
@@ -499,7 +497,6 @@ test("every task entry point uses the non-syncing uv launcher, including help an
     assert.deepEqual(restored.execution.args, task.execution.args);
   }
   await h.command("showVariant", { ...h.target(), name: "large" });
-  await h.command("validate", h.target());
   for (const task of [...h.tasks, ...await h.api.taskProvider.provideTasks()]) {
     assert.deepEqual(task.execution.args.slice(0, 3), ["run", "--no-sync", "ptk"]);
   }
@@ -516,6 +513,31 @@ test("job actions expose icons with tooltip titles in the sidebar", () => {
   }
 });
 
+test("GUI items offer only run and help; variant selection lives in the tree", () => {
+  const menus = require("../package.json").contributes.menus["view/item/context"];
+  const shown = viewItem => menus.filter(entry => new RegExp(entry.when.match(/viewItem =~ \/(.*)\//)?.[1] ?? "$^").test(viewItem) ||
+    entry.when.includes(`viewItem == ${viewItem}`)).map(entry => entry.command.replace("project-toolkit.", "")).sort();
+  assert.deepEqual(shown("gui"), ["run", "showHelp"]);
+  assert.ok(!menus.some(entry => entry.command === "project-toolkit.selectVariant"));
+  assert.ok(shown("job-report").includes("openReport"));
+});
+
+test("variant-independent jobs have no variant tree and run without --variant", async t => {
+  const doc = inventory();
+  doc.projects[0].jobs[0].variant_independent = true;
+  const h = harness(t, [doc]);
+  await h.controller.ready();
+  const project = h.controller.provider.getChildren()[0].children[0];
+  const node = project.children.find(item => item.label === "Jobs").children[0];
+  assert.deepEqual(node.children, []);
+  assert.equal(h.controller.provider.getTreeItem(node).description, "");
+  await h.command("run", node);
+  assert.deepEqual(h.tasks[0].execution.args, ["run", "build"]);
+  const builtins = project.children.find(item => item.label === "Built-in commands");
+  assert.equal(h.controller.provider.getTreeItem(builtins).state, h.api.TreeItemCollapsibleState.Collapsed);
+  assert.deepEqual(h.errors, []);
+});
+
 test("tree omits duplicate run and report commands in repositories and workspaces", async t => {
   const doc = inventory();
   doc.mode = "workspace";
@@ -525,11 +547,11 @@ test("tree omits duplicate run and report commands in repositories and workspace
   await h.controller.ready();
   const root = h.controller.provider.getChildren()[0];
   const project = root.children.find(node => node.project);
-  for (const owner of [root, project]) {
-    const builtins = owner.children.find(node => node.label === "Built-in commands");
-    assert.deepEqual(builtins.children.map(node => node.label), ["CLI help", "help", "validate", "workflow", "self-service", "maintainer"]);
-    assert.deepEqual(builtins.children.find(node => node.label === "workflow").children.map(node => node.label), ["list", "show"]);
-  }
+  // The VMR folder has no Built-in commands of its own; each member repository keeps them.
+  assert.ok(!root.children.some(node => node.label === "Built-in commands"));
+  const builtins = project.children.find(node => node.label === "Built-in commands");
+  assert.deepEqual(builtins.children.map(node => node.label), ["CLI help", "help", "validate", "workflow", "self-service", "maintainer"]);
+  assert.deepEqual(builtins.children.find(node => node.label === "workflow").children.map(node => node.label), ["list", "show"]);
   for (const label of ["Jobs", "Workflows"]) {
     const node = project.children.find(node => node.label === label).children[0];
     assert.equal(node.contextValue, `${node.kind}-report`);
@@ -735,18 +757,15 @@ test("parameters changed while the form is open are validated before launch", as
 });
 
 
-test("configuration files and validation remain available after an invalid save breaks discovery", async t => {
+test("the last known project stays available after an invalid save breaks discovery", async t => {
   const h = harness(t);
   await h.controller.ready();
-  const file = h.target().project.config_files[0];
   core.readInventory = async () => { throw new Error("invalid configuration"); };
   await h.controller.refresh();
   await h.controller.refresh();
   const warning = h.controller.provider.getChildren()[0];
-  assert.ok(warning.children.some(node => node.label === "Validate configuration"));
-  await h.editorActions.validate({ fsPath: file });
-  assert.deepEqual(h.tasks[0].execution.args.slice(-1), ["validate"]);
-  assert.equal(h.tasks[0].execution.options.cwd, h.target().project.invocation.cwd);
+  assert.ok(!warning.children.some(node => node.label === "Validate configuration"));
+  assert.equal(warning.children[0].description, "configuration error");
 });
 
 
@@ -771,24 +790,23 @@ test("jobs and workflows select variants independently with no Variants group", 
   assert.match(groups.find(node => node.label === "Jobs").children[0].description, /large/);
 });
 
-test("validation on an empty workspace offers init using an explicit config directory", async t => {
+test("an empty workspace offers init using an explicit config directory", async t => {
   const doc = inventory(); doc.projects = [];
   const h = harness(t, [doc]);
   await h.controller.ready();
-  h.picks.push(actions => actions[0]); h.inputs.push("configuration");
-  await h.command("validate");
-  assert.ok(h.logs.some(message => /No PTK project found/.test(message)));
+  h.inputs.push("configuration");
+  await h.command("init");
   assert.deepEqual(h.tasks[0].execution.args, ["init", "--config-dir", "configuration", "--", doc.root]);
+  assert.deepEqual(h.controller.provider.getChildren(), []);
 });
 
-test("initial invalid project exposes diagnostics and validation without prior inventory", async t => {
+test("initial invalid project exposes diagnostics without prior inventory", async t => {
   const doc = inventory(); doc.projects[0].error = "invalid event route";
   doc.projects[0].diagnostics = [{ file: doc.projects[0].entry_file, line: 4, message: "invalid event route" }];
   const h = harness(t, [doc]); await h.controller.ready();
   const node = h.controller.provider.getChildren()[0].children[0];
   assert.equal(node.description, "configuration error");
-  await h.command("validate", node);
-  assert.equal(h.tasks[0].definition.kind, "validate");
+  assert.equal(node.children[0].label, "invalid event route");
 });
 
 
