@@ -42,7 +42,7 @@ def valid_revision(value: str) -> str:
         value,
     ):
         raise ValueError(
-            "revision must be a full commit hash or version tag (for example v2.4.0); moving branches are unsupported"
+            "revision must be a full commit hash or version tag (for example v2.4.0 or v26.45.00.01); moving branches are unsupported"
         )
     return value
 

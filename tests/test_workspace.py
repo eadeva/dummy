@@ -125,6 +125,10 @@ def test_commands_inside_a_member_need_no_alias(tmp_path, monkeypatch):
             result = runner.invoke(cli, args)
             assert result.exit_code == 0, (cwd, args, result.output)
     assert "firmware" in runner.invoke(cli, ["build"]).output
+    tools = runner.invoke(cli, ["self-service", "tools", "--help"])
+    assert tools.exit_code == 0 and "--job" in tools.output, tools.output
+    shared = runner.invoke(cli, ["self-service", "--help"])
+    assert "install tools under a repository" in shared.output, shared.output
 
 
 def test_vmr_permissions_are_per_repository(tmp_path, monkeypatch):

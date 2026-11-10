@@ -152,8 +152,9 @@ the conflict explicitly. There is no force overwrite flag.
 The first synchronization resolves a version tag to a commit; subsequent syncs
 keep that commit even if the tag moves. Change the revision explicitly to upgrade.
 A source/revision change requires a full sync, not a selected group. Branch names
-are rejected. Full 40/64-character hashes and version tags such as ``v2.4.0`` are
-supported. Upgrading PTk does not change external bases.
+are rejected. Full 40/64-character hashes and version tags with two to four
+numeric parts, an optional ``v`` prefix and an optional ``-``/``+`` suffix (such as
+``v2.4.0`` or ``v26.45.00.01``) are supported. Upgrading PTk does not change external bases.
 
 Constraints
 -----------

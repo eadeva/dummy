@@ -313,8 +313,10 @@ retains its existing spelling.
 Inside a VMR member repository the alias is
 implied: ``ptk maintainer sync configs`` or ``ptk build`` act on that member and use
 its maintainer list. Workspace workflows (``workflows/NAME.ptk.yml`` at the VMR
-root), ``ALIAS/...`` references, other aliases, ``init``, ``describe`` and
-``self-service`` keep their workspace meaning there. Offline skills and examples
+root), ``ALIAS/...`` references, other aliases, ``init``, ``describe`` and the
+workspace's own ``self-service`` commands (``completion``, ``extension``, ``doctor``
+and ``creds``) keep their workspace meaning there; other ``self-service`` commands,
+such as ``self-service tools``, act on the member. Offline skills and examples
 are installed with ``ptk maintainer sync agent``; see :doc:`/guides/editor`.
 
 GitHub template generation

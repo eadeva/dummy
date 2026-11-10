@@ -14,6 +14,9 @@ from .jobs import ProjectGroup
 from .state import CliState, state_of
 from .workspace_commands import RESERVED, build_commands
 
+# Self-service commands the workspace provides itself; others belong to a member.
+WORKSPACE_SELF_SERVICE = {"completion", "extension", "doctor", "creds"}
+
 
 class RepositoryGroup(ProjectGroup):
     repository_boundary = True
@@ -69,7 +72,15 @@ class WorkspaceGroup(ProjectGroup):
             not args
             or args[0].startswith("-")
             or "/" in args[0]
-            or args[0] in {"init", "describe", "self-service"}
+            or args[0] in {"init", "describe"}
+            or (
+                args[0] == "self-service"
+                and (
+                    len(args) < 2
+                    or args[1].startswith("-")
+                    or args[1] in WORKSPACE_SELF_SERVICE
+                )
+            )
             or ctx.resilient_parsing
             or "vmr_repositories" in ctx.meta
         ):
