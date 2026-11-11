@@ -14,7 +14,12 @@ import yaml
 
 from ptk.adapters import github_actions as actions
 from ptk.domain.workflows import WorkflowSpec
-from ptk.drivers.cli.github_workflows import render_workflow
+from ptk.drivers.cli.github_workflows import (
+    MARKER,
+    CxSettings,
+    render_job,
+    render_workflow,
+)
 from tests.project_files import write_project
 from tests.test_matrix_export import invoke
 from tests.test_matrix_export import project as matrix_project
@@ -218,41 +223,149 @@ def spec():
     )
 
 
-def test_generated_workflow_has_setup_needs_docker_and_actions():
-    text = render_workflow(
-        "verify", spec(), action_repository="eadeva/dummy", action_ref="v1"
+def settings(vmr=False):
+    checkout = (
+        {"manifest-url": "https://example.invalid/manifest.git", "app-id": "1400"}
+        if vmr
+        else None
     )
-    data = yaml.safe_load(text)
+    return CxSettings(
+        runner_group="linux",
+        image="registry.example.invalid/build:1",
+        login="robot@example.invalid",
+        token_secret="FIRMWARE_ROBOT_ARTIFACTORY_TOKEN",
+        pmt_repository="XC-CE/pmt",
+        pmt_version="v26.45.00",
+        checkout=checkout,
+        private_key_secret="APP_KEY" if vmr else None,
+        vmr=vmr,
+    )
+
+
+def render(workflow, vmr=False):
+    return yaml.safe_load(
+        render_workflow(
+            "verify",
+            workflow,
+            settings(vmr),
+            job_files={
+                key: f"call-{key.replace(':', '-')}.yml" for key in workflow.jobs
+            },
+            env={},
+            optional=set(),
+        )
+    )
+
+
+def test_generated_workflow_calls_one_job_workflow_per_entry():
+    data = render(spec())
     assert set(data["on"]) == {"workflow_call"}
-    assert "maintainer matrix --workflow" in data["jobs"]["setup"]["steps"][-1]["run"]
-    assert data["jobs"]["job_build"]["needs"] == ["setup"]
-    assert data["jobs"]["job_test"]["needs"] == ["setup", "job_build"]
-    steps = data["jobs"]["job_test"]["steps"]
-    assert [s.get("uses", "").split("/")[-1].split("@")[0] for s in steps] == [
-        "checkout",
-        "ptk-download",
-        "ptk-run-job",
-        "ptk-upload",
-    ]
-    assert steps[1]["with"]["working-directory"] == "."
-    assert all("container" in job for job in data["jobs"].values())
-    assert "&id" not in text
-
-
-def test_vmr_template_has_only_checkout_todos():
-    text = render_workflow(
-        "verify", spec(), action_repository="eadeva/dummy", action_ref="v1", vmr=True
+    setup = data["jobs"]["setup"]
+    assert "maintainer matrix --workflow" in setup["steps"][-1]["run"]
+    assert setup["runs-on"] == {"group": "linux"}
+    assert setup["container"]["credentials"]["password"] == (
+        "${{ secrets.FIRMWARE_ROBOT_ARTIFACTORY_TOKEN }}"
     )
-    assert "actions/checkout" not in text
+    assert setup["steps"][0]["uses"] == (
+        "XC-CE/pmt/.github/actions/checkout-or-repo-init@v26.45.00"
+    )
+    build, test = data["jobs"]["job_build"], data["jobs"]["job_test"]
+    assert build["needs"] == ["setup"]
+    assert test["needs"] == ["setup", "job_build"]
+    assert build["uses"] == "./.github/workflows/call-build.yml"
+    assert build["secrets"] == "inherit"
+    assert build["with"]["matrix"] == "${{ needs.setup.outputs.matrix_job_build }}"
+    assert data["on"]["workflow_call"]["secrets"] == {
+        "FIRMWARE_ROBOT_ARTIFACTORY_TOKEN": {"required": True}
+    }
+
+
+def test_job_workflow_runs_ptk_between_ptk_transfers():
+    text = render_job(
+        "build",
+        settings(),
+        {"FIRMWARE_ROBOT_FOSSID_TOKEN": "${{ secrets.FIRMWARE_ROBOT_FOSSID_TOKEN }}"},
+        {"FIRMWARE_ROBOT_FOSSID_TOKEN"},
+    )
+    assert text.startswith(MARKER) and "&id" not in text
     data = yaml.safe_load(text)
-    for job in data["jobs"].values():
-        assert job["steps"][0]["name"] == "TODO: VMR checkout"
-        assert "exit 1" in job["steps"][0]["run"]
+    job = data["jobs"]["run"]
+    assert job["strategy"]["matrix"] == "${{ fromJSON(inputs.matrix) }}"
+    names = [step["name"] for step in job["steps"]]
+    assert names == [
+        "Checkout",
+        "Trust the checkout",
+        "Download producer outputs",
+        "Run PTk job",
+        "Upload declared outputs",
+        "Enforce required output contract",
+    ]
+    steps = {step["name"]: step for step in job["steps"]}
+    download, upload = (
+        steps["Download producer outputs"],
+        steps["Upload declared outputs"],
+    )
+    assert "ptk maintainer cx download" in download["run"]
+    assert download["if"] == "${{ toJSON(matrix.producers) != '[]' }}"
+    assert "ptk maintainer cx upload" in upload["run"]
+    assert upload["if"] == "${{ !cancelled() }}"
+    for step in (download, upload):
+        assert step["env"]["PTK_ARTIFACT_USER"] == "robot@example.invalid"
+        assert step["env"]["PTK_ARTIFACT_TOKEN"] == (
+            "${{ secrets.FIRMWARE_ROBOT_ARTIFACTORY_TOKEN }}"
+        )
+    run = steps["Run PTk job"]
+    assert run["env"]["FIRMWARE_ROBOT_FOSSID_TOKEN"].startswith("${{ secrets.")
+    assert run["continue-on-error"] == "${{ inputs.continue-on-error }}"
+    # JSON and secrets reach the shell through env, never through the script text.
+    assert all("${{" not in step.get("run", "") for step in job["steps"])
+    assert data["on"]["workflow_call"]["secrets"] == {
+        "FIRMWARE_ROBOT_ARTIFACTORY_TOKEN": {"required": True},
+        "FIRMWARE_ROBOT_FOSSID_TOKEN": {"required": False},
+    }
+
+
+def test_custom_checkout_replaces_the_pmt_checkout():
+    from dataclasses import replace
+
+    custom = {"uses": "org/repo/.github/actions/repo-init@develop", "with": {"a": "b"}}
+    rendered = yaml.safe_load(
+        render_job(
+            "build", replace(settings(), vmr=True, custom_checkout=custom), {}, set()
+        )
+    )
+    assert rendered["jobs"]["run"]["steps"][0] == {"name": "Checkout", **custom}
+    assert "checkout-ref" in rendered["on"]["workflow_call"]["inputs"]
+
+
+def test_vmr_checkout_uses_repo_init_with_the_github_app():
+    data = render(spec(), vmr=True)
+    checkout = data["jobs"]["setup"]["steps"][0]
+    assert checkout["with"]["manifest-url"] == "https://example.invalid/manifest.git"
+    assert checkout["with"]["app-id"] == "1400"
+    inputs = data["on"]["workflow_call"]["inputs"]
+    assert {"manifest-branch", "checkout-ref"} <= set(inputs)
+    assert data["jobs"]["job_build"]["with"]["checkout-ref"] == (
+        "${{ inputs.checkout-ref }}"
+    )
+    assert data["on"]["workflow_call"]["secrets"]["APP_KEY"] == {"required": True}
 
 
 def configure_workflow(project):
     root, model = project
     model["jobs"]["test"].pop("when")
+    model["jobs"]["test"]["steps"]["compile"]["secrets"] = {"TOKEN": "fossid.token"}
+    model["credentials"] = {
+        "artifactory": {"fields": ["user", "token"], "user_field": "user"},
+        "fossid": {"fields": ["token"], "optional": True},
+    }
+    model["cx"] = {
+        "technical_user": "robot",
+        "runner_group": "linux",
+        "image": "registry.example.invalid/build:1",
+        "artifactory_credential": "artifactory",
+        "pmt": {"version": "v26.45.00"},
+    }
     model["workflows"] = {
         "verify": {
             "jobs": {
@@ -289,15 +402,59 @@ def test_matrix_exports_dependencies_for_each_variant(project):
     assert result.exit_code == 0 and "matrix_job_build=" in result.output
 
 
-def test_generation_never_overwrites_existing_workflow(project):
+def test_generation_replaces_only_marked_files_and_backs_up_on_request(project):
     root = configure_workflow(project)
     result = invoke(root, "maintainer", "gen-workflows", "verify")
     assert result.exit_code == 0, result.output
-    path = root / ".github/workflows/ptk-verify.yml"
-    path.write_text("custom workflow")
+    folder = root / ".github/workflows"
+    assert {p.name for p in folder.iterdir()} == {
+        "call-verify.yml",
+        "call-build.yml",
+        "call-test.yml",
+    }
+    test = yaml.safe_load((folder / "call-test.yml").read_text())
+    run = next(s for s in test["jobs"]["run"]["steps"] if s["name"] == "Run PTk job")
+    assert run["env"]["FIRMWARE_ROBOT_FOSSID_TOKEN"] == (
+        "${{ secrets.FIRMWARE_ROBOT_FOSSID_TOKEN }}"
+    )
+    assert test["jobs"]["run"]["container"]["credentials"]["password"] == (
+        "${{ secrets.FIRMWARE_ROBOT_ARTIFACTORY_TOKEN }}"
+    )
+    (folder / "call-build.yml").write_text("custom workflow")
     result = invoke(root, "maintainer", "gen-workflows", "verify")
     assert result.exit_code == 0 and "Warning:" in result.output
-    assert path.read_text() == "custom workflow"
+    assert "Unchanged" in result.output
+    assert (folder / "call-build.yml").read_text() == "custom workflow"
+    result = invoke(root, "maintainer", "gen-workflows", "verify", "--replace-unmarked")
+    assert result.exit_code == 0, result.output
+    [backup] = (root / ".github/workflows_backup").iterdir()
+    assert (backup / "call-build.yml").read_text() == "custom workflow"
+    assert (folder / "call-build.yml").read_text().startswith(MARKER)
+
+
+def test_yaml_twin_of_a_generated_file_is_backed_up_and_replaced(tmp_path):
+    from ptk.drivers.cli.github_workflows import _write
+
+    twin = tmp_path / "workflows/call-sbom.yaml"
+    twin.parent.mkdir()
+    twin.write_text("hand-written")
+    backup = tmp_path / "workflows_backup/now"
+    _write(twin.with_suffix(".yml"), "new", replace_unmarked=False, backup=backup)
+    assert twin.read_text() == "hand-written"
+    _write(twin.with_suffix(".yml"), "new", replace_unmarked=True, backup=backup)
+    assert (
+        not twin.exists() and (backup / "call-sbom.yaml").read_text() == "hand-written"
+    )
+    assert twin.with_suffix(".yml").read_text() == "new"
+
+
+def test_generation_requires_cx_configuration(project):
+    root = configure_workflow(project)
+    model = project[1]
+    model.pop("cx")
+    write_project(root / ".main.ptk.yml", model)
+    result = invoke(root, "maintainer", "gen-workflows", "verify")
+    assert result.exit_code != 0 and "cx.ptk.yml" in result.output
 
 
 def test_generation_denied_in_cx_for_nonmaintainer(project):
@@ -348,11 +505,18 @@ def test_real_verify_configuration_generates_callable_workflow(tmp_path):
     source = Path(__file__).resolve().parents[1]
     shutil.copy(source / ".main.ptk.yml", tmp_path)
     shutil.copytree(source / "config", tmp_path / "config")
+    (tmp_path / "config/ptk/credentials.ptk.yml").write_text(
+        "artifactory:\n  fields: [token]\n"
+    )
+    (tmp_path / "config/ptk/cx.ptk.yml").write_text(
+        "technical_user: robot\nrunner_group: linux\nimage: registry.example.invalid/ptk:1\n"
+        "artifactory_credential: artifactory\npmt: {version: v26.45.00}\n"
+    )
     grant_maintainer(tmp_path)
     result = invoke(tmp_path, "maintainer", "gen-workflows", "verify")
     assert result.exit_code == 0, result.output
     document = yaml.safe_load(
-        (tmp_path / ".github/workflows/ptk-verify.yml").read_text()
+        (tmp_path / ".github/workflows/call-verify.yml").read_text()
     )
     assert document["jobs"]["job_package"]["needs"] == [
         "setup",
@@ -411,23 +575,36 @@ def test_empty_output_set_publishes_manifest(artifacts, tmp_path):
     assert actions.download([row], tmp_path, "run1", store) == []
 
 
-def test_vmr_detection_replaces_normal_checkout(tmp_path):
+def test_vmr_member_needs_cx_vmr_checkout(tmp_path):
     from tests.conftest import grant_maintainer
     from tests.workflows.test_cli import repository
 
     (tmp_path / ".main.ptk.yml").write_text("virtual_monorepo: true\nmembers: [app]\n")
     repository(tmp_path / "app", workflows={"verify": {"jobs": {"build": {}}}})
+    config = next((tmp_path / "app").rglob("project.ptk.yml")).parent
+    (config / "credentials.ptk.yml").write_text("artifactory:\n  fields: [token]\n")
+    cx = (
+        "technical_user: robot\nrunner_group: linux\nimage: registry.example.invalid/b:1\n"
+        "artifactory_credential: artifactory\npmt: {version: v26.45.00}\n"
+    )
+    (config / "cx.ptk.yml").write_text(cx)
     grant_maintainer(tmp_path)
     grant_maintainer(tmp_path / "app")
     result = invoke(tmp_path, "maintainer", "gen-workflows", "app/verify")
+    assert result.exit_code != 0 and "cx.vmr" in result.output
+    (config / "cx.ptk.yml").write_text(
+        cx
+        + "vmr:\n  manifest_url: https://example.invalid/manifest.git\n"
+        + "  app_id: 1400\n  private_key: APP_KEY\n"
+    )
+    result = invoke(tmp_path, "maintainer", "gen-workflows", "app/verify")
     assert result.exit_code == 0, result.output
-    text = (tmp_path / "app/.github/workflows/ptk-verify.yml").read_text()
-    assert "VMR checkout" in text and "actions/checkout" not in text
-    assert (
-        yaml.safe_load(text)["on"]["workflow_call"]["inputs"]["project-directory"][
-            "default"
-        ]
-        == "app"
+    data = yaml.safe_load(
+        (tmp_path / "app/.github/workflows/call-verify.yml").read_text()
+    )
+    assert data["jobs"]["setup"]["steps"][0]["with"]["app-id"] == "1400"
+    assert data["on"]["workflow_call"]["inputs"]["project-directory"]["default"] == (
+        "app"
     )
 
 
@@ -548,35 +725,179 @@ def test_invalid_output_contract_cannot_publish_even_available_files(artifacts):
 
 
 def test_generated_jobs_remain_defined_and_guard_empty_variant_matrices():
-    document = yaml.safe_load(
-        render_workflow(
-            "verify", spec(), action_repository="eadeva/dummy", action_ref="v1"
-        )
-    )
+    document = render(spec())
     assert set(document["jobs"]) == {"setup", "job_build", "job_test"}
     for name in ("job_build", "job_test"):
         assert f"has_jobs_{name}" in document["jobs"]["setup"]["outputs"]
         assert f"has_jobs_{name} == 'true'" in document["jobs"][name]["if"]
-        assert "fromJSON" in document["jobs"][name]["strategy"]["matrix"]
     assert "needs.job_build.result == 'success'" in document["jobs"]["job_test"]["if"]
 
 
-def test_tolerated_job_failure_does_not_tolerate_output_contract_failure():
+def test_local_needs_are_not_github_dependencies():
+    workflow = WorkflowSpec.model_validate(
+        {"jobs": {"build": {}, "sbom": {"local_needs": "build"}}}
+    )
+    document = render(workflow)
+    assert document["jobs"]["job_sbom"]["needs"] == ["setup"]
+    assert "job_build" not in document["jobs"]["job_sbom"]["if"]
+
+
+def test_tolerated_job_failure_is_passed_to_the_job_workflow():
     workflow = spec()
     workflow.jobs["build"].continue_on_error = True
-    document = yaml.safe_load(
-        render_workflow(
-            "verify", workflow, action_repository="eadeva/dummy", action_ref="v1"
-        )
-    )
-    job = document["jobs"]["job_build"]
-    assert "continue-on-error" not in job
-    run = next(step for step in job["steps"] if step.get("id") == "run")
-    assert run["continue-on-error"] is True
+    document = render(workflow)
+    assert document["jobs"]["job_build"]["with"]["continue-on-error"] is True
+    assert document["jobs"]["job_test"]["with"]["continue-on-error"] is False
+    job = yaml.safe_load(render_job("build", settings(), {}, set()))["jobs"]["run"]
     check = job["steps"][-1]
-    assert check["if"] == "${{ !cancelled() }}"
-    assert check["env"]["PTK_OUTPUTS_VALID"] == "${{ steps.run.outputs.outputs-valid }}"
+    assert check["if"] == "${{ !cancelled() && inputs.continue-on-error }}"
+    assert check["env"]["PTK_OUTPUTS_VALID"] == (
+        "${{ steps.upload.outputs.outputs-valid }}"
+    )
     assert "exit 1" in check["run"]
+
+
+def named_row(row, name="build_debug_1.0.0+3.gabc"):
+    return {**row, "upload": {**row["upload"], "name": name}}
+
+
+def test_named_uploads_land_in_the_destination_with_readable_names(artifacts, tmp_path):
+    root, row, manifest, store = artifacts
+    row = named_row(row)
+    manifest["files"][0]["properties"] = {
+        **manifest["files"][0]["properties"],
+        "artifact_type": "binaries",
+    }
+    address = actions.upload(
+        manifest, root, row["upload"]["url"], row, "run1", {"quality": "ok"}, store
+    )
+    base = row["upload"]["url"]
+    assert address == base + "build_debug_1.0.0%2B3.gabc.ptk-manifest.json"
+    assert list(store.files) == [
+        base + "build_debug_1.0.0%2B3.gabc_binaries.bin",
+        base + "build_debug_1.0.0%2B3.gabc_symbols.zip",
+        address,
+    ]
+    first = store.properties[base + "build_debug_1.0.0%2B3.gabc_binaries.bin"]
+    assert first["artifact_type"] == "binaries" and first["quality"] == "ok"
+    consumer = tmp_path / "consumer"
+    consumer.mkdir()
+    assert actions.download([row], consumer, "run1", store) == [
+        "dist/app.bin",
+        "symbols",
+    ]
+    assert (consumer / "symbols/run.sh").is_file()
+
+
+def test_single_named_output_keeps_the_plain_name(artifacts):
+    root, row, manifest, store = artifacts
+    manifest["files"] = manifest["files"][1:]
+    row = named_row(row)
+    actions.upload(manifest, root, row["upload"]["url"], row, "run1", {}, store)
+    assert row["upload"]["url"] + "build_debug_1.0.0%2B3.gabc.zip" in store.files
+
+
+def test_named_download_rejects_foreign_files(artifacts, tmp_path):
+    root, row, manifest, store = artifacts
+    row = named_row(row)
+    address = actions.upload(
+        manifest, root, row["upload"]["url"], row, "run1", {}, store
+    )
+    document = json.loads(store.files[address])
+    document["files"][0]["remote_path"] = "other_job.zip"
+    store.files[address] = json.dumps(document).encode()
+    with pytest.raises(ValueError, match="escapes"):
+        actions.download([row], tmp_path, "run1", store)
+
+
+def test_nested_output_of_one_producer_is_restored_once(artifacts, tmp_path):
+    root, row, manifest, store = artifacts
+    nested = {**manifest["files"][1], "relative_path": "symbols/empty"}
+    nested["path"] = str(root / "symbols/empty")
+    manifest["files"].append(nested)
+    row = named_row(row)
+    actions.upload(manifest, root, row["upload"]["url"], row, "run1", {}, store)
+    consumer = tmp_path / "consumer"
+    consumer.mkdir()
+    assert actions.download([row], consumer, "run1", store) == [
+        "dist/app.bin",
+        "symbols",
+    ]
+    assert (consumer / "symbols/empty").is_dir()
+
+
+def test_named_destination_requires_one_path_segment():
+    from ptk.domain.artifacts import ArtifactoryStructure, destination
+
+    spec = ArtifactoryStructure.model_validate(
+        {
+            "url": "https://example.invalid/artifactory",
+            "repository": "ci",
+            "name": "${run.job}_${run.variant}",
+            "events": {
+                "push": {
+                    "branch": {"path": "dev"},
+                    "tag": {"path": "releases", "name": "${run.job}_release"},
+                }
+            },
+        }
+    )
+    values = {"run.job": "build", "run.variant": "debug"}
+
+    def scope(text):
+        for key, value in values.items():
+            text = text.replace("${" + key + "}", value)
+        return text
+
+    branch = destination(spec, scope, event="push", ref_type="branch", job="build")
+    tag = destination(spec, scope, event="push", ref_type="tag", job="build")
+    assert branch["name"] == "build_debug" and tag["name"] == "build_release"
+    values["run.variant"] = "a/b"
+    with pytest.raises(ValueError, match="one path segment"):
+        destination(spec, scope, event="push", ref_type="branch", job="build")
+
+
+def test_upload_command_reports_failed_job_without_outputs(project, tmp_path):
+    root = project[0]
+    output = invoke(
+        root,
+        "maintainer",
+        "cx",
+        "upload",
+        cx=True,
+        env={
+            "PTK_PRODUCER": "{}",
+            "PTK_GITHUB_RESULT": str(tmp_path / "missing.json"),
+            "PTK_JOB_OUTCOME": "failure",
+            "PTK_ARTIFACT_USER": "robot",
+            "PTK_ARTIFACT_TOKEN": "secret",
+            "GITHUB_REPOSITORY": "o/r",
+            "GITHUB_RUN_ID": "1",
+        },
+    )
+    assert output.exit_code == 0, output.output
+    assert output.output.splitlines() == ["outputs-valid=false"]
+
+
+def test_download_command_rejects_producer_outside_needs(project):
+    output = invoke(
+        project[0],
+        "maintainer",
+        "cx",
+        "download",
+        "--root",
+        str(project[0]),
+        cx=True,
+        env={
+            "PTK_PRODUCERS": '[{"invocation": "job_build"}]',
+            "PTK_NEEDS": '{"setup": {}}',
+            "PTK_ARTIFACT_USER": "robot",
+            "PTK_ARTIFACT_TOKEN": "secret",
+            "GITHUB_REPOSITORY": "o/r",
+            "GITHUB_RUN_ID": "1",
+        },
+    )
+    assert output.exit_code != 0 and "not declared" in output.output
 
 
 def test_qualified_workflow_keys_generate_distinct_portable_ids_and_matching_outputs():
@@ -589,18 +910,14 @@ def test_qualified_workflow_keys_generate_distinct_portable_ids_and_matching_out
             key: {} if i == 0 else {"needs": keys[i - 1]} for i, key in enumerate(keys)
         }
     )
-    rendered = yaml.safe_load(
-        render_workflow(
-            "verify", workflow, action_repository="eadeva/dummy", action_ref="v1"
-        )
-    )
+    rendered = render(workflow)
     for i, key in enumerate(keys):
         identity = workflow_job_id(key)
         job = rendered["jobs"][identity]
         assert job["name"] == key
         assert job["needs"] == ["setup", *([workflow_job_id(keys[i - 1])] if i else [])]
         assert f"matrix_{identity}" in rendered["jobs"]["setup"]["outputs"]
-        assert f"matrix_{identity}" in job["strategy"]["matrix"]
+        assert f"matrix_{identity}" in job["with"]["matrix"]
 
 
 @pytest.mark.parametrize(
@@ -633,6 +950,4 @@ def test_render_rechecks_ids_after_programmatic_workflow_mutation():
     workflow = WorkflowSpec(jobs={"a_job_b:c": {}})
     workflow.jobs["a:b_job_c"] = workflow.jobs["a_job_b:c"]
     with pytest.raises(ValueError, match="same generated ID"):
-        render_workflow(
-            "verify", workflow, action_repository="eadeva/dummy", action_ref="v1"
-        )
+        render(workflow)

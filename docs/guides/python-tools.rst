@@ -61,6 +61,46 @@ recognized script, without shell operators, and all commands with ``python``
 configured are split into arguments and run without a shell. Do not rely on
 pipes, redirection or shell expansion inside a Python-mode command.
 
+.. _python-version:
+
+Choose the Python version
+-------------------------
+
+Set the version once for the project in ``project.ptk.yml``::
+
+   python:
+     version: "3.12"
+     index: [company=https://artifacts.example.org/artifactory/api/pypi/python-virtual/simple/]
+     downloads: automatic
+
+A step can override it with ``python.version`` in any uv mode::
+
+   steps:
+     check:
+       python: {uvx: company-quality==1.4.0, version: "3.11"}
+       run: [company-quality, check]
+
+Versions are ``3.12``, ``3.12.4`` or specifiers such as ``>=3.11,<3.13``;
+configuration validation rejects other forms. PTk passes the effective version
+to uv as ``--python`` for standalone scripts, ``uvx``, ``project`` and ``venv``
+steps, and dry runs show it in the runtime description. ``interpreter: cli``
+always uses PTk's own Python: a step-level ``version`` is rejected there and the
+project default does not apply. Without any version, uv chooses an interpreter
+itself (a project's ``requires-python`` or a script's PEP 723 header still apply),
+which may be an unexpected installation on the machine.
+
+PTk does not search for interpreters itself. uv uses a matching installed Python
+(uv-managed, on PATH or, on Windows, registered with the ``py`` launcher). If none
+matches, uv downloads a managed CPython into its own cache, which needs network
+access (including proxy settings). Set ``downloads: never`` to forbid this; a
+missing version then fails the step with uv's error instead of downloading.
+PTk passes this policy as ``UV_PYTHON_DOWNLOADS``.
+
+``index`` entries (``name=url`` or ``url``) become ``UV_INDEX`` for every uv-mode
+step and for ``venv`` creation, so packages resolve from those indexes in addition
+to uv's default. Project ``python`` settings override the same variables from the
+step environment. Never put credentials into index URLs.
+
 Standalone scripts and inline dependencies
 ------------------------------------------
 
@@ -108,15 +148,15 @@ interpreter still selects that executable.
 Requirements and package environments
 -------------------------------------
 
-Declare requirement files, extra packages and an optional Python interpreter or
-version request::
+Declare requirement files and extra packages; the Python version comes from
+``python.version`` or the project default::
 
    steps:
      check:
        run: [tools/check.py]
        python:
+         version: "3.12"
          venv:
-           python: "3.12"
            requirements: [requirements-tools.txt]
            packages: [rich==13.9.4]
 
@@ -125,7 +165,8 @@ packages. PTk creates it with ``uv venv`` and installs declared dependencies wit
 ``uv pip install``. Scripts use that environment's interpreter; ordinary commands
 find its executables first on PATH. No shell activation is needed.
 
-Environments live under ``.ptk/venvs/<hash>``. The hash covers the Python request,
+Environments live under ``.ptk/venvs/<hash>``. The hash covers the effective Python
+version request,
 declared package requirements, and the paths and bytes of the listed requirements
 files. Changing only a file timestamp does not create another environment. Steps
 with matching declarations share it. A completed environment is reused without
@@ -302,7 +343,8 @@ Configure Artifactory as a Python index
 ---------------------------------------
 
 Publish wheels and/or source distributions to an Artifactory PyPI repository.
-Configure uv to use its Python simple-index endpoint, for example::
+Add its Python simple-index endpoint to the project ``python.index`` (see
+:ref:`above <python-version>`), or set uv's variables for a single step, for example::
 
    steps:
      quality:
@@ -319,10 +361,9 @@ PTk's artifact destination/download configuration does not configure uv's Python
 index automatically.
 
 For ``uvx`` command steps, uv receives the resolved command environment. The
-``python.venv`` setup currently uses the launcher environment before the command
-starts; configure index/authentication at launcher or user level for that mode.
-This distinction is existing behavior, not a promise that every step environment
-value participates in environment creation.
+``python.venv`` setup uses the launcher environment plus the project ``python``
+settings (``index`` and ``downloads``) before the command starts; step ``env``
+values do not participate in environment creation.
 
 Passing configuration and reporting results
 -------------------------------------------

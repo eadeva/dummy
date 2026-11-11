@@ -31,6 +31,7 @@ class CliState:
     clean: bool = False
     re_run: bool = False
     no_cache_ptk: bool = False
+    docker: bool | None = None
     _project: Project | None = field(default=None, repr=False)
     _project_error: PtkError | None = field(default=None, repr=False)
     _loaded: bool = field(default=False, repr=False)
@@ -68,6 +69,17 @@ class CliState:
             self._role = self.app.role(self.try_project())
         return self._role
 
+    def use_docker(self, project: Project) -> bool:
+        """--docker/--no-docker; default: on Linux outside a container when an image is configured."""
+        if self.docker is not None:
+            return self.docker
+        host = self.app.host
+        return (
+            project.config.docker is not None
+            and host.os_name() == "linux"
+            and not host.is_docker()
+        )
+
 
 def state_of(ctx: click.Context) -> CliState:
     """The CLI state; created from the root options if the root callback has not
@@ -91,6 +103,7 @@ def state_of(ctx: click.Context) -> CliState:
             clean=params.get("clean", False),
             re_run=params.get("re_run", False),
             no_cache_ptk=params.get("no_cache_ptk", False),
+            docker=params.get("docker"),
         )
     return root.obj
 

@@ -36,6 +36,7 @@ class RepositoryGroup(ProjectGroup):
             clean=parent_state.clean,
             re_run=parent_state.re_run,
             no_cache_ptk=parent_state.no_cache_ptk,
+            docker=parent_state.docker,
         )
         if parent_state.cx is not None and extra["obj"].role() != "maintainer":
             raise click.ClickException("--cx/--no-cx is a maintainer-only option")
@@ -72,7 +73,7 @@ class WorkspaceGroup(ProjectGroup):
             not args
             or args[0].startswith("-")
             or "/" in args[0]
-            or args[0] in {"init", "describe"}
+            or args[0] in {"init", "describe", "jobs"}
             or (
                 args[0] == "self-service"
                 and (
@@ -227,4 +228,26 @@ class WorkspaceGroup(ProjectGroup):
                     if commands
                 ]
             }
-        return click.RichGroup.format_help(self, ctx, formatter)
+        self.format_usage(ctx, formatter)
+        self.format_help_text(ctx, formatter)
+        formatter.write(vmr_panel(ctx))
+        self.format_options(ctx, formatter)
+        self.format_epilog(ctx, formatter)
+
+
+def vmr_panel(ctx):
+    from rich.panel import Panel
+    from rich.table import Table
+
+    from .workspace_commands import VMR_COMMANDS
+
+    table = Table.grid(padding=(0, 2))
+    for path, summary in VMR_COMMANDS:
+        if allowed(ctx, path.split()[0]):
+            table.add_row(f"[bold cyan]ptk {path}[/]", summary)
+    return Panel(
+        table,
+        title="VMR commands (run in every PTk repository)",
+        title_align="left",
+        border_style="dim",
+    )

@@ -157,6 +157,19 @@
           "title": "Base Path",
           "type": "string"
         },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "File name template of generated-workflow uploads, for example ${run.job}_${run.variant}_${version.current.value}. Files are stored directly in the destination as NAME[_ARTIFACT_TYPE].zip with NAME.ptk-manifest.json; omit for opaque ptk/<hash> folders.",
+          "title": "Name"
+        },
         "events": {
           "additionalProperties": {
             "$ref": "#/$defs/EventRoute"
@@ -191,6 +204,7 @@
         "url",
         "repository",
         "base_path",
+        "name",
         "events",
         "jobs"
       ]
@@ -399,19 +413,6 @@
     "CredentialSpec": {
       "additionalProperties": false,
       "properties": {
-        "namespace": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Credential storage scope. A VMR provides a default scope when this is omitted.",
-          "title": "Namespace"
-        },
         "description": {
           "default": "",
           "description": "Explanation of what the credential is used for.",
@@ -466,6 +467,12 @@
           "title": "Remember",
           "type": "boolean"
         },
+        "optional": {
+          "default": false,
+          "description": "When no provider supplies a value (for example in CX without the variable), leave the step's variables unset instead of failing. Locally the prompt still asks.",
+          "title": "Optional",
+          "type": "boolean"
+        },
         "test": {
           "anyOf": [
             {
@@ -483,14 +490,193 @@
       "title": "CredentialSpec",
       "type": "object",
       "x-ptk-field-order": [
-        "namespace",
         "description",
         "fields",
         "providers",
         "env",
         "user_field",
         "remember",
+        "optional",
         "test"
+      ]
+    },
+    "CxSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "technical_user": {
+          "description": "Technical user ID running CX jobs. Secret names follow <PROJECT>_<TECHNICAL_USER>_<CREDENTIAL>_<FIELD>.",
+          "pattern": "^[A-Za-z0-9]+$",
+          "title": "Technical User",
+          "type": "string"
+        },
+        "runner_group": {
+          "description": "GitHub runner group of generated jobs, for example ${{ vars.RUNNER_GROUP }}.",
+          "minLength": 1,
+          "title": "Runner Group",
+          "type": "string"
+        },
+        "image": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z0-9][A-Za-z0-9._/:@-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Container image of generated jobs; default: docker.image. The image must contain PTk.",
+          "title": "Image"
+        },
+        "artifactory_credential": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z][A-Za-z0-9_-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Credential whose token pulls the image and transfers artifacts; default: docker.credential. The login name is docker.login_user with {user} set to technical_user.",
+          "title": "Artifactory Credential"
+        },
+        "pmt": {
+          "$ref": "#/$defs/PmtSpec",
+          "description": "PMT actions used by generated workflows."
+        },
+        "checkout": {
+          "anyOf": [
+            {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Checkout step (uses/with) replacing the PMT checkout, for example a project-owned repo-init action. Values may use ${{ ... }} expressions and secrets.",
+          "title": "Checkout"
+        },
+        "vmr": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VmrCheckoutSpec"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Virtual monorepo checkout with git-repo. Required when the repository belongs to a virtual monorepo."
+        }
+      },
+      "required": [
+        "technical_user",
+        "runner_group",
+        "pmt"
+      ],
+      "title": "CxSpec",
+      "type": "object",
+      "x-ptk-field-order": [
+        "technical_user",
+        "runner_group",
+        "image",
+        "artifactory_credential",
+        "pmt",
+        "checkout",
+        "vmr"
+      ]
+    },
+    "DockerSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "image": {
+          "description": "Image reference used by ptk --docker, for example registry.example.com/team/build:1.0. The image must contain PTk.",
+          "pattern": "^[a-z0-9][A-Za-z0-9._/:@-]*$",
+          "title": "Image",
+          "type": "string"
+        },
+        "credential": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z][A-Za-z0-9_-]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Credential with user and token fields used for docker login to the image registry. Omit for public images or an existing login.",
+          "title": "Credential"
+        },
+        "login_user": {
+          "default": "{user}",
+          "description": "Registry login name; {user} is the credential's user, for example {user}@example.com when the registry expects e-mail logins.",
+          "minLength": 1,
+          "title": "Login User",
+          "type": "string"
+        },
+        "wsl_distro": {
+          "default": "Ubuntu-24.04",
+          "description": "WSL distribution running Docker Engine on Windows. PTk calls docker inside it; Docker Desktop is not used.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+          "title": "Wsl Distro",
+          "type": "string"
+        },
+        "workspace": {
+          "default": "sync",
+          "description": "Windows only. sync copies the repository to a mirror on the WSL disk with rsync (fast builds; _builds stays there); mount uses the repository through /mnt (slow file access). Linux always mounts the repository.",
+          "enum": [
+            "sync",
+            "mount"
+          ],
+          "title": "Workspace",
+          "type": "string"
+        },
+        "env": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Environment variables set in the container, for example proxy settings.",
+          "title": "Env",
+          "type": "object"
+        },
+        "keep": {
+          "description": "Names of host environment variables passed into the container. Values are never written to the command line.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Keep",
+          "type": "array"
+        },
+        "run_args": {
+          "description": "Extra docker run arguments, for example additional --volume options.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Run Args",
+          "type": "array"
+        }
+      },
+      "required": [
+        "image"
+      ],
+      "title": "DockerSpec",
+      "type": "object",
+      "x-ptk-field-order": [
+        "image",
+        "credential",
+        "login_user",
+        "wsl_distro",
+        "workspace",
+        "env",
+        "keep",
+        "run_args"
       ]
     },
     "DownloadSource": {
@@ -650,6 +836,19 @@
           "description": "Override the Artifactory repository for this event.",
           "title": "Repository"
         },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Override the file name template for this event.",
+          "title": "Name"
+        },
         "branch": {
           "anyOf": [
             {
@@ -680,6 +879,7 @@
       "x-ptk-field-order": [
         "path",
         "repository",
+        "name",
         "branch",
         "tag"
       ]
@@ -946,6 +1146,7 @@
                 "all_variants",
                 "args_for",
                 "clean",
+                "docker",
                 "dry_run",
                 "env",
                 "feature",
@@ -1007,6 +1208,12 @@
           "minimum": 1,
           "title": "Max Workers",
           "type": "integer"
+        },
+        "docker": {
+          "default": true,
+          "description": "Run this job in the project's Docker image when ptk --docker is used. False keeps it on the host, for example for Windows-only tools.",
+          "title": "Docker",
+          "type": "boolean"
         },
         "steps": {
           "additionalProperties": {
@@ -1233,7 +1440,7 @@
           "id": "python-venv",
           "group": "Python",
           "label": "Python environment (requirements / packages)",
-          "description": "Create and reuse a repository-local environment with uv. Add requirements files, packages and optionally a Python version under python.venv.",
+          "description": "Create and reuse a repository-local environment with uv. Add requirements files and packages under python.venv, and optionally python.version.",
           "requirements": "uv; dependency installation uses the launcher's index/authentication environment. Requirement file paths are repository-relative.",
           "constraints": "The environment key hashes declared requirement file contents and package/version requests, not transitive files or local package sources. It is separate from PTk's output cache.",
           "initial": {
@@ -1405,6 +1612,7 @@
         "requires_tools",
         "env",
         "max_workers",
+        "docker",
         "steps"
       ]
     },
@@ -1699,6 +1907,19 @@
           "default": null,
           "description": "Override the Artifactory repository for this route.",
           "title": "Repository"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Override the file name template for this route.",
+          "title": "Name"
         }
       },
       "required": [
@@ -1708,7 +1929,35 @@
       "type": "object",
       "x-ptk-field-order": [
         "path",
-        "repository"
+        "repository",
+        "name"
+      ]
+    },
+    "PmtSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "repository": {
+          "default": "XC-CE/pmt",
+          "description": "GitHub repository providing the checkout and Artifactory actions.",
+          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$",
+          "title": "Repository",
+          "type": "string"
+        },
+        "version": {
+          "description": "Tag or commit of the PMT actions used by generated workflows, for example v26.45.00.",
+          "pattern": "^[A-Za-z0-9_./-]+$",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "version"
+      ],
+      "title": "PmtSpec",
+      "type": "object",
+      "x-ptk-field-order": [
+        "repository",
+        "version"
       ]
     },
     "ProductLineSpec": {
@@ -1815,6 +2064,49 @@
         "components"
       ]
     },
+    "PythonDefaults": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Python version uv uses for every Python step without its own python.version, for example 3.12, 3.12.4 or >=3.11,<3.13. uv uses a matching installed interpreter or downloads one.",
+          "title": "Version"
+        },
+        "index": {
+          "description": "Extra package indexes for uv as name=url or url entries, passed to Python steps and environment creation as UV_INDEX.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Index",
+          "type": "array"
+        },
+        "downloads": {
+          "default": "automatic",
+          "description": "automatic lets uv download a missing Python version; never requires an installed interpreter and fails clearly otherwise (UV_PYTHON_DOWNLOADS).",
+          "enum": [
+            "automatic",
+            "never"
+          ],
+          "title": "Downloads",
+          "type": "string"
+        }
+      },
+      "title": "PythonDefaults",
+      "type": "object",
+      "x-ptk-field-order": [
+        "version",
+        "index",
+        "downloads"
+      ]
+    },
     "PythonSpec": {
       "additionalProperties": false,
       "properties": {
@@ -1849,7 +2141,7 @@
             }
           ],
           "default": null,
-          "description": "Create an isolated environment with the specified requirements, packages and Python version."
+          "description": "Create an isolated environment with the specified requirements and packages."
         },
         "project": {
           "anyOf": [
@@ -1885,6 +2177,19 @@
           "default": null,
           "description": "Use cli to run with PTk\u2019s own Python environment. Choose exactly one Python execution mode.",
           "title": "Interpreter"
+        },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Python version for this step, for example 3.12, 3.12.4 or >=3.11,<3.13; overrides the project python.version. uv uses a matching installed interpreter or downloads one. Not allowed with interpreter.",
+          "title": "Version"
         }
       },
       "title": "PythonSpec",
@@ -1919,7 +2224,7 @@
           "id": "python-venv",
           "group": "Python",
           "label": "Python environment (requirements / packages)",
-          "description": "Create and reuse a repository-local environment with uv. Add requirements files, packages and optionally a Python version under python.venv.",
+          "description": "Create and reuse a repository-local environment with uv. Add requirements files and packages under python.venv, and optionally python.version.",
           "requirements": "uv; dependency installation uses the launcher's index/authentication environment. Requirement file paths are repository-relative.",
           "constraints": "The environment key hashes declared requirement file contents and package/version requests, not transitive files or local package sources. It is separate from PTk's output cache.",
           "initial": {
@@ -1958,7 +2263,8 @@
         "venv",
         "project",
         "groups",
-        "interpreter"
+        "interpreter",
+        "version"
       ]
     },
     "RepositorySpec": {
@@ -2447,7 +2753,7 @@
           "id": "python-venv",
           "group": "Python",
           "label": "Python environment (requirements / packages)",
-          "description": "Create and reuse a repository-local environment with uv. Add requirements files, packages and optionally a Python version under python.venv.",
+          "description": "Create and reuse a repository-local environment with uv. Add requirements files and packages under python.venv, and optionally python.version.",
           "requirements": "uv; dependency installation uses the launcher's index/authentication environment. Requirement file paths are repository-relative.",
           "constraints": "The environment key hashes declared requirement file contents and package/version requests, not transitive files or local package sources. It is separate from PTk's output cache.",
           "initial": {
@@ -2936,27 +3242,13 @@
           },
           "title": "Packages",
           "type": "array"
-        },
-        "python": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Python interpreter or version requested for this environment.",
-          "title": "Python"
         }
       },
       "title": "VenvSpec",
       "type": "object",
       "x-ptk-field-order": [
         "requirements",
-        "packages",
-        "python"
+        "packages"
       ]
     },
     "VersionDependency": {
@@ -3254,6 +3546,75 @@
         "dependencies"
       ]
     },
+    "VmrCheckoutSpec": {
+      "additionalProperties": false,
+      "properties": {
+        "manifest_url": {
+          "description": "git-repo manifest repository of the virtual monorepo.",
+          "pattern": "^https://\\S+$",
+          "title": "Manifest Url",
+          "type": "string"
+        },
+        "manifest_name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Manifest file; default: the manifest's default.xml.",
+          "title": "Manifest Name"
+        },
+        "app_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
+          ],
+          "description": "GitHub App ID with read access to all repositories of the manifest.",
+          "title": "App Id"
+        },
+        "private_key": {
+          "description": "Name of the GitHub secret holding the GitHub App private key.",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "title": "Private Key",
+          "type": "string"
+        },
+        "owner": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Owner of the GitHub App installation; default: the repository owner.",
+          "title": "Owner"
+        }
+      },
+      "required": [
+        "manifest_url",
+        "app_id",
+        "private_key"
+      ],
+      "title": "VmrCheckoutSpec",
+      "type": "object",
+      "x-ptk-field-order": [
+        "manifest_url",
+        "manifest_name",
+        "app_id",
+        "private_key",
+        "owner"
+      ]
+    },
     "WorkflowJob": {
       "additionalProperties": false,
       "properties": {
@@ -3274,6 +3635,23 @@
           "description": "Job keys that must succeed before this job starts. Accepts one ID or a list. Omit for an immediately eligible job.",
           "title": "Needs"
         },
+        "local_needs": {
+          "anyOf": [
+            {
+              "pattern": "^(?:[a-z][a-z0-9_-]*:)?[a-z][a-z0-9_-]*$",
+              "type": "string"
+            },
+            {
+              "items": {
+                "pattern": "^(?:[a-z][a-z0-9_-]*:)?[a-z][a-z0-9_-]*$",
+                "type": "string"
+              },
+              "type": "array"
+            }
+          ],
+          "description": "Job keys that must finish (with any result) before this job starts in a local run, e.g. because both use the same build folder. No outputs are exchanged; generated GitHub workflows ignore them.",
+          "title": "Local Needs"
+        },
         "params": {
           "additionalProperties": true,
           "description": "Parameter values supplied to the called job.",
@@ -3292,6 +3670,7 @@
       "x-ptk-initial": {},
       "x-ptk-field-order": [
         "needs",
+        "local_needs",
         "params",
         "continue_on_error"
       ]
@@ -3475,6 +3854,34 @@
       "$ref": "#/$defs/EnvironmentSpec",
       "description": "Default environment isolation and PATH settings for job execution."
     },
+    "python": {
+      "$ref": "#/$defs/PythonDefaults",
+      "description": "Project-wide Python version, package indexes and download policy for Python steps."
+    },
+    "docker": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/DockerSpec"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "Docker image and settings for ptk --docker, which runs jobs inside the image (Windows: Docker Engine in WSL)."
+    },
+    "cx": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/CxSpec"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "GitHub CX settings used by ptk maintainer gen-workflows: technical user, runner, image, PMT actions and virtual monorepo checkout."
+    },
     "tools": {
       "additionalProperties": {
         "$ref": "#/$defs/ToolSpec"
@@ -3649,6 +4056,9 @@
     "vars",
     "param_defaults",
     "environment",
+    "python",
+    "docker",
+    "cx",
     "requires_tools",
     "tools",
     "credentials",
@@ -3685,6 +4095,9 @@
           "param_defaults": false,
           "requires_tools": false,
           "environment": false,
+          "python": false,
+          "docker": false,
+          "cx": false,
           "tools": false,
           "credentials": false,
           "variants": false,

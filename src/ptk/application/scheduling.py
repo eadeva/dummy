@@ -5,7 +5,9 @@ from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from ..domain.execution.model import Status
 
 
-def schedule(nodes, needs, run, skip, cancel, max_workers):
+def schedule(nodes, needs, run, skip, cancel, max_workers, after=None):
+    """``after`` only orders: those prerequisites must finish, with any result."""
+    after = after or {}
     pending = dict(nodes)
     completed = {}
     running = {}
@@ -20,7 +22,10 @@ def schedule(nodes, needs, run, skip, cancel, max_workers):
                 for name, node in list(pending.items()):
                     if cancel.is_set():
                         completed[name] = skip(node, Status.CANCELLED, "cancelled")
-                    elif not all(parent in completed for parent in needs[name]):
+                    elif not all(
+                        parent in completed
+                        for parent in (*needs[name], *after.get(name, ()))
+                    ):
                         continue
                     else:
                         blocked = [

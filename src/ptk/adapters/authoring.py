@@ -55,8 +55,12 @@ class AuthoringFiles:
         version: str,
         check: bool,
         configuration_readme: tuple[str, bytes] | None = None,
+        confirm=None,
     ) -> list[str]:
-        """Return changed paths; protect custom edits and unrelated .github files."""
+        """Return changed paths; protect custom edits and unrelated .github files.
+
+        ``confirm(paths)`` may accept overwriting locally changed or unowned files.
+        """
         root = root.resolve()
         github = root / ".github"
 
@@ -107,7 +111,7 @@ class AuthoringFiles:
                     raise ValueError("manifest cannot manage itself")
             except (OSError, ValueError, KeyError, TypeError) as exc:
                 raise PtkError(f"invalid PTk authoring manifest: {exc}") from None
-        changes, conflicts = [], []
+        changes, conflicts, blocked = [], [], False
         for name in sorted(set(files) | set(previous)):
             path = safe(name)
             current = path.read_bytes() if path.is_file() else None
@@ -118,7 +122,8 @@ class AuthoringFiles:
             if path.exists() and (
                 not path.is_file() or digest(current) != previous.get(name)
             ):
-                conflicts.append(name)
+                conflicts.append(".github/" + name)
+                blocked |= not path.is_file()
 
         def readme_path(name):
             relative = PurePosixPath(name)
@@ -183,11 +188,12 @@ class AuthoringFiles:
                     not path.is_file() or digest(current) != recorded
                 ):
                     conflicts.append(rel)
+                    blocked |= not path.is_file()
                 readme_changes.append((path, content))
             next_readme = {"path": name, "sha256": digest(value)}
-        if conflicts:
+        if conflicts and (blocked or check or not (confirm and confirm(conflicts))):
             raise PtkError(
-                "preserving locally changed or unowned authoring files; move or reconcile them before setup:\n  "
+                "preserving locally changed or unowned authoring files; move or reconcile them before setup, or use --force:\n  "
                 + "\n  ".join(conflicts)
             )
         content = manifest_content(files, version, next_readme)

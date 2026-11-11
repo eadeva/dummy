@@ -87,6 +87,15 @@ class CredentialService:
         key = self._key(ref)
         if key.ref in self._cache:
             return self._cache[key.ref]
+        try:
+            return self._resolve(key)
+        except PtkError:
+            if not self.spec(key.credential).optional:
+                raise
+            self._cache[key.ref] = ""
+            return ""
+
+    def _resolve(self, key: SecretKey) -> str:
         spec = self.spec(key.credential)
         notes: list[str] = []
         if key.field == spec.user_field:

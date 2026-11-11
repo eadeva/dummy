@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import re
+from graphlib import CycleError, TopologicalSorter
+from types import SimpleNamespace
 from typing import Annotated, Any, Literal
 
 from pydantic import (
@@ -33,6 +35,10 @@ class WorkflowJob(BaseModel):
         default_factory=list,
         description="Job keys that must succeed before this job starts. Accepts one ID or a list. Omit for an immediately eligible job.",
     )
+    local_needs: list[JobTarget] = Field(
+        default_factory=list,
+        description="Job keys that must finish (with any result) before this job starts in a local run, e.g. because both use the same build folder. No outputs are exchanged; generated GitHub workflows ignore them.",
+    )
     params: dict[str, Any] = Field(
         description="Parameter values supplied to the called job.", default_factory=dict
     )
@@ -42,18 +48,29 @@ class WorkflowJob(BaseModel):
     )
 
     @field_validator(
-        "needs", mode="before", json_schema_input_type=JobTarget | list[JobTarget]
+        "needs",
+        "local_needs",
+        mode="before",
+        json_schema_input_type=JobTarget | list[JobTarget],
     )
     @classmethod
     def _needs(cls, value):
         return [value] if isinstance(value, str) else value
 
-    @field_validator("needs")
+    @field_validator("needs", "local_needs")
     @classmethod
     def _unique(cls, value):
         if len(value) != len(set(value)):
             raise ValueError("needs must not repeat a job key")
         return value
+
+    @model_validator(mode="after")
+    def _disjoint(self):
+        if both := set(self.needs) & set(self.local_needs):
+            raise ValueError(
+                f"{sorted(both)} listed in needs and local_needs; keep one"
+            )
+        return self
 
 
 class WorkflowSpec(BaseModel):
@@ -85,6 +102,23 @@ class WorkflowSpec(BaseModel):
     @model_validator(mode="after")
     def _graph(self):
         validate_graph(self.jobs, "workflow job", identifier=TARGET)
+        for name, job in self.jobs.items():
+            for dependency in job.local_needs:
+                if dependency == name or dependency not in self.jobs:
+                    raise ValueError(
+                        f"workflow job {name!r} local_needs unknown or own invocation {dependency!r}"
+                    )
+        try:
+            tuple(
+                TopologicalSorter(
+                    {name: [*j.needs, *j.local_needs] for name, j in self.jobs.items()}
+                ).static_order()
+            )
+        except CycleError as exc:
+            raise ValueError(
+                "workflow job dependency cycle (needs and local_needs): "
+                + " -> ".join(exc.args[1])
+            ) from None
         self.validate_job_targets()
         return self
 
@@ -110,6 +144,15 @@ class WorkflowSpec(BaseModel):
 
     def ancestors(self):
         return ancestors(self.jobs)
+
+    def local_ancestors(self):
+        """Ordering of a local run: needs and local_needs together."""
+        return ancestors(
+            {
+                name: SimpleNamespace(needs=[*job.needs, *job.local_needs])
+                for name, job in self.jobs.items()
+            }
+        )
 
 
 class WorkflowFile(BaseModel):

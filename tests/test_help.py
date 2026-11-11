@@ -94,3 +94,72 @@ def test_help_without_project_still_lists_commands(tmp_path, monkeypatch):
     assert result.exit_code == 0
     html = out.read_text()
     assert "could not be loaded" in html and "ptk validate" in html
+
+
+def test_navigation_is_a_tree_like_the_extension(tmp_path):
+    import shutil
+
+    demo = shutil.copytree(DEMO, tmp_path / "demo")
+    out = tmp_path / "help.html"
+    result = CliRunner(env={"PTK_ROLE": "user"}).invoke(
+        cli, ["help", "--no-open", "-o", str(out)], catch_exceptions=False, cwd=demo
+    )
+    assert result.exit_code == 0, result.output
+    html = out.read_text()
+    nav = html[html.index("<nav") : html.index("</nav>")]
+    for title in ("Jobs", "Built-in commands", "Configuration", "AI assistant"):
+        assert f"<summary>{title} " in nav, title
+    # Nested command groups: self-service > creds > set
+    creds = nav.index("<summary>creds</summary>")
+    assert nav.index("<summary>self-service</summary>") < creds
+    assert 'href="#cmd-self-service-creds-set"' in nav[creds:]
+    assert 'id="cmd-self-service-creds-set"' in html
+    assert "deploy" not in nav  # maintainer-only job hidden for users
+    assert "ptk maintainer sync agent" in html and "ptk-job-authoring" in html
+    assert "Not installed in this repository yet" in html
+    assert 'class="ptk-graph"' in html and "Steps of job build" in html
+    assert "<dt>Configuration</dt>" not in html
+
+
+def test_gui_jobs_workflows_and_installed_assistant_are_grouped():
+    from ptk.application.use_cases.help import (
+        HelpAssistant,
+        HelpJob,
+        HelpSkill,
+        HelpWorkflow,
+    )
+
+    doc = BuildHelp("1.0").execute(None, [], "maintainer")
+    doc.project = "demo"
+    doc.jobs = [
+        HelpJob("build", "", "all", [], [], [], [], []),
+        HelpJob("viewer", "", "all", [], [], [], [], [], gui=True),
+    ]
+    doc.workflows = [
+        HelpWorkflow("ci", "Checks", "maintainer", [("build", []), ("doc", ["build"])])
+    ]
+    doc.assistant = HelpAssistant([HelpSkill("ptk-vmr", "Workspaces")], "2.0")
+    doc.prefix = "fw"
+    html = render(doc)
+    assert '<summary>GUIs <span class="count">1</span>' in html
+    assert 'class="ent-gui"' in html and 'class="ent-workflow maint"' in html
+    assert "ptk fw maintainer workflow run ci" in html
+    assert 'aria-label="Workflow ci"' in html
+    assert "Installed in this repository (PTk 2.0)" in html
+
+
+def test_vmr_help_covers_every_repository(tmp_path, monkeypatch):
+    from tests.test_workspace import workspace
+
+    workspace(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    out = tmp_path / "vmr.html"
+    result = CliRunner(env={"PTK_ROLE": "user"}).invoke(
+        cli, ["help", "--no-open", "-o", str(out)], catch_exceptions=False
+    )
+    assert result.exit_code == 0, result.output
+    html = out.read_text()
+    assert "<summary>VMR commands " in html and "<summary>firmware</summary>" in html
+    assert 'id="repo-bootloader"' in html and 'id="firmware--job-build"' in html
+    assert "ptk firmware build [OPTIONS]" in html
+    assert 'id="vmr--cmd-jobs"' in html or 'id="vmr-cmd-jobs"' in html

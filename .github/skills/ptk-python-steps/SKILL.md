@@ -1,6 +1,6 @@
 ---
 name: ptk-python-steps
-description: 'Choose, author or troubleshoot Python execution in a PTk project: PEP 723 scripts, uv tools, requirements environments, editable local projects and explicit interpreters. Use when selecting dependencies, working directories or shared-environment ordering.'
+description: 'Choose, author or troubleshoot Python execution in a PTk project: PEP 723 scripts, uv tools, requirements environments, editable local projects, explicit interpreters and the project/step Python version, package indexes and download policy. Use when selecting dependencies, Python versions, working directories or shared-environment ordering.'
 ---
 
 # ptk-python-steps
@@ -13,13 +13,15 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 3. Pin package versions where reproducibility matters. Use `with` only with `uvx`. Use `groups` only with `project`, selecting dependency groups that actually exist in that project.
 
+   Set the Python version once in `project.ptk.yml` (`python: {version: '3.12', index: [name=url], downloads: automatic|never}`) and override it per step with `python.version` (e.g. `3.12`, `3.12.4`, `>=3.11,<3.13`). It applies to standalone scripts, `uvx`, `project` and `venv`; `interpreter: cli` always uses PTk's Python and rejects `version`. There is no `venv.python` field, and do not set `UV_PYTHON`/`UV_INDEX` in step `env` for this. uv uses a matching installed interpreter or downloads one; `downloads: never` forbids downloads. Project `index` entries reach uv as `UV_INDEX`; never embed credentials in them.
+
 4. Use `run: [script.py, arg]` for scripts and a tool command for uvx; do not feed a project script to a tool that does not run Python files.
 
 5. For editable local packages, use `python: {project: .}` or the actual project directory. uv synchronizes that project normally; editable installation depends on its packaging configuration. Keep development groups explicit and do not replace this with ad hoc `pip install -e` in PTk’s environment. Project/requirements paths resolve from the repository root; script paths resolve from step `cwd`, whose default is the repository root.
 
 6. Do not activate environments or mutate the parent process environment. Python-mode commands are argv, not shells: use an explicit shell command for pipes/redirection. See [execution forms](../../../docs/reference/execution.rst).
 
-7. Use `ptk JOB --dry-run` to inspect runtime and command resolution before installation or execution.
+7. Use `ptk JOB --dry-run` to inspect runtime, effective Python version and command resolution before installation or execution.
 
 8. When execution is authorized, verify the relevant job and its recorded interpreter/debug log. Test space-containing paths on the supported platforms; report platforms not exercised.
 

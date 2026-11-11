@@ -116,6 +116,12 @@
         "icon": "$(question)"
       },
       {
+        "command": "project-toolkit.showAdvancedHelp",
+        "title": "Open Advanced Help",
+        "category": "Project Toolkit",
+        "icon": "$(book)"
+      },
+      {
         "command": "project-toolkit.runBuiltin",
         "title": "Run Command",
         "category": "Project Toolkit",
@@ -189,6 +195,11 @@
           "command": "project-toolkit.showHelp",
           "when": "view == project-toolkit.projects && viewItem =~ /^(job|workflow|gui|builtin)/",
           "group": "inline@4"
+        },
+        {
+          "command": "project-toolkit.showAdvancedHelp",
+          "when": "view == project-toolkit.projects && viewItem == builtin-help",
+          "group": "inline@5"
         },
         {
           "command": "project-toolkit.runBuiltin",

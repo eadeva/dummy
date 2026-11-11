@@ -56,6 +56,7 @@ class HelpStep:
     detail: str  # command or built-in operation
     when: str | None
     flags: list[str]
+    needs: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -70,6 +71,29 @@ class HelpJob:
     passthrough: list[str]  # steps accepting "-- args"
     usage: str = ""
     is_default: bool = False
+    gui: bool = False
+
+
+@dataclass
+class HelpWorkflow:
+    name: str
+    help: str
+    audience: str
+    jobs: list[tuple[str, list[str]]]  # (job key, needs)
+    usage: str = ""
+
+
+@dataclass
+class HelpSkill:
+    name: str
+    description: str
+
+
+@dataclass
+class HelpAssistant:
+    skills: list[HelpSkill]
+    installed_version: str | None = None  # None: not installed in the repository
+    installed_repositories: list[str] = field(default_factory=list)  # VMR page
 
 
 @dataclass
@@ -117,6 +141,55 @@ class HelpDocument:
     credentials: list[HelpCredential] = field(default_factory=list)
     tools: list[HelpTool] = field(default_factory=list)
     error: str | None = None  # project could not be loaded
+    workflows: list[HelpWorkflow] = field(default_factory=list)
+    hidden_workflows: int = 0
+    assistant: HelpAssistant | None = None
+    alias: str = ""
+    prefix: str = ""  # command prefix, e.g. the repository alias in a VMR
+
+
+@dataclass
+class HelpWorkspace:
+    version: str
+    generated: str
+    role: Role
+    root: str
+    commands: list[HelpCommand]
+    workflows: list[HelpWorkflow] = field(default_factory=list)
+    repositories: list[HelpDocument] = field(default_factory=list)
+    assistant: HelpAssistant | None = None
+
+
+def assistant_info(bundle: dict[str, bytes], root: Any = None) -> HelpAssistant:
+    """Skills shipped with this PTk and whether a repository has them installed."""
+    import json
+
+    import yaml
+
+    skills = []
+    for name, content in sorted(bundle.items()):
+        parts = name.split("/")
+        if len(parts) != 3 or parts[0] != "skills" or parts[2] != "SKILL.md":
+            continue
+        text = content.decode("utf-8", "replace")
+        meta = {}
+        if text.startswith("---"):
+            try:
+                meta = yaml.safe_load(text.split("---", 2)[1]) or {}
+            except yaml.YAMLError:
+                meta = {}
+        skills.append(HelpSkill(parts[1], str(meta.get("description", ""))))
+    installed = None
+    if root is not None:
+        manifest = root / ".github" / "ptk" / "manifest.json"
+        if (root / ".github" / "agents" / "ptk-expert.agent.md").is_file():
+            try:
+                installed = json.loads(manifest.read_text(encoding="utf-8")).get(
+                    "ptk_version", "unknown"
+                )
+            except (OSError, ValueError):
+                installed = "unknown"
+    return HelpAssistant(skills, installed)
 
 
 class BuildHelp:
@@ -169,8 +242,16 @@ class BuildHelp:
                         else ""
                     ),
                     is_default=name == config.project.default_job,
+                    gui=job.gui,
                 )
             )
+        workflow_restricted = config.command_audience.get("workflow") == "maintainer"
+        for name, spec in config.workflows.items():
+            audience = "maintainer" if workflow_restricted else spec.audience
+            if not visible(audience, role):
+                doc.hidden_workflows += 1
+                continue
+            doc.workflows.append(workflow_help(name, spec, audience))
         if config.variants is not None:
             from .variants import VariantService
 
@@ -213,6 +294,16 @@ class BuildHelp:
                 HelpTool(name, tool.description, tool.version or "", sources)
             )
         return doc
+
+
+def workflow_help(name: str, spec: Any, audience: str) -> HelpWorkflow:
+    return HelpWorkflow(
+        name,
+        spec.help,
+        audience,
+        [(key, list(call.needs)) for key, call in spec.jobs.items()],
+        f"ptk {'maintainer ' if audience == 'maintainer' else ''}workflow run {name}",
+    )
 
 
 def _rel(project: Project, path: Any) -> str:
@@ -267,6 +358,7 @@ def _step(name: str, step: StepSpec) -> HelpStep:
                 if p.project
                 else "ptk interpreter"
             )
+            + (f" (Python {p.version})" if p.version else "")
         )
     if step.cwd:
         flags.append(f"cwd {step.cwd}")
@@ -287,6 +379,7 @@ def _step(name: str, step: StepSpec) -> HelpStep:
         detail,
         step.when,
         flags,
+        list(step.needs),
     )
 
 

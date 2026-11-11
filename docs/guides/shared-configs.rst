@@ -70,7 +70,8 @@ PTk does not create or update this project file.
 
 Commit bases, overlays, generated outputs, mapping configuration and the lock.
 PTk does not apply filesystem write protection. Ownership is documented and
-checked using content hashes; a locally modified file still blocks synchronization.
+checked using content hashes; a locally modified file still blocks synchronization
+unless the maintainer confirms ``--force``.
 Validation ignores write permissions and checks executable status where supported.
 Synchronization writes normal writable files, including files made read-only by
 an earlier synchronization.
@@ -140,6 +141,8 @@ Updating and checking
 * ``ptk maintainer sync configs`` synchronizes all enabled groups.
 * ``ptk maintainer sync configs clang-format`` selects a group.
 * ``ptk maintainer sync configs --check`` checks locally without fetching.
+* ``ptk maintainer sync configs --force`` also replaces conflicting files after
+  listing them and asking the maintainer to confirm.
 * ``ptk validate --generated`` provides the same offline check to ordinary users/CX.
 
 Synchronization and its preview require maintainer access. There is no
@@ -147,7 +150,9 @@ Synchronization and its preview require maintainer access. There is no
 An existing differing file is replaced only when its contents still match the
 previously recorded managed version. Edited bases/generated outputs and differing
 unowned files block synchronization before destination writes; review and resolve
-the conflict explicitly. There is no force overwrite flag.
+the conflict explicitly. ``--force`` lists every conflicting file and overwrites
+them only when the maintainer answers yes; declining, or running in CX, writes
+nothing. ``--force`` cannot be combined with ``--check`` or ``--diff``.
 
 The first synchronization resolves a version tag to a commit; subsequent syncs
 keep that commit even if the tag moves. Change the revision explicitly to upgrade.

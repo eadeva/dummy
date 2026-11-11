@@ -10,7 +10,16 @@ import webbrowser
 from html import escape
 from pathlib import Path
 
-from ..application.use_cases.help import HelpCommand, HelpDocument, HelpJob, HelpStep
+from ..application.use_cases.help import (
+    HelpAssistant,
+    HelpCommand,
+    HelpDocument,
+    HelpJob,
+    HelpStep,
+    HelpWorkflow,
+    HelpWorkspace,
+)
+from . import graph_html
 
 CSS = """
 :root{--bg:#f3f5f8;--paper:#ffffff;--ink:#18212f;--muted:#5b6778;--line:#dce2ea;--rail:#0f7b8a;
@@ -39,7 +48,24 @@ nav a{display:block;padding:3px 10px;margin-left:-10px;border-left:2px solid tra
 text-decoration:none;font-size:14px}
 nav a:hover{border-left-color:var(--rail);color:var(--rail)}
 nav a.maint::after{content:"maintainer";font-size:11px;color:var(--cond);margin-left:6px}
-main{padding:40px 48px 24px;max-width:1080px}
+nav details.grp{margin:2px 0}
+nav details.grp>summary{color:var(--ink);font-weight:600;font-size:14px;margin:6px 0 2px}
+nav details.grp details.grp{margin-left:12px}
+nav details.grp details.grp>summary{font-weight:500}
+nav details.grp>a,nav details.grp>details{margin-left:4px}
+nav .count{color:var(--muted);font-weight:400;font-size:12px}
+nav details.repo-grp>summary{font-size:15px}
+nav a[class*="ent-"]::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;
+margin-right:7px;background:var(--muted);vertical-align:middle}
+nav a.ent-job::before{background:#3b82f6}nav a.ent-gui::before{background:#06b6d4}
+nav a.ent-workflow::before{background:#a855f7}nav a.ent-skill::before{background:#16a34a}
+.group-head{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600;
+margin:40px 0 14px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.repo-head{font-size:34px;margin:56px 0 8px;padding-top:16px;border-top:3px solid var(--rail)}
+.repo-head .meta{font-size:16px;color:var(--muted);font-weight:400;margin-left:8px}
+section.cmd-block.depth-1{margin-left:16px}section.cmd-block.depth-2{margin-left:32px}
+section.cmd-block.depth-3{margin-left:48px}
+main{padding:40px 48px 24px;min-width:0}
 .hero{padding:8px 0 28px;border-bottom:1px solid var(--line);margin-bottom:28px}
 .hero h1{font-size:44px;margin:0 0 6px}
 .hero .lead{font-size:18px;color:var(--muted);max-width:62ch;margin:0 0 18px}
@@ -88,12 +114,18 @@ border-bottom:1px solid var(--line)}main{padding:24px 16px}.hero h1{font-size:34
 
 JS = """
 const q=document.getElementById('q');
+const toc=document.querySelector('nav details.toc');
+function openTo(el){for(let d=el&&el.parentElement;d;d=d.parentElement){if(d.tagName==='DETAILS')d.open=true;}}
 function filter(){const t=q.value.toLowerCase().trim();
 document.querySelectorAll('main section.block').forEach(s=>s.classList.toggle('hidden',!!t&&!s.textContent.toLowerCase().includes(t)));
-document.querySelectorAll('nav a[href^="#"]').forEach(a=>{const s=document.querySelector(a.getAttribute('href'));
-a.classList.toggle('hidden',!!(s&&s.classList.contains('hidden')))});}
+document.querySelectorAll('nav a[href^="#"]').forEach(a=>{const s=document.getElementById(a.getAttribute('href').slice(1));
+const hide=!!t&&!!(s&&s.classList.contains('hidden'))&&!a.textContent.toLowerCase().includes(t);a.classList.toggle('hidden',hide);
+if(t&&!hide)openTo(a);});
+document.querySelectorAll('nav details.grp').forEach(d=>d.classList.toggle('hidden',!!t&&!d.querySelector('a:not(.hidden)')));}
 q.addEventListener('input',()=>{filter();if(q.value)toc.open=true;});
-const toc=document.querySelector('nav details');
+function follow(){const id=decodeURIComponent(location.hash.slice(1));if(!id)return;
+openTo(document.querySelector(`nav a[href="#${CSS.escape(id)}"]`));}
+window.addEventListener('hashchange',follow);follow();
 if(window.matchMedia('(max-width:820px)').matches)toc.open=false;
 document.addEventListener('keydown',e=>{if(e.key==='/'&&document.activeElement!==q){e.preventDefault();q.focus();q.select();}
 else if(e.key==='Escape'&&document.activeElement===q){q.value='';filter();q.blur();}});
@@ -110,7 +142,11 @@ def _e(text: object) -> str:
 
 
 def _anchor(prefix: str, name: str) -> str:
-    return prefix + "-" + "".join(c if c.isalnum() else "-" for c in name.lower())
+    return prefix + "-" + _slug(name)
+
+
+def _slug(name: str) -> str:
+    return "".join(c if c.isalnum() else "-" for c in name.lower())
 
 
 def _cmd(text: str) -> str:
@@ -139,20 +175,29 @@ def _steps(steps: list[HelpStep]) -> str:
     return '<ul class="steps">' + "".join(_node(s) for s in steps) + "</ul>"
 
 
-def _job(job: HelpJob) -> str:
+def _with_prefix(text: str, prefix: str) -> str:
+    """Insert the repository alias after ``ptk`` for VMR command lines."""
+    if prefix and (text == "ptk" or text.startswith("ptk ")):
+        return f"ptk {prefix}{text[3:]}"
+    return text
+
+
+def _job(job: HelpJob, ns: str = "", prefix: str = "") -> str:
     badge = (
         ' <span class="tag maint">maintainer only</span>'
         if job.audience == "maintainer"
         else ""
     )
+    if job.gui:
+        badge += ' <span class="tag">GUI</span>'
     if job.is_default:
         badge += ' <span class="tag def">default job</span>'
     parts = [
-        f'<section class="block" id="{_anchor("job", job.name)}"><h2>{_e(job.name)}{badge}</h2>',
+        f'<section class="block" id="{_anchor(ns + "job", job.name)}"><h2>{_e(job.name)}{badge}</h2>',
         f'<p class="lead">{_e(job.help)}</p>'
         if job.help
         else '<p class="lead empty">No description.</p>',
-        _cmd(job.usage),
+        _cmd(_with_prefix(job.usage, prefix)),
     ]
     if job.params:
         rows = "".join(
@@ -167,6 +212,26 @@ def _job(job: HelpJob) -> str:
             f"<th>Default</th><th>From env</th><th>Description</th></tr>{rows}</table></div>"
         )
     parts.append(f"<h3>Steps</h3>{_steps(job.steps)}")
+    if len(job.steps) > 1:
+        parts.append(
+            graph_html.section(
+                {
+                    "nodes": [
+                        {
+                            "id": s.name,
+                            "label": s.title or s.name,
+                            "needs": s.needs,
+                            "message": s.detail,
+                            "status": "configured",
+                        }
+                        for s in job.steps
+                    ],
+                    "tree": [],
+                    "caption": "Configured step dependencies: prerequisites → dependents. Independent steps can overlap.",
+                },
+                f"Steps of job {job.name}",
+            )
+        )
     notes = [
         "Run a step and its prerequisites with <code>--to STEP</code>, or explicitly bypass prerequisites with <code>--only-step STEP</code>: "
         + ", ".join(f"<code>{_e(p)}</code>" for p in job.phases)
@@ -182,7 +247,14 @@ def _job(job: HelpJob) -> str:
             + ", ".join(f"<code>{_e(t)}</code>" for t in job.requires_tools)
         )
     notes.append(
-        f"Preview without running: <code>ptk {'maintainer ' if job.audience == 'maintainer' else ''}{_e(job.name)} --dry-run</code>"
+        "Preview without running: <code>"
+        + _e(
+            _with_prefix(
+                f"ptk {'maintainer ' if job.audience == 'maintainer' else ''}{job.name} --dry-run",
+                prefix,
+            )
+        )
+        + "</code>"
     )
     if job.is_default:
         notes.append(
@@ -197,7 +269,7 @@ def _job(job: HelpJob) -> str:
     return "".join(parts)
 
 
-def _command(cmd: HelpCommand) -> str:
+def _command(cmd: HelpCommand, ns: str = "", prefix: str = "") -> str:
     rows = "".join(
         f"<tr><td><code>{_e(o.names)}</code></td><td>{_e(o.help)}"
         f"{(' <span class="tag">default ' + _e(o.default) + '</span>') if o.default else ''}</td></tr>"
@@ -205,9 +277,12 @@ def _command(cmd: HelpCommand) -> str:
     )
     table = f'<div class="table-wrap"><table>{rows}</table></div>' if rows else ""
     text = "".join(f"<p>{_e(par)}</p>" for par in cmd.help.split("\n\n") if par.strip())
+    depth = min(cmd.path.count(" "), 3) if cmd.path else 0
+    title = _with_prefix(f"ptk {cmd.path}".rstrip(), prefix)
     return (
-        f'<section class="block" id="{_anchor("cmd", cmd.path or "ptk")}"><h2>ptk {_e(cmd.path)}</h2>'
-        f"{_cmd(cmd.usage)}{text}{table}</section>"
+        f'<section class="block cmd-block depth-{depth}" id="{_anchor(ns + "cmd", cmd.path or "ptk")}">'
+        f"<h2>{_e(title)}</h2>"
+        f"{_cmd(_with_prefix(cmd.usage, prefix))}{text}{table}</section>"
     )
 
 
@@ -217,70 +292,133 @@ def _table(head: list[str], rows: list[list[str]]) -> str:
     return f'<div class="table-wrap"><table><tr>{th}</tr>{body}</table></div>'
 
 
-def render(doc: HelpDocument) -> str:
-    name = doc.project or "ptk"
-    nav = [
-        f'<p class="brand">{_e(name)}</p>',
-        (
-            f'<p class="meta">ptk {_e(doc.version)}, generated {_e(doc.generated)}'
-            f"{', maintainer view' if doc.role == 'maintainer' else ''}</p>"
-        ),
-        '<input id="q" type="search" placeholder="Search" aria-label="Search the help">',
-        '<p class="hint">Press <kbd>/</kbd> to search</p>',
-        "<details open><summary>Contents</summary>",
-        '<a href="#top">Overview</a>',
+def _link(target: str, label: str, cls: str = "") -> str:
+    css = f' class="{cls}"' if cls else ""
+    return f'<a href="#{target}"{css}>{_e(label)}</a>'
+
+
+def _group(title: str, items: list[str], *, opened: bool, cls: str = "") -> str:
+    if not items:
+        return ""
+    state = " open" if opened else ""
+    return (
+        f'<details class="grp {cls}"{state}><summary>{_e(title)} '
+        f'<span class="count">{len(items)}</span></summary>{"".join(items)}</details>'
+    )
+
+
+def _command_tree(commands: list[HelpCommand], ns: str) -> list[str]:
+    """Nest command paths like the extension: self-service > creds > set."""
+    tree: dict = {}
+    for cmd in commands:
+        if not cmd.path:
+            continue
+        node = tree
+        for part in cmd.path.split():
+            node = node.setdefault(part, {})
+    paths = {cmd.path for cmd in commands}
+
+    def render_level(level: dict, path: list[str]) -> list[str]:
+        items = []
+        for name, children in level.items():
+            full = " ".join([*path, name])
+            target = _anchor(ns + "cmd", full)
+            if children:
+                own = [_link(target, "overview", "ent-cmd")] if full in paths else []
+                items.append(
+                    f'<details class="grp"><summary>{_e(name)}</summary>'
+                    + "".join(own + render_level(children, [*path, name]))
+                    + "</details>"
+                )
+            else:
+                items.append(_link(target, name, "ent-cmd"))
+        return items
+
+    root = [_link(_anchor(ns + "cmd", "ptk"), "ptk (global options)", "ent-cmd")]
+    return (root if "" in paths else []) + render_level(tree, [])
+
+
+def _workflow(wf: HelpWorkflow, ns: str = "", prefix: str = "") -> str:
+    badge = (
+        ' <span class="tag maint">maintainer only</span>'
+        if wf.audience == "maintainer"
+        else ""
+    )
+    rows = [
+        [f"<code>{_e(key)}</code>", _e(", ".join(needs)) or "–"]
+        for key, needs in wf.jobs
     ]
+    usage = wf.usage or (
+        f"ptk {'maintainer ' if wf.audience == 'maintainer' else ''}workflow run {wf.name}"
+    )
+    return (
+        f'<section class="block" id="{_anchor(ns + "wf", wf.name)}"><h2>{_e(wf.name)}{badge}</h2>'
+        + (
+            f'<p class="lead">{_e(wf.help)}</p>'
+            if wf.help
+            else '<p class="lead empty">No description.</p>'
+        )
+        + _cmd(_with_prefix(usage, prefix) + " [--dry-run]")
+        + "<h3>Jobs</h3>"
+        + _table(["Job", "Needs"], rows)
+        + graph_html.section(
+            {
+                "nodes": [
+                    {
+                        "id": key,
+                        "label": key,
+                        "needs": needs,
+                        "message": "needs " + ", ".join(needs) if needs else "ready",
+                        "status": "configured",
+                    }
+                    for key, needs in wf.jobs
+                ],
+                "tree": [],
+                "caption": "Configured job dependencies: prerequisites → dependents. Independent jobs can run in parallel up to max_workers.",
+            },
+            f"Workflow {wf.name}",
+        )
+        + "</section>"
+    )
+
+
+def _project_parts(doc: HelpDocument, ns: str = "") -> tuple[list[str], list[str]]:
+    """Navigation groups and page sections of one repository, in extension order."""
+    nav: list[str] = []
     body: list[str] = []
+    prefix = doc.prefix
+    for title, kind, jobs in (
+        ("Jobs", "job", [j for j in doc.jobs if not j.gui]),
+        ("GUIs", "gui", [j for j in doc.jobs if j.gui]),
+    ):
+        links = []
+        if jobs:
+            body.append(f'<p class="group-head" id="{ns}g-{kind}s">{title}</p>')
+        for job in jobs:
+            cls = f"ent-{kind}" + (" maint" if job.audience == "maintainer" else "")
+            links.append(_link(_anchor(ns + "job", job.name), job.name, cls))
+            body.append(_job(job, ns, prefix))
+        nav.append(_group(title, links, opened=True))
+    if doc.workflows:
+        body.append(f'<p class="group-head" id="{ns}g-workflows">Workflows</p>')
+    links = []
+    for wf in doc.workflows:
+        cls = "ent-workflow" + (" maint" if wf.audience == "maintainer" else "")
+        links.append(_link(_anchor(ns + "wf", wf.name), wf.name, cls))
+        body.append(_workflow(wf, ns, prefix))
+    nav.append(_group("Workflows", links, opened=True))
 
-    hero = [f'<header class="hero" id="top"><h1>{_e(name)}</h1>']
-    hero.append(
-        f'<p class="lead">{_e(doc.description)}</p>'
-        if doc.description
-        else '<p class="lead">Everything this project can do with ptk: jobs, their parameters and steps, '
-        "variants and commands.</p>"
-    )
-    if doc.error:
-        hero.append(
-            f'<p class="problem">The project configuration could not be loaded, so only the built-in '
-            f"commands are listed. Fix it and run <code>ptk help</code> again.<br>{_e(doc.error)}</p>"
+    if doc.commands:
+        body.append(f'<p class="group-head" id="{ns}g-commands">Built-in commands</p>')
+        body.extend(_command(cmd, ns, prefix) for cmd in doc.commands)
+        nav.append(
+            _group("Built-in commands", _command_tree(doc.commands, ns), opened=False)
         )
-    if doc.project:
-        facts = [
-            ("Project folder", doc.root),
-            ("Default job", doc.default_job or "none"),
-            ("Configuration", " → ".join(doc.layers)),
-        ]
-        hero.append(
-            '<dl class="facts">'
-            + "".join(f"<div><dt>{_e(k)}</dt><dd>{_e(v)}</dd></div>" for k, v in facts)
-            + "</dl>"
-        )
-    hero.append(
-        _cmd(
-            "ptk                               # run the default job\n"
-            "ptk JOB --dry-run                # see what would run\n"
-            "ptk JOB --NAME VALUE           # run it with a parameter\n"
-            "ptk JOB --only-step STEP -- ARGS\n"
-            "ptk variant list"
-        )
-    )
-    if doc.hidden_jobs:
-        hero.append(
-            f'<p class="meta">{doc.hidden_jobs} maintainer-only job(s) are not listed.</p>'
-        )
-    hero.append("</header>")
-    body.append("".join(hero))
 
-    if doc.jobs:
-        nav.append("<h2>Jobs</h2>")
-        for job in doc.jobs:
-            cls = ' class="maint"' if job.audience == "maintainer" else ""
-            nav.append(f'<a href="#{_anchor("job", job.name)}"{cls}>{_e(job.name)}</a>')
-            body.append(_job(job))
-
-    project_links = []
+    config_links = []
+    config_body = []
     if doc.variants:
-        project_links.append('<a href="#variants">Variants</a>')
+        config_links.append(_link(f"{ns}variants", "Variants"))
         rows = [
             [
                 f"<code>{_e(v.name)}</code>"
@@ -292,15 +430,15 @@ def render(doc: HelpDocument) -> str:
             ]
             for v in doc.variants
         ]
-        body.append(
-            '<section class="block" id="variants"><h2>Variants</h2><p class="lead">Choose one with '
+        config_body.append(
+            f'<section class="block" id="{ns}variants"><h2>Variants</h2><p class="lead">Choose one with '
             "<code>-V NAME</code> (a name or an alias). <code>ptk variant show NAME</code> shows every "
             "feature value.</p>"
             + _table(["Variant", "Aliases", "Based on", "Description"], rows)
             + "</section>"
         )
     if doc.credentials:
-        project_links.append('<a href="#credentials">Credentials</a>')
+        config_links.append(_link(f"{ns}credentials", "Credentials"))
         rows = [
             [
                 f"<code>{_e(c.name)}</code>",
@@ -310,8 +448,8 @@ def render(doc: HelpDocument) -> str:
             ]
             for c in doc.credentials
         ]
-        body.append(
-            '<section class="block" id="credentials"><h2>Credentials</h2><p class="lead">Values never '
+        config_body.append(
+            f'<section class="block" id="{ns}credentials"><h2>Credentials</h2><p class="lead">Values never '
             "appear here. Commands receive them only as environment variables, and they are masked in "
             "all output.</p>"
             + _table(
@@ -320,7 +458,7 @@ def render(doc: HelpDocument) -> str:
             + "</section>"
         )
     if doc.tools:
-        project_links.append('<a href="#tools">Tools</a>')
+        config_links.append(_link(f"{ns}tools", "Tools"))
         rows = [
             [
                 f"<code>{_e(t.name)}</code>",
@@ -330,43 +468,239 @@ def render(doc: HelpDocument) -> str:
             ]
             for t in doc.tools
         ]
-        body.append(
-            '<section class="block" id="tools"><h2>Tools</h2>'
+        config_body.append(
+            f'<section class="block" id="{ns}tools"><h2>Tools</h2>'
             + _table(["Tool", "Version", "Installed with", "Description"], rows)
             + "</section>"
         )
     if doc.files:
-        project_links.append('<a href="#files">Configuration files</a>')
-        body.append(
-            '<section class="block" id="files"><h2>Configuration files</h2><p class="lead">Read in this '
+        config_links.append(_link(f"{ns}files", "Configuration files"))
+        config_body.append(
+            f'<section class="block" id="{ns}files"><h2>Configuration files</h2><p class="lead">Read in this '
             'order; later files override earlier ones.</p><ul class="notes">'
             + "".join(f"<li><code>{_e(f)}</code></li>" for f in doc.files)
             + "</ul></section>"
         )
-    if project_links:
-        nav.append("<h2>Project</h2>" + "".join(project_links))
+    if config_body:
+        body.append(f'<p class="group-head" id="{ns}g-configuration">Configuration</p>')
+        body.extend(config_body)
+    nav.append(_group("Configuration", config_links, opened=False))
+    return [n for n in nav if n], body
 
-    nav.append("<h2>Commands</h2>")
-    for cmd in doc.commands:
-        nav.append(
-            f'<a href="#{_anchor("cmd", cmd.path or "ptk")}">{_e(cmd.path or "ptk")}</a>'
+
+ASSISTANT_TASKS = (
+    "Create and change jobs, steps, parameters, GUIs and workflows",
+    "Set up variants, tools, credentials, Python environments and versioning",
+    "Diagnose failed runs from logs and reports, and suggest narrowly scoped fixes",
+    "Maintain shared configurations, Git hooks and VMR workspaces",
+    "Prepare GitHub workflow templates and artifact handoff for CX",
+)
+
+
+def _assistant(info: HelpAssistant | None, ns: str = "") -> tuple[str, str]:
+    if info is None:
+        return "", ""
+    if info.installed_repositories:
+        status = (
+            "Installed in "
+            + ", ".join(f"<code>{_e(r)}</code>" for r in info.installed_repositories)
+            + ". In VS Code, select the <code>ptk-expert</code> agent in Copilot Chat. "
+            "Install or update it per repository with <code>ptk maintainer sync agent</code>."
         )
-        body.append(_command(cmd))
-    nav.append("</details>")
+    elif info.installed_version:
+        status = (
+            f"Installed in this repository (PTk {_e(info.installed_version)}). In VS Code, "
+            "select the <code>ptk-expert</code> agent in Copilot Chat or mention a skill. "
+            "Update it with <code>ptk maintainer sync agent</code>."
+        )
+    else:
+        status = (
+            "Not installed in this repository yet. A maintainer installs the agent, its skills "
+            "and offline docs into <code>.github</code> with <code>ptk maintainer sync agent</code>."
+        )
+    rows = [[f"<code>{_e(s.name)}</code>", _e(s.description)] for s in info.skills]
+    body = (
+        f'<p class="group-head" id="{ns}g-assistant">AI assistant</p>'
+        f'<section class="block" id="{ns}assistant"><h2>PTk expert agent and skills</h2>'
+        '<p class="lead">The <code>ptk-expert</code> agent knows this PTk version. It reads your '
+        "configuration, picks the matching skill and uses the installed ptk commands, so its "
+        "answers fit your project instead of generic examples.</p>"
+        f'<p class="meta">{status}</p><h3>What it helps with</h3><ul class="notes">'
+        + "".join(f"<li>{_e(t)}</li>" for t in ASSISTANT_TASKS)
+        + "</ul><h3>Skills</h3>"
+        + _table(["Skill", "Use it for"], rows)
+        + "</section>"
+    )
+    nav = _group(
+        "AI assistant",
+        [_link(f"{ns}assistant", "Agent and skills")]
+        + [_link(f"{ns}assistant", s.name, "ent-skill") for s in info.skills],
+        opened=False,
+    )
+    return nav, body
 
-    title = f"{name} help"
+
+def _page(
+    title: str, brand: str, meta: str, nav: list[str], body: list[str], doc
+) -> str:
+    head = [
+        f'<p class="brand">{_e(brand)}</p>',
+        f'<p class="meta">{meta}</p>',
+        '<input id="q" type="search" placeholder="Search" aria-label="Search the help">',
+        '<p class="hint">Press <kbd>/</kbd> to search</p>',
+        '<details open class="toc"><summary>Contents</summary>',
+        '<a href="#top">Overview</a>',
+    ]
     return (
         f'<!doctype html><html lang="en"><head><meta charset="utf-8">'
         f'<meta name="viewport" content="width=device-width,initial-scale=1"><title>{_e(title)}</title>'
-        f'<style>{CSS}</style></head><body><div class="layout"><nav aria-label="Contents">{"".join(nav)}</nav>'
+        f'<style>{CSS}</style></head><body><div class="layout"><nav aria-label="Contents">'
+        f"{''.join(head + nav)}</details></nav>"
         f"<main>{''.join(body)}<footer>Generated by ptk {_e(doc.version)} on {_e(doc.generated)}. "
-        f"Run <code>ptk help</code> to refresh.</footer></main></div><script>{JS}</script></body></html>"
+        f"Run <code>ptk help</code> to refresh.</footer></main></div><script>{JS}</script>"
+        f"{graph_html.assets()}</body></html>"
     )
 
 
-def write_help(doc: HelpDocument, target: Path) -> Path:
+def render(doc: HelpDocument) -> str:
+    name = doc.project or "ptk"
+    hero = [f'<header class="hero" id="top"><h1>{_e(name)}</h1>']
+    hero.append(
+        f'<p class="lead">{_e(doc.description)}</p>'
+        if doc.description
+        else '<p class="lead">Everything this project can do with ptk: jobs, workflows, their '
+        "parameters and steps, variants and commands.</p>"
+    )
+    if doc.error:
+        hero.append(
+            f'<p class="problem">The project configuration could not be loaded, so only the built-in '
+            f"commands are listed. Fix it and run <code>ptk help</code> again.<br>{_e(doc.error)}</p>"
+        )
+    if doc.project:
+        facts = [
+            ("Project folder", doc.root),
+            ("Default job", doc.default_job or "none"),
+        ]
+        hero.append(
+            '<dl class="facts">'
+            + "".join(f"<div><dt>{_e(k)}</dt><dd>{_e(v)}</dd></div>" for k, v in facts)
+            + "</dl>"
+        )
+    hero.append(
+        _cmd(
+            _with_prefix(
+                "ptk                               # run the default job\n", doc.prefix
+            )
+            + _with_prefix(
+                "ptk JOB --dry-run                # see what would run\n", doc.prefix
+            )
+            + _with_prefix(
+                "ptk JOB --NAME VALUE           # run it with a parameter\n", doc.prefix
+            )
+            + _with_prefix("ptk JOB --only-step STEP -- ARGS\n", doc.prefix)
+            + _with_prefix("ptk variant list", doc.prefix)
+        )
+    )
+    hidden = [
+        f"{count} maintainer-only {kind}(s)"
+        for count, kind in (
+            (doc.hidden_jobs, "job"),
+            (doc.hidden_workflows, "workflow"),
+        )
+        if count
+    ]
+    if hidden:
+        hero.append(f'<p class="meta">{" and ".join(hidden)} are not listed.</p>')
+    hero.append("</header>")
+    nav, body = _project_parts(doc)
+    assistant_nav, assistant_body = _assistant(doc.assistant)
+    if assistant_nav:
+        nav.append(assistant_nav)
+        body.append(assistant_body)
+    meta = (
+        f"ptk {_e(doc.version)}, generated {_e(doc.generated)}"
+        f"{', maintainer view' if doc.role == 'maintainer' else ''}"
+    )
+    return _page(f"{name} help", name, meta, nav, ["".join(hero), *body], doc)
+
+
+def render_workspace(ws: HelpWorkspace) -> str:
+    """One page for a VMR: VMR commands, workspace workflows and every repository."""
+    hero = [
+        '<header class="hero" id="top"><h1>VMR</h1>',
+        (
+            '<p class="lead">All PTk repositories of this workspace: their jobs, workflows, '
+            "commands and configuration. Each repository applies its own maintainer list.</p>"
+        ),
+        f'<dl class="facts"><div><dt>Workspace folder</dt><dd>{_e(ws.root)}</dd></div></dl>',
+        _table(
+            ["Repository", "Project", "Folder"],
+            [
+                [
+                    _link(f"repo-{_slug(r.alias)}", r.alias),
+                    _e(r.project or "configuration error"),
+                    _e(r.root),
+                ]
+                for r in ws.repositories
+            ],
+        ),
+        _cmd(
+            "ptk jobs                          # jobs of every repository\n"
+            "ptk ALIAS JOB --dry-run          # see what a repository job would run\n"
+            "ptk workflow list                 # workflows of every repository\n"
+            "ptk --help                        # terminal help with the VMR commands"
+        ),
+        "</header>",
+    ]
+    nav: list[str] = []
+    body: list[str] = ["".join(hero)]
+    if ws.commands:
+        body.append('<p class="group-head" id="g-vmr">VMR commands</p>')
+        body.extend(_command(cmd, "vmr-") for cmd in ws.commands)
+        nav.append(
+            _group("VMR commands", _command_tree(ws.commands, "vmr-"), opened=False)
+        )
+    if ws.workflows:
+        body.append('<p class="group-head" id="g-workflows">Workspace workflows</p>')
+        links = []
+        for wf in ws.workflows:
+            cls = "ent-workflow" + (" maint" if wf.audience == "maintainer" else "")
+            links.append(_link(_anchor("wf", wf.name), wf.name, cls))
+            body.append(_workflow(wf))
+        nav.append(_group("Workspace workflows", links, opened=True))
+    assistant_nav, assistant_body = _assistant(ws.assistant)
+    if assistant_nav:
+        nav.append(assistant_nav)
+        body.append(assistant_body)
+    for repo in ws.repositories:
+        ns = f"{_slug(repo.alias)}--"
+        anchor = f"repo-{_slug(repo.alias)}"
+        heading = (
+            f'<h2 class="repo-head" id="{anchor}">{_e(repo.alias)}'
+            f'<span class="meta"> {_e(repo.project or "")}</span></h2>'
+        )
+        if repo.error:
+            heading += (
+                f'<p class="problem">The configuration could not be loaded; run '
+                f"<code>ptk {_e(repo.alias)} validate</code>.<br>{_e(repo.error)}</p>"
+            )
+        repo_nav, repo_body = _project_parts(repo, ns)
+        body.append(f'<div class="repo">{heading}{"".join(repo_body)}</div>')
+        nav.append(
+            f'<details class="grp repo-grp"><summary>{_e(repo.alias)}</summary>'
+            f"{_link(anchor, 'overview')}{''.join(repo_nav)}</details>"
+        )
+    meta = (
+        f"ptk {_e(ws.version)}, generated {_e(ws.generated)}"
+        f"{', maintainer view' if ws.role == 'maintainer' else ''}"
+    )
+    return _page("VMR help", "VMR", meta, nav, body, ws)
+
+
+def write_help(doc: HelpDocument | HelpWorkspace, target: Path) -> Path:
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(render(doc), encoding="utf-8")
+    page = render_workspace(doc) if isinstance(doc, HelpWorkspace) else render(doc)
+    target.write_text(page, encoding="utf-8")
     return target
 
 

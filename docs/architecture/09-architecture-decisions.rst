@@ -678,7 +678,9 @@ not imply that every related future capability has been implemented.
    uvx and PTk-interpreter modes, while preserving ordinary explicit-interpreter
    commands. Use uv's existing editable-project installation for local development
    rather than introducing a separate PTk editable-install operation. Keep package
-   entry points and module execution ordinary process commands.
+   entry points and module execution ordinary process commands. Pass one Python
+   version request (step or project default) to uv in every uv mode and let uv
+   discover or download the interpreter, optionally with downloads forbidden.
 
    **Consequences:** Projects own dependency declarations, build metadata and
    environment paths. Project mode uses normal uv synchronization rather than

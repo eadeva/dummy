@@ -1,4 +1,4 @@
-"""End-to-end runs with real processes (Linux/macOS shell commands, Python via uv)."""
+"""End-to-end runs with real processes (Linux shell commands, Python via uv)."""
 
 from __future__ import annotations
 

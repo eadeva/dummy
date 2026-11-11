@@ -49,7 +49,9 @@ including workflow equivalents, are omitted in favour of job/workflow actions.
 The remaining tree commands have Run, Options and Help icons. Required
 arguments are prompted automatically; the gear lets you supply optional values.
 Credential values and vault passwords stay in PTk's hidden terminal prompts.
-**CLI help** displays ``ptk --help``; **help** opens PTk's HTML help.
+**CLI help** displays ``ptk --help``; its book icon opens PTk's advanced HTML help.
+A VMR folder starts with a collapsed **VMR commands** branch for commands that act
+on every repository, including CLI and advanced help for the whole VMR.
 The command tree requires a supported PTk inventory; incompatible inventories
 show an update error. See :ref:`extension-compatibility`.
 
@@ -416,7 +418,10 @@ copy examples to a temporary directory before running them.
 Setup records hashes and the PTk version in ``.github/ptk/manifest.json``. It
 updates unchanged managed files and removes obsolete unchanged managed files.
 Custom skills and other GitHub files are preserved. Locally modified or conflicting
-files cause an error before writing; reconcile them explicitly and rerun setup.
+files cause an error before writing; reconcile them explicitly and rerun setup, or
+run ``ptk maintainer sync agent --force``, which lists those files and overwrites
+them only after the maintainer confirms (never in CX). Paths that are not regular
+files still block setup.
 Checks and writes refuse symlinked managed paths. Commit the generated skills,
 reference files and manifest together if the team should share them.
 

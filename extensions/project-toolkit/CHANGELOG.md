@@ -4,6 +4,11 @@
 
 - First release under the extension ID `bosch-xc-ce.project-toolkit` (previously `eadeva.project-toolkit`). `ptk self-service extension` installs the new ID and removes the old one; after a manual VSIX install, uninstall the old extension yourself.
 - Add the Robert Bosch GmbH proprietary license (`LICENSE.txt`).
+- Show a collapsed **VMR commands** branch first in a VMR folder, for the commands that act on every repository.
+- Add **Open Advanced Help** (book icon) next to **CLI help** for the structured HTML help of a repository or the whole VMR; the plain `help` row is no longer listed separately.
+- Show each step's own fields, including `outputs`, under its node in configuration graph trees.
+- Place **CLI help** with its advanced help icon directly under each repository; **Configuration** lists GUI jobs under their own **GUIs** branch.
+- Show the step's Python version in dependency graph labels.
 
 ## 0.26.1
 

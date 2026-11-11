@@ -199,6 +199,21 @@ def test_missing_lists_what_was_tried(tmp_path):
     assert "ptk self-service creds set art user" in text
 
 
+def test_optional_credential_without_a_value_resolves_empty(tmp_path):
+    svc = service(tmp_path, spec=SPEC.model_copy(update={"optional": True}))
+    assert svc.resolve("art.user") == ""
+
+
+def test_values_of_older_vmr_scoped_entries_are_migrated(tmp_path):
+    vault(tmp_path).set("vmr/0123/4567/art.token", "legacy")
+    assert service(tmp_path).resolve("art.token") == "legacy"
+    assert vault(tmp_path).entries()["art.token"] == "legacy"
+    vault(tmp_path).set("vmr/0123/89ab/art.user", "one")
+    vault(tmp_path).set("vmr/0123/cdef/art.user", "two")
+    with pytest.raises(PtkError):
+        service(tmp_path).resolve("art.user")  # ambiguous: ask again
+
+
 def test_prompt_is_last_and_only_interactive(tmp_path):
     prompter = FakePrompter(["typed-value"])
     svc = service(tmp_path, prompter=prompter)

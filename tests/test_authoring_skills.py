@@ -97,6 +97,14 @@ def test_installed_workflow_skill_supports_a_consumer_pipeline(tmp_path, monkeyp
                 "repository": "cx",
                 "events": {"push": {"path": "checks"}},
             },
+            "credentials": {"artifactory": {"fields": ["token"]}},
+            "cx": {
+                "technical_user": "robot",
+                "runner_group": "linux",
+                "image": "registry.example.invalid/device:1",
+                "artifactory_credential": "artifactory",
+                "pmt": {"version": "v26.45.00"},
+            },
         },
     )
     grant_maintainer(tmp_path)
@@ -104,15 +112,18 @@ def test_installed_workflow_skill_supports_a_consumer_pipeline(tmp_path, monkeyp
     installed = tmp_path / ".github/skills/ptk-github-workflows/SKILL.md"
     assert installed.is_file()
     assert "../../ptk/docs/guides/github-actions.rst" in installed.read_text()
-    assert "additional_properties" in installed.read_text()
+    assert "additional-properties" in installed.read_text()
     monkeypatch.chdir(tmp_path)
     runner = CliRunner(env={"PTK_CX": "1", "GITHUB_EVENT_NAME": "push", "PTK_ROLE": ""})
     for args in (["validate"], ["maintainer", "gen-workflows", "quality"]):
         result = runner.invoke(cli, args)
         assert result.exit_code == 0, result.output
-    path = tmp_path / ".github/workflows/ptk-quality.yml"
+    path = tmp_path / ".github/workflows/call-quality.yml"
     generated = yaml.safe_load(path.read_text())
     assert generated["jobs"]["job_inspect"]["needs"] == ["setup", "job_compile"]
+    assert generated["jobs"]["job_inspect"]["uses"] == (
+        "./.github/workflows/call-inspect.yml"
+    )
     assert "workflow_call" in generated["on"]
     result = runner.invoke(cli, ["maintainer", "matrix", "--workflow", "quality"])
     assert result.exit_code == 0, result.output
@@ -124,7 +135,7 @@ def test_installed_workflow_skill_supports_a_consumer_pipeline(tmp_path, monkeyp
     ).exists()  # Generation never executes jobs.
     before = path.read_bytes()
     result = runner.invoke(cli, ["maintainer", "gen-workflows", "quality"])
-    assert "Warning:" in result.output and path.read_bytes() == before
+    assert "Unchanged" in result.output and path.read_bytes() == before
     assert (
         SetupAuthoring(AuthoringFiles(), "test").execute(tmp_path, check=True).paths
         == []

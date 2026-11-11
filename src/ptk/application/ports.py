@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
-    from ..domain.config.model import PythonSpec
+    from ..domain.config.model import PythonDefaults, PythonSpec
     from ..domain.config.tree import Node
     from ..domain.credentials import SecretKey
     from ..domain.execution.commands import PythonRuntime
@@ -69,7 +69,7 @@ class HostEnvironment(Protocol):
     def is_docker(self) -> bool: ...
 
     def os_name(self) -> str:
-        """'windows' or 'linux' (or 'macos')."""
+        """'windows' or 'linux'."""
 
     def user_id(self) -> str | None:
         """OS login name locally, triggering actor on GitHub Actions."""
@@ -132,6 +132,7 @@ class PythonEnvManager(Protocol):
         *,
         create: bool,
         on_output: Callable[[str], None] | None = None,
+        defaults: PythonDefaults | None = None,
     ) -> PythonRuntime | None:
         """``create=False`` only describes (dry run); ``create=True`` builds missing venvs."""
 
@@ -169,6 +170,7 @@ class AuthoringResources(Protocol):
         version: str,
         check: bool,
         configuration_readme: tuple[str, bytes] | None = None,
+        confirm: Callable[[list[str]], bool] | None = None,
     ) -> list[str]: ...
 
 

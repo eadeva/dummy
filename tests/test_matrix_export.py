@@ -138,6 +138,9 @@ def test_local_matrix_exports_only_eligible_pairs_aliases_and_destinations(
         "path": base,
         "url": "https://artifacts.example.invalid/artifactory/ci-local/" + base + "/",
     }
+    assert first["upload"]["artifactory_url"] == (
+        "https://artifacts.example.invalid/artifactory"
+    )
     assert first["upload"]["path"] == base + "/debug/build"
     assert first["upload"]["base_path"] == base
     assert snapshot(root) == before

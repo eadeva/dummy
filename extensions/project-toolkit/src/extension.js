@@ -217,13 +217,13 @@ function createController(vscode, context, editorFactory = createEditors) {
     }
   }
 
-  function builtinTree(owner, commands) {
-    // Dedicated job/workflow actions replace these generic tree entries only.
+  function builtinTree(owner, commands, label = "Built-in commands") {
+    // Dedicated job/workflow actions and the advanced help icon replace these generic tree entries only.
     // Keep the full inventory for CLI help, the command palette and saved tasks.
     function visible(items) {
       return items.filter(spec => {
         const path = spec.path[0] === "maintainer" ? spec.path.slice(1) : spec.path;
-        return !["run", "report"].includes(path[0]) && !(path[0] === "workflow" && path[1] === "run");
+        return !["run", "report"].includes(path[0]) && !(path[0] === "workflow" && path[1] === "run") && !(spec.path.length === 1 && spec.path[0] === "help");
       })
         .map(spec => ({ ...spec, children: visible(spec.children) }))
         .filter(spec => spec.runnable || spec.children.length);
@@ -241,9 +241,10 @@ function createController(vscode, context, editorFactory = createEditors) {
     }
     const help = nodes.get("--help");
     help.icon = "question";
+    help.contextValue = "builtin-help";
     help.command = { command: "project-toolkit.showHelp", title: "Show CLI help", arguments: [targets[0]] };
     const children = [help, ...treeCommands.map(spec => nodes.get(spec.path.join(" ")))];
-    return { label: "Built-in commands", children, icon: "terminal", entityKind: "builtin", collapsed: true };
+    return { label, children, icon: "terminal", entityKind: "builtin", collapsed: true };
   }
 
   function configurationNode(common) {
@@ -263,7 +264,7 @@ function createController(vscode, context, editorFactory = createEditors) {
       if (graph && !graph.error) {
         node.icon = "git-merge";
         node.description = "prerequisites → dependents";
-        node.tooltip = "Expand a prerequisite to see its dependents. Joins wait for all prerequisites; branches can overlap. Shared references edit the same definition.";
+        node.tooltip = "Expand a prerequisite to see its own fields, then its dependents. Joins wait for all prerequisites; branches can overlap. Shared references edit the same definition.";
         node.children = [];
         const metadata = new Map(graph.nodes.map(item => [item.id, item]));
         const branches = [];
@@ -274,7 +275,8 @@ function createController(vscode, context, editorFactory = createEditors) {
           child.icon = entry.shared ? "references" : "git-branch";
           child.description = [item.label !== item.id ? item.label : "", item.needs.length > 1 ? `needs all: ${item.needs.join(", ")}` : "", entry.shared ? "↩ shared — shown above" : ""].filter(Boolean).join(" · ");
           child.tooltip = `${item.label ? item.label + "\n" : ""}Needs: ${item.needs.join(", ") || "none"}\n${entry.shared ? "Shared dependency; edits the same definition.\n" : ""}${child.tooltip}`;
-          child.children = [];
+          // Own fields (outputs, run, ...) come first; dependent branches are appended below.
+          child.children = entry.shared ? [] : child.children || [];
           branches.push(child);
           (entry.parent === null ? node : branches[entry.parent]).children.push(child);
         }
@@ -289,6 +291,13 @@ function createController(vscode, context, editorFactory = createEditors) {
     const keys = schemaTools.orderedEntries(config.schema, value, config.schema, { includeMissing: true }).map(([key]) => key).filter(key => key !== "members" || Object.hasOwn(value, key));
     const node = field(value, [], "Configuration");
     node.children = keys.map(key => field(value[key], [key], key));
+    const jobs = node.children.find(child => child.configPath.length === 1 && child.configPath[0] === "jobs");
+    const guiJobs = jobs?.children?.filter(child => value.jobs?.[child.configPath[1]]?.gui === true) || [];
+    if (guiJobs.length) {
+      jobs.children = jobs.children.filter(child => !guiJobs.includes(child));
+      const guis = { ...jobs, id: `${jobs.id}:guis`, label: "GUIs", icon: "window", entityKind: "gui", children: guiJobs };
+      node.children.splice(node.children.indexOf(jobs) + 1, 0, guis);
+    }
     const components = field(value.project?.components || {}, ["project", "components"], "Components");
     components.icon = "package";
     components.children = Object.keys(value.project?.components || {}).map(name => {
@@ -331,7 +340,10 @@ function createController(vscode, context, editorFactory = createEditors) {
       });
       if (children.length) groups.push({ entityKind: group, label: group === "gui" ? "GUIs" : kind === "job" ? "Jobs" : "Workflows", icon: group === "gui" ? "window" : kind === "job" ? "tasklist" : "git-merge", children });
     }
-    groups.push(builtinTree(common, project.commands), configurationNode(common));
+    const builtins = builtinTree(common, project.commands);
+    // CLI help (with its advanced help icon) sits directly under the repository.
+    groups.unshift(builtins.children.shift());
+    groups.push(builtins, configurationNode(common));
     return { ...common, label: project.alias, description: project.name, tooltip: project.root,
       contextValue: "project", icon: "repo", children: groups };
   }
@@ -362,6 +374,9 @@ function createController(vscode, context, editorFactory = createEditors) {
           label: spec.name, tooltip: spec.help, icon: "git-merge",
           contextValue: core.canOpenReport({ kind: "workflow", commands: record.inventory.commands }) ? "workflow-report" : "workflow",
         })) });
+        if (record.inventory.mode === "workspace" && record.inventory.commands?.length) {
+          children.unshift(builtinTree({ folder: record.folder, root: record.inventory.root, cx: record.inventory.cx }, record.inventory.commands, "VMR commands"));
+        }
         return { label: record.folder.name, description: record.inventory.mode === "workspace" ? "VMR" : "", children, icon: "root-folder" };
       })(), [record.folder.uri.fsPath]));
     },
@@ -575,6 +590,20 @@ function createController(vscode, context, editorFactory = createEditors) {
     if (inputs === undefined) return;
     return vscode.tasks.executeTask(makeTask(target, { inputs }));
   }
+  command("showAdvancedHelp", async element => {
+    trusted();
+    await settled();
+    const owner = element?.kind ? await chooseBuiltin(element, true) : undefined;
+    const helps = core.availableBuiltins(records).filter(target => target.name === "help" && target.spec.runnable &&
+      (!owner || target.root === owner.root && target.project?.entry_file === owner.project?.entry_file));
+    if (!helps.length) {
+      await vscode.window.showInformationMessage("This PTk version has no advanced help command. Update PTk to open the HTML help.");
+      return;
+    }
+    const target = owner || helps.length === 1 ? helps[0]
+      : (await vscode.window.showQuickPick(helps.map(item => ({ label: item.project?.alias || path.basename(item.root), description: item.root, target: item })), { placeHolder: "Choose a repository or VMR for advanced help" }))?.target;
+    if (target) return vscode.tasks.executeTask(makeTask(target, { inputs: {} }));
+  });
   command("runBuiltin", element => runBuiltin(element));
   command("runBuiltinWithParameters", element => runBuiltin(element, true));
   command("selectVariant", selectVariant);

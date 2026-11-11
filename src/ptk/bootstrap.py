@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -188,28 +186,8 @@ class App:
 
         key = id(project)
         if key not in self._credentials:
-            definitions = project.config.credentials
-            workspace = self.workspace.root(project.root)
-            if workspace is not None:
-                workspace_id = hashlib.sha256(str(workspace).encode()).hexdigest()[:12]
-                definitions = {
-                    name: spec.model_copy(
-                        update={
-                            "namespace": spec.namespace
-                            or "vmr/"
-                            + workspace_id
-                            + "/"
-                            + hashlib.sha256(
-                                json.dumps(
-                                    spec.model_dump(mode="json"), sort_keys=True
-                                ).encode()
-                            ).hexdigest()[:12]
-                        }
-                    )
-                    for name, spec in definitions.items()
-                }
             self._credentials[key] = CredentialService(
-                definitions,
+                project.config.credentials,
                 self.secret_providers,
                 self.host,
                 self.runner,

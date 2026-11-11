@@ -36,7 +36,7 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 ## Verify and hand off
 
 9. Validate the owning configuration, inspect the affected job/workflow preview after considering version-command effects, and run only the checks authorized by the task. For authored GitHub YAML, distinguish local validation from an actual hosted run. Keep platform acceptance separate from checks run on the current host.
-10. When assistant resources are in scope, use `ptk maintainer sync agent --check` and the authorized synchronization. Keep project-specific instructions separately owned; do not patch installed examples or regenerate over custom edits.
+10. When assistant resources are in scope, use `ptk maintainer sync agent --check` and the authorized synchronization. Keep project-specific instructions separately owned; do not patch installed examples or regenerate over custom edits. `sync agent --force` lists locally changed or unowned managed files and replaces them only after the maintainer confirms; use it only on explicit request and never pipe an answer into the prompt.
 11. Report the concrete change, affected owners/paths, checks actually performed, remaining TODOs and the next operational action. Clearly distinguish reviewed, generated, installed, executed, uploaded and published states. Escalate only a specific missing decision or permission; continue independent authorized work.
 
 Use `when` for job and step eligibility; never author `only_cx`, `only_variants`

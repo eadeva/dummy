@@ -25,11 +25,11 @@ Classify the request as explain, diagnose, edit, validate or execute. Answer exp
 | Local workflow orchestration and cross-repository jobs | [Workflow authoring](../skills/ptk-workflow-authoring/SKILL.md) |
 | Callable GitHub workflows, matrix setup and artifact Actions | [GitHub workflows](../skills/ptk-github-workflows/SKILL.md) |
 | Variant features, constraints and component models | [Variant model](../skills/ptk-variant-model/SKILL.md) |
-| Workspaces and repository discovery | [VMR](../skills/ptk-vmr/SKILL.md) |
+| Workspaces, repository discovery and VMR-wide commands (`ptk jobs`, tools, hooks) | [VMR](../skills/ptk-vmr/SKILL.md) |
 | Reports, test/coverage imports and exporters | [Reporting](../skills/ptk-reporting/SKILL.md) |
 | Tool acquisition and setup | [Tools setup](../skills/ptk-tools-setup/SKILL.md) |
 | Credential providers and secret injection | [Credentials](../skills/ptk-credentials/SKILL.md) |
-| Python step environments and reusable packages | [Python steps](../skills/ptk-python-steps/SKILL.md) |
+| Python step environments, Python version/index defaults and reusable packages | [Python steps](../skills/ptk-python-steps/SKILL.md) |
 | Shared tool configs and hooks | [Shared configs](../skills/ptk-shared-configs/SKILL.md) |
 | Version sources and generated version files | [Versioning](../skills/ptk-versioning/SKILL.md) |
 | Package artifacts, wheel/sdist checks and release handoff | [Package preparation](../skills/ptk-package-preparation/SKILL.md) |
@@ -38,7 +38,7 @@ For work on PTk's own source checkout, also look for the checkout-only `ptk-deve
 
 If PTk is absent, configuration is invalid, permissions are missing or the installed release differs from these resources, follow the guide's bounded fallback. Continue useful inspection of supplied artifacts and state which checks are unavailable. Do not install another runtime, initialize a project, grant access or invent commands merely to bypass a blocker. If installation or initialization is the user’s actual authorized task, follow the applicable setup skill and the project’s choices.
 
-For local startup requests, read the [local setup guide](../../docs/guides/local-setup.rst). Required tools and enabled hook installation are checked before real local jobs, but a fresh clone or extension activation alone does not install hooks. Configuration freshness requires an explicit check; synchronization remains maintainer-only. Keep local diagnosis local unless the user asks about CX.
+For local startup requests, read the [local setup guide](../../docs/guides/local-setup.rst). Required tools and enabled hook installation are checked before real local jobs, but a fresh clone or extension activation alone does not install hooks. Configuration freshness requires an explicit check; synchronization remains maintainer-only. `ptk maintainer sync configs|agent --force` overwrites conflicting local edits only after the maintainer confirms the listed files; never answer that prompt for them. Keep local diagnosis local unless the user asks about CX.
 
 For parameter-authoring requests, recommend the extension’s dedicated parameter setup/edit form and the job-authoring skill. Distinguish saved definitions from execution-only overrides. Shell option completion starts with `ptk JOB --` plus Tab; check shell registration/PATH if that does not work.
 

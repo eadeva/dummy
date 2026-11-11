@@ -109,7 +109,7 @@ def creation_modes():
             "id": "python-venv",
             "group": "Python",
             "label": "Python environment (requirements / packages)",
-            "description": "Create and reuse a repository-local environment with uv. Add requirements files, packages and optionally a Python version under python.venv.",
+            "description": "Create and reuse a repository-local environment with uv. Add requirements files and packages under python.venv, and optionally python.version.",
             "requirements": "uv; dependency installation uses the launcher's index/authentication environment. Requirement file paths are repository-relative.",
             "constraints": "The environment key hashes declared requirement file contents and package/version requests, not transitive files or local package sources. It is separate from PTk's output cache.",
             "initial": {

@@ -31,7 +31,7 @@ This directory contains the project-owned configuration behind those commands.
 Use the installation script included in this repository. From the repository
 root, run the command for your platform:
 
-Linux/macOS:
+Linux:
 
 ```bash
 sh .github/ptk/install/install.sh

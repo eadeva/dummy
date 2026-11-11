@@ -17,6 +17,7 @@ from pydantic import (
     ConfigDict,
     Field,
     StrictBool,
+    StrictInt,
     StrictStr,
     field_validator,
     model_validator,
@@ -68,6 +69,7 @@ RESERVED_PARAMS = {
     "quiet",
     "args_for",
     "no_cache_ptk",
+    "docker",
     "help",
 }
 
@@ -265,6 +267,50 @@ class ParamSpec(_Strict):
 
 # --------------------------------------------------------------------------- python
 
+_VERSION = r"\d+(?:\.\d+){0,2}"
+_SPECIFIER = rf"(?:[<>]=?|==|!=|~=)\s*{_VERSION}"
+PYTHON_VERSION = re.compile(rf"(?:{_VERSION}|{_SPECIFIER}(?:\s*,\s*{_SPECIFIER})*)")
+PYTHON_INDEX = re.compile(r"(?:[A-Za-z0-9][A-Za-z0-9_.-]*=)?https?://\S+")
+
+
+def _python_version(value: str | None) -> str | None:
+    if value is not None and not PYTHON_VERSION.fullmatch(value.strip()):
+        raise ValueError(
+            f"invalid Python version {value!r}; use for example 3.12, 3.12.4 or >=3.11,<3.13"
+        )
+    return value.strip() if value is not None else None
+
+
+class PythonDefaults(_Strict):
+    version: str | None = Field(
+        default=None,
+        description="Python version uv uses for every Python step without its own python.version, for example 3.12, 3.12.4 or >=3.11,<3.13. uv uses a matching installed interpreter or downloads one.",
+    )
+    index: list[str] = Field(
+        default_factory=list,
+        description="Extra package indexes for uv as name=url or url entries, passed to Python steps and environment creation as UV_INDEX.",
+    )
+    downloads: Literal["automatic", "never"] = Field(
+        default="automatic",
+        description="automatic lets uv download a missing Python version; never requires an installed interpreter and fails clearly otherwise (UV_PYTHON_DOWNLOADS).",
+    )
+
+    @field_validator("version")
+    @classmethod
+    def _version(cls, value: str | None) -> str | None:
+        return _python_version(value)
+
+    @field_validator("index", mode="before")
+    @classmethod
+    def _indexes(cls, value: Any) -> Any:
+        value = _listify(value)
+        for entry in value or []:
+            if not isinstance(entry, str) or not PYTHON_INDEX.fullmatch(entry):
+                raise ValueError(
+                    f"invalid package index {entry!r}; use name=https://host/simple/ or https://host/simple/"
+                )
+        return value
+
 
 class VenvSpec(_Strict):
     requirements: list[str] = Field(
@@ -275,10 +321,6 @@ class VenvSpec(_Strict):
         description="Additional Python package requirements to install, for example pytest>=8.",
         default_factory=list,
     )  # extra packages
-    python: str | None = Field(
-        default=None,
-        description="Python interpreter or version requested for this environment.",
-    )
 
     @field_validator("requirements", "packages", mode="before")
     @classmethod
@@ -298,7 +340,7 @@ class PythonSpec(_Strict):
     )  # extra packages for uvx
     venv: VenvSpec | None = Field(
         default=None,
-        description="Create an isolated environment with the specified requirements, packages and Python version.",
+        description="Create an isolated environment with the specified requirements and packages.",
     )
     project: str | None = Field(
         default=None,
@@ -312,6 +354,15 @@ class PythonSpec(_Strict):
         default=None,
         description="Use cli to run with PTk’s own Python environment. Choose exactly one Python execution mode.",
     )  # ptk's own environment
+    version: str | None = Field(
+        default=None,
+        description="Python version for this step, for example 3.12, 3.12.4 or >=3.11,<3.13; overrides the project python.version. uv uses a matching installed interpreter or downloads one. Not allowed with interpreter.",
+    )
+
+    @field_validator("version")
+    @classmethod
+    def _version(cls, value: str | None) -> str | None:
+        return _python_version(value)
 
     @field_validator("with_", "groups", mode="before")
     @classmethod
@@ -338,6 +389,10 @@ class PythonSpec(_Strict):
             raise ValueError("invalid dependency group name")
         if self.with_ and self.uvx is None:
             raise ValueError("'with' is only allowed together with uvx")
+        if self.version is not None and self.interpreter is not None:
+            raise ValueError(
+                "'version' cannot be combined with interpreter: cli, which always uses PTk's own Python"
+            )
         return self
 
 
@@ -538,6 +593,10 @@ class JobSpec(_Strict):
     )
     max_workers: int = Field(
         default=4, ge=1, le=32, description="Maximum concurrent steps in this job."
+    )
+    docker: StrictBool = Field(
+        default=True,
+        description="Run this job in the project's Docker image when ptk --docker is used. False keeps it on the host, for example for Windows-only tools.",
     )
     steps: dict[str, StepSpec] = Field(
         description="Named steps with explicit needs dependencies. YAML order only controls presentation.",
@@ -798,10 +857,6 @@ ProviderName = Literal["env", "vault", "prompt"]
 
 
 class CredentialSpec(_Strict):
-    namespace: str | None = Field(
-        default=None,
-        description="Credential storage scope. A VMR provides a default scope when this is omitted.",
-    )  # explicit storage scope; VMR supplies one by default
     description: str = Field(
         default="", description="Explanation of what the credential is used for."
     )
@@ -824,6 +879,10 @@ class CredentialSpec(_Strict):
     remember: bool = Field(
         default=True,
         description="Store values entered at the prompt in the encrypted vault. Set false to ask every run.",
+    )
+    optional: bool = Field(
+        default=False,
+        description="When no provider supplies a value (for example in CX without the variable), leave the step's variables unset instead of failing. Locally the prompt still asks.",
     )
     test: str | None = Field(
         default=None, description="Command used to verify that the credential works."
@@ -1137,6 +1196,115 @@ class LogAnalysisSpec(_Strict):
         return rules
 
 
+# --------------------------------------------------------------------------- docker
+
+
+class DockerSpec(_Strict):
+    image: str = Field(
+        description="Image reference used by ptk --docker, for example registry.example.com/team/build:1.0. The image must contain PTk.",
+        pattern=r"^[a-z0-9][A-Za-z0-9._/:@-]*$",
+    )
+    credential: str | None = Field(
+        default=None,
+        description="Credential with user and token fields used for docker login to the image registry. Omit for public images or an existing login.",
+        pattern=r"^[A-Za-z][A-Za-z0-9_-]*$",
+    )
+    login_user: str = Field(
+        default="{user}",
+        description="Registry login name; {user} is the credential's user, for example {user}@example.com when the registry expects e-mail logins.",
+        min_length=1,
+    )
+    wsl_distro: str = Field(
+        default="Ubuntu-24.04",
+        description="WSL distribution running Docker Engine on Windows. PTk calls docker inside it; Docker Desktop is not used.",
+        pattern=r"^[A-Za-z0-9][A-Za-z0-9._-]*$",
+    )
+    workspace: Literal["sync", "mount"] = Field(
+        default="sync",
+        description="Windows only. sync copies the repository to a mirror on the WSL disk with rsync (fast builds; _builds stays there); mount uses the repository through /mnt (slow file access). Linux always mounts the repository.",
+    )
+    env: dict[str, str] = Field(
+        default_factory=dict,
+        description="Environment variables set in the container, for example proxy settings.",
+    )
+    keep: list[str] = Field(
+        default_factory=list,
+        description="Names of host environment variables passed into the container. Values are never written to the command line.",
+    )
+    run_args: list[str] = Field(
+        default_factory=list,
+        description="Extra docker run arguments, for example additional --volume options.",
+    )
+
+
+# --------------------------------------------------------------------------- cx
+
+_SECRET_NAME = r"^[A-Za-z_][A-Za-z0-9_]*$"  # noqa: S105 - a name pattern, not a secret
+
+
+class PmtSpec(_Strict):
+    repository: str = Field(
+        default="XC-CE/pmt",
+        description="GitHub repository providing the checkout and Artifactory actions.",
+        pattern=r"^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$",
+    )
+    version: str = Field(
+        description="Tag or commit of the PMT actions used by generated workflows, for example v26.45.00.",
+        pattern=r"^[A-Za-z0-9_./-]+$",
+    )
+
+
+class VmrCheckoutSpec(_Strict):
+    manifest_url: str = Field(
+        description="git-repo manifest repository of the virtual monorepo.",
+        pattern=r"^https://\S+$",
+    )
+    manifest_name: str | None = Field(
+        default=None, description="Manifest file; default: the manifest's default.xml."
+    )
+    app_id: StrictInt | str = Field(
+        description="GitHub App ID with read access to all repositories of the manifest."
+    )
+    private_key: str = Field(
+        description="Name of the GitHub secret holding the GitHub App private key.",
+        pattern=_SECRET_NAME,
+    )
+    owner: str | None = Field(
+        default=None,
+        description="Owner of the GitHub App installation; default: the repository owner.",
+    )
+
+
+class CxSpec(_Strict):
+    technical_user: str = Field(
+        description="Technical user ID running CX jobs. Secret names follow <PROJECT>_<TECHNICAL_USER>_<CREDENTIAL>_<FIELD>.",
+        pattern=r"^[A-Za-z0-9]+$",
+    )
+    runner_group: str = Field(
+        description="GitHub runner group of generated jobs, for example ${{ vars.RUNNER_GROUP }}.",
+        min_length=1,
+    )
+    image: str | None = Field(
+        default=None,
+        description="Container image of generated jobs; default: docker.image. The image must contain PTk.",
+        pattern=r"^[a-z0-9][A-Za-z0-9._/:@-]*$",
+    )
+    artifactory_credential: str | None = Field(
+        default=None,
+        description="Credential whose token pulls the image and transfers artifacts; default: docker.credential. The login name is docker.login_user with {user} set to technical_user.",
+        pattern=r"^[A-Za-z][A-Za-z0-9_-]*$",
+    )
+    pmt: PmtSpec = Field(description="PMT actions used by generated workflows.")
+    checkout: dict[str, Any] | None = Field(
+        default=None,
+        description="Checkout step (uses/with) replacing the PMT checkout, for example a project-owned repo-init action. Values may use ${{ ... }} expressions and secrets.",
+    )
+    vmr: VmrCheckoutSpec | None = Field(
+        default=None,
+        description="Virtual monorepo checkout with git-repo. Required when the repository belongs to a virtual monorepo.",
+    )
+
+
 # --------------------------------------------------------------------------- root
 
 
@@ -1158,6 +1326,9 @@ class PtkConfig(_Strict):
                 "vars",
                 "param_defaults",
                 "environment",
+                "python",
+                "docker",
+                "cx",
                 "requires_tools",
                 "tools",
                 "credentials",
@@ -1219,6 +1390,18 @@ class PtkConfig(_Strict):
     environment: EnvironmentSpec = Field(
         description="Default environment isolation and PATH settings for job execution.",
         default_factory=EnvironmentSpec,
+    )
+    python: PythonDefaults = Field(
+        description="Project-wide Python version, package indexes and download policy for Python steps.",
+        default_factory=PythonDefaults,
+    )
+    docker: DockerSpec | None = Field(
+        default=None,
+        description="Docker image and settings for ptk --docker, which runs jobs inside the image (Windows: Docker Engine in WSL).",
+    )
+    cx: CxSpec | None = Field(
+        default=None,
+        description="GitHub CX settings used by ptk maintainer gen-workflows: technical user, runner, image, PMT actions and virtual monorepo checkout.",
     )
     tools: dict[str, ToolSpec] = Field(
         description="Named tool definitions, version checks and installation sources.",
@@ -1309,6 +1492,34 @@ class PtkConfig(_Strict):
                 )
             except ValueError as exc:
                 raise ValueError(f"workflow {name!r}: {exc}") from exc
+        return self
+
+    @model_validator(mode="after")
+    def _docker_credential(self):
+        name = self.docker.credential if self.docker else None
+        if name is None:
+            return self
+        spec = self.credentials.get(name)
+        if spec is None:
+            raise ValueError(
+                f"docker.credential {name!r} is not a configured credential"
+            )
+        if "token" not in spec.fields or not (spec.user_field or "user" in spec.fields):
+            raise ValueError(
+                f"docker.credential {name!r} needs a token field and a user field"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def _cx_credential(self):
+        name = self.cx.artifactory_credential if self.cx else None
+        if name is None:
+            return self
+        spec = self.credentials.get(name)
+        if spec is None or "token" not in spec.fields:
+            raise ValueError(
+                f"cx.artifactory_credential {name!r} must be a configured credential with a token field"
+            )
         return self
 
     @field_validator("param_defaults")

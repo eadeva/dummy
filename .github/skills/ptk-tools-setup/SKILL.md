@@ -17,7 +17,7 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 5. Prefer SHA-256 checksums for downloads (a missing one only warns) and verify the archive's `bin` subfolder, which must exist inside the archive.
 
-6. Run `ptk self-service tools --job JOB --dry-run` and inspect the proposed installations. `-a/--job` is repeatable; without it all configured tools are checked.
+6. Run `ptk self-service tools --job JOB --dry-run` and inspect the proposed installations. `-a/--job` is repeatable; without it all configured tools are checked. At a VMR root the same command checks every repository (with `--job` only those defining the job).
 
 7. Use `ptk self-service tools --job JOB` or the job's `--setup` only within the requested installation scope. In an interactive non-CX terminal, a job with missing/too old tools asks **Install them now?**; answering no keeps the usual error.
 
@@ -43,3 +43,5 @@ For generated GitHub workflows, supply a Linux container image with matching PTk
 Consult [local setup](../../../docs/guides/local-setup.rst) for the preparation order and hook behavior. `tools.ensure` defers initial required-tool checks; order it before consumers with explicit `needs`. Unknown executables in arbitrary commands are not discovered as tool requirements. Mise is not a built-in installer; do not invent a `mise` schema field.
 
 `docker: false` is the default and disables installation only inside Docker. Keep version checks, report entries and existing tool activation. Use `docker: true` only when installation inside the image is intended. `PTK_DOCKER=1|0` overrides best-effort runtime detection. Report every unavailable/incompatible tool with its recorded reason; direct the developer to correct the image or its selected PATH rather than disabling checks.
+
+`ptk --docker` (default on Linux when `project.ptk.yml` has a `docker` section, opt-in on Windows through Docker Engine in WSL) runs jobs with the image's PTk; see [Docker guide](../../../docs/guides/docker.rst). Jobs with `docker: false` and GUI jobs stay on the host. Inside the image the container environment is the baseline, so the image's PATH provides the tools. Manage the kept container with `ptk self-service docker status|stop|remove`; never pass secret job parameters into Docker.

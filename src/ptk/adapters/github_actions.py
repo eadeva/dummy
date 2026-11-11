@@ -81,6 +81,43 @@ def location(row, scope):
     return "ptk/" + key
 
 
+def stem(row):
+    """File name template result of the destination; None keeps ptk/<hash> folders."""
+    name = (row.get("upload") or {}).get("name")
+    if name is not None and ("/" in name or not relative(name)):
+        raise ValueError("upload name must be one path segment")
+    return name
+
+
+def manifest_path(row, scope):
+    name = stem(row)
+    return (
+        f"{name}.ptk-manifest.json" if name else location(row, scope) + "/manifest.json"
+    )
+
+
+_LABEL = re.compile(r"[^A-Za-z0-9._+-]")
+
+
+def named(name, items):
+    """Remote names NAME[_LABEL].ext; a single output keeps NAME alone."""
+    names, used = [], set()
+    for index, item in enumerate(items):
+        rel = item["relative_path"]
+        ext = ".zip" if item["kind"] == "directory" else Path(rel).suffix
+        label = (
+            item.get("upload_path")
+            or item["properties"].get("artifact_type")
+            or Path(rel).name
+        )
+        base = name if len(items) == 1 else f"{name}_{_LABEL.sub('_', label)}"
+        if base + ext in used:
+            base = f"{base}_{index}"
+        used.add(base + ext)
+        names.append(relative(base + ext))
+    return names
+
+
 class Curl:
     """Pass credentials through stdin, never command arguments or error output."""
 
@@ -189,6 +226,18 @@ def upload(manifest, root, base, row, scope, extra, transfer):
     if "producer" in manifest and identity(manifest["producer"]) != identity(row):
         raise ValueError("upload producer differs from setup matrix")
     prefix = location(row, scope)
+    name = stem(row)
+    remotes = (
+        named(
+            name,
+            [
+                {**item, "relative_path": relative(item.get("relative_path"))}
+                for item in manifest["files"]
+            ],
+        )
+        if name
+        else None
+    )
     records = []
     with tempfile.TemporaryDirectory(prefix="ptk-upload-") as temporary:
         temp = Path(temporary)
@@ -220,7 +269,11 @@ def upload(manifest, root, base, row, scope, extra, transfer):
             suffix = relative(item.get("upload_path") or rel) + (
                 ".zip" if kind == "directory" else ""
             )
-            remote = f"{prefix}/{manifest['run_id']}/{index}/{suffix}"
+            remote = (
+                remotes[index]
+                if remotes
+                else f"{prefix}/{manifest['run_id']}/{index}/{suffix}"
+            )
             relative(remote)
             record = {
                 "relative_path": rel,
@@ -248,8 +301,9 @@ def upload(manifest, root, base, row, scope, extra, transfer):
         published = temp / "manifest.json"
         published.write_text(encode(document), encoding="utf-8")
         # Publish last: consumers never see a partially uploaded set.
-        transfer.transfer(url(base, prefix + "/manifest.json"), published, upload=True)
-    return url(base, prefix + "/manifest.json")
+        address = url(base, manifest_path(row, scope))
+        transfer.transfer(address, published, upload=True)
+    return address
 
 
 def unpack(archive, destination):
@@ -272,14 +326,15 @@ def unpack(archive, destination):
 
 
 def download(producers, root, scope, transfer, base=""):
-    restored, targets, pending = [], [], []
+    targets, pending = [], []
     with tempfile.TemporaryDirectory(prefix="ptk-download-") as temporary:
         temp = Path(temporary)
         for producer in producers:
             prefix = location(producer, scope)
+            name = stem(producer)
             source_base = (producer.get("upload") or {}).get("url") or base
             path = temp / f"manifest-{len(pending)}.json"
-            transfer.transfer(url(source_base, prefix + "/manifest.json"), path)
+            transfer.transfer(url(source_base, manifest_path(producer, scope)), path)
             document = json.loads(path.read_text(encoding="utf-8"))
             if (
                 document.get("schema_version") != 1
@@ -289,7 +344,7 @@ def download(producers, root, scope, transfer, base=""):
                 raise ValueError("download manifest identity mismatch")
             directory = producer.get("working_directory", ".")
             producer_root = root if directory == "." else local(root, directory)
-            for record in document["files"]:
+            for record in outermost(document["files"]):
                 target = local(producer_root, record["relative_path"])
                 if any(
                     target == p or target.is_relative_to(p) or p.is_relative_to(target)
@@ -300,7 +355,12 @@ def download(producers, root, scope, transfer, base=""):
                     )
                 targets.append(target)
                 remote = relative(record["remote_path"])
-                if not remote.startswith(prefix + "/"):
+                inside = (
+                    "/" not in remote and remote.startswith(name)
+                    if name
+                    else remote.startswith(prefix + "/")
+                )
+                if not inside:
                     raise ValueError("artifact escapes producer namespace")
                 payload = temp / f"payload-{len(pending)}"
                 transfer.transfer(url(source_base, remote), payload)
@@ -314,19 +374,38 @@ def download(producers, root, scope, transfer, base=""):
                 elif record["kind"] != "file":
                     raise ValueError("unsupported artifact kind")
                 pending.append((payload, target, record, producer_root))
-        # All payloads and ZIP paths are checked before touching project outputs.
-        for payload, target, record, producer_root in pending:
-            local(producer_root, record["relative_path"])
-            target.parent.mkdir(parents=True, exist_ok=True)
-            if target.is_dir():
-                shutil.rmtree(target)
-            elif target.exists():
-                target.unlink()
-            shutil.move(str(payload), target)
-            target.chmod(
-                record.get("mode", 0o755 if target.is_dir() else 0o644) & 0o777
-            )
-            restored.append(record["relative_path"])
+        restored = replace_outputs(pending)
+    return restored
+
+
+def outermost(records):
+    """A producer's output inside another of its directory outputs is restored with it."""
+    folders = [
+        tuple(relative(r["relative_path"]).split("/"))
+        for r in records
+        if r["kind"] == "directory"
+    ]
+    result = []
+    for record in records:
+        parts = tuple(relative(record["relative_path"]).split("/"))
+        if not any(len(f) < len(parts) and parts[: len(f)] == f for f in folders):
+            result.append(record)
+    return result
+
+
+def replace_outputs(pending):
+    """Move checked payloads to their targets; call only after every payload is verified."""
+    restored = []
+    for payload, target, record, producer_root in pending:
+        local(producer_root, record["relative_path"])
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if target.is_dir():
+            shutil.rmtree(target)
+        elif target.exists():
+            target.unlink()
+        shutil.move(str(payload), target)
+        target.chmod(record.get("mode", 0o755 if target.is_dir() else 0o644) & 0o777)
+        restored.append(record["relative_path"])
     return restored
 
 

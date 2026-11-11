@@ -221,7 +221,19 @@ class VaultProvider:
     def get(self, key: SecretKey) -> str | None:
         if not self.vault.exists:
             return None
-        return self.vault.entries().get(key.storage_ref)
+        entries = self.vault.entries()
+        value = entries.get(key.storage_ref)
+        if value is None:
+            # Older PTk versions scoped values per VMR (vmr/<workspace>/<definition>/NAME.FIELD).
+            legacy = {
+                v
+                for k, v in entries.items()
+                if k.startswith("vmr/") and k.rsplit("/", 1)[-1] == key.ref
+            }
+            if len(legacy) == 1:
+                value = legacy.pop()
+                self.vault.set(key.storage_ref, value)
+        return value
 
     def store(self, key: SecretKey, value: str) -> None:
         self.vault.set(key.storage_ref, value)

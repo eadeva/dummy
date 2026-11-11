@@ -23,6 +23,7 @@ def project_files(text, extra=None):
         "layout": "folder_structure",
         "artifactory": "artifactory_paths",
         "credentials": "credentials",
+        "cx": "cx",
         "tools": "tools",
         "versioning": "versioning",
         "configs": "configs",

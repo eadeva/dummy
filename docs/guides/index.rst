@@ -13,6 +13,7 @@ and defaults, use :doc:`/reference/configuration-schema`.
    configuration
    shared-configs
    python-tools
+   docker
    variant-generation
    workflows
    versioning

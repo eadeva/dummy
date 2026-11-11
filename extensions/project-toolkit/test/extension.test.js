@@ -124,7 +124,8 @@ test("GUI jobs have their own branch and keep job variants, parameters and saved
   const restored = await h.api.taskProvider.resolveTask(h.tasks[0]);
   assert.deepEqual(restored.execution.args, h.tasks[0].execution.args);
   const config = root.children.find(node => node.label === "Configuration");
-  const configured = config.children.find(node => node.label === "jobs").children.find(node => node.label === "viewer");
+  assert.ok(!config.children.find(node => node.label === "jobs").children.some(node => node.label === "viewer"));
+  const configured = config.children.find(node => node.label === "GUIs").children.find(node => node.label === "viewer");
   assert.equal(h.controller.provider.getTreeItem(configured).iconPath.id, "window");
   assert.equal(h.controller.provider.getTreeItem(configured).iconPath.color.id, "terminal.ansiCyan");
   project.jobs[1].gui = false;
@@ -547,16 +548,21 @@ test("tree omits duplicate run and report commands in repositories and workspace
   await h.controller.ready();
   const root = h.controller.provider.getChildren()[0];
   const project = root.children.find(node => node.project);
-  // The VMR folder has no Built-in commands of its own; each member repository keeps them.
-  assert.ok(!root.children.some(node => node.label === "Built-in commands"));
+  // VMR-level commands get their own node; each member repository keeps its Built-in commands.
+  assert.deepEqual(root.children.map(node => node.label), ["VMR commands", "Workspace workflows", "demo"]);
+  assert.deepEqual(root.children[0].children.map(node => node.label), ["CLI help", "validate", "workflow", "self-service", "maintainer"]);
   const builtins = project.children.find(node => node.label === "Built-in commands");
-  assert.deepEqual(builtins.children.map(node => node.label), ["CLI help", "help", "validate", "workflow", "self-service", "maintainer"]);
+  // The plain help command is replaced by the advanced help icon on CLI help.
+  // CLI help moved to the top of the repository; the built-in tree keeps the commands.
+  assert.equal(project.children[0].label, "CLI help");
+  assert.equal(project.children[0].contextValue, "builtin-help");
+  assert.deepEqual(builtins.children.map(node => node.label), ["validate", "workflow", "self-service", "maintainer"]);
   assert.deepEqual(builtins.children.find(node => node.label === "workflow").children.map(node => node.label), ["list", "show"]);
   for (const label of ["Jobs", "Workflows"]) {
     const node = project.children.find(node => node.label === label).children[0];
     assert.equal(node.contextValue, `${node.kind}-report`);
   }
-  assert.equal(root.children[0].children[0].contextValue, "workflow-report");
+  assert.equal(root.children[1].children[0].contextValue, "workflow-report");
   // Removing the duplicate rows does not remove CLI operations or saved tasks.
   await h.command("runBuiltin", { ...h.target("builtin"), name: "workflow run" });
   assert.equal(h.tasks[0].execution.args.at(-1), "run");
@@ -626,7 +632,7 @@ test("built-ins form a collapsible command tree with CLI help and credential act
   assert.equal(h.controller.provider.getTreeItem(setup).state, h.api.TreeItemCollapsibleState.Collapsed);
   assert.equal(creds.contextValue, "builtin-group");
   assert.deepEqual(creds.children.map(node => node.label), ["list", "set"]);
-  const help = builtins.children.find(node => node.label === "CLI help");
+  const help = project.children.find(node => node.label === "CLI help");
   assert.doesNotThrow(() => JSON.stringify(help.command));
   await h.command("showHelp", help.command.arguments[0]);
   await h.command("showHelp", creds);
@@ -683,10 +689,15 @@ test("VMR root built-ins omit member configuration and member help selects its r
   await h.controller.ready();
   await h.command("runBuiltin", { kind: "builtin", root: doc.root, name: "self-service creds list" });
   assert.deepEqual(h.tasks[0].execution.args, ["self-service", "creds", "list"]);
-  const project = h.controller.provider.getChildren()[0].children[0];
-  const commands = project.children.find(node => node.label === "Built-in commands").children;
-  await h.command("showHelp", commands[0]);
-  assert.deepEqual(h.tasks[1].execution.args, ["--help"]);
+  const vmr = h.controller.provider.getChildren()[0];
+  assert.equal(vmr.children[0].label, "VMR commands");
+  await h.command("showAdvancedHelp", vmr.children[0].children[0]);
+  assert.deepEqual(h.tasks[1].execution.args, ["help"]);
+  const project = vmr.children.find(node => node.project);
+  await h.command("showHelp", project.children[0]);
+  assert.deepEqual(h.tasks[2].execution.args, ["--help"]);
+  await h.command("showAdvancedHelp", project.children[0]);
+  assert.deepEqual(h.tasks[3].execution.args.at(-1), "help");
 });
 
 test("clean bypasses required parameters and survives saved-task restoration", async t => {
@@ -949,26 +960,35 @@ test("a step removed while the run form is open prevents the entire variant batc
 
 test("configuration graph trees use PTk metadata for job and workflow joins", async t => {
   const doc = inventory(), config = doc.projects[0].configuration;
-  config.value = {jobs: {build: {steps: {start: {uses: "echo"}, left: {uses: "echo", needs: "start"}, right: {uses: "echo", needs: "start"}, join: {uses: "echo", needs: ["left", "right"]}}}}, workflows: {verify: {jobs: {start: {}, left: {job: "build", needs: "start"}, right: {job: "build", needs: "start"}, join: {job: "build", needs: ["left", "right"]}}}}};
+  config.value = {jobs: {build: {steps: {start: {uses: "echo", outputs: ["a.txt", {path: "docs", artifact_type: "docs"}]}, left: {uses: "echo", needs: "start"}, right: {uses: "echo", needs: "start"}, join: {uses: "echo", needs: ["left", "right"]}}}}, workflows: {verify: {jobs: {start: {}, left: {job: "build", needs: "start"}, right: {job: "build", needs: "start"}, join: {job: "build", needs: ["left", "right"]}}}}};
   const nodes = [{id: "start", needs: []}, {id: "left", needs: ["start"]}, {id: "right", needs: ["start"]}, {id: "join", needs: ["left", "right"]}];
   const projection = [{id: "start", parent: null, shared: false}, {id: "left", parent: 0, shared: false}, {id: "join", parent: 1, shared: false}, {id: "right", parent: 0, shared: false}, {id: "join", parent: 3, shared: true}];
   config.graphs = [{path: ["jobs", "build", "steps"], nodes, tree: projection}, {path: ["workflows", "verify", "jobs"], nodes: nodes.map(node => ({...node, label: "engine:build"})), tree: projection}];
   const h = harness(t, [doc]); await h.controller.ready();
   const tree = h.controller.provider.getChildren()[0].children[0].children.find(item => item.label === "Configuration");
+  const branches = node => node.children.filter(child => ["git-branch", "references"].includes(child.icon));
   for (const section of ["jobs", "workflows"]) {
     const graph = tree.children.find(item => item.label === section).children[0].children[0];
     assert.deepEqual(graph.children.map(node => node.label), ["start"]);
-    const start = graph.children[0], [left, right] = start.children;
-    const join = left.children[0];
-    assert.deepEqual(start.children.map(node => node.label), ["left", "right"]);
+    const start = graph.children[0], [left, right] = branches(start);
+    const join = branches(left)[0];
+    assert.deepEqual(branches(start).map(node => node.label), ["left", "right"]);
+    // A step's own fields (uses, needs, outputs, ...) come before its dependents.
+    if (section === "jobs") {
+      assert.equal(start.children[0].label, "uses");
+      const outputs = start.children.find(node => node.label === "outputs");
+      assert.equal(outputs.children.length, 2);
+      await h.command("openConfig", outputs.children[1]);
+      assert.deepEqual(h.opened.at(-1).path, [...graph.configPath, "start", "outputs", 1]);
+    }
     assert.equal(join.label, "join");
     assert.match(join.description, /needs all: left, right/);
-    const reference = right.children[0];
+    const reference = branches(right)[0];
     assert.equal(reference.label, "join");
     assert.match(reference.description, /shared — shown above/);
     assert.equal(reference.children.length, 0);
-    assert.notEqual(reference.id, left.children[0].id);
-    assert.deepEqual(reference.configPath, left.children[0].configPath);
+    assert.notEqual(reference.id, branches(left)[0].id);
+    assert.deepEqual(reference.configPath, branches(left)[0].configPath);
     await h.command("openConfig", reference);
     assert.deepEqual(h.opened.at(-1).path, [...graph.configPath, "join"]);
     assert.match(join.tooltip, /Needs: left, right/);

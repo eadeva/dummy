@@ -238,5 +238,6 @@ def test_manual_routing_supplies_context_for_shared_services(tmp_path):
     standalone = create_app()
     assert (
         standalone.credentials(a).keys("shared")[0].storage_ref
-        != one.credentials(a).keys("shared")[0].storage_ref
+        == one.credentials(a).keys("shared")[0].storage_ref
+        == "shared.token"
     )

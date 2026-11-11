@@ -96,6 +96,8 @@ def build_command(
             if plain_python
             else ["uv", "run", "--no-project"]
         )
+        if plain_python:
+            env = {**env, **plain_python.env}
         argv = [*prefix, *argv]
     elif suffix in (".bat", ".cmd"):
         argv = ["cmd", "/c", *argv]

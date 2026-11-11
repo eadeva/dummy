@@ -45,6 +45,7 @@ DOCS = (
     "guides/output-reuse",
     "guides/cx-matrix",
     "guides/github-actions",
+    "guides/docker",
     "guides/shared-configs",
 )
 

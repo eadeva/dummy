@@ -167,7 +167,9 @@ contract in :doc:`agent-guide` and the local onboarding flow in :doc:`local-setu
 Keep team-specific assistant instructions in files owned by that project. Do not
 edit the installed reference examples to configure builds, and do not modify the
 bundle manifest to hide drift. Synchronization reports conflicting edits and
-preserves them. Reconcile changes intentionally before updating the bundle.
+preserves them. Reconcile changes intentionally before updating the bundle, or
+use ``ptk maintainer sync agent --force`` to review the listed files and confirm
+their replacement.
 
 A successful link check proves resource availability; it does not prove that an
 AI assistant or the VS Code UI will behave correctly in every environment.

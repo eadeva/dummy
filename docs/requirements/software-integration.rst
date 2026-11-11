@@ -55,7 +55,7 @@ Configured external dependencies, ordinary Python tools and maintenance.
    :req_satisfies: REQ_Sys_VMR
    :tags: implemented
 
-   PTk shall combine identical workspace credential definitions, disambiguate conflicts, and namespace storage by definition/workspace unless an explicit namespace is provided.
+   PTk shall combine workspace credentials by name and store vault values per user only (``NAME.FIELD``), independent of project, repository or workspace.
 
    **Origin:** Derived from the current CLI implementation and regression tests; requires review.
 

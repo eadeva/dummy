@@ -1,5 +1,7 @@
 """Minimal execution and artifact metadata for a GitHub workflow setup job."""
 
+from urllib.parse import quote
+
 from ...domain.errors import PtkError
 from ...domain.suggest import did_you_mean
 from .conditions import job_enabled
@@ -67,8 +69,18 @@ class ExportMatrix:
                     base = destination.pop("base")
                     identity = destination.pop("identity")
                     bases.append(base)
+                    suffix = "/".join(
+                        quote(part, safe="")
+                        for part in (
+                            destination["repository"],
+                            *destination["path"].split("/"),
+                        )
+                        if part
+                    )
                     upload = {
                         **destination,
+                        # Server URL for the PMT actions, which take repository and path apart.
+                        "artifactory_url": destination["url"][: -len(suffix) - 2],
                         "base_path": base["path"],
                         "base_url": base["url"],
                     }

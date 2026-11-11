@@ -1,5 +1,5 @@
 #!/bin/sh
-# Install ptk on Linux/macOS: uv (if missing) + ptk as a uv tool.
+# Install ptk on Linux: uv (if missing) + ptk as a uv tool.
 #
 #   curl -LsSf <url>/install.sh | sh
 #   PTK_SOURCE="git+https://github.com/<org>/ptk@v0.1.0" sh install.sh

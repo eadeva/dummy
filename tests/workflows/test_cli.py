@@ -335,6 +335,23 @@ def test_maintainer_workflows_are_protected(tmp_path, command_policy):
     assert allowed.exit_code == 0, allowed.output
 
 
+def test_maintainer_workflow_list_shows_all_and_users_only_their_own(tmp_path):
+    root = repository(
+        tmp_path,
+        workflows={
+            "verify": {"help": "Checks", "jobs": {"build": {}}},
+            "release": {"audience": "maintainer", "jobs": {"build": {}}},
+        },
+    )
+    user = invoke(root, "workflow", "list").output
+    assert "verify: Checks" in user and "release" not in user
+    grant_maintainer(root)
+    listed = invoke(root, "maintainer", "workflow", "list", env={"PTK_ROLE": ""}).output
+    assert "verify: Checks" in listed and "release (maintainer):" in listed
+    empty = repository(tmp_path / "empty", workflows={})
+    assert "no workflows" in invoke(empty, "workflow", "list").output
+
+
 def test_published_example_runs_locally_without_github(tmp_path, monkeypatch):
     import shutil
 

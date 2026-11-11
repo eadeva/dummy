@@ -128,7 +128,7 @@ def test_commands_inside_a_member_need_no_alias(tmp_path, monkeypatch):
     tools = runner.invoke(cli, ["self-service", "tools", "--help"])
     assert tools.exit_code == 0 and "--job" in tools.output, tools.output
     shared = runner.invoke(cli, ["self-service", "--help"])
-    assert "install tools under a repository" in shared.output, shared.output
+    assert "tools and Git hooks for every repository" in shared.output, shared.output
 
 
 def test_vmr_permissions_are_per_repository(tmp_path, monkeypatch):
@@ -265,7 +265,7 @@ def test_unselected_repository_missing_job_does_not_block_command(
     assert result.exit_code != 0 and "unknown job" in result.output
 
 
-def test_shared_workspace_views_and_no_global_installer(tmp_path, monkeypatch):
+def test_shared_workspace_views_and_fan_out_commands(tmp_path, monkeypatch):
     a, b = workspace(tmp_path)
     grant_maintainer(tmp_path)
     grant_maintainer(a.parent)
@@ -279,24 +279,60 @@ def test_shared_workspace_views_and_no_global_installer(tmp_path, monkeypatch):
         ["variant", "list"],
         ["report", "list"],
         ["report", "summary"],
+        ["self-service", "tools", "--dry-run"],
+        ["self-service", "hooks", "status"],
+        ["maintainer", "configs-report"],
     ):
         result = runner.invoke(cli, args)
         assert result.exit_code == 0, (args, result.output, result.exception)
-    result = runner.invoke(cli, ["self-service", "tools"])
-    assert result.exit_code != 0
+    result = runner.invoke(cli, ["self-service", "tools", "--dry-run"])
+    assert "[firmware]" in result.output and "[bootloader]" in result.output
+    missing = runner.invoke(cli, ["self-service", "tools", "--job", "nope"])
+    assert missing.exit_code != 0 and "no repository defines" in missing.output
+    hooks = runner.invoke(cli, ["self-service", "hooks", "status"])
+    assert "[firmware]" not in hooks.output  # repositories without hooks are skipped
     result = runner.invoke(cli, ["maintainer", "config", "show", "project.name"])
     assert "[firmware]" in result.output and "[bootloader]" in result.output
+    help_text = runner.invoke(cli, ["--help"]).output
+    assert help_text.index("VMR commands") < help_text.index("Repositories")
+    assert "ptk self-service hooks" in help_text
 
 
-def test_shared_credentials_merge_conflicts_and_namespace(tmp_path, monkeypatch):
+def test_jobs_lists_every_repository_by_role(tmp_path, monkeypatch):
+    a, _b = workspace(tmp_path)
+    data = read_project(a)
+    data["jobs"]["publish"] = {
+        "audience": "maintainer",
+        "help": "Release",
+        "steps": {"up": {"run": "echo up"}},
+    }
+    data["jobs"]["viewer"] = {
+        "gui": True,
+        "help": "Open the viewer",
+        "steps": {"open": {"run": "echo open"}},
+    }
+    write_project(a, data)
+    monkeypatch.chdir(tmp_path)
+    user = CliRunner(env={"PTK_ROLE": "user"}).invoke(cli, ["jobs"])
+    assert user.exit_code == 0, user.output
+    assert "firmware/build" in user.output and "bootloader/build" in user.output
+    assert "firmware/viewer (gui)" in user.output and "publish" not in user.output
+    grant_maintainer(a.parent)
+    maintainer = CliRunner(env={"PTK_ROLE": ""}).invoke(cli, ["jobs"])
+    assert "firmware/publish (maintainer): Release" in maintainer.output
+    monkeypatch.chdir(a.parent)
+    inside = CliRunner(env={"PTK_ROLE": ""}).invoke(cli, ["jobs"])
+    assert "bootloader/build" in inside.output, inside.output
+
+
+def test_credentials_share_one_user_vault(tmp_path, monkeypatch):
     from ptk.bootstrap import create_app
 
     a, b = workspace(tmp_path)
     for file in (a, b):
         data = read_project(file)
         data["credentials"] = {
-            "shared": {"providers": ["vault"]},
-            "different": {"providers": ["vault"], "description": file.parent.name},
+            "shared": {"providers": ["vault"], "description": file.parent.name},
         }
         write_project(file, data)
     monkeypatch.chdir(tmp_path)
@@ -305,38 +341,20 @@ def test_shared_credentials_merge_conflicts_and_namespace(tmp_path, monkeypatch)
     runner = CliRunner()
     result = runner.invoke(cli, ["self-service", "creds", "list"])
     assert result.exit_code == 0, result.output
-    assert (
-        "firmware/different" in result.output
-        and "bootloader/different" in result.output
-    )
     assert "shared.token [bootloader, firmware]" in result.output
-    assert (
-        runner.invoke(
-            cli, ["self-service", "creds", "set", "different"], input="ambiguous\n"
-        ).exit_code
-        != 0
-    )
     result = runner.invoke(
         cli, ["self-service", "creds", "set", "shared"], input="shared-synthetic\n"
     )
     assert result.exit_code == 0, (result.output, result.exception)
-    result = runner.invoke(
-        cli,
-        ["self-service", "creds", "set", "firmware/different"],
-        input="private-synthetic\n",
-    )
-    assert result.exit_code == 0, result.output
     one, two = create_app(), create_app()
     ap, bp = (
         one.load_project.execute(config_file=a),
         two.load_project.execute(config_file=b),
     )
-    assert one.credentials(ap).resolve("shared.token") == two.credentials(bp).resolve(
-        "shared.token"
-    )
     assert (
-        one.credentials(ap).keys("different")[0].storage_ref
-        != two.credentials(bp).keys("different")[0].storage_ref
+        one.credentials(ap).resolve("shared.token")
+        == two.credentials(bp).resolve("shared.token")
+        == "shared-synthetic"
     )
     # Listing a locked vault must not retrieve or prompt for a value.
     monkeypatch.delenv("PTK_VAULT_PASSWORD")

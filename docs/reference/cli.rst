@@ -14,7 +14,8 @@ Use ``ptk maintainer NAME`` for jobs and workflows declared with
 with ``run NAME`` or ``workflow run NAME`` within the same namespace.
 
 Help shows Jobs, Workflows, everyday Commands, Self-service and Maintenance in
-that order. At a VMR root, Repositories replaces Jobs. Maintenance is visible
+that order. At a VMR root, a **VMR commands** panel comes first and Repositories
+replaces Jobs. Maintenance is visible
 to maintainers listed by the owning project or workspace. CX also permits
 entry to the maintenance namespace for the hidden, read-only matrix export;
 other maintenance commands retain their role checks. Group help and Tab
@@ -58,7 +59,7 @@ completion follow the same permissions and ordering.
      - Manage this repository's local Git hooks
    * - ``ptk maintainer config show|schema``
      - Inspect effective configuration and sources, or export its JSON schema
-   * - ``ptk maintainer sync configs|agent [--check]``
+   * - ``ptk maintainer sync configs|agent [--check|--force]``
      - Regenerate one explicitly selected integration, or check it without writing
    * - ``ptk maintainer configs-report [--output PATH]``
      - Write offline JSON deviations and modified external-base filenames; does not synchronize files
@@ -75,6 +76,11 @@ completion follow the same permissions and ordering.
 changing files. ``maintainer sync`` requires a target; it never generates
 unrequested integrations. Config names may follow ``sync configs``;
 ``--diff`` previews shared configuration changes. Both targets support ``--check``.
+Both also support ``--force``: locally changed or unowned files that would
+otherwise block the sync are listed, and they are overwritten only when the
+maintainer confirms the prompt. Declining writes nothing; CX refuses ``--force``.
+``--force`` cannot be combined with ``--check`` or ``--diff``.
+At a VMR root the option is forwarded to every member, each with its own prompt.
 ``sync agent`` installs the PTk expert agent, its skills and offline reference docs.
 
 ``validate`` is always available. With no project it reports
@@ -270,7 +276,9 @@ It selects the variant for jobs, version discovery/generation, report commands,
 artifact destinations and ``variant show`` when NAME is omitted. An explicit
 NAME on ``variant show`` takes precedence. It is irrelevant to self-service/config/help/pre-commit,
 variant list/explain (which have their own explicit selection), describe,
-and workflow list/show. Workflow execution selects the owner variant and resolves
+and workflow list/show. ``workflow list`` shows workflows for everyone;
+``maintainer workflow list`` shows all workflows, marking maintainer-only ones.
+Workflow execution selects the owner variant and resolves
 other repositories through its ``repo_variants`` mappings.
 The option is no longer accepted after a job or subcommand.
 
@@ -412,38 +420,85 @@ Manual VMR commands are invoked from the marked workspace; inside an ordinary
 member repository, ptk remains standalone. Each repository has
 isolated configuration, tools, permissions and output directories.
 ``ptk firmware`` runs that repository's default job; bare ``ptk`` lists the
-repositories. There is no implicit run across all repositories. Global options
+repositories. Jobs never run across all repositories implicitly; the shared
+commands below act on every repository. Global options
 precede the alias. Project selection uses the working directory and the repository
 alias; there is no global ``--config``/``-C`` option. To opt a repository out of
 VMR membership, set ``virtual_monorepo: false`` in its root marker. Extension
 launches use the discovered workspace directory
 and repository alias.
 
+.. _vmr-commands:
+
 Shared VMR commands
 -------------------
 
-Alongside repository aliases, the VMR root exposes ``repos``, ``help``,
-``init``, ``validate``, ``maintainer config show/schema``, ``self-service doctor``, ``self-service creds``,
-``variant list`` and ``report list/summary``. ``report list --history``
-includes retained historical runs. Configuration and variant output is labelled
-by repository; projects without variants are skipped. Doctor checks the host
-once and then each repository. There is no root ``self-service tools``.
+Alongside repository aliases, the VMR root exposes commands that act on every
+PTk repository of the workspace. ``ptk --help`` lists them first in the
+**VMR commands** panel (maintenance entries only for workspace maintainers):
 
-Credentials with identical definitions and names are combined. Different
-definitions use ``ALIAS/NAME`` at the workspace level. Provisioning a shared
-credential writes once; testing it runs its configured test separately in each
-owning repository. Restricted credential groups are excluded from the shared
-catalog. Repository commands remain available for all these operations.
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
 
-VMR credential storage is namespaced by workspace location and definition
-identity unless ``credentials.NAME.namespace`` explicitly sets a stable scope.
-Git-pointer membership preserves this scope when invoked from a member directory.
-Manual VMR members receive workspace scope when routed from the marked workspace;
-direct standalone invocation does not infer a parent workspace. Identical definitions
-share a scope; conflicting definitions cannot overwrite each other in the vault.
-Moving a workspace or changing a definition changes its automatic
-scope: provision again or configure a stable namespace. Explicit env
-mappings are honored and may intentionally share variables. Default env
+   * - Command
+     - Effect
+   * - ``ptk jobs``
+     - List ``ALIAS/JOB: help`` for every repository; marks ``(gui)`` and, for that
+       repository's maintainers, ``(maintainer)`` jobs
+   * - ``ptk validate``, ``ptk variant list``, ``ptk report list|summary``
+     - Validate, list variants or show recorded runs of every repository
+   * - ``ptk self-service doctor``
+     - Check the host once, then each repository
+   * - ``ptk self-service tools [--job JOB] [--dry-run]``
+     - Check and install tools in every repository; with ``--job`` only in
+       repositories defining that job (an error if none does)
+   * - ``ptk self-service hooks install|uninstall|status``
+     - Manage Git hooks in every repository that has a pre-commit configuration
+   * - ``ptk self-service creds ...``
+     - Combined credentials (see below); ``lock`` and ``reset`` act once on your vault
+   * - ``ptk maintainer sync configs|agent``, ``maintainer config show``,
+       ``maintainer configs-report``, ``maintainer version show``
+     - Maintenance in every repository; refused before any repository runs if
+       you are not a maintainer of each one
+   * - ``ptk help``
+     - Open the advanced HTML help of the whole VMR (see below)
+   * - ``ptk repos``, ``ptk init``, ``ptk vmr-clean-all``
+     - List members, initialize unconfigured members, clean all outputs
+
+Each repository prints a ``[ALIAS]`` header. A failure in one repository does not
+stop the others; the command exits with the worst exit code. Configuration and
+variant output is labelled by repository; projects without variants are skipped.
+``report list --history`` includes retained historical runs. Inside a member
+directory, member-specific commands such as ``self-service tools`` act on that
+member; ``jobs`` and the workspace ``self-service`` commands (``completion``,
+``extension``, ``doctor``, ``creds``) keep their workspace meaning.
+
+Advanced HTML help
+------------------
+
+``ptk help`` writes a self-contained HTML page (``.ptk/help.html``, or ``-o PATH``)
+and opens it unless ``--no-open`` is given. Its navigation follows the VS Code
+extension: **Jobs**, **GUIs** and **Workflows** (expanded), **Built-in commands**
+nested by command path (for example *self-service › creds › set*),
+**Configuration** (variants, credentials, tools, files) and **AI assistant**,
+which explains the ``ptk-expert`` agent, lists the bundled skills and shows
+whether ``ptk maintainer sync agent`` installed them. Jobs and workflows include
+their dependency graphs. The page uses the full browser width. Search filters the page and
+opens matching branches. Maintainer-only jobs and workflows appear only for
+maintainers. At a VMR root the page starts with the VMR commands, workspace
+workflows and the assistant, followed by one branch per repository with the
+same groups and that repository's role.
+
+Credentials with the same name are combined: the vault belongs to the user and
+is shared by every project and repository. Provisioning a credential writes
+once; testing it runs its configured test separately in each owning repository.
+Restricted credential groups are excluded from the shared catalog. Repository
+commands remain available for all these operations.
+
+Vault entries are keyed by ``NAME.FIELD`` only. Values stored by older PTk
+versions under a VMR scope are moved to that key when they are unambiguous.
+Explicit env mappings are honored and may intentionally share variables. Default env
 variable names are shown by ``self-service creds list``.
 
 Listing only reads environment values and provider availability. Other stores
@@ -477,7 +532,8 @@ directory. The README, configuration and assistant files are protected by prefli
 in ``.github/ptk/manifest.json``; unchanged generated files update automatically,
 while local edits or different unowned files cause conflicts. ``--check`` includes
 the README. A changed config path relocates an unmodified managed README and
-rebuilds its relative links; modified old files must be reconciled first.
+rebuilds its relative links; modified old files must be reconciled first or
+replaced with a confirmed ``--force``.
 
 In VMR mode, omit DIRECTORY to initialize **all checked-out members without a
 root .main.ptk.yml**. This works before any member has PTk configuration and from

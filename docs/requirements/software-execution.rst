@@ -173,8 +173,10 @@ Preparation, scheduling, isolation, cancellation and output lifecycle.
 
    PTk shall support standalone Python scripts through uv and explicit selection
    of exactly one Python runtime: a uv project with optional dependency groups,
-   a requirements/packages environment with an optional Python request, a uvx
-   package with optional extra packages, or PTk's own interpreter. Ordinary
+   a requirements/packages environment, a uvx
+   package with optional extra packages, or PTk's own interpreter. A project-wide
+   Python version, package indexes and download policy, and a per-step version
+   override, shall apply to every uv mode. Ordinary
    interpreter commands shall remain executable without Python-mode configuration.
    The selected runtime shall apply to command steps without activating or
    replacing PTk's parent process environment.

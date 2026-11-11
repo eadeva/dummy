@@ -52,6 +52,12 @@ def in_maintainer(ctx):
     return False
 
 
+def _cx_command(path):
+    return path in {"maintainer", "maintainer.matrix", "maintainer.cx"} or (
+        path.startswith("maintainer.cx.")
+    )
+
+
 def allowed(ctx, name):
     if ctx.meta.get("host_setup") and name in {
         "self-service",
@@ -77,20 +83,13 @@ def allowed(ctx, name):
             role = state.app.workspace_role(root) if root else "user"
         except PtkError:
             role = "user"  # Invalid identity lists never expose mutation commands.
-        if state.app.host.is_cx() and ".".join(parts) in {
-            "maintainer",
-            "maintainer.matrix",
-        }:
+        if state.app.host.is_cx() and _cx_command(".".join(parts)):
             return True
         return command_allowed(".".join(parts), role, {})
     project = state.try_project()
-    # CX can read the matrix without a human maintainer login. This grants no
-    # mutation capability or access to restricted jobs/other maintenance commands.
-    if (
-        project is not None
-        and project.cx
-        and ".".join(parts) in {"maintainer", "maintainer.matrix"}
-    ):
+    # CX can read the matrix and transfer artifacts without a human maintainer login.
+    # This grants no mutation capability or access to restricted jobs/other commands.
+    if project is not None and project.cx and _cx_command(".".join(parts)):
         return True
     return command_allowed(
         ".".join(parts),

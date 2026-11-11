@@ -120,6 +120,11 @@ click.rich_click.SHOW_ARGUMENTS = True
     is_flag=True,
     help="Disable PTk's built-in output cache for all executed jobs and steps. Tool-native caches are unchanged.",
 )
+@click.option(
+    "--docker/--no-docker",
+    default=None,
+    help="Run jobs with the PTk in the project's Docker image (docker section; Windows: Docker Engine in WSL). Default: on for Linux when an image is configured, off on Windows. GUI jobs and jobs with docker: false stay on the host.",
+)
 @click.pass_context
 @guarded
 def cli(
@@ -131,6 +136,7 @@ def cli(
     clean: bool = False,
     re_run: bool = False,
     no_cache_ptk: bool = False,
+    docker: bool | None = None,
 ) -> None:
     """[bold]ptk[/] - project tool kit.
 
@@ -717,6 +723,24 @@ def doctor_command(ctx: click.Context) -> None:
     sys.exit(0 if _print_checks(checks) else 1)
 
 
+def _confirm_overwrite(ctx: click.Context):
+    """Let the maintainer accept the exact files --force would overwrite."""
+
+    def confirm(paths: list[str]) -> bool:
+        if _state(ctx).app.host.is_cx():
+            raise click.UsageError(
+                "--force requires interactive confirmation; not available in CX"
+            )
+        console.print(
+            "[yellow]Locally changed or unowned files will be overwritten:[/]"
+        )
+        for path in paths:
+            console.print(f"  {escape(path)}", highlight=False)
+        return click.confirm(f"Overwrite these {len(paths)} file(s)?", default=False)
+
+    return confirm
+
+
 def _show_config_results(items: list[Any], root: Path) -> None:
     for item in items:
         colour = {"up to date": "green", "new": "cyan"}.get(item.status, "yellow")
@@ -736,9 +760,16 @@ def _show_config_results(items: list[Any], root: Path) -> None:
 @click.option(
     "--diff", is_flag=True, help="Only show what would change (unified diff)."
 )
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Also overwrite locally changed or unowned files after confirmation.",
+)
 @click.pass_context
 @guarded
-def configs_sync(ctx: click.Context, names: tuple[str, ...], diff: bool) -> None:
+def configs_sync(
+    ctx: click.Context, names: tuple[str, ...], diff: bool, force: bool = False
+) -> None:
     """Copy declared external base files; overlays and Ruff settings stay project-owned."""
     project = _state(ctx).project()
     service = _state(ctx).app.shared_configs
@@ -751,7 +782,11 @@ def configs_sync(ctx: click.Context, names: tuple[str, ...], diff: bool) -> None
         if not changed:
             console.print("[green]all configs are up to date[/]")
         return
-    items = service.sync(project, list(names) or None)
+    items = service.sync(
+        project,
+        list(names) or None,
+        confirm=_confirm_overwrite(ctx) if force else None,
+    )
     if not items:
         console.print(
             "no external files configured (declare source and file mappings in configs.ptk.yml)"
@@ -924,14 +959,22 @@ def report_open(
     is_flag=True,
     help="Check the config README, agent, skills and docs without writing; exit 1 if outdated.",
 )
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Also overwrite locally changed or unowned files after confirmation.",
+)
 @click.pass_context
 @guarded
-def agent_command(ctx: click.Context, check: bool) -> None:
+def agent_command(ctx: click.Context, check: bool, force: bool = False) -> None:
     """Sync the config README and PTk agent, skills and offline docs."""
     state = _state(ctx)
     project = state.project()
     result = state.app.setup_authoring.execute(
-        project.root, check=check, config_path=project.config.repository.config_path
+        project.root,
+        check=check,
+        config_path=project.config.repository.config_path,
+        confirm=_confirm_overwrite(ctx) if force else None,
     )
     if check:
         console.print(
@@ -950,7 +993,10 @@ def agent_command(ctx: click.Context, check: bool) -> None:
 
 
 def _collect_commands(
-    group: click.Group, ctx: click.Context, role: str
+    group: click.Group,
+    ctx: click.Context,
+    role: str,
+    commands: dict[str, click.Command] | None = None,
 ) -> list[HelpCommand]:
     """All commands of the click tree as plain data for the HTML help."""
     from ...application.use_cases.help import HelpCommand, HelpOption
@@ -1011,11 +1057,52 @@ def _collect_commands(
                     visit(child, sub, [*path, child_name])
 
     # Collect only the selected repository, even when the real root is a VMR.
-    standalone = ProjectGroup(
-        commands=group.commands, params=group.params, help=group.help
+    standalone = (
+        click.RichGroup(commands=commands, params=group.params, help=group.help)
+        if commands is not None
+        else ProjectGroup(commands=group.commands, params=group.params, help=group.help)
     )
     visit(standalone, None, [])
     return result
+
+
+def _assistant(app, root: Path | None):
+    from ...application.use_cases.help import assistant_info
+
+    try:
+        return assistant_info(app.setup_authoring.bundle(), root)
+    except PtkError:
+        return None
+
+
+def repository_help(ctx: click.Context, state, alias: str | None):
+    """Help document of one repository; ``alias`` prefixes its commands in a VMR."""
+    project, error = None, None
+    try:
+        project = state.project()
+    except ConfigError as exc:
+        error = "; ".join(str(p) for p in exc.problems[:5])
+    except PtkError as exc:
+        error = str(exc)
+    role = state.app.role(project)
+    doc = state.app.build_help.execute(
+        project, _collect_commands(cli, ctx, role), role, error
+    )
+    doc.alias = alias or (project.config.repository.alias if project else "")
+    doc.prefix = alias or ""
+    doc.assistant = _assistant(state.app, project.root if project else None)
+    return project, doc
+
+
+def write_and_open(state, doc, output: Path, no_open: bool) -> None:
+    path = state.app.write_help(doc, output)
+    console.print(
+        f"help written to [bold]{escape(str(path))}[/]", highlight=False, soft_wrap=True
+    )
+    if not no_open and not state.app.open_in_browser(path):
+        console.print(
+            "[dim]no browser available here - open the file above on a machine with a desktop[/]"
+        )
 
 
 @cli.command("help")
@@ -1030,42 +1117,23 @@ def _collect_commands(
 )
 @click.pass_context
 def help_command(ctx: click.Context, output: Path | None, no_open: bool) -> None:
-    """Open the full help as a web page: every job with its parameters and steps, variants, credentials,
-    tools and all commands. Works offline."""
+    """Open the full help as a web page: every job, GUI and workflow with its parameters and steps,
+    variants, credentials, tools, the AI assistant and all commands. Works offline."""
     import tempfile
 
     state = _state(ctx)
-    project, error = None, None
-    try:
-        project = state.project()
-    except ConfigError as exc:
-        error = "; ".join(str(p) for p in exc.problems[:5])
-    except PtkError as exc:
-        error = str(exc)
-    role = state.app.role(project)
-    doc = state.app.build_help.execute(
-        project, _collect_commands(cli, ctx, role), role, error
-    )
+    alias = None
     parent = ctx
     while parent is not None:
         if getattr(parent.command, "repository_boundary", False):
-            prefix = f"ptk {parent.info_name}"
-            for item in [*doc.commands, *doc.jobs]:
-                if item.usage == "ptk" or item.usage.startswith("ptk "):
-                    item.usage = prefix + item.usage[3:]
+            alias = parent.info_name
             break
         parent = parent.parent
+    project, doc = repository_help(ctx, state, alias)
     if output is None:
         base = project.root / ".ptk" if project else Path(tempfile.gettempdir()) / "ptk"
         output = base / "help.html"
-    path = state.app.write_help(doc, output)
-    console.print(
-        f"help written to [bold]{escape(str(path))}[/]", highlight=False, soft_wrap=True
-    )
-    if not no_open and not state.app.open_in_browser(path):
-        console.print(
-            "[dim]no browser available here - open the file above on a machine with a desktop[/]"
-        )
+    write_and_open(state, doc, output, no_open)
 
 
 @click.command("init")
@@ -1187,9 +1255,14 @@ def _show_init_result(target: Path, result: InitResult) -> None:
 @click.option(
     "--diff", is_flag=True, help="Preview shared configuration changes (configs only)."
 )
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Also overwrite locally changed or unowned files after listing them and asking for confirmation.",
+)
 @click.pass_context
 @guarded
-def sync_command(ctx, target, names, check, diff):
+def sync_command(ctx, target, names, check, diff, force):
     """Regenerate one explicitly selected kind of project integration."""
     if names and target != "configs":
         raise click.UsageError("NAMES apply only to configs")
@@ -1197,6 +1270,8 @@ def sync_command(ctx, target, names, check, diff):
         raise click.UsageError(
             "--diff requires configs and cannot be combined with --check"
         )
+    if force and (check or diff):
+        raise click.UsageError("--force cannot be combined with --check or --diff")
     root = ctx.find_root()
     current = ctx
     member = False
@@ -1214,14 +1289,15 @@ def sync_command(ctx, target, names, check, diff):
             names=names,
             check=check,
             diff=diff,
+            force=force,
         )
     if target == "configs":
         return (
             ctx.invoke(configs_check, names=names)
             if check
-            else ctx.invoke(configs_sync, names=names, diff=diff)
+            else ctx.invoke(configs_sync, names=names, diff=diff, force=force)
         )
-    return ctx.invoke(agent_command, check=check)
+    return ctx.invoke(agent_command, check=check, force=force)
 
 
 @click.group("self-service", cls=AccessGroup, invoke_without_command=True)
@@ -1242,6 +1318,8 @@ def maintainer_group(ctx):
         click.echo(ctx.get_help())
 
 
+from .cx import cx_group
+from .docker import docker_group
 from .github_workflows import gen_workflows
 from .hooks import hooks_group
 from .matrix import matrix_command
@@ -1253,10 +1331,12 @@ for command in (
     extension_command,
     doctor_command,
     hooks_group,
+    docker_group,
 ):
     self_service.add_command(command)
 for command in (
     matrix_command,
+    cx_group,
     gen_workflows,
     configs_report,
     config_group,

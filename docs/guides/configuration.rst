@@ -22,7 +22,7 @@ except ``project.ptk.yml``, which must define the project name.
    * - File
      - Contents
    * - ``project.ptk.yml``
-     - Name, description, default job, component directories, variables and shared execution defaults
+     - Name, description, default job, component directories, variables and shared execution defaults, including the ``python`` version, package indexes and download policy (see :doc:`python-tools`)
    * - ``folder_structure.ptk.yml``
      - Output layout
    * - ``artifactory_paths.ptk.yml``

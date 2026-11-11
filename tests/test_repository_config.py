@@ -79,6 +79,72 @@ def test_python_groups_are_only_allowed_for_project_mode():
         PythonSpec(project=".", groups=["--no-project"])
 
 
+def test_python_version_index_and_downloads_reach_every_uv_mode(tmp_path):
+    from ptk.domain.config.model import PythonDefaults, VenvSpec
+
+    manager = UvPythonEnvManager(None, uv="uv")
+    defaults = PythonDefaults(
+        version="3.12", index=["tcc=https://example.invalid/simple/"], downloads="never"
+    )
+    expected_env = {
+        "UV_INDEX": "tcc=https://example.invalid/simple/",
+        "UV_PYTHON_DOWNLOADS": "never",
+    }
+    plain = manager.runtime(None, tmp_path, create=False, defaults=defaults)
+    assert plain.script_prefix == ["uv", "run", "--no-project", "--python", "3.12"]
+    assert plain.env == expected_env and "Python 3.12" in plain.description
+    tool = manager.runtime(
+        PythonSpec(uvx="ruff", version="3.11"),
+        tmp_path,
+        create=False,
+        defaults=defaults,
+    )
+    assert tool.command_prefix[:5] == ["uv", "tool", "run", "--python", "3.11"]
+    project = manager.runtime(
+        PythonSpec(project="."), tmp_path, create=False, defaults=defaults
+    )
+    assert project.command_prefix[4:6] == ["--python", "3.12"]
+    venv = manager.runtime(
+        PythonSpec(venv=VenvSpec()), tmp_path, create=False, defaults=defaults
+    )
+    assert venv.env["UV_INDEX"] and "Python 3.12" in venv.description
+    other = manager.runtime(
+        PythonSpec(venv=VenvSpec(), version="3.11"), tmp_path, create=False
+    )
+    assert other.script_prefix != venv.script_prefix  # version is part of the hash
+    cli = manager.runtime(
+        PythonSpec(interpreter="cli"), tmp_path, create=False, defaults=defaults
+    )
+    assert cli.env == {} and "--python" not in cli.script_prefix
+    step = PlannedStep(path=("s",), spec=StepSpec(run=["x.py"]), run=["x.py"])
+    command = build_command(
+        step,
+        env={},
+        cwd=str(tmp_path),
+        os_name="linux",
+        python=None,
+        plain_python=plain,
+    )
+    assert command.argv[:5] == ["uv", "run", "--no-project", "--python", "3.12"]
+    assert command.env["UV_PYTHON_DOWNLOADS"] == "never"
+
+
+def test_python_version_and_index_are_validated():
+    from ptk.domain.config.model import PythonDefaults
+
+    for version in ("3", "3.12", "3.12.4", ">=3.11,<3.13", "~=3.12"):
+        assert PythonSpec(uvx="ruff", version=version).version == version
+    for version in ("3.1.2.3", "python3", "latest", "3.12,"):
+        with pytest.raises(ValidationError, match="invalid Python version"):
+            PythonSpec(uvx="ruff", version=version)
+    with pytest.raises(ValidationError, match="interpreter: cli"):
+        PythonSpec(interpreter="cli", version="3.12")
+    with pytest.raises(ValidationError, match="invalid package index"):
+        PythonDefaults(index=["no url"])
+    with pytest.raises(ValidationError, match="Extra inputs"):
+        PythonSpec.model_validate({"venv": {"python": "3.12"}})
+
+
 @pytest.mark.parametrize("cx", [False, True], ids=["local", "cx"])
 @pytest.mark.parametrize(
     "entry",

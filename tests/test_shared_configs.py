@@ -267,6 +267,14 @@ def test_modified_file_blocks_every_destination(external):
         target.read_text() == "local edits"
         and (root / ".clang-format").read_bytes() == before
     )
+    asked = []
+    with pytest.raises(PtkError, match="locally modified"):
+        service.sync(project(), confirm=lambda paths: asked.append(paths) or False)
+    assert asked == [["config/external/ruff-base.toml"]]
+    assert target.read_text() == "local edits"
+    service.sync(project(), confirm=lambda paths: True)
+    assert target.read_text() != "local edits"
+    assert all(item.status == "up to date" for item in service.check(project()))
 
 
 def test_tag_is_pinned_and_offline_reuse_works(external):

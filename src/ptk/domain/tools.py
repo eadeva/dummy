@@ -9,7 +9,7 @@
         download: {linux: {url: ..., sha256: ..., bin: bin}}
         apt: cmake                                   # only with --allow-system
 
-Install order: Windows choco -> uv tool -> download; Linux/macOS uv tool ->
+Install order: Windows choco -> uv tool -> download; Linux uv tool ->
 download -> apt/dnf (only when system package managers are allowed).
 """
 

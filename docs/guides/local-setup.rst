@@ -17,6 +17,9 @@ Start without running a job::
 Use discovered job and variant names in the commands below. ``JOB`` is a
 placeholder, not a built-in job. A project without variants is valid. In a VMR,
 use the owning repository's invocation route; keep global options before its alias.
+From the VMR root, ``ptk self-service tools --dry-run`` and
+``ptk self-service hooks install`` prepare every repository at once, and
+``ptk jobs`` lists what each repository offers.
 
 What a real local job checks
 ----------------------------

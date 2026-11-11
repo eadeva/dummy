@@ -229,7 +229,7 @@ class SharedConfigs:
         with self._files.transaction(project.root):
             return self._plan(project, names)
 
-    def _plan(self, project, names=None):
+    def _plan(self, project, names=None, confirm=None):
         groups = self._selection(project, names)
         previous, raw, old_mode = self._lock(project)
         source = project.config.configs.source
@@ -250,6 +250,7 @@ class SharedConfigs:
             if names and record.get("group") not in names
         }
         changes = []
+        conflicts = []
         for name, item, destination, overlay_path, source_path in self._files_of(
             groups, blobs
         ):
@@ -281,9 +282,7 @@ class SharedConfigs:
                 and digest(old) != wanted[0]
                 and (not owned or digest(old) != owned["sha256"])
             ):
-                raise PtkError(
-                    f"preserving locally modified or unowned configuration: {destination}; reconcile it before synchronization"
-                )
+                conflicts.append(destination)
             records[destination] = {
                 "group": name,
                 "source": source_path,
@@ -313,6 +312,12 @@ class SharedConfigs:
                     ],
                 )
             )
+        if conflicts and not (confirm and confirm(conflicts)):
+            raise PtkError(
+                "preserving locally modified or unowned configuration: "
+                + ", ".join(conflicts)
+                + "; reconcile it before synchronization or use --force"
+            )
         if not paths and not previous:
             return []
         document = {
@@ -333,9 +338,10 @@ class SharedConfigs:
         )
         return changes
 
-    def sync(self, project, names=None):
+    def sync(self, project, names=None, confirm=None):
+        """``confirm(paths)`` may accept overwriting locally changed or unowned files."""
         with self._files.transaction(project.root):
-            planned = self._plan(project, names)
+            planned = self._plan(project, names, confirm)
             # All sources, destinations and conflicts are checked before any project write.
             for item in planned:
                 if item.status != "up to date":

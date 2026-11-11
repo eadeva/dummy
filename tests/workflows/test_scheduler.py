@@ -98,6 +98,46 @@ def test_worker_limit_bounds_ready_jobs():
     assert maximum == 2
 
 
+def test_local_needs_order_jobs_but_do_not_block_on_failure():
+    prepared = plan(
+        {
+            "build": {},
+            "sbom": {"local_needs": "build"},
+            "sfa": {"local_needs": ["sbom"]},
+        },
+        max_workers=3,
+    )
+    order, lock = [], threading.Lock()
+
+    def run(node, cancel):
+        with lock:
+            assert set(node.spec.local_needs) <= set(order)
+            order.append(node.id)
+        return CallOutcome(Status.FAILED if node.id == "build" else Status.PASSED)
+
+    result = RunWorkflow().execute(prepared, run, Cancelled())
+    assert order == ["build", "sbom", "sfa"]
+    assert [job.status for job in result.jobs] == [
+        Status.FAILED,
+        Status.PASSED,
+        Status.PASSED,
+    ]
+
+
+@pytest.mark.parametrize(
+    ("jobs", "message"),
+    [
+        ({"a": {"local_needs": "missing"}}, "unknown"),
+        ({"a": {"local_needs": "a"}}, "own invocation"),
+        ({"a": {"needs": "b", "local_needs": "b"}, "b": {}}, "needs and local_needs"),
+        ({"a": {"local_needs": "b"}, "b": {"needs": "a"}}, "cycle"),
+    ],
+)
+def test_invalid_local_needs_are_rejected(jobs, message):
+    with pytest.raises(ValidationError, match=message):
+        WorkflowSpec(jobs=jobs)
+
+
 @pytest.mark.parametrize("outcome", [Status.FAILED, Status.SKIPPED, Status.CANCELLED])
 def test_unsuccessful_prerequisite_blocks_its_chain_but_not_independent_jobs(outcome):
     prepared = plan(

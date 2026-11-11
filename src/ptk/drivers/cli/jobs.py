@@ -32,7 +32,7 @@ from .access import AccessGroup, denied_command, in_maintainer
 from .completion import features as complete_features
 from .completion import passthrough_steps as complete_passthrough
 from .completion import steps as complete_steps
-from .options import SuggestedCommand, SuggestedOption, cache_option
+from .options import SuggestedCommand, SuggestedOption, cache_option, docker_option
 from .report_links import print_report
 from .state import console, err_console, guarded, report_error, state_of
 
@@ -121,6 +121,7 @@ def param_option(name: str, spec: ParamSpec) -> click.Option:
 def common_options() -> list[click.Parameter]:
     params: list[click.Parameter] = [
         cache_option(),
+        docker_option(),
         click.Option(
             ["--graph"],
             is_flag=True,
@@ -211,9 +212,12 @@ def build_request(
     dry_run: bool = False,
     graph: bool = False,
     no_cache_ptk: bool = False,
+    docker: bool | None = None,
 ) -> RunRequest:
     from ...application.use_cases.run import RunRequest
 
+    if docker is not None:
+        state_of(ctx).docker = docker
     project = state_of(ctx).project()
     name = job or project.config.project.default_job
     spec = project.config.jobs.get(name)
@@ -299,6 +303,10 @@ def execute(
     cleaning = mode(state)
     if show_env and not request.dry_run:
         raise PtkError("--env requires --dry-run")
+    if state.use_docker(project) and _execute_in_docker(
+        ctx, request, project, names, quiet=quiet, setup=setup
+    ):
+        return
     if setup and not state.clean and not request.dry_run:
         job = request.job or project.config.project.default_job
         if job:
@@ -336,6 +344,90 @@ def execute(
             break
     if not request.dry_run:
         sys.exit(130 if 130 in codes else max(codes, default=0))
+
+
+def _execute_in_docker(ctx, request, project, names, *, quiet, setup) -> bool:
+    """Run the job with the PTk of the project's image; False: it stays on the host."""
+    from .docker import container_argv, job_paths, job_secrets, runs_in_docker, session
+
+    state = state_of(ctx)
+    name = request.job or project.config.project.default_job
+    spec = project.config.jobs.get(name) if name else None
+    if spec is None:
+        raise PtkError(f"unknown job {name!r}")
+    if not runs_in_docker(spec):
+        reason = "GUI job" if spec.gui else "docker: false"
+        err_console.print(f"[yellow]'{escape(name)}' runs on the host ({reason})[/]")
+        return False
+    params = {**request.params_file, **request.params}
+    if any(spec.params[p].type == "secret" for p in params if p in spec.params):
+        raise PtkError(
+            "secret parameters cannot be passed into Docker; use step secrets (credentials) instead"
+        )
+    run = session(state, project)
+    argv = container_argv(
+        job=name,
+        maintainer=spec.audience == "maintainer",
+        variant=request.variant,
+        all_variants=request.all_variants,
+        params=params,
+        features=request.feature_overrides,
+        only_step=request.only_step,
+        end=request.end,
+        args_for=request.args_for,
+        passthrough=request.passthrough,
+        overrides=state.overrides,
+        verbose=state.verbose,
+        clean=state.clean,
+        re_run=state.re_run,
+        no_cache_ptk=request.no_cache_ptk,
+        quiet=quiet,
+        setup=setup,
+    )
+    if request.dry_run:
+        console.print(
+            f"docker: would run in {run.name} ({escape(project.config.docker.image)}): "
+            + escape(shlex.join(argv)),
+            highlight=False,
+        )
+        return True
+    cx = state.app.host.is_cx() if state.cx is None else state.cx
+    if state.clean:
+        with run.reserved():
+            code = run.run(argv, secrets={}, cx=cx)
+        if code:
+            sys.exit(code)
+        return False  # also clean the host copies
+    prepared = [
+        state.app.prepare_run(project).execute(
+            project,
+            dataclasses.replace(
+                request, variant=n, all_variants=False, check_tools=False
+            ),
+        )
+        for n in names
+    ]
+    secrets = job_secrets(state, project, [p.plan for p in prepared])
+    with run.reserved():
+        code = run.run(argv, secrets=secrets, cx=cx)
+        run.copy_back(path for p in prepared for path in job_paths(p.plan))
+    for item in prepared:
+        folder = Path(item.plan.dirs["reports_dir"])
+        html, diagnostics = folder / "report.html", folder / "diagnostics.html"
+        if html.is_file():
+            print_report(
+                html, identity=display.prefix(name, item.plan.variant), kind="JOB"
+            )
+        opening = (
+            diagnostics
+            if code and not cx and diagnostics.is_file()
+            else html
+            if spec.open_report == "always" and not cx and html.is_file()
+            else None
+        )
+        if opening is not None:
+            state.app.open_in_browser(opening)
+    sys.exit(code)
 
 
 def _execute_one(ctx, request, *, quiet=False, show_env=False, prepared=None):

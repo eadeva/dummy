@@ -106,7 +106,7 @@ def test_help_inventory_and_completion_share_read_only_suggestions(
     assert [
         (option["name"], option["option"])
         for option in info["workflows"][0]["run_options"]
-    ] == [("no_cache_ptk", "--no-cache-ptk")]
+    ] == [("no_cache_ptk", "--no-cache-ptk"), ("docker", "--docker")]
     complete = BashComplete(cli, {}, "ptk", "_PTK_COMPLETE")
     values = lambda args, partial: {
         i.value for i in complete.get_completions(args, partial)

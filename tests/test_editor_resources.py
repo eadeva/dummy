@@ -115,6 +115,18 @@ def test_unowned_conflict_preflights_before_any_file_is_written(tmp_path, monkey
     assert result.exit_code != 0 and "unowned" in result.output
     assert not (tmp_path / ".github/ptk/manifest.json").exists()
     assert conflict.read_text() == "custom VMR skill"
+    declined = CliRunner().invoke(
+        cli, ["maintainer", "sync", "agent", "--force"], input="n\n"
+    )
+    assert declined.exit_code != 0
+    assert ".github/skills/ptk-vmr/SKILL.md" in declined.output
+    assert conflict.read_text() == "custom VMR skill"
+    accepted = CliRunner().invoke(
+        cli, ["maintainer", "sync", "agent", "--force"], input="y\n"
+    )
+    assert accepted.exit_code == 0, accepted.output
+    assert conflict.read_text() != "custom VMR skill"
+    assert (tmp_path / ".github/ptk/manifest.json").exists()
 
 
 def test_manifest_paths_and_symlinks_cannot_escape_project(tmp_path):

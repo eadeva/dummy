@@ -112,6 +112,12 @@ Each value accepts:
 
 * ``needs``: one job key or a list of keys. Omission or ``[]`` makes the job
   immediately eligible. All listed prerequisites must complete successfully.
+* ``local_needs``: one job key or a list of keys that must finish first, with
+  any result, in a local run only, for example because both jobs use the same
+  build folder. No outputs are exchanged; a failed prerequisite does not skip
+  the job. Generated GitHub workflows ignore ``local_needs``, so those jobs run in
+  parallel on separate runners without downloading each other's outputs. A key
+  cannot be in both lists.
 * ``params``: values for parameters already declared by the target job.
   Values use that job's types, choices and validation. Secret parameters are
   not configurable in a workflow; keep secrets in the target job's credential
@@ -313,10 +319,13 @@ retains its existing spelling.
 Inside a VMR member repository the alias is
 implied: ``ptk maintainer sync configs`` or ``ptk build`` act on that member and use
 its maintainer list. Workspace workflows (``workflows/NAME.ptk.yml`` at the VMR
-root), ``ALIAS/...`` references, other aliases, ``init``, ``describe`` and the
+root), ``ALIAS/...`` references, other aliases, ``init``, ``describe``, ``jobs`` and the
 workspace's own ``self-service`` commands (``completion``, ``extension``, ``doctor``
 and ``creds``) keep their workspace meaning there; other ``self-service`` commands,
-such as ``self-service tools``, act on the member. Offline skills and examples
+such as ``self-service tools``, act on the member. From the VMR root,
+``ptk jobs``, ``ptk self-service tools`` and ``ptk self-service hooks install``
+act on every repository; see :ref:`the shared VMR commands <vmr-commands>`.
+Offline skills and examples
 are installed with ``ptk maintainer sync agent``; see :doc:`/guides/editor`.
 
 GitHub template generation

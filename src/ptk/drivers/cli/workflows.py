@@ -24,7 +24,7 @@ from ...domain.errors import PtkError
 from .access import AccessGroup, denied_command, in_maintainer
 from .completion import workflows as complete_workflows
 from .jobs import write_reports
-from .options import cache_option
+from .options import cache_option, docker_option
 from .report_links import print_report
 from .state import CliState, console, err_console, guarded, state_of
 
@@ -88,15 +88,16 @@ def can_view(parent, owners, owner, spec):
     return visible(spec.audience, role)
 
 
-def matches_namespace(ctx, owners, owner, spec):
-    audience = spec.audience
-    if (
+def maintainer_only(owners, owner, spec):
+    return spec.audience == "maintainer" or bool(
         owner
         and owners[owner].project().config.command_audience.get("workflow")
         == "maintainer"
-    ):
-        audience = "maintainer"
-    return (audience == "maintainer") == in_maintainer(ctx)
+    )
+
+
+def matches_namespace(ctx, owners, owner, spec):
+    return maintainer_only(owners, owner, spec) == in_maintainer(ctx)
 
 
 def select(ctx, name, *, report=False):
@@ -129,14 +130,21 @@ def workflow_group(ctx):
 @click.pass_context
 @guarded
 def list_workflows(ctx):
+    """List workflows; the maintainer list also shows maintainer-only workflows."""
     parent, _, owners, available = catalog(ctx)
+    maintainer = in_maintainer(ctx)
+    shown = 0
     for name, (owner, spec, _) in sorted(available.items()):
-        if can_view(parent, owners, owner, spec) and matches_namespace(
-            ctx, owners, owner, spec
-        ):
-            click.echo(f"{name}: {spec.help}")
-    if not available:
-        click.echo("no workflows configured")
+        if not can_view(parent, owners, owner, spec):
+            continue
+        restricted = maintainer_only(owners, owner, spec)
+        if restricted and not maintainer:
+            continue
+        mark = " (maintainer)" if restricted else ""
+        click.echo(f"{name}{mark}: {spec.help}")
+        shown += 1
+    if not shown:
+        click.echo("no workflows")
 
 
 def authored(spec):
@@ -270,6 +278,8 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False, no_cache_ptk=Fals
             raise PtkError(
                 "secret parameters must not be stored in workflow configuration; use job credentials"
             )
+        from .docker import runs_in_docker
+
         request = RunRequest(
             job=job_name,
             variant=variants.for_project(alias, project),
@@ -277,6 +287,10 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False, no_cache_ptk=Fals
             dry_run=dry_run,
             role=state.role(),
             no_cache_ptk=no_cache_ptk or parent.no_cache_ptk or parent.re_run,
+            # The image provides the tools of jobs that run in Docker.
+            check_tools=not (
+                job is not None and parent.use_docker(project) and runs_in_docker(job)
+            ),
         )
         if parent.clean:
             from ...application.use_cases.cleanup import prepare_cleanup
@@ -294,7 +308,19 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False, no_cache_ptk=Fals
         for node in plan.jobs:
             p = node.prepared.plan
             readiness = (
-                "needs: " + ", ".join(node.spec.needs) if node.spec.needs else "ready"
+                "; ".join(
+                    part
+                    for part in (
+                        "needs: " + ", ".join(node.spec.needs)
+                        if node.spec.needs
+                        else "",
+                        "after: " + ", ".join(node.spec.local_needs)
+                        if node.spec.local_needs
+                        else "",
+                    )
+                    if part
+                )
+                or "ready"
             )
             click.echo(
                 f"{node.id}: {node.repo}:{p.job} [{p.variant or 'default'}] — {readiness}"
@@ -337,7 +363,47 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False, no_cache_ptk=Fals
         console, plan, target, run_id, root, owner_project, variants.selected
     )
 
+    docker_runs = {}
+
+    def docker_job(node):
+        from .docker import runs_in_docker
+
+        project = node.prepared.project
+        spec = project.config.jobs[node.prepared.plan.job]
+        return parent.use_docker(project) and runs_in_docker(spec)
+
+    def run_in_docker(node):
+        from .docker import container_argv, job_paths, job_secrets, session
+
+        state, prepared = bindings[node.id], node.prepared
+        p = prepared.plan
+        spec = prepared.project.config.jobs[p.job]
+        docker = session(state, prepared.project, docker_runs)
+        argv = container_argv(
+            job=p.job,
+            maintainer=spec.audience == "maintainer",
+            variant=p.variant,
+            params=node.spec.params,
+            overrides=parent.overrides,
+            verbose=parent.verbose,
+            no_cache_ptk=no_cache_ptk or parent.no_cache_ptk or parent.re_run,
+        )
+        code = docker.run(
+            argv, secrets=job_secrets(state, prepared.project, [p]), cx=False
+        )
+        docker.copy_back(job_paths(p))
+        report = Path(p.dirs["reports_dir"]) / "report.html"
+        status = {0: Status.PASSED, 130: Status.CANCELLED}.get(code, Status.FAILED)
+        return CallOutcome(
+            status,
+            [str(report)] if report.is_file() else [],
+            p.run_id,
+            report_errors=code != 0,
+        )
+
     def run(node, cancel):
+        if docker_job(node):
+            return run_in_docker(node)
         state, prepared = bindings[node.id], node.prepared
         p = prepared.plan
         with job_lock(prepared.project.root, p.variant, p.job):
@@ -405,7 +471,18 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False, no_cache_ptk=Fals
         except BaseException as exc:  # noqa: BLE001 - propagate in the main thread
             holder["error"] = exc
 
+    from contextlib import ExitStack
+
+    from .docker import session
+
+    reservations = ExitStack()
     try:
+        # All repository locks up front, in a fixed order, so workflows cannot deadlock.
+        for node in plan.jobs:
+            if docker_job(node):
+                session(bindings[node.id], node.prepared.project, docker_runs)
+        for docker in sorted(docker_runs.values(), key=lambda item: item.name):
+            reservations.enter_context(docker.reserved())
         output.start()
         worker = threading.Thread(target=work, name="ptk-workflow")
         worker.start()
@@ -420,6 +497,7 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False, no_cache_ptk=Fals
         result = holder["result"]
         output.finish(result)
     finally:
+        reservations.close()
         output.close()
     open_summary = False
     try:
@@ -510,11 +588,13 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False, no_cache_ptk=Fals
 )
 @click.pass_context
 @guarded
-def run_workflow(ctx, name, dry_run, graph, no_cache_ptk):
+def run_workflow(ctx, name, dry_run, graph, no_cache_ptk, docker):
+    if docker is not None:
+        state_of(ctx).docker = docker
     execute_workflow(ctx, name, dry_run=dry_run, graph=graph, no_cache_ptk=no_cache_ptk)
 
 
-run_workflow.params.append(cache_option())
+run_workflow.params.extend([cache_option(), docker_option()])
 
 
 def workflow_command(name, spec, *, hidden=False):
@@ -523,7 +603,9 @@ def workflow_command(name, spec, *, hidden=False):
 
     @click.pass_context
     @guarded
-    def run(ctx, dry_run, graph, no_cache_ptk):
+    def run(ctx, dry_run, graph, no_cache_ptk, docker):
+        if docker is not None:
+            state_of(ctx).docker = docker
         execute_workflow(
             ctx, name, dry_run=dry_run, graph=graph, no_cache_ptk=no_cache_ptk
         )
@@ -533,6 +615,7 @@ def workflow_command(name, spec, *, hidden=False):
         callback=run,
         params=[
             cache_option(),
+            docker_option(),
             click.Option(
                 ["--graph"],
                 is_flag=True,
@@ -570,7 +653,7 @@ def workspace_shortcuts(ctx):
     return ctx.meta["workflow_shortcuts"]
 
 
-def workspace_sync(ctx, entries, *, target, names, check, diff):
+def workspace_sync(ctx, entries, *, target, names, check, diff, force=False):
     """Preflight every member before running the sync in each repository."""
     from .workspace_commands import visit
 
@@ -587,4 +670,6 @@ def workspace_sync(ctx, entries, *, target, names, check, diff):
         args.append("--check")
     if diff:
         args.append("--diff")
+    if force:
+        args.append("--force")
     return visit(root_ctx, [(alias, args) for alias in sorted(entries)])

@@ -140,16 +140,17 @@ class ToolService:
 
     def environment(self, project: Project) -> dict[str, str]:
         spec = project.config.environment
+        in_image = self._host.is_docker() and "PTK_DOCKER" in self._host.variables
         env = base_environment(
             self.clean_environment(self._host.variables),
             os_name=self._host.os_name(),
-            isolate=spec.isolate,
+            isolate=spec.isolate and not in_image,
             keep=spec.keep,
             set_=spec.set,
             unset=spec.unset,
             path_prepend=spec.path_prepend,
             path_append=spec.path_append,
-            inherit_path=spec.inherit_path,
+            inherit_path=spec.inherit_path or in_image,
         )
         for folder in reversed(self.paths(project)):
             env = prepend_path(env, folder, os_name=self._host.os_name())

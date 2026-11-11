@@ -17,6 +17,9 @@ class PathRoute(BaseModel):
     repository: str | None = Field(
         default=None, description="Override the Artifactory repository for this route."
     )
+    name: str | None = Field(
+        default=None, description="Override the file name template for this route."
+    )
 
 
 class EventRoute(BaseModel):
@@ -29,6 +32,9 @@ class EventRoute(BaseModel):
     )
     repository: str | None = Field(
         default=None, description="Override the Artifactory repository for this event."
+    )
+    name: str | None = Field(
+        default=None, description="Override the file name template for this event."
     )
     branch: PathRoute | None = Field(
         default=None,
@@ -65,6 +71,10 @@ class ArtifactoryStructure(BaseModel):
     base_path: str = Field(
         default="",
         description="Relative path prefix shared by all artifact destinations.",
+    )
+    name: str | None = Field(
+        default=None,
+        description="File name template of generated-workflow uploads, for example ${run.job}_${run.variant}_${version.current.value}. Files are stored directly in the destination as NAME[_ARTIFACT_TYPE].zip with NAME.ptk-manifest.json; omit for opaque ptk/<hash> folders.",
     )
     events: dict[str, EventRoute] = Field(
         description="Destination routes keyed by event name, for example push or pull_request.",
@@ -185,6 +195,13 @@ def destination(spec, scope, *, event, ref_type, job, include_base=False):
         }
 
     result = compose(parts)
+    template = getattr(selected, "name", None) or route.name or spec.name
+    if template:
+        name = scope(template)
+        if not isinstance(name, str) or not name or "/" in name or "\\" in name:
+            raise ValueError("Artifactory file name must resolve to one path segment")
+        relative_path(name)
+        result["name"] = name
     if include_base:
         result["base"] = compose(parts[:2])
     return result

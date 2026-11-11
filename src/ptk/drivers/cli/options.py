@@ -14,8 +14,19 @@ def cache_option():
     )
 
 
+def docker_option():
+    return click.Option(
+        ["--docker/--no-docker", "docker"],
+        default=None,
+        help="Run in the project's Docker image (Windows: Docker Engine in WSL). Default: on for Linux when an image is configured, off on Windows.",
+    )
+
+
 def workflow_run_options(ctx):
-    return [describe_parameter(ctx, cache_option())]
+    return [
+        describe_parameter(ctx, cache_option()),
+        describe_parameter(ctx, docker_option()),
+    ]
 
 
 def suggestions(ctx, param):

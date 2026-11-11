@@ -69,7 +69,7 @@ class PrepareWorkflow:
             except PtkError as exc:
                 raise PtkError(f"workflow {name}, {invocation}: {exc}") from None
             jobs.append(PlannedCall(invocation, job, repo, prepared))
-        validate_resources(jobs, spec.ancestors())
+        validate_resources(jobs, spec.local_ancestors())
         return WorkflowPlan(name, spec, jobs)
 
 
@@ -213,6 +213,7 @@ class RunWorkflow:
             record,
             cancel,
             plan.spec.max_workers,
+            after={job.id: job.spec.local_needs for job in plan.jobs},
         )
         status = Status.CANCELLED if cancel.is_set() else combine(results)
         return WorkflowResult(plan.name, status, time.monotonic() - started, results)

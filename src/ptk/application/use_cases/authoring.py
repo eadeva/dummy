@@ -19,6 +19,9 @@ class SetupAuthoring:
     def __init__(self, files: AuthoringResources, version: str):
         self._files, self._version = files, version
 
+    def bundle(self) -> dict[str, bytes]:
+        return self._files.bundle()
+
     def render(self):
         """Render the same portable bundle for initialization and later sync."""
         files = {}
@@ -104,7 +107,9 @@ class SetupAuthoring:
         result[name] = readme
         return result
 
-    def execute(self, root: Path, *, check=False, config_path=None) -> AuthoringResult:
+    def execute(
+        self, root: Path, *, check=False, config_path=None, confirm=None
+    ) -> AuthoringResult:
         from .init_readme import configuration_readme
 
         files, count = self.render()
@@ -123,6 +128,7 @@ class SetupAuthoring:
                 version=self._version,
                 check=check,
                 configuration_readme=readme,
+                confirm=confirm,
             ),
             count,
         )

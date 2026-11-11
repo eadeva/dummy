@@ -60,8 +60,6 @@ class SystemHost:
     def os_name(self) -> str:
         if sys.platform.startswith("win"):
             return "windows"
-        if sys.platform == "darwin":
-            return "macos"
         return "linux"
 
     def user_id(self) -> str | None:
@@ -71,6 +69,9 @@ class SystemHost:
                 or self._environ.get("GITHUB_ACTOR")
                 or None
             )
+        # ptk --docker passes the host user, whose credentials and role the job uses.
+        if self._environ.get("PTK_USER") and self.is_docker():
+            return self._environ["PTK_USER"]
         try:
             return getpass.getuser() or None
         except Exception:  # noqa: BLE001 - getuser can raise various errors

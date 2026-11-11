@@ -92,6 +92,7 @@ class RunRequest:
     graph: bool = False
     no_cache_ptk: bool = False
     role: Role = "user"  # maintainer-only jobs are refused for users
+    check_tools: bool = True  # False: the job runs elsewhere (ptk --docker)
 
 
 @dataclass
@@ -345,6 +346,7 @@ class PrepareRun:
                 "job": request.job,
                 "variant": variant_name or lay.NO_VARIANT,
                 "step": "/".join(step_path),
+                "os": os_name,
                 **dirs,
             }
             if step_path:
@@ -390,12 +392,14 @@ class PrepareRun:
         # environment of every command of this run (steps add their own layer)
         try:
             env_spec = config.environment
+            # The image defines the toolchain; the container already isolates the host.
+            in_image = self._host.is_docker() and "PTK_DOCKER" in host_env
             pre = scope(host_env)
             base = envs.base_environment(
                 self._tools.clean_environment(host_env) if self._tools else host_env,
                 os_name=os_name,
-                inherit_path=env_spec.inherit_path,
-                isolate=env_spec.isolate,
+                inherit_path=env_spec.inherit_path or in_image,
+                isolate=env_spec.isolate and not in_image,
                 keep=[*env_spec.keep, *(envs.GUI_SESSION if job.gui else ())],
                 set_={k: to_text(pre(v)) for k, v in env_spec.set.items()},
                 unset=env_spec.unset,
@@ -452,6 +456,7 @@ class PrepareRun:
             self._tools is not None
             and job.required_tool_names
             and not request.dry_run
+            and request.check_tools
             and not any(s.uses == "tools.ensure" for s in job.walk_steps())
         ):
             tool_statuses = self._tools.status(
@@ -876,7 +881,12 @@ class RunJob:
         if step.kind == "uses":
             return f"uses {step.spec.uses} {step.with_ or ''}".rstrip(), None
         runtime = (
-            self._python.runtime(step.python, prepared.project.root, create=False)
+            self._python.runtime(
+                step.python,
+                prepared.project.root,
+                create=False,
+                defaults=prepared.project.config.python,
+            )
             if step.python is not None
             else None
         )
@@ -998,6 +1008,7 @@ class RunJob:
                             prepared.project.root,
                             create=True,
                             on_output=out,
+                            defaults=prepared.project.config.python,
                         )
                 command = self._command(prepared, step, runtime)
                 if self._environment_check:
@@ -1197,7 +1208,8 @@ class RunJob:
         env.update(step.env)
         for variable, ref in step.secrets.items():
             if not prepared.dry_run:
-                env[variable] = prepared.step_secrets[ref]
+                if prepared.step_secrets[ref]:  # empty: optional credential missing
+                    env[variable] = prepared.step_secrets[ref]
             else:
                 env[variable] = MASK
         cwd = Path(step.cwd)
@@ -1207,7 +1219,12 @@ class RunJob:
             env["PTK_CMAKE_BUILD_DIR"] = str(
                 prepared.project.root / step.cmake_build_dir
             )
-        plain = self._python.runtime(None, prepared.project.root, create=False)
+        plain = self._python.runtime(
+            None,
+            prepared.project.root,
+            create=False,
+            defaults=prepared.project.config.python,
+        )
         command = build_command(
             step,
             env=env,

@@ -185,8 +185,12 @@ session. See the GUI jobs section in `docs/guides/configuration.rst` for setup.
   owner variant and its repository variant mappings. On CX, workflows can only be dry-run; individual
   jobs remain runnable. The help icon displays workflow usage.
 - Expand **Built-in commands** to browse the CLI tree, including **self-service > creds**,
-  configuration, variants and **help**. **CLI help** displays `ptk --help`;
-  **help** runs PTk's HTML help command. Use the play icon to run a command, the
+  configuration and variants. **CLI help**, the first row under each repository,
+  displays `ptk --help`; its book icon
+  (**Open Advanced Help**) opens PTk's structured HTML help. In a VMR folder, the
+  collapsed **VMR commands** branch comes first: it holds the commands that act on
+  every repository, with the same CLI help and advanced help for the whole VMR.
+  Use the play icon to run a command, the
   gear to choose options/arguments, or the question mark for its usage. Required
   arguments are prompted automatically; optional values retain PTk defaults when
   omitted. Credential values and vault passwords are entered through PTk's hidden
@@ -343,7 +347,7 @@ npm run package
 Packaging runs syntax checks and the Node test suite before producing the VSIX.
 Set `PTK_TEST_PYTHON` to a Python interpreter with PTk's development dependencies
 to include the real Node-to-CLI integration tests. For example, after `uv sync`
-at the repository root, on Linux/macOS:
+at the repository root, on Linux:
 
 ```sh
 PTK_TEST_PYTHON="$PWD/../../.venv/bin/python" npm run package
@@ -377,8 +381,8 @@ fail before execution or cleanup.
 The trash and restart icons clean selected job/variant outputs or clean and
 re-run them. Clean requires no job parameters. All four output categories are
 removed; these actions execute immediately. Repository `clean-all` is in each
-repository's Built-in commands; the VMR folder has no Built-in commands section,
-so workspace `vmr-clean-all` runs from the palette (**Run Command**). Both ask for
+repository's Built-in commands; workspace `vmr-clean-all` is in the VMR folder's
+**VMR commands** branch. Both ask for
 confirmation in the terminal.
 Use their Options action for `--dry-run` or `--yes`. Saved tasks accept `clean`
 or `reRun`, with optional `preview: true` to inspect without deletion.
@@ -393,7 +397,8 @@ Chromium executable. Without Playwright these tests are explicitly skipped.
 
 
 Jobs and workflows under **Configuration** use graph metadata supplied by PTk.
-Trees follow **prerequisites → dependents**: expand a prerequisite to see the
+Trees follow **prerequisites → dependents**: expand a prerequisite to see its own
+fields (for example `run`, `python` and `outputs`) followed by the
 work that follows it. Steps without prerequisites are roots. Shared nodes expand
 once; later references are marked **shared — shown
 above** and edit the same definition. Joins list **needs all** and still wait for

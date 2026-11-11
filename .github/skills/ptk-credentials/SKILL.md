@@ -13,7 +13,7 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 3. Start with `ptk self-service creds list NAME` to inspect declared provider availability without unlocking a store. Use `setup` (creates the encrypted per-user vault when missing, except in CX) or `set NAME FIELD --store PROVIDER` only for requested provisioning.
 
-4. After the master password, the vault stays unlocked for `PTK_VAULT_UNLOCK_HOURS` (default 8; `0` asks every run); `PTK_VAULT_PASSWORD` keeps no session. `creds lock` ends the session. `creds reset [--yes]` deletes the vault and every secret in it; run it only when the user explicitly asks (e.g. forgotten master password).
+4. After the master password, the vault stays unlocked for `PTK_VAULT_UNLOCK_HOURS` (default 8; `0` asks every run); `PTK_VAULT_PASSWORD` keeps no session. `creds lock` ends the session. `creds reset [--yes]` deletes the vault and every secret in it; run it only when the user explicitly asks (e.g. forgotten master password). At a VMR root both act once on the user's vault.
 
 5. Map secrets into individual step environment variables with `secrets: {TOKEN: service.token}`.
 

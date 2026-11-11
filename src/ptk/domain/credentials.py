@@ -53,13 +53,13 @@ class SecretKey:
     credential: str
     field: str
     env_var: str
-    namespace: str | None = None
     env_pattern: str | None = None  # convention variable of any user (CX)
     env_fallbacks: tuple[str, ...] = ()
 
     @property
     def storage_ref(self) -> str:
-        return f"{self.namespace}/{self.ref}" if self.namespace else self.ref
+        """Vault key: one vault per user, shared by every project and repository."""
+        return self.ref
 
     @property
     def ref(self) -> str:
@@ -78,8 +78,7 @@ def key_for(
     project: str | None = None,
     user: str | None = None,
 ) -> SecretKey:
-    scoped_name = f"{spec.namespace}/{name}" if spec.namespace else name
-    fallback = default_variable(scoped_name, field)
+    fallback = default_variable(name, field)
     if field in spec.env:
         env_var, pattern, fallbacks = spec.env[field], None, ()
     elif project:
@@ -88,7 +87,6 @@ def key_for(
     else:
         env_var, pattern, fallbacks = fallback, None, ()
     return SecretKey(
-        namespace=spec.namespace,
         credential=name,
         field=field,
         env_var=env_var,
