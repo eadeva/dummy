@@ -112,6 +112,48 @@ is available to substitutions and external commands, but is not copied into the
 built-in formats. Enumeration values remain strings; PTk does not assign ordinal
 C preprocessor numbers based on the order of an enum's choices.
 
+Preprocessor definitions
+------------------------
+
+Variants and component files can declare compiler definitions directly::
+
+   # variants/cgw_cs.ptk.yml or <component>/component.variants.ptk.yml
+   definitions:
+     CAN_FD_ENABLED: true      # exported unchanged: CAN_FD_ENABLED=1
+     TRACE_MARKER: null        # defined without a value
+   build_options:
+     __TASKING__: 0            # exported with the BO_ prefix: BO___TASKING__=0
+
+Every concrete variant also becomes ``BO_<VARIANT>`` automatically (uppercase,
+other characters replaced by ``_``): ``1`` for the selected variant and ``0`` for
+all others, for example ``BO_CGW_CS=1`` and ``BO_CGW_PLUS=0``. Abstract variants
+get no build option. Order and precedence: automatic variant options, then the
+selected components in registration order, then the variant inheritance chain
+(parents first). A later value for the same name replaces the earlier one.
+Definitions of unselected components are not exported. Names must be C
+identifiers; ``true``/``false`` become ``1``/``0``.
+
+.. list-table:: Definitions per generator
+   :header-rows: 1
+   :widths: 15 85
+
+   * - Generator
+     - Export
+   * - ``cmake``
+     - ``set(NAME value)`` and ``add_compile_definitions(NAME=value)`` for all
+       targets of the including directory (skipped in ``cmake -P`` script mode).
+       Include the file as ``CMAKE_PROJECT_INCLUDE`` or before the targets.
+   * - ``header``
+     - ``#define NAME value``, guarded by ``#ifndef`` so command-line values win.
+   * - ``make``, ``ninja``, ``yocto``
+     - ``VARIANT_DEFINES`` (``NAME=value`` list) and ``VARIANT_CPPFLAGS``
+       (``-DNAME=value`` list); values with whitespace or backslashes are rejected.
+   * - ``gn``
+     - ``VARIANT_DEFINES`` list for ``defines = VARIANT_DEFINES``.
+   * - ``bazel``
+     - ``definitions`` list in ``variant.bazel.json``; the helper exposes
+       ``DEFINES`` from ``variant.bzl`` for ``defines``/``local_defines``.
+
 Generate for a step
 -------------------
 
@@ -191,9 +233,12 @@ Build-tool integrations
    * - ``make``
      - ``variant.mk``
      - GNU Make assignments; booleans 0/1, inactive null empty.
+   * - ``ninja``
+     - ``variant.ninja``
+     - Ninja variables for ``include variant.ninja``; booleans 0/1, inactive null empty.
    * - ``cmake``
      - ``variant.cmake``
-     - Ordinary CMake variables; booleans 0/1, inactive null empty; no forced cache entries.
+     - Ordinary CMake variables and compile definitions; booleans 0/1, inactive null empty; no forced cache entries.
    * - ``bazel``
      - ``variant.bazel.json``
      - Versioned typed JSON for the project-owned repository helper below.
@@ -213,7 +258,8 @@ Build-tool integrations
      - ``variant.rst``
      - RST containing the resolved values as JSON.
 
-Make rejects newlines, backslashes and surrounding whitespace; Yocto rejects
+Make rejects newlines, backslashes and surrounding whitespace; Ninja rejects
+newlines and surrounding whitespace; Yocto rejects
 newlines and variable expansions. GN rejects newlines/NUL in strings and integers
 outside the signed 64-bit range. Unsupported values fail explicitly. Other tools
 can impose their own target/API restrictions after importing a valid file.

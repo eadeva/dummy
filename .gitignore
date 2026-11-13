@@ -5,6 +5,8 @@ dist/
 .pytest_cache/
 .ruff_cache/
 pytest.log
+# git-repo source fetched by hatch_build.py for packaging
+_vendor/
 # ptk workspace
 _builds/
 _bin/

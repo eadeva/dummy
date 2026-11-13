@@ -43,7 +43,11 @@ def _ptk_variants_impl(ctx):
         declarations.append("%s_value(name = %s, build_setting_default = %s)" % (kind, repr(name), repr(value)))
     ctx.file("BUILD.bazel", "\n".join(declarations) + "\n")
     ctx.file("settings.bzl", _SETTINGS)
-    ctx.file("variant.bzl", "# Resolved PTk configuration.\nVARIANT = " + repr(values) + "\n")
+    # Older snapshots have no definitions; use DEFINES in cc_* defines/local_defines.
+    defines = document.get("definitions", [])
+    if type(defines) != "list" or any([type(d) != "string" for d in defines]):
+        fail("Expected a definitions list of strings")
+    ctx.file("variant.bzl", "# Resolved PTk configuration.\nVARIANT = " + repr(values) + "\nDEFINES = " + repr(defines) + "\n")
 
 ptk_variants = repository_rule(
     implementation = _ptk_variants_impl,

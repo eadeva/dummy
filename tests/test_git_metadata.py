@@ -135,6 +135,30 @@ def test_event_does_not_leak_into_other_vmr_repositories(tmp_path):
     assert metadata(other, env)["branch"] == "main"
 
 
+@pytest.mark.parametrize(
+    ("server", "remote", "is_workflow_repo"),
+    [
+        ("https://github.example.com", "https://github.example.com/Org/Repo.git", True),
+        ("https://github.example.com", "https://github.example.com/Org/Repo", True),
+        ("", "git@github.com:Org/Repo.git", True),
+        ("https://github.example.com", "https://github.com/Org/Repo.git", False),
+    ],
+)
+def test_vmr_member_is_the_workflow_repository_by_its_enterprise_remote(
+    tmp_path, server, remote, is_workflow_repo
+):
+    root = tmp_path / "repository"
+    env, head, *_ = pr(root, tmp_path)
+    git(root, "remote", "add", "origin", remote)
+    env.update(
+        GITHUB_WORKSPACE=str(tmp_path),
+        GITHUB_REPOSITORY="org/repo",
+        GITHUB_SERVER_URL=server,
+    )
+    result = metadata(root, env)
+    assert (result["commit"] == head) is is_workflow_repo
+
+
 def test_tag_event_prefers_triggering_tag_and_detached_branch(tmp_path):
     commit = repo(tmp_path)
     git(tmp_path, "tag", "a")

@@ -192,6 +192,68 @@ def test_git_variant_lines_and_dirty_policy(write, load):
         io.discover(VersionSource(source="git"), clone)
 
 
+def test_git_build_label_and_pull_request_base(tmp_path):
+    from ptk.adapters.host import SystemHost
+    from ptk.adapters.process import SubprocessRunner
+
+    def git(*args):
+        return subprocess.check_output(
+            ["git", "-C", str(tmp_path), *args], text=True
+        ).strip()
+
+    def commit(name):
+        (tmp_path / name).write_text(name)
+        git("add", name)
+        git("commit", "-qm", name)
+
+    def discover(**env):
+        io = VersionIO(SubprocessRunner(), SystemHost({**os.environ, **env}))
+        spec = VersionSource(
+            source="git", match="v1.*", strip_prefix="v", first_parent=False
+        )
+        return io.discover(spec, tmp_path)
+
+    git("init", "-q", "-b", "develop")
+    git("config", "user.name", "PTk Test")
+    git("config", "user.email", "test@example.invalid")
+    commit("a")
+    git("tag", "-am", "release", "v1.0.9")
+    assert discover()["build_label"] == ""
+    commit("b")
+    commit("c")
+    develop = discover()
+    assert (develop["value"].split("+")[0], develop["build_label"]) == ("1.0.9", "dev2")
+    assert develop["base"]["build_label"] == "dev2" and develop["base"]["ahead"] == 0
+
+    git("checkout", "-qb", "release/1.1.0")
+    # The candidate tag sits on a branch-only commit, so develop never describes as an rc.
+    git("commit", "-q", "--allow-empty", "-m", "Start release 1.1.0")
+    git("tag", "v1.1.0-rc1")
+    assert discover()["build_label"] == "rc1"
+    commit("fix")
+    assert discover()["build_label"] == "rc1-1"
+    git("tag", "v1.1.0-rc2")
+    git("tag", "-am", "release", "v1.1.0")
+    released = discover()
+    assert (released["value"], released["build_label"]) == ("1.1.0", "")
+
+    # GitHub's synthetic PR merge: develop moved on by one commit, the PR adds two.
+    git("checkout", "-q", "develop")
+    git("checkout", "-qb", "feature/x")
+    commit("pr1")
+    commit("pr2")
+    git("checkout", "-q", "develop")
+    commit("d")
+    git("merge", "--no-ff", "-qm", "merge", "feature/x")
+    pull = discover(GITHUB_EVENT_NAME="pull_request")
+    assert pull["build_label"] == "dev6"
+    base = pull["base"]
+    assert (base["major"], base["minor"], base["patch"]) == (1, 0, 9)
+    assert (base["build_label"], base["ahead"]) == ("dev2", 2)
+    assert base["sort_key"] == "0001_0000_0009"
+    assert discover()["base"]["ahead"] == 0  # not a pull request event
+
+
 def test_file_env_command_and_fallback_sources(tmp_path):
     app = create_app(environ={**os.environ, "RELEASE_VERSION": "2026.10"})
     io = VersionIO(app.runner, app.host)

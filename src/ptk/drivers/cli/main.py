@@ -967,7 +967,9 @@ def report_open(
 @click.pass_context
 @guarded
 def agent_command(ctx: click.Context, check: bool, force: bool = False) -> None:
-    """Sync the config README and PTk agent, skills and offline docs."""
+    """Sync the config README and PTk agent, skills and offline docs (plus the VMR guide in a VMR)."""
+    from ...adapters.workspace import workspace_root
+
     state = _state(ctx)
     project = state.project()
     result = state.app.setup_authoring.execute(
@@ -975,6 +977,7 @@ def agent_command(ctx: click.Context, check: bool, force: bool = False) -> None:
         check=check,
         config_path=project.config.repository.config_path,
         confirm=_confirm_overwrite(ctx) if force else None,
+        vmr=workspace_root(project.root) is not None,
     )
     if check:
         console.print(
@@ -1323,6 +1326,7 @@ from .docker import docker_group
 from .github_workflows import gen_workflows
 from .hooks import hooks_group
 from .matrix import matrix_command
+from .vmr import vmr_group
 
 for command in (
     setup_command,
@@ -1350,6 +1354,7 @@ for command in (
 cli.add_command(init_command)
 cli.add_command(self_service)
 cli.add_command(maintainer_group)
+cli.add_command(vmr_group)
 cli.commands = {
     name: cli.commands[name]
     for name in (
@@ -1365,6 +1370,7 @@ cli.commands = {
         "maintainer",
         "run",
         "describe",
+        "vmr",
     )
 }
 

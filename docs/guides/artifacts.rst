@@ -19,7 +19,10 @@ artifact routes. Explicit CLI overrides remain available for inspection.
 The destination is ``url / repository / base_path / event.path / job.path``.
 An event can override the repository. The ``push`` event accepts either a common
 ``path`` or ``branch``/``tag`` routes selected by ``GITHUB_REF_TYPE``; each selected
-route can also override the repository. Other events use a single path.
+route can also override the repository. ``branch`` may also be a list of routes:
+the first route whose ``match`` glob (``fnmatch``) matches ``${git.branch}``, or
+which has no ``match``, is used, for example ``release/*`` before a fallback for
+``develop``. Other events use a single path.
 An omitted job entry adds no suffix. Unknown events, missing push routes, unknown
 jobs and unresolved values are errors. Job visibility and ``command_audience.artifacts``
 apply to the command. Job suffix names refer to PTk jobs, not GitHub job IDs.
@@ -45,6 +48,16 @@ versions whose components are at most 9999. It orders numeric release components
 not prerelease identifiers; ``rc``/``beta`` and build metadata have no additional
 ordering rule. Unparsed versions and larger components have no sort key and
 cannot use a template requiring it. Version values themselves are unchanged.
+
+With a Git version source, ``${version.current.build_label}`` names the build after
+its nearest tag: empty on a release tag, ``rc1`` on ``v1.1.0-rc1``, ``rc1-2`` two
+commits later and ``dev57`` 57 commits after a release tag. In pull request events
+``${version.current.base.*}`` describes the commit where the PR branched off its
+target (``value``, ``major``, ``minor``, ``patch``, ``sort_key``, ``build_label``) and
+``base.ahead`` counts the PR's own commits; other events repeat the current version
+with ``ahead`` 0. Example PR folder:
+``pr${github.event.pull_request.number}-${version.current.base.build_label}-${version.current.base.ahead}``
+gives ``pr123-dev55-3``.
 
 ``${date.timestamp}`` provides local invocation time as ``2026_10_26_1507``;
 ``${date.utc.timestamp}`` uses UTC. These values are captured once, rather than

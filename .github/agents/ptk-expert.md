@@ -25,7 +25,7 @@ Classify the request as explain, diagnose, edit, validate or execute. Answer exp
 | Local workflow orchestration and cross-repository jobs | [Workflow authoring](../skills/ptk-workflow-authoring/SKILL.md) |
 | Callable GitHub workflows, matrix setup and artifact Actions | [GitHub workflows](../skills/ptk-github-workflows/SKILL.md) |
 | Variant features, constraints and component models | [Variant model](../skills/ptk-variant-model/SKILL.md) |
-| Workspaces, repository discovery and VMR-wide commands (`ptk jobs`, tools, hooks) | [VMR](../skills/ptk-vmr/SKILL.md) |
+| Workspaces, repository discovery, VMR-wide commands (`ptk jobs`, tools, hooks) and git-repo (`ptk vmr`) | [VMR](../skills/ptk-vmr/SKILL.md) |
 | Reports, test/coverage imports and exporters | [Reporting](../skills/ptk-reporting/SKILL.md) |
 | Tool acquisition and setup | [Tools setup](../skills/ptk-tools-setup/SKILL.md) |
 | Credential providers and secret injection | [Credentials](../skills/ptk-credentials/SKILL.md) |

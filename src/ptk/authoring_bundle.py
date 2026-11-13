@@ -28,6 +28,7 @@ DOCS = (
     "guides/local-setup",
     "reference/cli",
     "guides/configuration",
+    "guides/vmr",
     "guides/python-tools",
     "guides/variant-generation",
     "guides/editor",
@@ -64,6 +65,7 @@ def source_files(root: Path) -> dict[str, Path]:
         if metadata.is_file():
             files[f"skills/{name}/agents/openai.yaml"] = metadata
     files["agents/ptk-expert.agent.md"] = root / ".github/agents/ptk-expert.md"
+    files["VMR_GUIDE.md"] = root / "VMR_GUIDE.md"
     for example in EXAMPLES:
         directory = root / "examples" / example
         for path in directory.rglob("*"):

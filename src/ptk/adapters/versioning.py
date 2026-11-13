@@ -31,6 +31,24 @@ def write_generated(path: Path, text: str) -> bool:
     return True
 
 
+def _with_distance(tag_value, distance, short, dirty):
+    """1.0.9 + 57 commits -> 1.0.9+57.g<sha>; uncommitted changes add dirty."""
+    suffix = [str(distance), "g" + short] if distance else []
+    if dirty:
+        suffix.append("dirty")
+    if not suffix:
+        return tag_value
+    return tag_value + ("." if "+" in tag_value else "+") + ".".join(suffix)
+
+
+def _build_label(tag_value, distance):
+    """Build name from the nearest tag: '' (release), rc1, rc1-2 or dev57."""
+    prerelease = tag_value.split("+", 1)[0].partition("-")[2]
+    if not distance:
+        return prerelease
+    return f"{prerelease}-{distance}" if prerelease else f"dev{distance}"
+
+
 class VersionIO:
     def __init__(self, runner, host):
         self.runner, self.host = runner, host
@@ -99,40 +117,27 @@ class VersionIO:
                 raise PtkError(
                     "shallow Git checkout: fetch full history/tags or explicitly set allow_shallow"
                 )
-            args = [
-                "describe",
-                "--tags",
-                "--long",
-                "--abbrev=12",
-                "--match",
-                spec.match,
-            ]
-            if spec.first_parent:
-                args.append("--first-parent")
-            raw = gitcmd(*args)
-            match = re.fullmatch(r"(.+)-(\d+)-g([0-9a-f]+)", raw)
-            if not match:
-                raise PtkError("unexpected git describe result")
-            tag, distance, short = match.groups()
+            raw, tag, distance, short = self._describe(gitcmd, spec, "HEAD")
             dirty = bool(gitcmd("status", "--porcelain", "--untracked-files=no"))
             if dirty and spec.dirty == "error":
                 raise PtkError("Git working tree is dirty")
             git = {
                 "tag": tag,
-                "distance": int(distance),
+                "distance": distance,
                 "commit": gitcmd("rev-parse", "HEAD"),
                 "dirty": dirty,
                 "shallow": shallow,
             }
-            value = tag.removeprefix(spec.strip_prefix) if spec.strip_prefix else tag
-            suffix = []
-            if int(distance):
-                suffix += [distance, "g" + short]
-            if dirty and spec.dirty == "suffix":
-                suffix.append("dirty")
-            if suffix:
-                value += ("." if "+" in value else "+") + ".".join(suffix)
-            return resolved(value, raw=raw, source="git", git=git)
+            tag_value = (
+                tag.removeprefix(spec.strip_prefix) if spec.strip_prefix else tag
+            )
+            value = _with_distance(
+                tag_value, distance, short, dirty and spec.dirty == "suffix"
+            )
+            result = resolved(value, raw=raw, source="git", git=git)
+            result["build_label"] = _build_label(tag_value, distance)
+            result["base"] = self._base(gitcmd, spec, result)
+            return result
         else:
             raise PtkError("inherit is only valid for components")
         if spec.regex:
@@ -147,6 +152,42 @@ class VersionIO:
         if spec.strip_prefix:
             value = value.removeprefix(spec.strip_prefix)
         return resolved(value, raw=raw, source=spec.source)
+
+    @staticmethod
+    def _describe(gitcmd, spec, ref):
+        args = ["describe", "--tags", "--long", "--abbrev=12", "--match", spec.match]
+        if spec.first_parent:
+            args.append("--first-parent")
+        raw = gitcmd(*args, ref)
+        match = re.fullmatch(r"(.+)-(\d+)-g([0-9a-f]+)", raw)
+        if not match:
+            raise PtkError("unexpected git describe result")
+        tag, distance, short = match.groups()
+        return raw, tag, int(distance), short
+
+    def _base(self, gitcmd, spec, current):
+        """Version where a pull request branched off; the build itself for other events."""
+        same = {**{k: v for k, v in current.items() if k != "base"}, "ahead": 0}
+        if not self.host.variables.get("GITHUB_EVENT_NAME", "").startswith(
+            "pull_request"
+        ):
+            return same
+        try:
+            head = gitcmd("rev-parse", "--verify", "HEAD^2")
+        except PtkError:
+            return same  # not GitHub's synthetic merge commit
+        fork = gitcmd("merge-base", "HEAD^1", head)
+        raw, tag, distance, short = self._describe(gitcmd, spec, fork)
+        tag_value = tag.removeprefix(spec.strip_prefix) if spec.strip_prefix else tag
+        base = resolved(
+            _with_distance(tag_value, distance, short, False), raw=raw, source="git"
+        )
+        base.update(
+            build_label=_build_label(tag_value, distance),
+            ahead=int(gitcmd("rev-list", "--count", f"{fork}..{head}")),
+            commit=fork,
+        )
+        return base
 
     def snapshot(self, path, snapshot):
         write_generated(Path(path), yaml.safe_dump(snapshot, sort_keys=False))

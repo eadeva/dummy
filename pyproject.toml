@@ -51,7 +51,7 @@ path = "hatch_metadata.py"
 [tool.hatch.build.targets.sdist]
 include = [
   "/src", "/tests", "/docs", "/examples", "/scripts", "/config/ptk",
-  "/.github/skills", "/.github/agents", "/.main.ptk.yml", "/README.md", "/pyproject.toml",
+  "/.github/skills", "/.github/agents", "/.main.ptk.yml", "/README.md", "/VMR_GUIDE.md", "/pyproject.toml",
   "/LICENSE.txt",
   "/.pre-commit-config.yaml",
   "/hatch_build.py", "/hatch_metadata.py", "/install",
@@ -89,8 +89,8 @@ addopts = "-ra"
 [tool.ruff]
 target-version = "py312"
 src = ["src", "tests"]
-# Historical inputs are preserved verbatim, outside active code and docs.
-extend-exclude = ["reference"]
+# Historical inputs are preserved verbatim, outside active code and docs; git-repo is vendored.
+extend-exclude = ["reference", "_vendor", "src/ptk/resources/git_repo/repo"]
 
 [tool.ruff.lint]
 # ruff defaults (E4, E7, E9, F; line length 88) plus stricter and security rule sets

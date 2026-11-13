@@ -1,5 +1,6 @@
 """Destination-only Artifactory rules and pure path composition."""
 
+from fnmatch import fnmatchcase
 from urllib.parse import quote, urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -11,6 +12,10 @@ from .config.template_variables import GIT_FIELDS, GITHUB_FIELDS
 
 class PathRoute(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    match: str | None = Field(
+        default=None,
+        description="Branch glob (fnmatch, e.g. release/*) selecting this route in a branch route list; omit for the fallback route.",
+    )
     path: str = Field(
         description="Relative destination path for this route. Supports PTk variables."
     )
@@ -36,9 +41,9 @@ class EventRoute(BaseModel):
     name: str | None = Field(
         default=None, description="Override the file name template for this event."
     )
-    branch: PathRoute | None = Field(
+    branch: PathRoute | list[PathRoute] | None = Field(
         default=None,
-        description="Destination for a push to a branch. Only valid for the push event.",
+        description="Destination for a push to a branch: one route, or a list whose first route with a matching branch glob (or without match) is used. Only valid for the push event.",
     )
     tag: PathRoute | None = Field(
         default=None,
@@ -49,6 +54,9 @@ class EventRoute(BaseModel):
     def shape(self):
         if (self.path is not None) == (self.branch is not None or self.tag is not None):
             raise ValueError("choose an event path or branch/tag routes")
+        single = [self.tag] + ([] if isinstance(self.branch, list) else [self.branch])
+        if any(route is not None and route.match is not None for route in single):
+            raise ValueError("match is only valid in a list of branch routes")
         return self
 
 
@@ -100,6 +108,9 @@ def template_problems(spec, variables):
         if isinstance(value, dict):
             for key, child in value.items():
                 yield from walk(child, (*path, key))
+        elif isinstance(value, list):
+            for index, child in enumerate(value):
+                yield from walk(child, (*path, index))
         elif isinstance(value, str):
             for ref in iter_references(value):
                 ns, rest = split_reference(ref)
@@ -154,6 +165,16 @@ def destination(spec, scope, *, event, ref_type, job, include_base=False):
         selected = (
             getattr(route, ref_type, None) if ref_type in {"branch", "tag"} else None
         )
+        if isinstance(selected, list):
+            branch = scope("${git.branch}")
+            selected = next(
+                (
+                    r
+                    for r in selected
+                    if r.match is None or fnmatchcase(branch, r.match)
+                ),
+                None,
+            )
         if selected is None:
             raise ValueError(
                 f"no Artifactory destination configured for push ref type {ref_type!r}"

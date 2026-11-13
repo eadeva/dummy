@@ -44,6 +44,7 @@ RESERVED_JOBS = {
     "pre-commit",
     "clean-all",
     "vmr-clean-all",
+    "vmr",
     "run",
     "describe",
     "help",
@@ -409,10 +410,20 @@ class StepSpec(_Strict):
         description="PTk cache is an optional aid; cache correctness is the project’s responsibility. Reuse existing outputs after unchanged successful dependencies. Requires explicit outputs. Steps without needs always execute; --no-cache-ptk disables reuse throughout the execution. No files are copied or restored.",
     )
     generators: list[
-        Literal["header", "make", "cmake", "bazel", "gn", "yocto", "robot", "sphinx"]
+        Literal[
+            "header",
+            "make",
+            "ninja",
+            "cmake",
+            "bazel",
+            "gn",
+            "yocto",
+            "robot",
+            "sphinx",
+        ]
     ] = Field(
         default_factory=list,
-        description="Variant generators run in order before each command or built-in operation attempt. Outputs are written into this step's build directory. A step may contain only generators. Built-ins: header, make, cmake, bazel, gn, yocto, robot, sphinx.",
+        description="Variant generators run in order before each command or built-in operation attempt. Outputs are written into this step's build directory. A step may contain only generators. Built-ins: header, make, ninja, cmake, bazel, gn, yocto, robot, sphinx.",
     )
 
     @field_validator("generators")
@@ -1272,6 +1283,10 @@ class VmrCheckoutSpec(_Strict):
     owner: str | None = Field(
         default=None,
         description="Owner of the GitHub App installation; default: the repository owner.",
+    )
+    upload_manifest: bool = Field(
+        default=False,
+        description="Setup job of generated workflows writes the revision-locked manifest (ptk vmr manifest) and uploads it as vmr_manifest.xml into every upload folder of the run.",
     )
 
 

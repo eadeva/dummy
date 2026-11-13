@@ -5,6 +5,7 @@ import re
 from collections.abc import Mapping
 from functools import cache
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from ..domain.errors import PtkError
 from ..domain.execution.model import CommandSpec
@@ -63,7 +64,13 @@ class GitMetadata:
         github_repo = bool(workspace_top and Path(workspace_top).resolve() == top)
         if not github_repo and env.get("GITHUB_REPOSITORY"):
             remote = git("config", "--get", "remote.origin.url", optional=True) or ""
-            match = re.search(r"github\.com[:/]([^/]+/[^/]+?)(?:\.git)?$", remote)
+            # GitHub Enterprise: the server comes from GITHUB_SERVER_URL, not github.com.
+            host = urlsplit(env.get("GITHUB_SERVER_URL") or "").hostname or "github.com"
+            match = re.search(
+                rf"{re.escape(host)}[:/]([^/]+/[^/]+?)(?:\.git)?/?$",
+                remote,
+                re.IGNORECASE,
+            )
             github_repo = bool(
                 match and match[1].lower() == env["GITHUB_REPOSITORY"].lower()
             )

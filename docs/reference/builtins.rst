@@ -29,7 +29,7 @@ Select built-in generators directly on a step::
 
 A step may instead contain only ``generators``. Generation requires a valid
 concrete variant and precedes every command or built-in operation attempt. The eight built-ins
-are ``header``, ``cmake``, ``bazel``, ``gn``, ``make``, ``yocto``, ``robot`` and
+are ``header``, ``cmake``, ``bazel``, ``gn``, ``make``, ``ninja``, ``yocto``, ``robot`` and
 ``sphinx``. Outputs always belong to the step's build directory. The former
 ``uses: variant.generate`` interface and its output override are removed.
 

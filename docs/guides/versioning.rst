@@ -73,6 +73,12 @@ not untracked files. At an exact clean ``v1.2.3`` tag, stripping ``v`` yields
 ``.dirty`` (or ``+dirty`` at the tag). The raw describe output, full commit,
 matched tag, distance, dirty flag and shallow flag remain in the snapshot.
 
+With ``first_parent: false`` a release tag merged back into the branch is found
+through the merge's second parent. ``${version.current.build_label}`` names the
+build after its distance (``dev57``, ``rc1``, ``rc1-2``, empty at a release tag);
+on a PR merge commit ``${version.current.base.*}`` describes the base branch
+commit the PR branched off. See :doc:`artifacts` for upload folders using them.
+
 Existing variant release lines
 ------------------------------
 

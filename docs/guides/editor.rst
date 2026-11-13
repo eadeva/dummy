@@ -395,7 +395,8 @@ Offline resources
 
 Run ``ptk maintainer sync agent`` for
 the PTk expert agent, its skills and their reference files. ``ptk maintainer sync agent --check`` checks drift
-without writing (exit code 1 when an update is needed).
+without writing (exit code 1 when an update is needed). In a VMR member it also installs
+``.github/ptk/VMR_GUIDE.md`` (:doc:`/guides/vmr`).
 
 The command is maintainer-only, including ``--check``.
 It is hidden from normal users and refuses direct invocation. Maintainers are

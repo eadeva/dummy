@@ -264,6 +264,45 @@
     "ComponentSpec": {
       "additionalProperties": false,
       "properties": {
+        "definitions": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": "Preprocessor definitions exported unchanged by the cmake and header generators while this is selected; true/false become 1/0, null defines the name without a value.",
+          "title": "Definitions",
+          "type": "object"
+        },
+        "build_options": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "description": "Preprocessor definitions exported with the BO_ prefix by the cmake and header generators while this is selected (for example __TASKING__: 0 becomes BO___TASKING__=0).",
+          "title": "Build Options",
+          "type": "object"
+        },
         "description": {
           "default": "",
           "description": "Short explanation of this component.",
@@ -298,6 +337,8 @@
       "title": "ComponentSpec",
       "type": "object",
       "x-ptk-field-order": [
+        "definitions",
+        "build_options",
         "description",
         "requires_components",
         "constraints",
@@ -855,11 +896,18 @@
               "$ref": "#/$defs/PathRoute"
             },
             {
+              "items": {
+                "$ref": "#/$defs/PathRoute"
+              },
+              "type": "array"
+            },
+            {
               "type": "null"
             }
           ],
           "default": null,
-          "description": "Destination for a push to a branch. Only valid for the push event."
+          "description": "Destination for a push to a branch: one route, or a list whose first route with a matching branch glob (or without match) is used. Only valid for the push event.",
+          "title": "Branch"
         },
         "tag": {
           "anyOf": [
@@ -1890,6 +1938,19 @@
     "PathRoute": {
       "additionalProperties": false,
       "properties": {
+        "match": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Branch glob (fnmatch, e.g. release/*) selecting this route in a branch route list; omit for the fallback route.",
+          "title": "Match"
+        },
         "path": {
           "description": "Relative destination path for this route. Supports PTk variables.",
           "title": "Path",
@@ -1928,6 +1989,7 @@
       "title": "PathRoute",
       "type": "object",
       "x-ptk-field-order": [
+        "match",
         "path",
         "repository",
         "name"
@@ -2383,11 +2445,12 @@
           "type": "boolean"
         },
         "generators": {
-          "description": "Variant generators run in order before each command or built-in operation attempt. Outputs are written into this step's build directory. A step may contain only generators. Built-ins: header, make, cmake, bazel, gn, yocto, robot, sphinx.",
+          "description": "Variant generators run in order before each command or built-in operation attempt. Outputs are written into this step's build directory. A step may contain only generators. Built-ins: header, make, ninja, cmake, bazel, gn, yocto, robot, sphinx.",
           "items": {
             "enum": [
               "header",
               "make",
+              "ninja",
               "cmake",
               "bazel",
               "gn",
@@ -3134,6 +3197,45 @@
     "VariantSpec": {
       "additionalProperties": false,
       "properties": {
+        "definitions": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": "Preprocessor definitions exported unchanged by the cmake and header generators while this is selected; true/false become 1/0, null defines the name without a value.",
+          "title": "Definitions",
+          "type": "object"
+        },
+        "build_options": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "description": "Preprocessor definitions exported with the BO_ prefix by the cmake and header generators while this is selected (for example __TASKING__: 0 becomes BO___TASKING__=0).",
+          "title": "Build Options",
+          "type": "object"
+        },
         "repo_variants": {
           "additionalProperties": {
             "type": "string"
@@ -3214,6 +3316,8 @@
       "title": "VariantSpec",
       "type": "object",
       "x-ptk-field-order": [
+        "definitions",
+        "build_options",
         "repo_variants",
         "description",
         "abstract",
@@ -3598,6 +3702,12 @@
           "default": null,
           "description": "Owner of the GitHub App installation; default: the repository owner.",
           "title": "Owner"
+        },
+        "upload_manifest": {
+          "default": false,
+          "description": "Setup job of generated workflows writes the revision-locked manifest (ptk vmr manifest) and uploads it as vmr_manifest.xml into every upload folder of the run.",
+          "title": "Upload Manifest",
+          "type": "boolean"
         }
       },
       "required": [
@@ -3612,7 +3722,8 @@
         "manifest_name",
         "app_id",
         "private_key",
-        "owner"
+        "owner",
+        "upload_manifest"
       ]
     },
     "WorkflowJob": {
@@ -3948,6 +4059,7 @@
             "validate",
             "variant",
             "version",
+            "vmr",
             "vmr-clean-all",
             "workflow"
           ]

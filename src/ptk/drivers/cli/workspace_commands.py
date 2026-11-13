@@ -24,6 +24,7 @@ RESERVED = (
     "maintainer",
     "describe",
     "vmr-clean-all",
+    "vmr",
 )
 
 # Commands that act on every PTk repository of the VMR (help panel and docs).
@@ -57,6 +58,7 @@ VMR_COMMANDS = (
     ),
     ("maintainer version show", "Show the discovered versions of every repository"),
     ("vmr-clean-all", "Remove generated outputs of every repository"),
+    ("vmr manifest|init|reinit|sync|status|repo", "git-repo commands of the VMR"),
     ("help", "Open the advanced HTML help of the whole VMR"),
 )
 
@@ -503,6 +505,7 @@ def build_commands(root, entries):
         )
 
     from .cleanup import vmr_clean_all
+    from .vmr import vmr_group
     from .workflows import workflow_group
 
     return {
@@ -519,6 +522,7 @@ def build_commands(root, entries):
             workspace_help,
             workflow_group,
             vmr_clean_all,
+            vmr_group,
             originals["describe"],
         )
     }

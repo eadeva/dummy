@@ -1,7 +1,7 @@
 # Project-owned pre-commit configuration.
 default_install_hook_types:
 - pre-commit
-exclude: (^reference/|\.log$)
+exclude: (^reference/|^src/ptk/resources/git_repo/repo$|\.log$)
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
   rev: v5.0.0

@@ -294,10 +294,20 @@ def catalogue(value, environment_names=()):
                 "git.distance",
                 "git.dirty",
                 "git.shallow",
+                "build_label",
+                "base.value",
+                "base.major",
+                "base.minor",
+                "base.patch",
+                "base.prerelease",
+                "base.sort_key",
+                "base.build_label",
+                "base.ahead",
+                "base.commit",
             ):
                 availability = (
                     "Requires a Git version source."
-                    if field.startswith("git.")
+                    if field.startswith(("git.", "build_label", "base."))
                     else "Requires a supported SemVer value."
                     if field
                     in {

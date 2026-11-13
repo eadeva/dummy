@@ -182,6 +182,21 @@ def test_all_installed_reference_links_are_self_contained(tmp_path):
     assert (tmp_path / ".github/ptk/docs/guides/local-setup.rst").is_file()
     assert not (tmp_path / ".github/skills/ptk-development").exists()
     assert not (tmp_path / ".github/skills/ptk-docs-writing").exists()
+    assert not (tmp_path / ".github/ptk/VMR_GUIDE.md").exists()
+
+
+def test_vmr_members_also_get_the_vmr_guide(tmp_path):
+    from scripts.prepare_package import check_skill_links
+
+    SetupAuthoring(AuthoringFiles(), "review").execute(tmp_path, vmr=True)
+    check_skill_links(tmp_path)
+    guide = tmp_path / ".github/ptk/VMR_GUIDE.md"
+    assert guide.read_text(encoding="utf-8").startswith("# Virtual monorepos (VMR)")
+    assert "(VMR_GUIDE.md)" in (tmp_path / ".github/ptk/README.md").read_text(
+        encoding="utf-8"
+    )
+    for target in re.findall(r"\]\((docs/[^)#]+)", guide.read_text(encoding="utf-8")):
+        assert (guide.parent / target).is_file(), target
 
 
 def test_managed_config_readme_sync_check_update_conflict_and_relocation(

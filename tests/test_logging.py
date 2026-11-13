@@ -190,6 +190,17 @@ def test_short_secret_stops_before_anything_runs(write):
     assert not (root / LOGS).exists()
 
 
+def test_missing_optional_secret_is_empty(write):
+    text = PROJECT.replace("KEEP", "0").replace(
+        "    - token\n", "    - token\n    optional: true\n"
+    )
+    root = write(project_files(text))
+    app = create_app(environ=HOST)
+    proj = app.load_project.execute(root)
+    prepared = app.prepare_run(proj).execute(proj, RunRequest())
+    assert prepared.step_secrets["repo.token"] == ""
+
+
 # --------------------------------------------------------------------------- console
 
 

@@ -68,6 +68,18 @@ say "installing/updating $source"
 uv tool install --force --reinstall --upgrade --python 3.12 "$source"
 uv tool update-shell >/dev/null 2>&1 || true
 
+# git-repo ships with ptk (ptk vmr); offer it as plain `repo` unless another one is installed.
+repo_bin=$(uv tool dir --bin)
+if command -v cygpath >/dev/null 2>&1; then repo_bin=$(cygpath -u "$repo_bin"); fi
+existing_repo=$(command -v repo 2>/dev/null || true)
+if [ -z "$existing_repo" ] || [ "$existing_repo" = "$repo_bin/repo" ]; then
+    printf '#!/bin/sh\nexec ptk vmr repo -- "$@"\n' > "$repo_bin/repo"
+    chmod +x "$repo_bin/repo"
+    say "repo command: $repo_bin/repo (git-repo shipped with ptk)"
+else
+    say "repo command: keeping $existing_repo; ptk vmr uses the git-repo shipped with ptk"
+fi
+
 if [ "$no_extension" = 0 ] || [ "$no_completion" = 0 ]; then
     tool_bin=$(uv tool dir --bin)
     # Git Bash receives a Windows path from the native uv executable.

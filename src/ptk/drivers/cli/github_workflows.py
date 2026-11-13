@@ -192,6 +192,7 @@ class CxSettings:
     private_key_secret: str | None = None
     vmr: bool = False
     custom_checkout: dict | None = None
+    upload_manifest: bool = False
 
     def action(self, name):
         return f"{self.pmt_repository}/.github/actions/{name}@{self.pmt_version}"
@@ -249,6 +250,7 @@ def cx_settings(project, *, vmr):
         private_key_secret=cx.vmr.private_key if checkout else None,
         vmr=vmr,
         custom_checkout=cx.checkout,
+        upload_manifest=bool(vmr and cx.vmr and cx.vmr.upload_manifest),
     )
 
 
@@ -522,6 +524,23 @@ def render_workflow(
     passed = ["no-cache-ptk", "additional-properties"]
     if settings.vmr:
         passed += ["manifest-branch", "checkout-ref"]
+    if settings.upload_manifest:
+        setup["steps"].append(
+            {
+                "name": "Upload the VMR manifest",
+                "shell": "bash",
+                "working-directory": "${{ inputs.project-directory }}",
+                "env": {
+                    "PTK_WORKFLOW": name,
+                    "PTK_VARIANTS": "${{ inputs.variants }}",
+                    "PTK_ARTIFACT_USER": settings.login,
+                    "PTK_ARTIFACT_TOKEN": _secret(settings.token_secret),
+                },
+                "run": 'args=()\nif [[ -n "$PTK_VARIANTS" ]]; then args+=(-V "$PTK_VARIANTS"); fi\n'
+                'ptk vmr manifest -o "$RUNNER_TEMP/vmr_manifest.xml"\n'
+                'ptk "${args[@]}" maintainer cx upload-file "$RUNNER_TEMP/vmr_manifest.xml" --artifact-type vmr_manifest\n',
+            }
+        )
     jobs = {"setup": setup}
     for target, call in spec.jobs.items():
         key = ids[target]

@@ -75,7 +75,7 @@ Configured external dependencies, ordinary Python tools and maintenance.
    :req_satisfies: REQ_Sys_TOOLS
    :tags: implemented
 
-   PTk shall provide header, CMake, Bazel, Make, GN, Yocto, Robot and Sphinx variant generators using uppercase VARIANT_<COMPONENT>_<FEATURE> symbols and step-local output files. Bazel shall receive schema-versioned JSON; its optional repository helper shall be a project-owned documentation resource outside PTk runtime. GN shall receive a .gni file, not plain Ninja rules.
+   PTk shall provide header, CMake, Bazel, Make, Ninja, GN, Yocto, Robot and Sphinx variant generators using uppercase ``VARIANT_<COMPONENT>_<FEATURE>`` symbols and step-local output files. The header, CMake, Bazel, Make, Ninja, GN and Yocto generators shall also export the resolved preprocessor definitions: explicit component and variant definitions, ``BO_``-prefixed build options and an automatic ``BO_<VARIANT>`` option per concrete variant. Bazel shall receive schema-versioned JSON; its optional repository helper shall be a project-owned documentation resource outside PTk runtime. GN shall receive a .gni file, not plain Ninja rules; Ninja shall receive includable variable assignments.
 
    **Origin:** Accepted reusable-component counterproposal and explicit Make/CMake/Bazel/GN integration request.
 

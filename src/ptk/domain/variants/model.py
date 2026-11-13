@@ -39,15 +39,23 @@ COMPONENT_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 VARIANT_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_-]*$")
 ALIAS_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 ENUM_VALUE_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.+-]*$")
+DEFINITION_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 COMPONENT_PREFIX = "COMPONENT_"
+BUILD_OPTION_PREFIX = "BO_"
 RESERVED_COMPONENTS = {"params", "vars", "env", "vh", "variant", "os", "cx"}
 RESERVED = {"VARIANT", "PROJECT", "OS", "CX"}
 
 FeatureValue = bool | int | str | None
+DefinitionValue = bool | int | str | None
 
 
 def component_symbol(name: str) -> str:
     return COMPONENT_PREFIX + name.upper()
+
+
+def variant_build_option(name: str) -> str:
+    """Automatic BO_<VARIANT> definition of a concrete variant."""
+    return BUILD_OPTION_PREFIX + re.sub(r"[^0-9A-Za-z_]", "_", name).upper()
 
 
 def feature_symbol(name: str) -> str:
@@ -71,6 +79,38 @@ def _listify(value: Any) -> Any:
     if value is None:
         return []
     return [value] if isinstance(value, str) else value
+
+
+class _Definitions(_Strict):
+    definitions: dict[str, DefinitionValue] = Field(
+        description="Preprocessor definitions exported unchanged by the cmake and header generators while this is selected; true/false become 1/0, null defines the name without a value.",
+        default_factory=dict,
+    )
+    build_options: dict[str, bool | int | str] = Field(
+        description="Preprocessor definitions exported with the BO_ prefix by the cmake and header generators while this is selected (for example __TASKING__: 0 becomes BO___TASKING__=0).",
+        default_factory=dict,
+    )
+
+    @field_validator("definitions", "build_options", mode="before")
+    @classmethod
+    def _no_definitions(cls, v: Any) -> Any:
+        return {} if v is None else v
+
+    @field_validator("definitions", "build_options")
+    @classmethod
+    def _definition_names(cls, v: dict[str, Any]) -> dict[str, Any]:
+        for name, value in v.items():
+            if not DEFINITION_RE.fullmatch(name):
+                raise ValueError(f"definition name {name!r} must be a C identifier")
+            if isinstance(value, str) and any(c in value for c in "\r\n\x00"):
+                raise ValueError(f"definition {name!r} must not contain newlines")
+        return v
+
+    def exported_definitions(self) -> dict[str, DefinitionValue]:
+        return {
+            **{BUILD_OPTION_PREFIX + k: v for k, v in self.build_options.items()},
+            **self.definitions,
+        }
 
 
 class FeatureType(StrEnum):
@@ -207,7 +247,7 @@ class Constraint(_Strict):
         return {"expr": v} if isinstance(v, str) else v
 
 
-class ComponentSpec(_Strict):
+class ComponentSpec(_Definitions):
     description: str = Field(
         default="", description="Short explanation of this component."
     )
@@ -240,7 +280,7 @@ class ComponentSpec(_Strict):
         return v
 
 
-class VariantSpec(_Strict):
+class VariantSpec(_Definitions):
     repo_variants: dict[str, str] = Field(
         description="Map repository aliases to the variants their workflow jobs must use when this owner variant is selected.",
         default_factory=dict,
@@ -425,6 +465,8 @@ class ResolvedVariant(BaseModel):
     all_components: list[str] = Field(default_factory=list)
     features: dict[str, ResolvedFeature] = Field(default_factory=dict)
     data: dict[str, Any] = Field(default_factory=dict)
+    # Preprocessor definitions in export order (variant BO_s, components, variant chain).
+    definitions: dict[str, DefinitionValue] = Field(default_factory=dict)
     issues: list[Issue] = Field(default_factory=list)
 
     @property

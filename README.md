@@ -3,6 +3,7 @@
 A configuration-driven project CLI: jobs made of named steps with explicit dependencies,
 built-in variant handling, credentials, tool setup, shared base configs,
 unified logging and reporting. See the [user guides](docs/guides/index.rst) for supported behavior.
+Working in a virtual monorepo (git-repo): [VMR guide](VMR_GUIDE.md).
 
 **Status:** Configuration, execution, variants, credentials, reporting, tool setup,
 reusable Python tools, VMR discovery and local workflows are implemented. The current scope and acceptance

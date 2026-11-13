@@ -44,6 +44,7 @@ CX configuration
      app_id: 1400
      private_key: GITHUB_APP_PRIVATE_KEY
      owner: org
+     upload_manifest: false          # true: setup job uploads vmr_manifest.xml
 
 * Jobs run on ``runs-on: {group: runner_group}`` in ``container: image``. The
   container logs in with ``docker.login_user`` (``{user}`` replaced by the
@@ -63,6 +64,11 @@ CX configuration
   repo-init action; the GitHub App secret is then not declared.
 * Artifacts move with ``ptk maintainer cx download`` and ``ptk maintainer cx
   upload`` inside the job container, logged in as the technical user.
+* With ``cx.vmr.upload_manifest``, the setup job of every generated workflow writes
+  the revision-locked manifest (``ptk vmr manifest``) and uploads it as
+  ``vmr_manifest.xml`` (``artifact_type: vmr_manifest``) into each upload folder of
+  the run. ``ptk vmr init --manifest vmr_manifest.xml --dir DIR`` reproduces the
+  checkout of that run.
 
 Setup and dependencies
 ----------------------

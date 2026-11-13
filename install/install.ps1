@@ -54,6 +54,18 @@ if ($LASTEXITCODE -ne 0) { throw "uv tool install failed" }
 uv tool update-shell | Out-Null
 if ($LASTEXITCODE -ne 0) { Write-Warning "uv could not update the shell PATH; completion setup will also add the tool directory to supported shell profiles." }
 
+# git-repo ships with ptk (ptk vmr); offer it as plain `repo` unless another one is installed.
+$repoBin = (uv tool dir --bin | Out-String).Trim()
+$repoShim = Join-Path $repoBin "repo.cmd"
+$existingRepo = Get-Command repo -ErrorAction SilentlyContinue | Where-Object { $_.Source -ne $repoShim } | Select-Object -First 1
+if ($repoBin -and -not $existingRepo) {
+    Set-Content -LiteralPath $repoShim -Encoding ascii -Value "@ptk vmr repo -- %*"
+    Set-Content -LiteralPath (Join-Path $repoBin "repo") -Encoding ascii -NoNewline -Value "#!/bin/sh`nexec ptk vmr repo -- `"`$@`"`n"
+    Say "repo command: $repoShim (git-repo shipped with ptk)"
+} elseif ($existingRepo) {
+    Say "repo command: keeping $($existingRepo.Source); ptk vmr uses the git-repo shipped with ptk"
+}
+
 if (-not $NoCompletion -or -not $NoExtension) {
     $toolBin = (uv tool dir --bin | Out-String).Trim()
     if ($LASTEXITCODE -ne 0 -or -not $toolBin) { throw "PTk installed, but cannot locate uv's tool directory" }

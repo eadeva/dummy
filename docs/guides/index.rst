@@ -11,6 +11,7 @@ and defaults, use :doc:`/reference/configuration-schema`.
    getting-started
    local-setup
    configuration
+   vmr
    shared-configs
    python-tools
    docker

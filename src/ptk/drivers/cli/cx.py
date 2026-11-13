@@ -106,6 +106,48 @@ def upload(producer, result, properties, outcome, user, token):
     _emit({"outputs-valid": True, "manifest-url": address})
 
 
+@cx_group.command("upload-file")
+@click.argument("file", type=click.Path(exists=True, dir_okay=False))
+@click.option("--workflow", envvar="PTK_WORKFLOW", required=True)
+@click.option("--artifact-type", default=None, help="artifact_type property.")
+@_USER
+@_TOKEN
+@click.pass_context
+@guarded
+def upload_file(ctx, file, workflow, artifact_type, user, token):
+    """Upload one file, under its own name, into every upload folder of the workflow's matrix."""
+    from datetime import UTC, datetime
+    from functools import partial
+    from urllib.parse import quote
+
+    from .github_workflows import workflow_matrix
+
+    data = workflow_matrix(ctx, workflow, at=datetime.now(UTC), event=None)
+    folders = {}
+    for row in data["matrix"]["include"]:
+        url = (row.get("upload") or {}).get("url")
+        if url:
+            folders.setdefault(url, row)
+    if not folders:
+        raise PtkError(f"workflow {workflow!r} has no upload destination")
+    transfer = _transfer(user, token)
+    path = Path(file)
+    for url, row in folders.items():
+        properties = {
+            "commit": row.get("commit"),
+            "version": row.get("version"),
+            "variant_alias": [row.get("variant") or "default"],
+            **({"artifact_type": artifact_type} if artifact_type else {}),
+        }
+        address = url.rstrip("/") + "/" + quote(path.name, safe="")
+        _run(
+            partial(
+                transfer.transfer, address, path, upload=True, properties=properties
+            )
+        )
+        click.echo(f"uploaded {address}", err=True)
+
+
 @cx_group.command("download")
 @click.option(
     "--root",

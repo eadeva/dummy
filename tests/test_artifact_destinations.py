@@ -1,6 +1,7 @@
 """Read-only destination routing, date snapshots, VMR ownership and CLI outputs."""
 
 import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -127,6 +128,51 @@ def test_tag_release_and_manual_routes(tmp_path, event, kind, repository, path):
     data = json.loads(result.output)
     assert data["repository"] == repository
     assert data["path"] == f"projects/demo/{path}/packages/debug"
+
+
+@pytest.mark.parametrize(
+    "branch,path",
+    [
+        ("release/1.1.0", "rc/release/1.1.0"),
+        ("develop", "dev/develop/debug"),
+    ],
+)
+def test_branch_route_list_selects_the_first_matching_glob(tmp_path, branch, path):
+    root = make_project(tmp_path)
+    structure_file = root / "config" / "artifactory_paths.ptk.yml"
+    structure = yaml.safe_load(structure_file.read_text())
+    structure["events"]["push"]["branch"] = [
+        {"match": "release/*", "path": "rc/${git.branch}"},
+        {"path": "dev/${git.branch}/${run.variant}"},
+    ]
+    structure_file.write_text(yaml.safe_dump(structure))
+    subprocess.run(["git", "init", "-q", "-b", branch], cwd=root, check=True)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.name=T",
+            "-c",
+            "user.email=t@example.invalid",
+            "commit",
+            "-q",
+            "--allow-empty",
+            "-m",
+            "init",
+        ],
+        cwd=root,
+        check=True,
+    )
+    result = invoke(root, env={"GITHUB_REF_NAME": branch})
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.output)["path"] == f"projects/demo/{path}/packages/debug"
+
+
+def test_match_outside_a_branch_route_list_is_rejected():
+    from ptk.domain.artifacts import EventRoute
+
+    with pytest.raises(ValueError, match="only valid in a list"):
+        EventRoute(tag={"match": "v*", "path": "tags"})
 
 
 def test_pr_payload_github_outputs_omitted_job_suffix_and_overlays(tmp_path):

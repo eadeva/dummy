@@ -26,6 +26,11 @@ with an installed CLI). This job needs Node.js 22+ and npm on PATH. It installs
 locked npm dependencies, runs extension checks and creates the VSIX under
 ``extensions/project-toolkit``. ``ptk extension --dry-run`` previews its steps.
 
+Packaging (``ptk package``, ``install/install.ps1``, any non-editable build) also
+fetches the git-repo source pinned in ``src/ptk/resources/git_repo/__init__.py``
+(``COMMIT``) without history into the ignored ``_vendor/git-repo`` and bundles it;
+this needs read access to that repository. Builds from an sdist reuse its copy.
+
 An installed ``ptk`` can run the same jobs without the ``uv run`` prefix.
 Jobs using a Python runtime always select this checkout's uv project, with
 separate environments under ``.ptk/venvs/<job>``. This prevents a job from

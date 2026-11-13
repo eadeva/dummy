@@ -333,7 +333,8 @@ class PrepareRun:
                     f"secret '{ref}' requested but no credential provider is configured"
                 )
             value = self._secrets(ref)
-            if len(value) < MIN_MASK_LENGTH:
+            # Empty: a missing optional credential; nothing to mask.
+            if value and len(value) < MIN_MASK_LENGTH:
                 raise SubstitutionError(short_secret(ref))
             secret_values.add(value)
             return value

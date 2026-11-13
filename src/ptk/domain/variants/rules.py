@@ -19,6 +19,7 @@ from .model import (
     component_symbol,
     feature_symbol,
     nested_values,
+    variant_build_option,
 )
 
 # --------------------------------------------------------------------------- model checks
@@ -79,6 +80,17 @@ def validate(line: ProductLineSpec) -> list[tuple[str, str]]:
         check(constraint.expr, f"variants.constraints[{i}].expr")
 
     aliases: dict[str, str] = {}
+    build_options: dict[str, str] = {}
+    for name in line.buildable():
+        option = variant_build_option(name)
+        if option in build_options:
+            problems.append(
+                (
+                    f"variants.variants.{name}",
+                    f"build option '{option}' collides with variant '{build_options[option]}'",
+                )
+            )
+        build_options[option] = name
     for name, spec in line.variants.items():
         for alias in spec.aliases:
             if alias in line.variants and alias != name:
@@ -242,6 +254,14 @@ def resolve(line: ProductLineSpec, name: str) -> ResolvedVariant:
                 continue
             assigned[feature] = (value, vname)
     result.data = data
+    definitions: dict[str, Any] = {
+        variant_build_option(other): other == name for other in line.buildable()
+    }
+    for comp in active:
+        definitions.update(line.components[comp].exported_definitions())
+    for _, spec in chain:
+        definitions.update(spec.exported_definitions())
+    result.definitions = definitions
     for feature, (value, by) in assigned.items():
         comp = index[feature]
         if comp not in active_set and value != line.feature(feature).disabled_value:

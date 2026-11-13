@@ -572,6 +572,38 @@ An explicit DIRECTORY always selects one project, even from inside a VMR::
 
 Outside VMR mode, omitting DIRECTORY continues to initialize the current directory.
 
+git-repo commands (``ptk vmr``)
+-------------------------------
+
+PTk ships git-repo (Apache-2.0, XC-CE fork) and runs it with its own Python, always
+without pager and without the launcher's signature check. PTk packages contain the
+git-repo source of the pinned commit without Git history (added at packaging time, not
+stored in the PTk repository). A new VMR installs git-repo into ``.repo/repo`` from a
+local Git copy of that source (``<tools dir>/git-repo/<version>``, created on first
+use), so users need no access to the fork. Running PTk from a source checkout, git-repo
+downloads itself from the fork instead. Existing VMRs keep their ``.repo/repo``. The installer
+adds a plain ``repo`` command running the same launcher unless another ``repo`` is on
+``PATH``. The commands work anywhere inside a VMR (``.repo`` folder), ``init`` also
+outside::
+
+   ptk vmr manifest -o vmr_manifest.xml                 # every repository at its commit
+   ptk vmr manifest --revision toyota_cgw=release/x     # replace one project's revision
+   ptk vmr init https://github.example.com/org/manifest.git -b develop --dir C:\git\vmr
+   ptk vmr init --manifest vmr_manifest.xml --dir C:\git\repro   # exact commits
+   ptk vmr reinit -b release/x                          # switch the VMR you are in
+   ptk vmr reinit --manifest vmr_manifest.xml
+   ptk vmr sync
+   ptk vmr status
+   ptk vmr repo -- start feature/x --all                # any other git-repo command
+
+``init`` refuses targets inside an existing VMR; without MANIFEST_URL it uses the
+manifest repository of the VMR you are in. ``--manifest`` takes a file or URL and
+uses git-repo's standalone manifest instead of a manifest repository. ``reinit``
+first lists uncommitted changes and commits on local branches that no remote has, and
+stops (``--force`` switches anyway). After ``reinit --manifest``, ``reinit -b BRANCH``
+returns to the original manifest repository, which PTk keeps in
+``.repo/ptk-manifest-url``.
+
 Cleaning and re-running
 -----------------------
 

@@ -22,12 +22,15 @@ class SetupAuthoring:
     def bundle(self) -> dict[str, bytes]:
         return self._files.bundle()
 
-    def render(self):
+    def render(self, *, vmr=False):
         """Render the same portable bundle for initialization and later sync."""
         files = {}
         count = 0
         for name, content in self._files.bundle().items():
-            if name.startswith("skills/") and name.endswith("/SKILL.md"):
+            if name == "VMR_GUIDE.md":
+                if vmr:
+                    files["ptk/VMR_GUIDE.md"] = content
+            elif name.startswith("skills/") and name.endswith("/SKILL.md"):
                 text = (
                     content.decode("utf-8")
                     .replace("../../../docs/", "../../ptk/docs/")
@@ -56,7 +59,8 @@ class SetupAuthoring:
             "- [Assistant discovery guide](docs/guides/agent-guide.rst)\n"
             "- [Local setup, hooks and tools](docs/guides/local-setup.rst)\n"
             "- [Configuration](docs/guides/configuration.rst)\n"
-            "- [External bases and deviation reports](docs/guides/shared-configs.rst)\n"
+            + ("- [Working in this VMR (git-repo)](VMR_GUIDE.md)\n" if vmr else "")
+            + "- [External bases and deviation reports](docs/guides/shared-configs.rst)\n"
             "- [CLI](docs/reference/cli.rst)\n"
             "- [Log analysis](docs/guides/log-analysis.rst)\n"
             "- [PTk expert agent](../agents/ptk-expert.agent.md)\n"
@@ -108,11 +112,11 @@ class SetupAuthoring:
         return result
 
     def execute(
-        self, root: Path, *, check=False, config_path=None, confirm=None
+        self, root: Path, *, check=False, config_path=None, confirm=None, vmr=False
     ) -> AuthoringResult:
         from .init_readme import configuration_readme
 
-        files, count = self.render()
+        files, count = self.render(vmr=vmr)
         readme = (
             None
             if config_path is None
