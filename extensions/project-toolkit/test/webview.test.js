@@ -143,22 +143,6 @@ test("failed saves retain the entered value and do not retry automatically", opt
   assert.match(await h.page.locator("#issue").textContent(), /Source file changed/);
 });
 
-test("a rejected connection does not trap the editor in a retry before the next selection", options, async t => {
-  const h = await form(t, { jobs: { build: { steps: {check: {run: "check"}, test: {run: "test"}} } } }, ["jobs", "build", "steps", "test"]);
-  await h.page.getByLabel("Add prerequisite", { exact: true }).selectOption("check");
-  await h.page.getByRole("button", { name: "Connect", exact: true }).click();
-  const [edit] = await h.edits();
-  await h.state({ ack: edit.id, issue: "Source changed. Review the refreshed configuration." });
-  assert.equal(await h.page.locator(".dependency-edge").count(), 0);
-  await h.page.getByLabel("Select step", { exact: true }).selectOption("check");
-  assert.equal(await h.field("run").inputValue(), "check");
-  assert.equal((await h.edits()).length, 1);
-  await h.page.getByLabel("Add prerequisite", { exact: true }).selectOption("test");
-  await h.page.getByRole("button", { name: "Connect", exact: true }).click();
-  assert.equal((await h.edits()).length, 2);
-  assert.equal((await h.edits())[1].operations[0].prerequisite, "test");
-});
-
 test("workflow creation selects the job key and rejects duplicate qualified owner targets", options, async t => {
   const h = await form(t, { repository: { alias: "app" }, jobs: {check: {steps: {}}, test: {steps: {}}}, workflows: {verify: {jobs: {check: {}}}} }, ["workflows", "verify", "jobs"]);
   await h.page.getByRole("button", { name: "Set up new workflow job", exact: true }).click();
@@ -194,10 +178,9 @@ test("invalid graph configuration keeps fields and raw YAML usable and recovers 
   assert.match(await h.page.locator(".dependency-editor [role=alert]").innerText(), /unknown prerequisite/);
   assert.equal(await h.field("run").inputValue(), "test");
   assert.equal(await h.page.getByRole("button", { name: "Raw YAML", exact: true }).isEnabled(), true);
-  await h.page.getByRole("button", { name: "Remove prerequisite missing from test" }).click();
-  const [edit] = await h.edits();
+  assert.equal(await h.page.getByRole("button", { name: "Remove prerequisite missing from test" }).count(), 0);
   h.value.jobs.build.steps.test.needs = [];
-  await h.state({ ack: edit.id });
+  await h.state();
   assert.equal(await h.page.locator(".dependency-node").count(), 2);
   h.value.jobs.build.steps.test.title = { invalid: "field type" };
   h.value.jobs.build.steps.test.needs = ["check"];
@@ -205,10 +188,8 @@ test("invalid graph configuration keeps fields and raw YAML usable and recovers 
   await h.state({ validationError: "Configuration validation failed: cycle and invalid title" });
   assert.match(await h.page.locator("#validation-error").innerText(), /validation failed/);
   assert.match(await h.page.locator(".dependency-editor [role=alert]").innerText(), /cycle/);
-  await h.page.getByRole("button", { name: "Remove prerequisite check from test" }).click();
-  const last = (await h.edits()).at(-1);
   h.value.jobs.build.steps.test.needs = [];
-  await h.state({ ack: last.id, validationError: "title must be a string" });
+  await h.state({ validationError: "title must be a string" });
   assert.equal(await h.page.locator(".dependency-node").count(), 2);
   assert.equal(await h.field("run").inputValue(), "test");
   h.value.jobs.build.steps.test.needs = 17;
@@ -256,7 +237,7 @@ test("an unfinished numeric value survives a structural acknowledgement", option
 
 test("new steps choose a mode and cannot double-submit while creation is pending", options, async t => {
   const h = await form(t, {jobs: {build: {steps: {}}}}, ["jobs", "build", "steps"]);
-  await h.page.getByRole("button", { name: "New step", exact: true }).click();
+  await h.page.getByRole("button", { name: "Set up new step", exact: true }).click();
   await h.page.getByLabel("New element name").fill("first");
   await h.page.getByLabel("Execution mode", { exact: true }).selectOption("python-editable");
   assert.match(await h.page.locator("#creation-mode-help").innerText(), /output cache/);
@@ -482,7 +463,7 @@ test("job and step configuration explain outputs and optional cache before opt-i
 });
 
 
-test("graph search, direction and dependent setup preserve the authored graph", options, async t => {
+test("graph search and direction preserve the authored graph; no graph edit controls", options, async t => {
   const h = await form(t, {jobs: {build: {steps: {prepare: {run: "prepare"}, compile: {run: ["compiler", "main.c"], needs: "prepare"}, docs: {run: "docs"}}}}}, ["jobs", "build", "steps", "compile"]);
   await h.page.getByLabel("Find graph nodes").fill("compiler");
   assert.equal(await h.page.locator('.dependency-node[data-match="true"]').count(), 1);
@@ -495,13 +476,7 @@ test("graph search, direction and dependent setup preserve the authored graph", 
   const edits = await h.edits();
   if (edits.length) await h.state({ack: edits.at(-1).id});
   assert.equal(await h.page.getByLabel("Graph zoom").textContent(), zoom);
-  await h.page.getByRole("button", {name: "New dependent", exact: true}).click();
-  await h.page.getByLabel("New element name").fill("package");
-  await h.page.getByLabel("Execution mode").selectOption("builtin");
-  await h.page.getByRole("button", {name: "Configure", exact: true}).click();
-  await h.page.getByRole("button", {name: "Review", exact: true}).click();
-  assert.match(await h.page.getByLabel("Configuration preview").innerText(), /"compile"/);
-  await h.page.getByRole("button", {name: "Cancel setup", exact: true}).click();
+  assert.equal(await h.page.getByRole("button", {name: "New dependent", exact: true}).count(), 0);
   assert.equal(await h.page.locator(".dependency-node").count(), 3);
   await h.page.setViewportSize({width: 390, height: 850});
   assert(await h.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));

@@ -80,7 +80,7 @@ def test_jobs_run_in_docker_skip_the_host_tool_check(write, load):
     root = write(project_files(model))
     app = create_app(environ={"PTK_CX": "0"})
     project = app.load_project.execute(root)
-    with pytest.raises(PtkError, match="missing or too old"):
+    with pytest.raises(PtkError, match="missing or not at the pinned version"):
         app.prepare_run(project).execute(project, RunRequest(job="build"))
     app.prepare_run(project).execute(
         project, RunRequest(job="build", check_tools=False)

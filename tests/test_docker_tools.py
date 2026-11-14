@@ -51,7 +51,7 @@ project:
   name: docker-example
 tools:
   compiler:
-    version: '>=12'
+    version: '12.0'
     check: compiler --version
     uv_tool: compiler==12.0
 requires_tools:
@@ -128,7 +128,7 @@ def test_docker_detection(monkeypatch):
 
 
 def test_docker_reports_every_unavailable_tool(project):
-    project.config.tools["linker"] = ToolSpec(check="linker --version", version=">=2")
+    project.config.tools["linker"] = ToolSpec(check="linker --version", version="2.0")
     installer = Installer()
     service = ToolService(SystemHost({"PTK_DOCKER": "1"}), Runner(), installer)
     results = service.setup(project, ["compiler", "linker"])

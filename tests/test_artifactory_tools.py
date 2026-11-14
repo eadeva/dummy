@@ -246,12 +246,32 @@ def test_new_optional_sources_preserve_existing_tool_identity():
 
     spec = ToolSpec(uv_tool="cmake==3.30.2")
     data = spec.model_dump(
-        mode="json", exclude={"description", "toolbase", "artifactory", "docker"}
-    )
+        mode="json",
+        exclude={
+            "description", "toolbase", "artifactory", "docker",
+            "version", "version_regex", "check",
+        },
+    )  # fmt: skip
     previous = hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()[
         :20
     ]
     assert tool_identity(spec) == previous
+
+
+def test_version_range_and_check_do_not_change_the_installation():
+    from ptk.domain.tools import tool_identity
+
+    source = {
+        "url": "https://a.example",
+        "repository": "r",
+        "path": "jq",
+        "name": "jq.zip",
+    }
+    spec = ToolSpec(version="1.6", check="jq --version", artifactory=source)
+    repinned = ToolSpec(version="1.7.1", check="jq-win64 --version", artifactory=source)
+    other = ToolSpec(version="1.6", artifactory={**source, "name": "jq17.zip"})
+    assert tool_identity(spec) == tool_identity(repinned)
+    assert tool_identity(spec) != tool_identity(other)
 
 
 def test_archive_traversal_rejected(tmp_path):

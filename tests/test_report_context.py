@@ -84,7 +84,6 @@ tools:
   python:
     docker: false
     check: PYTHON --version
-    version: '>=3.12'
 jobs:
   build:
     requires_tools:

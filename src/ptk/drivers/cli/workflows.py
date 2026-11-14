@@ -299,6 +299,15 @@ def execute_workflow(ctx, name, *, dry_run=False, graph=False, no_cache_ptk=Fals
                 project, request.job, request.variant, request.role
             )
         else:
+            if (
+                not dry_run
+                and request.check_tools
+                and job is not None
+                and parent.app.prompter.interactive()
+            ):
+                from .jobs import offer_missing_tools
+
+                offer_missing_tools(state, project, job_name)
             prepared = state.app.prepare_run(project).execute(project, request)
         bindings[invocation] = state
         return alias, prepared

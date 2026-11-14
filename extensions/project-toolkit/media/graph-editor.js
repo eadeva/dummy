@@ -1,7 +1,7 @@
 /* global dagre, PtkDependencies */
 "use strict";
 window.PtkGraphEditor = (() => {
-  function mount(container, context, { navigate, connect, locked, create, view = {}, refresh = () => {} }) {
+  function mount(container, context, { navigate, view = {}, refresh = () => {} }) {
     const D = PtkDependencies;
     const html = (tag, text, attrs = {}) => {
       const node = document.createElement(tag);
@@ -37,18 +37,9 @@ window.PtkGraphEditor = (() => {
     select.value = context.selected || "";
     select.addEventListener("change", () => navigate(select.value ? [...context.path, select.value] : context.path));
     toolbar.append(html("label", `Select ${context.kind}`, { for: "graph-selection" }), select);
-    if (create) toolbar.append(button(context.kind === "step" ? "New step" : "New workflow job", () => create({})));
-    root.append(toolbar, html("p", "Prerequisites → dependents. Drag an output connector onto another node, or select a node and choose Add prerequisite. Joins wait for every prerequisite. Enter opens a focused node.", { class: "help" }));
+    root.append(toolbar, html("p", "Prerequisites → dependents (view only). Click or press Enter on a node to open its fields; change dependencies in its needs field. Joins wait for every prerequisite.", { class: "help" }));
     const message = html("p", error || "", { class: "notice error", role: "alert" });
     message.hidden = !error; root.append(message);
-    function issue(text) { message.textContent = text; message.hidden = !text; }
-    function write(from, to, remove = false) {
-      try {
-        if (locked(to)) throw new Error("These dependencies are locked. Use Raw YAML to edit them.");
-        D.update(context.value, from, to, remove);
-        connect(from, to, remove); issue("");
-      } catch (error) { issue(error.message); }
-    }
     const selected = entries.find(node => node.id === context.selected);
     if (selected) {
       const detail = context.kind === "job" ? { kind: "job", label: "Job", command: "" } : D.describe(context.value[selected.id]);
@@ -59,29 +50,15 @@ window.PtkGraphEditor = (() => {
       const links = html("div", undefined, { class: "row" });
       links.append(html("span", dependents.length ? "Used by:" : "No dependent nodes yet", { class: "muted" }));
       dependents.forEach(node => links.append(button(node.id, () => navigate([...context.path, node.id]), `Open dependent ${node.id}`)));
-      if (create) links.append(button("New dependent", () => create({ needs: [selected.id] })));
       summary.append(links); root.append(summary);
-      const controls = html("div", undefined, { class: "dependency-needs" });
-      controls.append(html("strong", `${selected.id} needs`));
-      if (!selected.needs.length) controls.append(html("span", "No prerequisites", { class: "muted" }));
-      for (const from of selected.needs) {
-        const remove = button(`${from} ×`, () => write(from, selected.id, true), `Remove prerequisite ${from} from ${selected.id}`);
-        remove.disabled = locked(selected.id); controls.append(remove);
-      }
-      const choices = html("select", undefined, { id: "graph-prerequisite", "aria-label": "Add prerequisite" });
-      choices.append(html("option", "Choose prerequisite…", { value: "" }));
-      for (const from of entries) {
-        try { D.update(context.value, from.id, selected.id); }
-        catch { continue; }
-        choices.append(html("option", from.id, { value: from.id }));
-      }
-      const add = button("Connect", () => write(choices.value, selected.id));
-      add.disabled = true; choices.disabled = locked(selected.id) || choices.options.length === 1;
-      choices.addEventListener("change", () => { add.disabled = !choices.value || locked(selected.id); });
-      controls.append(choices, add); root.append(controls);
+      const needs = html("div", undefined, { class: "dependency-needs" });
+      needs.append(html("strong", `${selected.id} needs`));
+      if (!selected.needs.length) needs.append(html("span", "No prerequisites", { class: "muted" }));
+      for (const from of selected.needs) needs.append(button(from, () => navigate([...context.path, from]), `Open prerequisite ${from}`));
+      root.append(needs);
     }
     if (error) return () => {};
-    if (!entries.length) { root.append(html("p", `No ${context.kind}s yet. Start with New ${context.kind === "step" ? "step" : "workflow job"}.`, { class: "empty" })); return () => {}; }
+    if (!entries.length) { root.append(html("p", `No ${context.kind}s yet. Add one in the fields above.`, { class: "empty" })); return () => {}; }
     root.append(html("p", `${entries.length} ${context.kind}s · ${entries.reduce((sum, node) => sum + node.needs.length, 0)} connections · ${entries.filter(node => !node.needs.length).length} roots. Independent branches may run in parallel.`, { class: "help" }));
     const controls = html("div", undefined, { class: "dependency-tools" });
     const search = html("input", undefined, { type: "search", id: "graph-search", "aria-label": "Find graph nodes", placeholder: "Find a name, command or job…" });
@@ -146,10 +123,7 @@ window.PtkGraphEditor = (() => {
       body.addEventListener("click", () => navigate([...context.path, node.id]));
       body.addEventListener("keydown", event => { if (["Enter", " "].includes(event.key)) { event.preventDefault(); navigate([...context.path, node.id]); } });
       group.append(body);
-      group.append(svgEl("circle", { cx: horizontal ? 0 : box.width / 2, cy: horizontal ? box.height / 2 : 0, r: 6, class: "dependency-inlet" }));
-      const port = svgEl("circle", { cx: horizontal ? box.width : box.width / 2, cy: horizontal ? box.height / 2 : box.height, r: 9, class: "dependency-outlet", "data-source": node.id });
-      port.append(svgEl("title", {}, `Drag from ${node.id} to a dependent; or select the dependent and choose Add prerequisite.`));
-      group.append(port); svg.append(group);
+      svg.append(group);
     }
     let scale = view.scale || 1, fitting = view.fitting !== false, disposed = false, drag;
     const output = html("output", "100%", { "aria-label": "Graph zoom" });
@@ -181,36 +155,22 @@ window.PtkGraphEditor = (() => {
     function nextMatch() { if (matching.length) center(matching[matchIndex = (matchIndex + 1) % matching.length]); }
     search.addEventListener("input", find); search.addEventListener("keydown", event => { if (event.key === "Enter") { event.preventDefault(); nextMatch(); } else if (event.key === "Escape") { search.value = ""; find(); } });
     controls.append(button("Find next", nextMatch)); find();
-    const preview = svgEl("path", { class: "dependency-preview", visibility: "hidden" }); svg.append(preview);
-    function cancel() { drag = undefined; preview.setAttribute("visibility", "hidden"); }
+    function cancel() { drag = undefined; }
     viewport.addEventListener("pointerdown", event => {
-      const from = event.target.closest("[data-source]")?.dataset.source;
-      if (event.button !== 0 || !from && event.target.closest(".dependency-node")) return;
-      if (!from && event.pointerType === "touch") return;
-      drag = { from, x: event.clientX, y: event.clientY, left: viewport.scrollLeft, top: viewport.scrollTop };
-      if (!from) { fitting = false; view.fitting = false; }
+      if (event.button !== 0 || event.target.closest(".dependency-node") || event.pointerType === "touch") return;
+      drag = { x: event.clientX, y: event.clientY, left: viewport.scrollLeft, top: viewport.scrollTop };
+      fitting = false; view.fitting = false;
       viewport.setPointerCapture(event.pointerId); event.preventDefault();
-      if (from) preview.setAttribute("visibility", "visible");
     });
     viewport.addEventListener("pointermove", event => {
       if (!drag) return;
-      if (!drag.from) { viewport.scrollLeft = drag.left + drag.x - event.clientX; viewport.scrollTop = drag.top + drag.y - event.clientY; return; }
-      const source = graph.node(drag.from), point = svg.createSVGPoint();
-      point.x = event.clientX; point.y = event.clientY;
-      const end = point.matrixTransform(svg.getScreenCTM().inverse());
-      preview.setAttribute("d", `M${source.x + (horizontal ? source.width / 2 : 0)},${source.y + (horizontal ? 0 : source.height / 2)} L${end.x},${end.y}`);
+      viewport.scrollLeft = drag.left + drag.x - event.clientX; viewport.scrollTop = drag.top + drag.y - event.clientY;
     });
-    viewport.addEventListener("pointerup", event => {
-      const from = drag?.from;
-      const to = document.elementFromPoint(event.clientX, event.clientY)?.closest(".dependency-node")?.dataset.nodeId;
-      cancel();
-      if (from && to) { event.preventDefault(); write(from, to); }
-    });
+    viewport.addEventListener("pointerup", cancel);
     viewport.addEventListener("pointercancel", cancel);
     viewport.addEventListener("lostpointercapture", cancel);
     viewport.addEventListener("keydown", event => {
-      if (event.key === "Escape") cancel();
-      else if (!event.ctrlKey && !event.metaKey && !event.altKey && ["+", "=", "-", "0", "f"].includes(event.key.toLowerCase())) {
+      if (!event.ctrlKey && !event.metaKey && !event.altKey && ["+", "=", "-", "0", "f"].includes(event.key.toLowerCase())) {
         event.preventDefault();
         if (event.key === "0") fit(); else if (event.key.toLowerCase() === "f") center(context.selected);
         else { fitting = false; zoom(scale * (event.key === "-" ? .8 : 1.25)); }
@@ -218,7 +178,7 @@ window.PtkGraphEditor = (() => {
     });
     viewport.addEventListener("wheel", event => { if (event.ctrlKey || event.metaKey) { event.preventDefault(); fitting = false; zoom(scale * (event.deltaY > 0 ? .9 : 1.1)); } }, { passive: false });
     viewport.addEventListener("scroll", () => { view.left = viewport.scrollLeft; view.top = viewport.scrollTop; if (view.left || view.top) { fitting = false; view.fitting = false; } });
-    root.append(html("p", "Canvas shortcuts: + / − zoom, 0 fits all, F focuses selection, Escape cancels a connection. Ctrl/Cmd + wheel zooms. Search dims unmatched nodes without hiding dependencies.", { class: "help" }));
+    root.append(html("p", "Canvas shortcuts: + / − zoom, 0 fits all, F focuses selection. Drag the background or scroll to pan; Ctrl/Cmd + wheel zooms. Search dims unmatched nodes without hiding dependencies.", { class: "help" }));
     const observer = new ResizeObserver(() => { if (fitting) fit(); }); observer.observe(viewport);
     requestAnimationFrame(() => { if (disposed) return; if (fitting) fit(); else { const left = view.left || 0, top = view.top || 0; zoom(scale); viewport.scrollLeft = left; viewport.scrollTop = top; } });
     return () => { view.left = viewport.scrollLeft; view.top = viewport.scrollTop; disposed = true; cancel(); observer.disconnect(); };

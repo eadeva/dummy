@@ -138,12 +138,12 @@ project:
   name: demo
 tools:
   ninja:
-    version: '>=1'
+    version: '1.11.1'
 jobs:
   go:
     requires_tools:
       ninja:
-        version: '>=2'
+        version: '1.12.1'
     steps:
       ok:
         uses: echo

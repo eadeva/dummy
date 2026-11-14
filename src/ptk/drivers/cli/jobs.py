@@ -515,7 +515,7 @@ def offer_missing_tools(state: Any, project: Any, job: str) -> None:
     if not missing:
         return
     err_console.print(
-        f"[yellow]'{escape(job)}' needs tools that are missing or too old:[/]\n"
+        f"[yellow]'{escape(job)}' needs tools that are missing or not at the pinned version:[/]\n"
         + "\n".join(f"  - {escape(s.name)}: {escape(s.problem)}" for s in missing),
         highlight=False,
     )

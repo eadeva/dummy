@@ -161,20 +161,17 @@ are unique within their job, and a prerequisite can be selected only once.
 These rules do not restrict reuse of a job in a different workflow or of a step
 name in a different job.
 
-Drag a node's output connector onto a dependent to add that node to the
-dependent's ``needs``. Alternatively select the dependent, choose **Add
-prerequisite**, and press **Connect**. This dropdown excludes self-links,
-existing connections and edges that would create a cycle. Remove a connection
-with its named prerequisite button. Keyboard users can select nodes with Enter
-or Space and edit every connection through the dropdown/buttons. Escape cancels
-a drag. Zoom, fit and background dragging help with larger graphs. Workflow
-``job`` fields suggest configured local jobs and accept explicit repository:job
-targets.
+The dependency graph is a read-only view at the end of the form, below the
+fields. Change dependencies only through the ``needs`` field of a step or
+workflow job; the graph follows every saved change. Click a node or press Enter
+or Space to open its fields; the selected node lists its prerequisites and
+dependents as buttons that open them. Zoom, fit and background dragging help
+with larger graphs. Workflow ``job`` fields suggest configured local jobs and
+accept explicit repository:job targets.
 
-The graph also provides **New step** / **New workflow job** and, for a selected
-node, **New dependent**. These open the same setup wizard; a new dependent starts
-with the selected node in ``needs`` and is only written after review. Selected
-node details show the declared command/target and direct dependents. Node labels
+New steps and workflow jobs are added with the setup controls of their parent
+list, which open the setup wizard; nothing is written before review.
+Selected node details show the declared command/target and direct dependents. Node labels
 include execution kind, root/prerequisite count and a bounded command preview;
 hover for the full declared text. No command, variable or secret is resolved
 for graph previews.
@@ -187,14 +184,14 @@ or **Expand canvas**. Zoom, pan, direction, search and highlighting are retained
 within the live form for that graph, including ordinary field-save redraws.
 They do not change YAML or scheduling and reset when the webview is closed.
 With focus on the canvas, ``+`` / ``-`` zoom, ``0`` fits all, ``F`` focuses the
-selected node, and Escape cancels connection dragging. Ctrl/Cmd + wheel zooms.
+selected node. Ctrl/Cmd + wheel zooms.
 Automatic layout remains bounded by the size of the authored graph; this is an
 editor overview, not a tool/file-level build graph or a free-position drawing.
 
-Connection edits preserve other prerequisites, YAML order and unrelated fields.
+``needs`` field edits preserve other prerequisites, YAML order and unrelated fields.
 They pass through the existing version/fingerprint checks and write the owning
 document. Logical project forms save and reload through PTk; individual file
-forms use VS Code's document save and undo behavior. Dragging creates scheduling
+forms use VS Code's document save and undo behavior. ``needs`` defines scheduling
 dependencies; it does not reorder definitions, run commands or establish artifact
 contracts. Positions are automatic and are not stored in YAML.
 

@@ -2,7 +2,7 @@
 
     tools:
       cmake:
-        version: ">=3.28,<4"
+        version: "3.30.2"                           # exact pin, same on every OS
         check: cmake --version
         choco: {package: cmake, version: "3.30.2"}   # Windows
         uv_tool: cmake==3.30.2                       # Windows + Linux
@@ -21,7 +21,6 @@ import re
 from dataclasses import dataclass, field, replace
 from typing import Any
 
-from packaging.specifiers import InvalidSpecifier, SpecifierSet
 from packaging.version import InvalidVersion, Version
 
 from .config.model import ChocoSource, DownloadSource, ToolbaseSource, ToolSpec
@@ -30,7 +29,7 @@ from .config.model import ChocoSource, DownloadSource, ToolbaseSource, ToolSpec
 @dataclass
 class ToolStatus:
     name: str
-    required: str | None  # version range
+    required: str | None  # pinned version
     found: bool
     version: str | None = None
     problem: str = ""
@@ -73,15 +72,16 @@ def parse_version(output: str, pattern: str) -> str | None:
 
 def check_version(name: str, spec: ToolSpec, output: str | None) -> ToolStatus:
     """``output``: what the check command printed (None: not found / failed)."""
+    pinned = spec.version
     if output is None:
-        return ToolStatus(name, spec.version, found=False, problem="not found")
+        return ToolStatus(name, pinned, found=False, problem="not found")
     version = parse_version(output, spec.version_regex)
-    status = ToolStatus(name, spec.version, found=True, version=version)
-    if spec.version:
+    status = ToolStatus(name, pinned, found=True, version=version)
+    if pinned:
         if version is None:
             status.problem = f"cannot read the version from '{spec.check}'"
-        elif not satisfies(version, spec.version):
-            status.problem = f"version {version} does not match {spec.version}"
+        elif not same_version(version, pinned):
+            status.problem = f"version {version} is not the pinned {pinned}"
     return status
 
 
@@ -94,11 +94,11 @@ def toolbase_status(
     return ToolStatus(name, None, found=True, version=source.version, source=folder)
 
 
-def satisfies(version: str, required: str) -> bool:
+def same_version(found: str, pinned: str) -> bool:
     try:
-        return SpecifierSet(required).contains(Version(version), prereleases=True)
-    except (InvalidSpecifier, InvalidVersion):
-        return False
+        return Version(found) == Version(pinned)
+    except InvalidVersion:
+        return found == pinned
 
 
 def install_methods(
@@ -150,8 +150,11 @@ def check_command(name: str, spec: ToolSpec) -> str:
 
 
 def tool_identity(spec: ToolSpec) -> str:
-    """Stable identity for an effective tool definition (versions and sources)."""
-    data = spec.model_dump(mode="json", exclude={"description"})
+    """Stable identity of what gets installed (sources); the pinned version is checked separately."""
+    # Changing the pin or the check must not orphan an installed tool.
+    data = spec.model_dump(
+        mode="json", exclude={"description", "version", "version_regex", "check"}
+    )
     # Keep identities of existing configurations stable when adding optional sources.
     data.pop("docker", None)  # installation policy does not change the payload
     for key in ("toolbase", "artifactory"):

@@ -57,7 +57,7 @@ def test_config_default_directory_execution_root_and_discovery(tmp_path, monkeyp
     main = repository(tmp_path, "firmware", config_path="tooling/ptk")
     config = main.parent / "tooling/ptk"
     data = read_project(main)
-    data["tools"] = {"ninja": {"version": ">=1"}}
+    data["tools"] = {"ninja": {"version": "1.12.1"}}
     data["jobs"]["build"]["requires_tools"] = {"ninja": True}
     write_project(main, data)
     (config / "maintainers.ptk.yml").write_text("maintainers: [alice]")

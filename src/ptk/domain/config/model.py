@@ -822,8 +822,8 @@ class ToolSpec(_Strict):
     )  # false: disable installation inside Docker, keep checks
     version: str | None = Field(
         default=None,
-        description="Accepted tool version range, for example >=3.28,<4. Not used for Toolbase on Windows.",
-    )  # PEP 440 style range: ">=3.28,<4"
+        description="Exact tool version, for example 3.30.2, the same on every operating system. Ranges are not allowed: every machine must use the same version. Not used for Toolbase on Windows.",
+    )
     check: str | None = Field(
         default=None,
         description="Command that prints the installed tool version. Not used for Toolbase on Windows.",
@@ -862,6 +862,20 @@ class ToolSpec(_Strict):
         default=None,
         description="DNF package name for opt-in installation on Linux. Installation may require sudo.",
     )
+
+    @field_validator("version")
+    @classmethod
+    def _pinned(cls, value):
+        from packaging.version import InvalidVersion, Version
+
+        if value is not None:
+            try:
+                Version(value)
+            except InvalidVersion:
+                raise ValueError(
+                    f"tool version {value!r} must be an exact version such as 3.30.2, not a range"
+                ) from None
+        return value
 
 
 ProviderName = Literal["env", "vault", "prompt"]

@@ -239,30 +239,7 @@
         }), button(`Remove ${graph.kind}`, () => removeField(actions, [...selected]), "danger"));
         main.append(actions);
       }
-      if (graph) {
-        graph.owner = (state.logical ? state.value : state.configurationValue)?.repository?.alias;
-        const canvas = el("div"); main.append(canvas);
-        const locked = id => {
-          const path = [...graph.path, id, "needs"];
-          return state.locked.some(prefix => prefix.every((key, i) => path[i] === key) || path.every((key, i) => prefix[i] === key));
-        };
-        try {
-          disposeGraph = PtkGraphEditor.mount(canvas, graph, {
-            navigate,
-            locked,
-            create: defaults => startCreation(graph.path, defaults),
-            refresh: renderConfiguration,
-            view: graphViews.get(JSON.stringify(graph.path)) || (() => { const view = {}; graphViews.set(JSON.stringify(graph.path), view); return view; })(),
-            connect: (from, to, remove) => afterEdits(() => {
-              // Recheck after any queued field save before applying the edge edit.
-              PtkDependencies.update(valueAt(graph.path), from, to, remove);
-              change({ op: "dependency", path: [...graph.path, to], prerequisite: from, remove }, true);
-            }),
-          });
-        } catch (error) {
-          canvas.replaceChildren(el("p", `Graph could not be displayed: ${error.message}. Configuration fields remain available below.`, { className: "notice error", role: "alert" }));
-        }
-      }
+      if (graph) graph.owner = (state.logical ? state.value : state.configurationValue)?.repository?.alias;
       const value = valueAt(selected);
       const spec = S.at(schema, state.value, selected, schema);
       const resolved = S.effective(spec, value, schema);
@@ -289,6 +266,19 @@
           renderField(main, [...selected, index], current, S.child(spec, value, index, schema), (resolved.required || []).includes(key), Array.isArray(value) ? value.length : undefined, !Array.isArray(value) && !resolved.properties?.[key] && resolved.additionalProperties !== false);
         });
         addField(main, value, spec, resolved);
+      }
+      if (graph) {
+        // View only: dependencies are changed through the needs fields above.
+        const canvas = el("div"); main.append(canvas);
+        try {
+          disposeGraph = PtkGraphEditor.mount(canvas, graph, {
+            navigate,
+            refresh: renderConfiguration,
+            view: graphViews.get(JSON.stringify(graph.path)) || (() => { const view = {}; graphViews.set(JSON.stringify(graph.path), view); return view; })(),
+          });
+        } catch (error) {
+          canvas.replaceChildren(el("p", `Graph could not be displayed: ${error.message}. Configuration fields remain available above.`, { className: "notice error", role: "alert" }));
+        }
       }
       layout.append(main); app.append(layout);
       if (focus) {

@@ -467,7 +467,7 @@ class PrepareRun:
             if problems:
                 lines = "\n".join(f"  - {s.name}: {s.problem}" for s in problems)
                 raise PtkError(
-                    f"'{request.job}' needs tools that are missing or too old:\n{lines}\n"
+                    f"'{request.job}' needs tools that are missing or not at the pinned version:\n{lines}\n"
                     f"  install them with: ptk self-service tools --job {request.job} "
                     f"(or run the job with --setup)"
                 )

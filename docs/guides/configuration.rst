@@ -636,7 +636,7 @@ Tool requirements merge **per tool**, not by replacing the entire list::
    git:
      check: git --version
    cmake:
-     version: '>=3.28'
+     version: 3.30.2
      check: cmake --version
      choco: cmake
    ninja:
@@ -645,10 +645,10 @@ Tool requirements merge **per tool**, not by replacing the entire list::
    # config/ptk/jobs/build.ptk.yml
    requires_tools:
      cmake:
-       version: '>=3.30'
+       version: 4.0.3
      ninja: true
 
-``build`` requires git, cmake and ninja, with its own CMake version constraint.
+``build`` requires git, cmake and ninja, with its own pinned CMake version.
 Other jobs retain the global requirements and CMake definition. Use
 ``git: false`` to disable only git for one job. ``requires_tools: []`` or ``{}``
 changes nothing; a job's unmentioned global requirements remain inherited.
@@ -660,6 +660,10 @@ Selecting jobs that require conflicting settings for the same tool fails
 before installation; install for those jobs separately. Without ``--job``,
 ``self-service tools`` uses global requirements when supplied, otherwise all declared
 tools. Declaring a tool alone does not make it a requirement of every job.
+
+``version`` is an exact version, compared with the output of ``check``
+(``1.6`` equals ``1.6.0``). Ranges such as ``>=3.28`` are rejected and the pin is
+the same on every operating system: every machine must run the same version.
 
 Isolated job environments
 ----------------------------
@@ -689,8 +693,11 @@ are applied to that command only. Neither the host process nor another job's
 environment is mutated. Tool versions are rechecked in the final subprocess
 environment, including Python-runtime and step overrides.
 
-Managed downloads and Python tools are stored by tool name and effective
-version/source identity. Only installations selected by the job's effective
+Managed downloads and Python tools are stored by tool name and source identity
+(what is downloaded or installed). The pinned ``version``, ``version_regex`` and
+``check`` are not part of it: changing the pin keeps the installed copy, which
+is then checked against the new pin.
+Only installations selected by the job's effective
 requirements (or its explicit ``tools.ensure`` selections) enter its PATH.
 A later ``tool: true`` keeps earlier settings; ``tool: false`` disables that
 requirement. System binaries on the OS path are version-checked. Chocolatey,
@@ -752,7 +759,7 @@ an optional environment variable. No JFrog CLI or legacy downloader is required:
 
    # config/ptk/tools.ptk.yml
    compiler:
-     version: ==12.3.0
+     version: 12.3.0
      check: compiler --version
      artifactory:
        url: https://artifacts.example.org/artifactory
@@ -813,7 +820,7 @@ Downloads are checksum-verified before entering the managed tools directory;
 failed downloads do not create an installation marker. Downloads are cached by
 the effective tool definition, so ``latest`` is resolved only on installation,
 not refreshed on every job. Pin properties/path/checksum for reproducibility.
-Changing a source or version creates a distinct installation, and each job
+Changing a source creates a distinct installation, and each job
 activates only its selected tool definitions. No corporate hostnames, legacy
 runtime filters or repository-specific download layout rules are built in.
 
@@ -825,7 +832,7 @@ Set ``docker: false`` on a tool to disable its installation inside Docker::
    # config/ptk/tools.ptk.yml
    compiler:
      docker: false
-     version: '>=12'
+     version: 12.3.0
      check: compiler --version
      apt: gcc
 

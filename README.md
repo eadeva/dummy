@@ -84,7 +84,7 @@ PTk must be installed on the workspace host. See
 ```yaml
 # config/ptk/tools.ptk.yml
 cmake:
-  version: '>=3.28,<4'
+  version: 3.30.2   # exact pin; ranges are rejected
   check: cmake --version
   choco:
     package: cmake

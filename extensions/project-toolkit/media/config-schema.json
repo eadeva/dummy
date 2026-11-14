@@ -2988,7 +2988,7 @@
             }
           ],
           "default": null,
-          "description": "Accepted tool version range, for example >=3.28,<4. Not used for Toolbase on Windows.",
+          "description": "Exact tool version, for example 3.30.2, the same on every operating system. Ranges are not allowed: every machine must use the same version. Not used for Toolbase on Windows.",
           "title": "Version"
         },
         "check": {

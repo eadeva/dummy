@@ -9,7 +9,7 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 1. Read [docs/guides/configuration.rst](../../../docs/guides/configuration.rst) and [docs/reference/cli.rst](../../../docs/reference/cli.rst); use `ptk describe --json --configuration` (or the bundled schema when runtime inspection is unavailable) for tool fields.
 
-2. Inspect the selected job's inherited tool requirements and platform-specific definitions. Reuse existing tool keys and sources; declare a check command, version range and version_regex matching observed output (not used for Toolbase on Windows).
+2. Inspect the selected job's inherited tool requirements and platform-specific definitions. Reuse existing tool keys and sources; declare a check command, an exact version (the same on every OS; ranges are rejected) and version_regex matching observed output (not used for Toolbase on Windows).
 
 3. Add job requires_tools so missing or wrong tools are caught before execution.
 
@@ -19,7 +19,7 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 6. Run `ptk self-service tools --job JOB --dry-run` and inspect the proposed installations. `-a/--job` is repeatable; without it all configured tools are checked. At a VMR root the same command checks every repository (with `--job` only those defining the job).
 
-7. Use `ptk self-service tools --job JOB` or the job's `--setup` only within the requested installation scope. In an interactive non-CX terminal, a job with missing/too old tools asks **Install them now?**; answering no keeps the usual error.
+7. Use `ptk self-service tools --job JOB` or the job's `--setup` only within the requested installation scope. In an interactive non-CX terminal, a job with missing/wrongly versioned tools asks **Install them now?**; answering no keeps the usual error.
 
 8. Treat system installs (`--allow-system`, apt/dnf with sudo) and Chocolatey bootstrap (`--bootstrap-choco`, Windows administrator terminal) as explicit options; do not add them merely to bypass failures.
 

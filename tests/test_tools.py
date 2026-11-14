@@ -19,7 +19,7 @@ from ptk.domain.tools import (
     check_version,
     install_methods,
     parse_version,
-    satisfies,
+    same_version,
     toolbase_status,
 )
 from ptk.drivers.cli.main import cli
@@ -35,13 +35,21 @@ def test_versions():
         parse_version("cmake version 3.30.2\nCMake suite", r"(\d+\.\d+(?:\.\d+)?)")
         == "3.30.2"
     )
-    assert satisfies("3.30.2", ">=3.28,<4") and not satisfies("4.0", ">=3.28,<4")
-    assert satisfies("18.1.8", "==18.*")
-    spec = ToolSpec(version=">=2", check="x --version")
+    assert same_version("3.30.2", "3.30.2") and not same_version("3.30.3", "3.30.2")
+    assert same_version("1.6", "1.6.0")
+    spec = ToolSpec(version="2.1.0", check="x --version")
     assert check_version("x", spec, None).problem == "not found"
-    assert "does not match" in check_version("x", spec, "x 1.5").problem
+    assert "is not the pinned 2.1.0" in check_version("x", spec, "x 2.2.0").problem
     assert "cannot read" in check_version("x", spec, "no digits").problem
     assert check_version("x", spec, "x 2.1.0").ok
+
+
+@pytest.mark.parametrize("version", [">=2", "==1.6", "1.6.*", "~=3.1", "latest"])
+def test_tool_versions_must_be_exact(version):
+    with pytest.raises(ValueError, match="must be an exact version"):
+        ToolSpec(version=version)
+    with pytest.raises(ValueError):
+        ToolSpec(version={"windows": "1.6", "linux": "1.7.1"})
 
 
 def test_toolbase_tool_is_present_when_its_folder_exists(tmp_path):
@@ -172,11 +180,11 @@ PROJECT = """
 project: {{name: tools, default_job: build}}
 tools:
   mytool:
-    version: ">=1.2,<2"
+    version: "1.2.3"
     check: mytool --version
     download: {{linux: {{url: "{url}", sha256: "{sha}", bin: bin}}}}
   ancient:
-    version: ">=99"
+    version: "99"
     check: sh -c "echo ancient 1.0"
     apt: ancient-pkg
 jobs:
@@ -186,6 +194,10 @@ jobs:
   other:
     requires_tools: [ancient]
     steps: {{x: {{run: "true"}}}}
+workflows:
+  verify:
+    jobs:
+      build: {{}}
 """
 
 
@@ -275,6 +287,30 @@ def test_interactive_run_offers_to_install_missing_tools(
 
 
 @posix_only
+def test_interactive_workflow_offers_to_install_missing_tools(project, monkeypatch):
+    monkeypatch.setattr(
+        "ptk.adapters.credentials.prompt.ConsolePrompter.interactive", lambda self: True
+    )
+    result = CliRunner(
+        env={
+            "PTK_DOCKER": "0",
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+            "PTK_TOOLS_DIR": str(project.tools),
+            "PTK_ROLE": "user",
+        }
+    ).invoke(
+        cli,
+        ["workflow", "run", "verify"],
+        input="y\n",
+        catch_exceptions=False,
+        cwd=project.root,
+    )
+    assert "mytool: not found" in result.output and "Install them now?" in result.output
+    assert result.exit_code == 0, result.output
+    assert "installed via download" in result.output
+
+
+@posix_only
 def test_checksum_mismatch(project):
     project.write_sha("0" * 64)
     result = project("self-service", "tools", "--job", "build")
@@ -286,7 +322,7 @@ def test_wrong_version_and_system_packages(project):
     result = project("self-service", "tools", "--job", "other")
     assert result.exit_code == 1
     assert (
-        "does not match >=99" in result.output or "no install method" in result.output
+        "is not the pinned 99" in result.output or "no install method" in result.output
     )
     assert "--allow-system" in result.output
 
@@ -353,7 +389,7 @@ def test_job_versions_coexist_and_path_contains_only_selected_tools(
             entry.size, entry.mode = len(payload), 0o755
             bundle.addfile(entry, io.BytesIO(payload))
         definitions[name] = {
-            "version": "==" + version,
+            "version": version,
             "download": {
                 "url": archive.as_uri(),
                 "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),

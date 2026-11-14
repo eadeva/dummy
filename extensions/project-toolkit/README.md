@@ -104,8 +104,8 @@ Replace example commands and paths before running. Modes and help come from the
 installed PTk schema; missing metadata produces an update instruction, with no
 bundled-schema substitute. Inventory interface version is 6; configuration interface version remains 5.
 
-Configuration graphs offer **New step/workflow job** and **New dependent** through
-the same setup. Search names/commands, inspect execution summaries and direct
+Configuration graphs are a view: new steps and workflow jobs are added through
+the setup of their parent list. Search names/commands, inspect execution summaries and direct
 dependents, highlight upstream/downstream paths, change layout direction, focus
 selection, fit or expand the canvas. Zoom/pan/search are retained during the live
 form session. Keyboard canvas controls: **+/-** zoom, **0** fit, **F** focus,
@@ -235,12 +235,10 @@ or merge implementation and does not substitute a bundled schema for the runtime
 PTk and the extension must both support this configuration interface. Discovery
 reports an error if the installed PTk does not provide it.
 
-Job and workflow forms include an offline graphical dependency canvas. Click a
-node or use **Select step** / **Select job** to edit its fields. Drag from a
-prerequisite's bottom connector onto a dependent to add a `needs` connection,
-or use **Add prerequisite → Connect**. Named prerequisite buttons remove edges.
-Self-links, duplicate connections and cycles are rejected before writing.
-Escape cancels dragging; dropdowns and buttons support keyboard-only editing.
+Job and workflow forms show an offline dependency graph after the fields. It is
+read-only: change dependencies in the `needs` field. Click a node or use
+**Select step** / **Select job** to open its fields.
+Self-links, duplicate connections and cycles in `needs` are reported in the graph.
 Workflow job fields suggest unused local jobs and retain repository-qualified targets.
 Each repository/job pair can occur once per workflow, even when calls would be
 sequential. Local and owner-qualified names are the same identity; the same job
