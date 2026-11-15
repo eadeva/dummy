@@ -48,6 +48,7 @@ class InstallMethod:
     download: DownloadSource | None = None
     options: dict[str, Any] = field(default_factory=dict)
     identity: str = ""
+    post_install: str | None = None
 
     def describe(self) -> str:
         if self.kind in {"toolbase", "artifactory"}:
@@ -135,7 +136,28 @@ def install_methods(
             methods.append(InstallMethod("apt", spec.apt))
         if spec.dnf:
             methods.append(InstallMethod("dnf", spec.dnf))
-    return [replace(method, identity=tool_identity(spec)) for method in methods]
+    return [
+        replace(
+            method,
+            identity=tool_identity(spec),
+            post_install=post_install_command(spec, os_name)
+            if method.kind in MANAGED
+            else None,
+        )
+        for method in methods
+    ]
+
+
+MANAGED = frozenset(
+    {"artifactory", "download", "uv_tool"}
+)  # installed into PTk's tool folder
+
+
+def post_install_command(spec: ToolSpec, os_name: str) -> str | None:
+    command = spec.post_install
+    if isinstance(command, dict):
+        return command.get("windows" if os_name == "windows" else "linux")
+    return command
 
 
 def tool_applies(spec: ToolSpec, os_name: str) -> bool:
@@ -151,9 +173,10 @@ def check_command(name: str, spec: ToolSpec) -> str:
 
 def tool_identity(spec: ToolSpec) -> str:
     """Stable identity of what gets installed (sources); the pinned version is checked separately."""
-    # Changing the pin or the check must not orphan an installed tool.
+    # Changing the pin, the check or the post-install command must not orphan an installed tool.
     data = spec.model_dump(
-        mode="json", exclude={"description", "version", "version_regex", "check"}
+        mode="json",
+        exclude={"description", "version", "version_regex", "check", "post_install"},
     )
     # Keep identities of existing configurations stable when adding optional sources.
     data.pop("docker", None)  # installation policy does not change the payload

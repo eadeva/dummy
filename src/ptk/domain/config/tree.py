@@ -53,11 +53,6 @@ def from_plain(value: Any, loc: Location | None = None) -> Node:
 def merge(base: Node | None, overlay: Node, _path: Path = ()) -> Node:
     if base is None:
         return _copy_node(overlay)
-    requirement = (len(_path) == 2 and _path[0] == "requires_tools") or (
-        len(_path) == 4 and _path[0] == "jobs" and _path[2] == "requires_tools"
-    )
-    if base.is_map and overlay.value is True and requirement:
-        return _copy_node(base)
     if base.is_map and overlay.is_map:
         merged = dict(base.value)
         key_locs = dict(base.key_locs)

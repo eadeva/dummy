@@ -148,8 +148,8 @@ fields; dependency branches contain dependents, not scalar field lists. Independ
 branches can overlap; the tree is not a serial timeline.
 Display ordering does not reorder YAML source files.
 
-Opening a job, workflow or one of its nodes also shows an editable graphical
-canvas in the configuration form. It uses the same bundled Dagre engine as
+Opening a job, workflow or one of its nodes also shows a read-only dependency
+graph in the configuration form. It uses the same bundled Dagre engine as
 reports, with prerequisites above dependents and shared nodes drawn once. Select
 a node on the canvas or use **Select step** / **Select job** to open its fields.
 The workflow selector lists invocation IDs and their job targets; dependencies
@@ -195,7 +195,7 @@ forms use VS Code's document save and undo behavior. ``needs`` defines schedulin
 dependencies; it does not reorder definitions, run commands or establish artifact
 contracts. Positions are automatic and are not stored in YAML.
 
-Selected graph steps expose **Edit step fields** to reach their controls and
+An opened step or workflow job shows **Edit step fields** to reach its controls and
 **Remove step** to delete the definition. Removal asks for confirmation and
 lists affected dependents; their references in ``needs`` are removed in the same
 edit. No replacement dependency is inferred, so review execution order afterwards.

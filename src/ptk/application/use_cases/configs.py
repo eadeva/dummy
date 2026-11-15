@@ -22,6 +22,19 @@ def digest(value):
     return hashlib.sha256(value).hexdigest() if value is not None else None
 
 
+def matches(content, sha256):
+    """Whether file bytes equal a pinned digest; CRLF checkouts (Git autocrlf) of text match."""
+    if content is None or sha256 is None:
+        return False
+    if digest(content) == sha256:
+        return True
+    return (
+        b"\r\n" in content
+        and b"\0" not in content
+        and digest(content.replace(b"\r\n", b"\n")) == sha256
+    )
+
+
 @dataclass
 class ConfigFile:
     name: str
@@ -42,7 +55,7 @@ class ConfigFile:
         return (
             "up to date"
             if not self.stale
-            and digest(self.old_text) == wanted
+            and matches(self.old_text, wanted)
             and self.old_mode == self.mode
             else "out of date"
         )
@@ -279,8 +292,8 @@ class SharedConfigs:
             # Equal bytes may be adopted on initial sync.
             if (
                 old is not None
-                and digest(old) != wanted[0]
-                and (not owned or digest(old) != owned["sha256"])
+                and not matches(old, wanted[0])
+                and (not owned or not matches(old, owned["sha256"]))
             ):
                 conflicts.append(destination)
             records[destination] = {
@@ -386,7 +399,7 @@ class SharedConfigs:
                             report["unavailable"].append(
                                 {"path": path, "reason": "base missing"}
                             )
-                        elif digest(base) != record.get("sha256"):
+                        elif not matches(base, record.get("sha256")):
                             report["modified_base_files"].append(path)
                     continue
                 base, _ = self._files.read(project.root, item.destination)
@@ -396,7 +409,7 @@ class SharedConfigs:
                     reason = "mapping not synchronized"
                 elif base is None:
                     reason = "base missing"
-                elif digest(base) != record.get("sha256"):
+                elif not matches(base, record.get("sha256")):
                     report["modified_base_files"].append(item.destination)
                     reason = "base modified; comparison omitted"
                 if reason:
@@ -440,8 +453,9 @@ class SharedConfigs:
                             "base": item.destination,
                             "overlay": item.overlay,
                             "output": item.output,
-                            "output_matches_sync": digest(effective)
-                            == output_record.get("sha256"),
+                            "output_matches_sync": matches(
+                                effective, output_record.get("sha256")
+                            ),
                             "diff": diff,
                         }
                     )

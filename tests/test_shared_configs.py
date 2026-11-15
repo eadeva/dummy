@@ -190,6 +190,18 @@ def test_external_sync_retains_pristine_bases_merges_and_tracks_provenance(exter
     assert all(item.status == "up to date" for item in service.check(project()))
 
 
+def test_crlf_checkout_of_pinned_text_config_is_up_to_date(external):
+    root, _, _, service, _, project = external
+    service.sync(project())
+    base = root / "config/external/ruff-base.toml"
+    base.write_bytes(base.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n"))
+    assert all(item.status == "up to date" for item in service.check(project()))
+    service.sync(project())
+    assert service.deviations(project())["modified_base_files"] == []
+    base.write_bytes(b"[lint]\r\nextend-select = []\r\n")
+    assert any(item.status != "up to date" for item in service.check(project()))
+
+
 def test_check_never_fetches_or_creates_cache(external, monkeypatch):
     root, _, _, service, adapter, project = external
     monkeypatch.setattr(

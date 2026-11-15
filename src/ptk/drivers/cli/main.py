@@ -694,16 +694,61 @@ def setup_command(
     sys.exit(0 if ok else 1)
 
 
-def _print_checks(checks: list[Any]) -> bool:
-    icons = {"ok": "[green]✔[/]", "warning": "[yellow]![/]", "problem": "[red]✘[/]"}
-    table = Table(box=None, pad_edge=False, show_header=False)
+_CHECK_STYLE = {
+    "ok": ("green", "✔"),
+    "warning": ("yellow", "!"),
+    "problem": ("red", "✘"),
+}
+
+
+def _grouped_checks(checks: list[Any]) -> list[tuple[str, str, str, str]]:
+    """(status, area, detail, fix); per-file config checks collapse by status."""
+    rows, configs = [], {}
     for check in checks:
-        fix = f" [dim]→ {escape(check.fix)}[/]" if check.fix else ""
-        table.add_row(
-            icons[check.status], escape(check.area), escape(check.detail) + fix
+        if check.area.startswith("config "):
+            key = (check.status, check.detail, check.fix)
+            configs.setdefault(key, []).append(check.area[len("config ") :])
+        else:
+            rows.append((check.status, check.area, check.detail, check.fix))
+    for (status, detail, fix), names in configs.items():
+        shown = ", ".join(names[:3]) + (
+            f" +{len(names) - 3} more" if len(names) > 3 else ""
         )
+        noun = "file" if len(names) == 1 else "files"
+        rows.append((status, "configs", f"{len(names)} {noun} {detail}: {shown}", fix))
+    return rows
+
+
+def _print_checks(checks: list[Any], title: str | None = None) -> bool:
+    if title:
+        console.rule(f"[bold cyan]{escape(title)}[/]", align="left")
+    table = Table(box=None, pad_edge=False, show_header=False)
+    table.add_column(no_wrap=True)
+    table.add_column(no_wrap=True)
+    table.add_column()
+    for status, area, detail, fix in _grouped_checks(checks):
+        colour, icon = _CHECK_STYLE[status]
+        hint = f"\n[dim]→ {escape(fix)}[/]" if fix else ""
+        text = escape(detail) if status == "ok" else f"[{colour}]{escape(detail)}[/]"
+        table.add_row(f"[{colour}]{icon}[/]", f"[bold]{escape(area)}[/]", text + hint)
     console.print(table)
     return not any(c.status == "problem" for c in checks)
+
+
+def _print_check_summary(*sections: list[Any]) -> None:
+    shown = [row[0] for checks in sections for row in _grouped_checks(checks)]
+    counts = {s: shown.count(s) for s in _CHECK_STYLE}
+    parts = [
+        f"[{_CHECK_STYLE[s][0]}]{n} {label}[/]"
+        for s, label in (
+            ("ok", "ok"),
+            ("warning", "warning(s)"),
+            ("problem", "problem(s)"),
+        )
+        if (n := counts[s]) or s == "ok"
+    ]
+    console.print()
+    console.print("Summary: " + ", ".join(parts))
 
 
 @click.command("doctor")
@@ -720,7 +765,9 @@ def doctor_command(ctx: click.Context) -> None:
         error = str(exc)
     credentials = state.app.credentials(project) if project else None
     checks = state.app.doctor.run(project, error, credentials, state.app.role(project))
-    sys.exit(0 if _print_checks(checks) else 1)
+    ok = _print_checks(checks)
+    _print_check_summary(checks)
+    sys.exit(0 if ok else 1)
 
 
 def _confirm_overwrite(ctx: click.Context):

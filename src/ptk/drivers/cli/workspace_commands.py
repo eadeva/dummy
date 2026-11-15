@@ -274,12 +274,15 @@ def build_commands(root, entries):
     @setup.command("doctor")
     @guarded
     def doctor():
-        failed = False
-        click.echo("[machine]")
-        for check in parent.app.doctor.run(None, None, None, "user"):
-            if check.area != "configuration":
-                click.echo(f"{check.area}: {check.status}: {check.detail}")
-                failed |= check.status == "problem"
+        from .main import _print_check_summary, _print_checks
+
+        machine = [
+            check
+            for check in parent.app.doctor.run(None, None, None, "user")
+            if check.area != "configuration"
+        ]
+        _print_checks(machine, "machine")
+        sections = [machine]
         for alias, state in states():
             project = state.project()
             policies = project.config.command_audience
@@ -288,17 +291,17 @@ def build_commands(root, entries):
                 for k in ("self-service", "self-service.doctor")
             ):
                 continue
-            click.echo(f"[{alias}]")
-            for check in state.app.doctor.run(
+            checks = state.app.doctor.run(
                 project,
                 None,
                 state.app.credentials(project),
                 state.role(),
                 include_machine=False,
-            ):
-                click.echo(f"{check.area}: {check.status}: {check.detail}")
-                failed |= check.status == "problem"
-        if failed:
+            )
+            _print_checks(checks, alias)
+            sections.append(checks)
+        _print_check_summary(*sections)
+        if any(c.status == "problem" for checks in sections for c in checks):
             raise click.exceptions.Exit(1)
 
     creds = click.RichGroup(

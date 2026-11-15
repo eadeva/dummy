@@ -40,24 +40,6 @@ def apply_defaults(tree: t.Node) -> t.Node:
         if not job.is_map:
             continue
         own_tools = job.value.get("requires_tools")
-        if (
-            tools is not None
-            and tools.is_map
-            and own_tools is not None
-            and own_tools.is_map
-        ):
-            # True enables a tool without resetting its inherited settings.
-            own_tools = t.Node(
-                {
-                    key: tools.value[key]
-                    if value.value is True
-                    and key in tools.value
-                    and tools.value[key].is_map
-                    else value
-                    for key, value in own_tools.value.items()
-                },
-                own_tools.loc,
-            )
         effective = t.merge(tools, own_tools) if own_tools is not None else tools
         if effective is not None:
             # This is the already-resolved model default. Keep its ordering and

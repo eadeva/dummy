@@ -272,6 +272,15 @@ class ToolInstaller(Protocol):
     ) -> None:
         """``secrets`` resolves credential references (``credential.field``) of the source."""
 
+    def post_install_pending(self, name: str, spec) -> bool:
+        """Whether an installed tool's configured post-install command has not run yet."""
+
+    def installation(self, name: str, spec) -> tuple[str, str | None] | None:
+        """(bin folder, recorded version) of a PTk-installed tool, else None."""
+
+    def record_version(self, name: str, spec, version: str | None) -> None:
+        """Remember the version a PTk-installed tool reported (best effort)."""
+
 
 class ProjectScaffold(Protocol):
     def create(self, target: Path, files: dict[str, str], *, dry_run: bool) -> bool:

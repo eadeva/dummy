@@ -249,7 +249,7 @@ def test_new_optional_sources_preserve_existing_tool_identity():
         mode="json",
         exclude={
             "description", "toolbase", "artifactory", "docker",
-            "version", "version_regex", "check",
+            "version", "version_regex", "check", "post_install",
         },
     )  # fmt: skip
     previous = hashlib.sha256(json.dumps(data, sort_keys=True).encode()).hexdigest()[

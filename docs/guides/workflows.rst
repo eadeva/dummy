@@ -137,7 +137,9 @@ The workflow accepts ``help``, ``audience: all|maintainer``, ``open_report``, ``
 and ``max_workers`` (default 4, range 1–32). This limit applies to active **job
 calls**, not to parallel steps inside those jobs. Each repository retains its own
 environment, tool configuration and credentials. Job parameter defaults, version
-discovery and ``requires_tools`` overrides continue to apply.
+discovery and ``requires_tools`` selection continue to apply. In an interactive
+terminal, missing tools of a called job are offered for installation
+(**Install them now?**) before the workflow starts.
 
 Failure, preflight and isolation
 --------------------------------

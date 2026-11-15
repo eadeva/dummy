@@ -39,7 +39,7 @@ def configured(write, *, build=None, **settings):
     return write(project_files(yaml.safe_dump(model)))
 
 
-def test_per_tool_override_disable_and_preserve_unmentioned(write, load):
+def test_per_tool_disable_and_preserve_unmentioned(write, load):
     root = configured(
         write,
         tools={
@@ -55,7 +55,6 @@ def test_per_tool_override_disable_and_preserve_unmentioned(write, load):
         param_defaults={"jobs": 8, "own": 99, "undeclared": 20},
         build={
             "requires_tools": {
-                "cmake": {"version": "4.0.0"},
                 "git": False,
                 "ninja": True,
             }
@@ -64,9 +63,7 @@ def test_per_tool_override_disable_and_preserve_unmentioned(write, load):
     p = load(root)
     assert p.config.jobs["build"].required_tool_names == ["cmake", "ninja"]
     assert p.config.jobs["test"].required_tool_names == ["cmake", "git"]
-    scoped = tools_for_jobs(p, ["build"])
-    assert scoped.config.tools["cmake"].version == "4.0.0"
-    assert scoped.config.tools["cmake"].choco == "cmake"
+    assert tools_for_jobs(p, ["build"]).selected_tools == ["cmake", "ninja"]
     assert p.config.tools["cmake"].version == "3.30.2"
     assert p.config.jobs["build"].params["jobs"].default == 8
     assert p.config.jobs["build"].params["own"].default == 2
@@ -130,25 +127,27 @@ def test_required_and_explicit_null_do_not_inherit_defaults():
     assert p.jobs["go"].params["b"].default is None
 
 
-def test_global_tools_without_jobs_and_true_preserves_settings():
+def test_global_tools_without_jobs_and_requires_tools_only_selects():
     p = PtkConfig.model_validate(
         {"project": {"name": "test"}, "tools": {"git": {}}, "requires_tools": ["git"]}
     )
     assert p.requires_tools == {"git": True}
-    p = PtkConfig.model_validate(
-        {
-            "project": {"name": "test"},
-            "requires_tools": {"git": {"version": "2.47.1"}},
-            "tools": {"git": {}},
-            "jobs": {
-                "go": {"requires_tools": ["git"], "steps": {"x": {"uses": "echo"}}}
-            },
-        }
-    )
-    assert p.jobs["go"].requires_tools["git"].version == "2.47.1"
+    with pytest.raises(ValueError, match="only selects tools"):
+        PtkConfig.model_validate(
+            {
+                "project": {"name": "test"},
+                "tools": {"git": {}},
+                "jobs": {
+                    "go": {
+                        "requires_tools": {"git": {"version": "2.47.1"}},
+                        "steps": {"x": {"uses": "echo"}},
+                    }
+                },
+            }
+        )
 
 
-def test_tool_checks_and_install_selection_use_job_settings(write, load):
+def test_tool_checks_and_install_selection_use_job_selection(write, load):
     from ptk.application.ports import ProcessOutcome
     from ptk.bootstrap import create_app
 
@@ -164,16 +163,14 @@ def test_tool_checks_and_install_selection_use_job_settings(write, load):
         write,
         tools={"cmake": {"version": "3.29.0", "uv_tool": "cmake"}, "git": {}},
         requires_tools=["cmake", "git"],
-        build={"requires_tools": {"cmake": {"version": "4.0.0"}, "git": False}},
+        build={"requires_tools": {"git": False}},
     )
     p = load(root)
     app = create_app(environ={}, runner=Runner())
     assert app.tools.required(p, ["build"]) == ["cmake"]
     assert app.tools.required(p, ["test"]) == ["cmake", "git"]
-    assert app.tools.problems(p, "build")[0].required == "4.0.0"
+    assert app.tools.problems(p, "build") == []
     assert app.tools.problems(p, "test") == []
     scoped = tools_for_jobs(p, ["build"])
-    results = app.tools.setup(scoped, ["cmake"], dry_run=True)
-    assert results[0].outcome.startswith("would install")
-    with pytest.raises(Exception, match="different settings"):
-        tools_for_jobs(p, ["build", "test"])
+    assert scoped.selected_tools == ["cmake"]
+    assert tools_for_jobs(p, ["build", "test"]).selected_tools == ["cmake", "git"]

@@ -13,13 +13,13 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 3. Add job requires_tools so missing or wrong tools are caught before execution.
 
-4. Configure platform-appropriate sources: Toolbase (Windows), Artifactory, Chocolatey (Windows), uv_tool, verified downloads, optional apt/dnf.
+4. Configure platform-appropriate sources: Toolbase (Windows), Artifactory, Chocolatey (Windows), uv_tool, verified downloads, optional apt/dnf. For managed installs that need registration outside their folder, use `post_install` (PowerShell on Windows, sh on Linux; `PTK_TOOL_DIR` is the tool folder); changing it re-runs it without a new download.
 
 5. Prefer SHA-256 checksums for downloads (a missing one only warns) and verify the archive's `bin` subfolder, which must exist inside the archive.
 
 6. Run `ptk self-service tools --job JOB --dry-run` and inspect the proposed installations. `-a/--job` is repeatable; without it all configured tools are checked. At a VMR root the same command checks every repository (with `--job` only those defining the job).
 
-7. Use `ptk self-service tools --job JOB` or the job's `--setup` only within the requested installation scope. In an interactive non-CX terminal, a job with missing/wrongly versioned tools asks **Install them now?**; answering no keeps the usual error.
+7. Use `ptk self-service tools --job JOB` or the job's `--setup` only within the requested installation scope. In an interactive non-CX terminal, a job or workflow with missing/wrongly versioned tools asks **Install them now?**; answering no keeps the usual error.
 
 8. Treat system installs (`--allow-system`, apt/dnf with sudo) and Chocolatey bootstrap (`--bootstrap-choco`, Windows administrator terminal) as explicit options; do not add them merely to bypass failures.
 
@@ -27,11 +27,11 @@ First follow the [project discovery and execution guide](../../../docs/guides/ag
 
 10. For a configuration change, verify the selected tool check and resolved executable, not PTk internal adapter tests. Only PTk developers change/test adapters in its source checkout.
 
-11. Global and job `requires_tools` merge per tool: unmentioned tools stay inherited, `name: false` disables one, and settings mappings override only that job. Tool files load automatically; see [docs/guides/configuration.rst](../../../docs/guides/configuration.rst).
+11. Global and job `requires_tools` merge per tool and only select tools: unmentioned tools stay inherited, `name: true` adds one, `name: false` disables one. Settings mappings are rejected; a job needing another version or source requires a separately named tool. Tool files load automatically; see [docs/guides/configuration.rst](../../../docs/guides/configuration.rst).
 
 12. Steps can reference `${tools.NAME.bin}`, the folder of the tool's executable on the job PATH; the tool must be in that job's `requires_tools`.
 
-Managed installations coexist by version/source identity. Verify the job-selected PATH; never append the entire cache. System installers remain host-shared. Isolated environments keep OS essentials (on Windows including `HOME` and `USERPROFILE`); use `environment.keep` for other required host variables; PATH inheritance is a separate opt-in. Download/uv/Artifactory installs are serialized by a lock per tool name and source identity; a lock whose recorded local owner process is dead is removed automatically, otherwise PTk prints a waiting message and waits for the owner (up to 30 minutes).
+Managed installations coexist by version/source identity. PTk records the version a managed install reported and skips its `check` while PATH resolves into that install and the record equals the pin; otherwise `check` runs. Verify the job-selected PATH; never append the entire cache. System installers remain host-shared. Isolated environments keep OS essentials (on Windows including `HOME` and `USERPROFILE`); use `environment.keep` for other required host variables; PATH inheritance is a separate opt-in. Download/uv/Artifactory installs are serialized by a lock per tool name and source identity; a lock whose recorded local owner process is dead is removed automatically, otherwise PTk prints a waiting message and waits for the owner (up to 30 minutes).
 
 
 Only when the project uses Toolbase, declare an exact package/version and relative executable directories; it is Windows-only. Toolbase-only entries are ignored on Linux. Do not add global PATH or shared `.env` mutations, and leave live Toolbase validation to the user's Windows environment.

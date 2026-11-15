@@ -163,6 +163,99 @@ def test_chocolatey_commands(tmp_path, monkeypatch):
         missing.install("llvm", method, print)
 
 
+def test_post_install_runs_once_and_again_after_a_change(tmp_path):
+    import json
+
+    from ptk.adapters.tools import MARKER
+    from ptk.domain.tools import tool_identity
+
+    def spec(command):
+        return ToolSpec(
+            download={"linux": {"url": "file:///qac.tgz", "bin": "bin"}},
+            post_install={"linux": command, "windows": "ignored"} if command else None,
+        )
+
+    runner = FakeRunner()
+    installer = SystemToolInstaller(
+        runner, {"PATH": "/usr/bin"}, windows=False, tools_dir=tmp_path
+    )
+    assert (
+        tool_identity(spec("a"))
+        == tool_identity(spec("b"))
+        == tool_identity(spec(None))
+    )
+    target = tmp_path / "qac" / tool_identity(spec("a"))
+    target.mkdir(parents=True)
+    (target / MARKER).write_text(json.dumps({"bin": "bin"}))
+    assert installer.post_install_pending("qac", spec("register"))
+    method = install_methods(spec("register"), "linux", allow_system=False)[0]
+    installer.install("qac", method, print)
+    assert runner.calls == [["sh", "-c", "register"]]
+    assert not installer.post_install_pending("qac", spec("register"))
+    installer.install("qac", method, print)
+    assert len(runner.calls) == 1
+    assert installer.post_install_pending("qac", spec("register --all"))
+
+    class Failing(FakeRunner):
+        def run(self, command, on_output, cancel=None):
+            return ProcessOutcome(3)
+
+    failing = SystemToolInstaller(Failing(), {}, windows=False, tools_dir=tmp_path)
+    changed = install_methods(spec("register --all"), "linux", allow_system=False)[0]
+    with pytest.raises(PtkError, match="post-install of qac failed"):
+        failing.install("qac", changed, print)
+    assert installer.post_install_pending("qac", spec("register --all"))
+
+
+def test_installed_tool_version_is_recorded_and_trusted(tmp_path, write, load):
+    import json
+
+    from ptk.adapters.host import SystemHost
+    from ptk.adapters.tools import MARKER
+    from ptk.application.use_cases.tools import ToolService
+    from ptk.domain.tools import tool_identity
+
+    root = write(
+        project_files("""
+        project: {name: t}
+        tools:
+          mytool:
+            version: "1.2.3"
+            check: mytool --version
+            download: {url: "file:///mytool.tgz", bin: bin}
+        """)
+    )
+    project = load(root)
+    spec = project.config.tools["mytool"]
+    folder = tmp_path / "tools" / "mytool" / tool_identity(spec)
+    (folder / "bin").mkdir(parents=True)
+    (folder / MARKER).write_text(json.dumps({"bin": "bin"}))
+
+    class Runner(FakeRunner):
+        found = str(folder / "bin" / "mytool")
+
+        def run(self, command, on_output, cancel=None):
+            self.calls.append(command.argv)
+            on_output("mytool 1.2.3")
+            return ProcessOutcome(0)
+
+        def which(self, program, path=None):
+            return self.found
+
+    runner = Runner()
+    installer = SystemToolInstaller(runner, {}, tools_dir=tmp_path / "tools")
+    service = ToolService(SystemHost({}), runner, installer)
+    status = lambda: service.status(project, ["mytool"], env={"PATH": ""})[0]
+    assert status().ok and len(runner.calls) == 1
+    assert json.loads((folder / MARKER).read_text())["version"] == "1.2.3"
+    assert status().ok and status().version == "1.2.3" and len(runner.calls) == 1
+    project.config.tools["mytool"] = spec.model_copy(update={"version": "1.2.4"})
+    assert "not the pinned 1.2.4" in status().problem and len(runner.calls) == 2
+    project.config.tools["mytool"] = spec
+    runner.found = "/usr/bin/mytool"  # PATH no longer resolves to PTk's install
+    assert status().ok and len(runner.calls) == 3
+
+
 def make_tool_archive(folder: Path) -> tuple[str, str]:
     script = b"#!/bin/sh\necho mytool 1.2.3\n"
     buffer = io.BytesIO()
@@ -332,6 +425,28 @@ def test_doctor_reports_tool_problems(project):
     result = project("self-service", "doctor")
     assert result.exit_code == 1
     assert "tool mytool" in result.output and "ptk self-service tools" in result.output
+    assert "Summary:" in result.output and "problem(s)" in result.output
+
+
+def test_doctor_collapses_per_file_config_checks():
+    from ptk.application.use_cases.setup import Check
+    from ptk.drivers.cli.main import _grouped_checks
+
+    checks = [Check("uv", "ok", "uv 0.9")] + [
+        Check(
+            f"config f{i}.yml", "warning", "out of date", "ptk maintainer sync configs"
+        )
+        for i in range(5)
+    ]
+    assert _grouped_checks(checks) == [
+        ("ok", "uv", "uv 0.9", ""),
+        (
+            "warning",
+            "configs",
+            "5 files out of date: f0.yml, f1.yml, f2.yml +2 more",
+            "ptk maintainer sync configs",
+        ),
+    ]
 
 
 @posix_only
@@ -388,8 +503,9 @@ def test_job_versions_coexist_and_path_contains_only_selected_tools(
             entry = tarfile.TarInfo("bin/selectedtool")
             entry.size, entry.mode = len(payload), 0o755
             bundle.addfile(entry, io.BytesIO(payload))
-        definitions[name] = {
+        definitions[f"selectedtool_{name}"] = {
             "version": version,
+            "check": "selectedtool --version",
             "download": {
                 "url": archive.as_uri(),
                 "sha256": hashlib.sha256(archive.read_bytes()).hexdigest(),
@@ -398,13 +514,13 @@ def test_job_versions_coexist_and_path_contains_only_selected_tools(
         }
     data = {
         "project": {"name": "isolated"},
-        "tools": {"selectedtool": {}},
+        "tools": definitions,
         "jobs": {
             name: {
-                "requires_tools": {"selectedtool": spec},
+                "requires_tools": [f"selectedtool_{name}"],
                 "steps": {"version": {"run": ["selectedtool", "--version"]}},
             }
-            for name, spec in definitions.items()
+            for name in ("one", "two")
         },
     }
     root = write(project_files(yaml.safe_dump(data)))
@@ -416,12 +532,12 @@ def test_job_versions_coexist_and_path_contains_only_selected_tools(
     app = create_app(environ=env)
     project = load(root)
     one, two = (tools_for_jobs(project, [name]) for name in ("one", "two"))
-    for scoped in (one, two):
-        assert app.tools.setup(scoped, ["selectedtool"])[0].ok
+    for scoped, tool in ((one, "selectedtool_one"), (two, "selectedtool_two")):
+        assert app.tools.setup(scoped, [tool])[0].ok
     first_paths, second_paths = app.tools.paths(one), app.tools.paths(two)
     assert len(first_paths) == len(second_paths) == 1 and first_paths != second_paths
-    assert app.tools.status(one, ["selectedtool"])[0].version == "1.0.0"
-    assert app.tools.status(two, ["selectedtool"])[0].version == "2.0.0"
+    assert app.tools.status(one, ["selectedtool_one"])[0].version == "1.0.0"
+    assert app.tools.status(two, ["selectedtool_two"])[0].version == "2.0.0"
     assert second_paths[0] not in app.tools.environment(one)["PATH"]
     for job, version in [("one", "1.0.0"), ("two", "2.0.0"), ("one", "1.0.0")]:
         result = CliRunner(env={"PTK_CX": "0", **env}).invoke(cli, [job], cwd=root)

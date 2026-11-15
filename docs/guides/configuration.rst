@@ -644,20 +644,19 @@ Tool requirements merge **per tool**, not by replacing the entire list::
 
    # config/ptk/jobs/build.ptk.yml
    requires_tools:
-     cmake:
-       version: 4.0.3
+     git: false
      ninja: true
 
-``build`` requires git, cmake and ninja, with its own pinned CMake version.
-Other jobs retain the global requirements and CMake definition. Use
-``git: false`` to disable only git for one job. ``requires_tools: []`` or ``{}``
-changes nothing; a job's unmentioned global requirements remain inherited.
-List shorthand enables/adds named tools; mappings can enable, disable or override
-a named tool's settings. All referenced names must be declared under ``tools``.
+``build`` requires cmake and ninja; other jobs keep the global git and cmake.
+``requires_tools: []`` or ``{}`` changes nothing; a job's unmentioned global
+requirements remain inherited. List shorthand enables/adds named tools; mappings
+enable (``true``) or disable (``false``) a named tool. ``requires_tools`` only
+selects tools: tool settings belong to the definition under ``tools``, and a
+settings mapping is rejected. A job that needs another version or source uses a
+separately named tool (for example ``cmake4``). All referenced names must be
+declared under ``tools``.
 
-``self-service tools --job build`` uses that job's effective tool settings.
-Selecting jobs that require conflicting settings for the same tool fails
-before installation; install for those jobs separately. Without ``--job``,
+``self-service tools --job build`` installs that job's selected tools. Without ``--job``,
 ``self-service tools`` uses global requirements when supplied, otherwise all declared
 tools. Declaring a tool alone does not make it a requirement of every job.
 
@@ -694,9 +693,30 @@ environment is mutated. Tool versions are rechecked in the final subprocess
 environment, including Python-runtime and step overrides.
 
 Managed downloads and Python tools are stored by tool name and source identity
-(what is downloaded or installed). The pinned ``version``, ``version_regex`` and
-``check`` are not part of it: changing the pin keeps the installed copy, which
-is then checked against the new pin.
+(what is downloaded or installed). The pinned ``version``, ``version_regex``,
+``check`` and ``post_install`` are not part of it: changing the pin keeps the
+installed copy, which is then checked against the new pin.
+
+PTk records the version a managed installation reported in its install folder.
+While the job PATH resolves the ``check`` command into that folder and the
+recorded version equals the pin, PTk does not run ``check`` again. A changed
+pin, a missing record or a PATH that resolves elsewhere runs ``check`` as usual.
+
+``post_install`` (one command, or separate ``windows`` and ``linux`` commands)
+runs once in the installed tool folder after an Artifactory, download or uv tool
+installation, for example to register plug-ins that the tool looks up outside
+its folder. It runs in PowerShell on Windows and ``sh`` on Linux, with
+``PTK_TOOL_DIR`` set to the tool folder and the tool's ``bin`` on PATH. Until it
+has succeeded the tool is reported as not ready; changing the command runs it
+again on the next ``ptk self-service tools`` without downloading the tool again::
+
+   tools:
+     helix_qac:
+       artifactory: {windows: {...}}
+       post_install:
+         windows: >-
+           $m = "$env:PTK_TOOL_DIR/modules";
+           ...write $env:LOCALAPPDATA/Perforce/installed_components.ini...
 Only installations selected by the job's effective
 requirements (or its explicit ``tools.ensure`` selections) enter its PATH.
 A later ``tool: true`` keeps earlier settings; ``tool: false`` disables that
@@ -715,7 +735,7 @@ Toolbase and Artifactory sources
 ========================================
 
 These sources participate in ``ptk self-service tools``, ``--setup`` and
-``tools.ensure``. Job-level ``requires_tools`` overrides and VMR repository
+``tools.ensure``. Job ``requires_tools`` selection and VMR repository
 selection work as for other tools. Source order is custom installers, Toolbase
 (Windows), Artifactory, Chocolatey (Windows), uv, download, then opt-in apt/dnf.
 ``download.url`` accepts only ``https://`` and ``file://`` URLs and
@@ -846,7 +866,7 @@ Prepare the required tool in the image or mount an existing managed cache.
 If using an image tool outside the default OS PATH, add its directory to the
 job's environment configuration. No Docker daemon or Docker CLI is needed.
 
-Job-level ``requires_tools`` can override ``docker`` like other tool settings.
+``docker`` is part of the tool definition; ``requires_tools`` cannot change it.
 Changing this policy does not change the managed installation identity.
 Detection checks ``/.dockerenv``, Docker cgroup markers and ``container=docker``.
 These signals are best-effort, especially for Windows containers or unusual

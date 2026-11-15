@@ -108,8 +108,8 @@ Configuration graphs are a view: new steps and workflow jobs are added through
 the setup of their parent list. Search names/commands, inspect execution summaries and direct
 dependents, highlight upstream/downstream paths, change layout direction, focus
 selection, fit or expand the canvas. Zoom/pan/search are retained during the live
-form session. Keyboard canvas controls: **+/-** zoom, **0** fit, **F** focus,
-**Escape** cancel a connection; **Ctrl/Cmd + wheel** zooms. Search dims unmatched
+form session. Keyboard canvas controls: **+/-** zoom, **0** fit, **F** focus;
+**Ctrl/Cmd + wheel** zooms. Search dims unmatched
 nodes without hiding dependencies. Graph appearance does not change execution.
 
 Template-capable configuration inputs have a **${}** button (**Insert variable…**) and autocomplete
@@ -135,7 +135,7 @@ and teal GUIs (`window`). Variants and versions use orange. Repositories,
 configuration, tools and credentials use neutral icons; ordinary fields use
 `symbol-field`, lists use `list-unordered`, and objects use `symbol-object`.
 Steps and built-in commands use subdued gray. These colours also apply to the
-configuration form and dependency editor. Red/yellow remain diagnostic colours;
+configuration form and dependency graph. Red/yellow remain diagnostic colours;
 status, selection and focus keep their own meaning. Colours follow the active
 VS Code theme, and labels/icon shapes also distinguish the categories.
 
@@ -246,11 +246,11 @@ name in another repository remains distinct. Step IDs and prerequisite choices
 are unique within their job. Loops are detected while configuring, including
 after editing needs fields, and by PTk validation before execution.
 
-Graph edits preserve definition order and other prerequisites, and use the
+`needs` edits preserve definition order and other prerequisites, and use the
 normal document/fingerprint checks. Layout is automatic; it is not saved in
 YAML. Invalid configurations keep their diagnostics, fields and Raw YAML access
-so users can repair them. Other validation errors do not disable graph repairs;
-PTk still performs full project validation. No graph action runs project scripts
+so users can repair them. Other validation errors do not block `needs` repairs;
+PTk still performs full project validation. The graph never runs project scripts
 or changes their responsibility for inputs, outputs and side effects.
 
 Text and number fields stay local while you type. Leaving a field, pressing

@@ -6,7 +6,6 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass, replace
 from pathlib import Path
 
-from ...domain.config.model import ToolSpec
 from ...domain.errors import PtkError
 from ...domain.execution.commands import split_words
 from ...domain.execution.environment import base_environment, prepend_path
@@ -17,6 +16,7 @@ from ...domain.tools import (
     check_command,
     check_version,
     install_methods,
+    same_version,
     tool_applies,
     toolbase_status,
 )
@@ -40,32 +40,11 @@ class SetupResult:
 
 
 def tools_for_jobs(project: Project, jobs: list[str] | None = None) -> Project:
-    """Apply per-tool settings without modifying other jobs or the source project."""
+    """Select the tools of ``jobs`` (and their tools.ensure steps) without modifying the source project."""
     config = project.config.model_copy(deep=True)
-    selections = [config.requires_tools] if jobs is None else []
     for name in jobs or []:
         if name not in config.jobs:
             raise PtkError(f"unknown job '{name}'")
-        selections.append(config.jobs[name].requires_tools)
-    overrides = {}
-    for selection in selections:
-        for name, spec in selection.items():
-            if spec is False or name not in config.tools:
-                continue
-            base = project.config.tools[name]
-            effective = (
-                ToolSpec.model_validate(
-                    {**base.model_dump(), **spec.model_dump(exclude_unset=True)}
-                )
-                if isinstance(spec, ToolSpec)
-                else base
-            )
-            if name in overrides and overrides[name] != effective:
-                raise PtkError(
-                    f"selected jobs require different settings for tool '{name}'; install per job"
-                )
-            overrides[name] = effective
-    config.tools.update(overrides)
     selected = None
     if jobs:
         selected = list(
@@ -184,6 +163,25 @@ class ToolService:
                 result.append(toolbase_status(name, spec.toolbase, folder))
                 continue
             argv = split_words(check_command(name, spec), self._host.os_name())
+            path = next((v for k, v in env.items() if k.upper() == "PATH"), "")
+            source = self._runner.which(argv[0], path=path) or ""
+            pending = self._installer.post_install_pending(name, spec)
+            # PTk's own install record, valid while PATH still resolves into its bin folder.
+            installed = self._installer.installation(name, spec)
+            managed = bool(
+                installed
+                and source
+                and Path(source).resolve().parent == Path(installed[0])
+            )
+            if managed and not pending:
+                recorded = installed[1]
+                if not spec.version or (
+                    recorded and same_version(recorded, spec.version)
+                ):
+                    result.append(
+                        ToolStatus(name, spec.version, True, recorded, source=source)
+                    )
+                    continue
             lines: list[str] = []
             outcome = self._runner.run(
                 CommandSpec(
@@ -195,9 +193,12 @@ class ToolService:
                 lines.append,
             )
             output = "\n".join(lines) if outcome.exit_code == 0 else None
-            path = next((v for k, v in env.items() if k.upper() == "PATH"), "")
-            source = self._runner.which(argv[0], path=path) or ""
-            result.append(replace(check_version(name, spec, output), source=source))
+            status = replace(check_version(name, spec, output), source=source)
+            if status.ok and pending:
+                status.problem = "post-install step has not run"
+            if status.ok and managed and status.version != installed[1]:
+                self._installer.record_version(name, spec, status.version)
+            result.append(status)
         return result
 
     def problems(self, project: Project, job: str) -> list[ToolStatus]:

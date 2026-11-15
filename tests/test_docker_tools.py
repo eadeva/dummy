@@ -40,6 +40,15 @@ class Installer:
     def install(self, name, method, out, secrets=None):
         self.installed.append(name)
 
+    def post_install_pending(self, name, spec):
+        return False
+
+    def installation(self, name, spec):
+        return None
+
+    def record_version(self, name, spec, version):
+        pass
+
 
 @pytest.fixture
 def project(write, load):
@@ -91,12 +100,12 @@ def test_docker_checks_and_paths_remain_but_install_never_runs(project, output):
     assert preview.ok == result.ok
 
 
-def test_host_install_and_job_override(project):
+def test_host_installs_and_docker_policy_comes_from_the_tool(project):
     runner, installer = Runner(), Installer()
     service = ToolService(SystemHost({"PTK_DOCKER": "0"}), runner, installer)
     service.setup(project, ["compiler"])
     assert installer.installed == ["compiler"]
-    project.config.jobs["build"].requires_tools = {"compiler": ToolSpec(docker=True)}
+    project.config.tools["compiler"].docker = True
     selected = tools_for_jobs(project, ["build"])
     service = ToolService(SystemHost({"PTK_DOCKER": "1"}), runner, installer)
     service.setup(selected, ["compiler"])

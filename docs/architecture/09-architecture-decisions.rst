@@ -301,23 +301,25 @@ not imply that every related future capability has been implemented.
 
    **Related requirement:** :need:`REQ_Sw_GRAPH_INSPECTION`.
 
-.. ddec:: Graphical dependency editing with recoverable validation
+.. ddec:: Read-only dependency graph with recoverable validation
    :id: DD_GRAPH_EDITING
    :status: accepted
 
    **Context:** The report diagram makes joins clearer than a tree. Users want
-   the same graphical overview while editing, selection dropdowns, and dragging
-   that connects prerequisites. Configuration validation must not make the
-   extension unusable when a project needs repair.
+   the same graphical overview while editing. Graphical connecting and editing
+   in the canvas proved harder to use than the fields and duplicated their
+   rules. Configuration validation must not make the extension unusable when a
+   project needs repair.
 
-   **Decision:** Keep the sidebar for navigation and add a graphical canvas to
-   job/workflow configuration forms. Reuse the pinned Dagre engine and license
-   notices through a build-time copy from the report assets. Show one node per
-   authored step or workflow invocation. Click a node or use the job/step
-   dropdown to edit its fields. Drag from a prerequisite's output connector onto
-   its dependent, or choose a prerequisite from a dropdown. Both actions add
-   one explicit needs edge; named removal buttons remove one connection.
-   Layout remains automatic, with prerequisite-to-dependent direction.
+   **Decision:** Keep the sidebar for navigation and show a read-only graph at
+   the end of job/workflow configuration forms, after the fields. Reuse the
+   pinned Dagre engine and license notices through a build-time copy from the
+   report assets. Show one node per authored step or workflow invocation. Click
+   a node or use the job/step dropdown to open its fields; prerequisites and
+   dependents of the selected node are buttons that open them. Dependencies
+   change only through the ``needs`` field. The graph offers no connecting,
+   removal or creation actions. Layout remains automatic, with
+   prerequisite-to-dependent direction.
 
    **Identity and uniqueness:** Each repository/job pair may occur once within
    a workflow, even when parameters differ or dependencies would serialize the
@@ -330,26 +332,26 @@ not imply that every related future capability has been implemented.
 
    **Validation boundary:** Installed schema metadata marks graph fields.
    Client checks assist editing; they do not duplicate PTk's full configuration
-   validation or substitute a bundled schema. The host checks requested edge
-   changes against the current authored graph and existing source-version
-   guards before writing. Cycles, self-links and duplicate additions are
-   rejected without changing YAML. Invalid loaded graphs show a diagnostic
-   while fields and Raw YAML remain available. Removal may repair missing or
-   cyclic references incrementally. Other validation errors remain visible and
-   do not prevent repair. Loop diagnostics are also refreshed when needs fields
-   are edited, without waiting for a run. PTk still validates the whole project
-   on reload/run.
+   validation or substitute a bundled schema. The host checks ``needs`` edits
+   against the current authored graph and existing source-version guards before
+   writing. Invalid loaded graphs show a diagnostic while fields and Raw YAML
+   remain available. Editing ``needs`` may repair missing or cyclic references
+   incrementally. Other validation errors remain visible and do not prevent
+   repair. Loop diagnostics are refreshed when needs fields are edited, without
+   waiting for a run. PTk still validates the whole project on reload/run.
 
    **Alternatives considered:** Reordering a list cannot represent joins and
-   would obscure whether order or dependencies control execution. User feedback
-   explicitly selected connecting dependencies. Free node positioning would
-   introduce layout state unrelated to execution. Blocking the whole form on
-   validation failure would prevent users from correcting their configuration.
+   would obscure whether order or dependencies control execution. Connecting
+   dependencies by dragging in the graph was implemented first and replaced by
+   this read-only view: one editing path (the fields) is simpler to learn,
+   test and keep consistent. Free node positioning would introduce layout state
+   unrelated to execution. Blocking the whole form on validation failure would
+   prevent users from correcting their configuration.
 
-   **Consequences:** Graph edits use the normal YAML editing/ownership path,
-   preserving other prerequisites, comments and definition order. Keyboard
-   dropdowns/buttons provide the same operations as dragging. No connection
-   runs commands, transfers artifacts or changes project responsibility under
+   **Consequences:** ``needs`` edits use the normal YAML editing/ownership path,
+   preserving other prerequisites, comments and definition order. The graph is
+   keyboard-navigable and never writes YAML. No node runs commands, transfers
+   artifacts or changes project responsibility under
    :need:`DD_EXECUTION_BOUNDARIES`. The schema graph hint is an additive change;
    inventory version 5 and configuration version 5 retain their meaning.
 
@@ -373,14 +375,13 @@ not imply that every related future capability has been implemented.
    field. Missing mode metadata gives an update instruction rather than a
    client-maintained template fallback.
 
-   **Graph interaction:** Reuse the same setup from New step/workflow job and
-   New dependent, which seeds an explicit needs edge. Show execution summaries,
+   **Graph interaction:** New steps and workflow jobs are created with the setup
+   of their parent list. The read-only graph shows execution summaries,
    prerequisites/dependents and transitive related paths. Add search that dims
    rather than hides nodes, layout direction, focus, zoom/fit and canvas expansion.
    Preserve view settings through live form redraws without writing layout to YAML.
-   Graph editing retains cycle checks, duplicate-target checks and keyboard
-   alternatives. Declared command text is displayed literally without resolving
-   variables or credentials.
+   ``needs`` field edits retain cycle checks and duplicate-target checks. Declared
+   command text is displayed literally without resolving variables or credentials.
 
    **Consequences:** Cancel discards the draft; closing/reloading the webview also
    loses it. Back preserves values unless the user changes the initial field,

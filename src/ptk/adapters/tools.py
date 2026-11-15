@@ -29,7 +29,7 @@ from ..application.ports import ProcessRunner
 from ..domain.config.model import ArtifactorySource, DownloadSource, ToolbaseSource
 from ..domain.errors import PtkError
 from ..domain.execution.model import CommandSpec
-from ..domain.tools import InstallMethod, tool_identity
+from ..domain.tools import InstallMethod, post_install_command, tool_identity
 from .locking import file_lock
 from .tool_sources import toolbase
 from .tool_sources.artifactory import CurlArtifactory, _url
@@ -157,11 +157,68 @@ class SystemToolInstaller:
         if method.kind in {"download", "uv_tool", "artifactory"}:
             target = self.tools_dir / name / method.identity
             with file_lock(target.with_suffix(".lock"), timeout=1800, waiting=out):
-                if (target / MARKER).is_file():
-                    return
-                handler(name, method, out)
+                if not (target / MARKER).is_file():
+                    handler(name, method, out)
+                if _recorded_post_install(target) != method.post_install:
+                    self._post_install(name, method, target, out)
         else:
             handler(name, method, out)
+
+    def post_install_pending(self, name: str, spec) -> bool:
+        """Whether an installed tool's configured post-install command has not run yet."""
+        command = post_install_command(spec, "windows" if self._windows else "linux")
+        target = self.tools_dir / name / tool_identity(spec)
+        return (target / MARKER).is_file() and _recorded_post_install(target) != command
+
+    def installation(self, name: str, spec) -> tuple[str, str | None] | None:
+        folder = self.tools_dir / name / tool_identity(spec)
+        marker = folder / MARKER
+        if not marker.is_file():
+            return None
+        data = json.loads(marker.read_text(encoding="utf-8"))
+        return str((folder / data.get("bin", "")).resolve()), data.get("version")
+
+    def record_version(self, name: str, spec, version: str | None) -> None:
+        marker = self.tools_dir / name / tool_identity(spec) / MARKER
+        try:
+            data = json.loads(marker.read_text(encoding="utf-8"))
+            data["version"] = version
+            marker.write_text(json.dumps(data), encoding="utf-8")
+        except (OSError, ValueError):
+            pass  # a read-only or concurrently replaced folder only costs another check
+
+    def _post_install(self, name, method, target: Path, out) -> None:
+        marker = target / MARKER
+        data = json.loads(marker.read_text(encoding="utf-8"))
+        if method.post_install:
+            out(f"{name}: post-install: {method.post_install}")
+            shell = (
+                ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command"]
+                if self._windows
+                else ["sh", "-c"]
+            )
+            env = dict(self._environ)
+            key = next((k for k in env if k.upper() == "PATH"), "PATH")
+            env[key] = os.pathsep.join(
+                p for p in (str(target / data.get("bin", "")), env.get(key)) if p
+            )
+            env["PTK_TOOL_DIR"] = str(target)
+            outcome = self._runner.run(
+                CommandSpec(
+                    argv=[*shell, method.post_install],
+                    cwd=str(target),
+                    env=env,
+                    timeout=1800,
+                ),
+                out,
+            )
+            if outcome.exit_code != 0:
+                raise PtkError(
+                    f"post-install of {name} failed "
+                    f"({outcome.error or f'exit code {outcome.exit_code}'})"
+                )
+        data["post_install"] = method.post_install
+        marker.write_text(json.dumps(data), encoding="utf-8")
 
     def _run(
         self,
@@ -375,6 +432,13 @@ class SystemToolInstaller:
             encoding="utf-8",
         )
         out(f"installed {name} into {target}")
+
+
+def _recorded_post_install(target: Path) -> str | None:
+    marker = target / MARKER
+    if not marker.is_file():
+        return None
+    return json.loads(marker.read_text(encoding="utf-8")).get("post_install")
 
 
 def _unzip(file: Path, target: Path) -> None:

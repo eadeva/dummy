@@ -9,6 +9,7 @@
 - Show each step's own fields, including `outputs`, under its node in configuration graph trees.
 - Place **CLI help** with its advanced help icon directly under each repository; **Configuration** lists GUI jobs under their own **GUIs** branch.
 - Show the step's Python version in dependency graph labels.
+- The job/workflow dependency graph is a read-only view after the form fields. Dependencies change only through `needs` fields; drag-to-connect, graph removal buttons and graph creation buttons were removed.
 
 ## 0.26.1
 

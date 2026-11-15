@@ -594,8 +594,8 @@ class JobSpec(_Strict):
         description="Named parameters accepted by this job. Define their types, help, choices and defaults.",
         default_factory=dict,
     )
-    requires_tools: dict[str, bool | ToolSpec] = Field(
-        description="Tools required before the job runs. Reference a registered tool, disable it with false, or supply an inline tool definition.",
+    requires_tools: dict[str, StrictBool] = Field(
+        description="Tools required before the job runs: a list of registered tool names, or a mapping of names to true/false (false disables a tool required at project level).",
         default_factory=dict,
     )
     env: dict[str, str] = Field(
@@ -618,13 +618,11 @@ class JobSpec(_Strict):
     @field_validator("requires_tools", mode="before")
     @classmethod
     def _tool_list(cls, value: Any) -> Any:
-        if isinstance(value, list) and all(isinstance(n, str) for n in value):
-            return dict.fromkeys(value, True)
-        return value
+        return tool_requirements(value)
 
     @property
     def required_tool_names(self) -> list[str]:
-        return [name for name, spec in self.requires_tools.items() if spec is not False]
+        return [name for name, spec in self.requires_tools.items() if spec]
 
     @field_validator("params")
     @classmethod
@@ -862,6 +860,10 @@ class ToolSpec(_Strict):
         default=None,
         description="DNF package name for opt-in installation on Linux. Installation may require sudo.",
     )
+    post_install: str | dict[Literal["windows", "linux"], str] | None = Field(
+        default=None,
+        description="Command run once in the installed tool folder after an Artifactory, download or uv tool installation, for example to register plug-ins. Runs in PowerShell on Windows and sh on Linux; PTK_TOOL_DIR is the tool folder and the tool is on PATH. Changing the command runs it again without downloading the tool again. Use one command or separate windows and linux commands.",
+    )
 
     @field_validator("version")
     @classmethod
@@ -879,6 +881,19 @@ class ToolSpec(_Strict):
 
 
 ProviderName = Literal["env", "vault", "prompt"]
+
+
+def tool_requirements(value: Any) -> Any:
+    if isinstance(value, list) and all(isinstance(n, str) for n in value):
+        return dict.fromkeys(value, True)
+    if isinstance(value, dict):
+        for name, setting in value.items():
+            if isinstance(setting, dict):
+                raise ValueError(  # noqa: TRY004 - pydantic reports only ValueError
+                    f"tool '{name}': requires_tools only selects tools (true/false); "
+                    "define a separately named tool for other settings"
+                )
+    return value
 
 
 class CredentialSpec(_Strict):
@@ -1412,8 +1427,8 @@ class PtkConfig(_Strict):
         description="Shared default values for job parameters with matching names.",
         default_factory=dict,
     )
-    requires_tools: dict[str, bool | ToolSpec] = Field(
-        description="Tools required at project level. Use registered names or inline definitions.",
+    requires_tools: dict[str, StrictBool] = Field(
+        description="Tools required by every job: a list of registered tool names, or a mapping of names to true/false.",
         default_factory=dict,
     )
     environment: EnvironmentSpec = Field(
@@ -1511,6 +1526,11 @@ class PtkConfig(_Strict):
 
             return to_plain(apply_defaults(from_plain(value)))
         return value
+
+    @field_validator("requires_tools", mode="before")
+    @classmethod
+    def _tool_list(cls, value: Any) -> Any:
+        return tool_requirements(value)
 
     @model_validator(mode="after")
     def _workflow_job_targets(self):
